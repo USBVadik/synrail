@@ -12,8 +12,8 @@ EXPECTED_OUTCOME="$3"
 OBSERVED_OUTCOME="$4"
 OUTFILE="$5"
 DEPLOY_NOTE="$6"
-PM2_APP="${7:-USBAGENT-V1}"
-TARGET_REPO_PATH="${8:-/root/USBAGENT_V2_1_STABLE}"
+PM2_APP="${7:-target-app}"
+TARGET_REPO_PATH="${8:-/srv/target-app}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ATTEST_OUTPUT="$("$SCRIPT_DIR/require_attested_target_surface.sh" "$TARGET_REPO_PATH")"
@@ -25,10 +25,17 @@ TARGET_HEAD="$(printf '%s\n' "$ATTEST_OUTPUT" | awk -F= '/^target_repo_head=/{pr
 TARGET_BRANCH="$(printf '%s\n' "$ATTEST_OUTPUT" | awk -F= '/^target_repo_branch=/{print $2}' | tail -n 1)"
 RUNTIME_SAMPLE="$(printf '%s\n' "$ATTEST_OUTPUT" | awk -F= '/^target_runtime_process_sample=/{print $2}' | tail -n 1)"
 
-HETZNER_HOST="${HETZNER_HOST:-root@49.13.140.183}"
-HETZNER_KEY="${HETZNER_KEY:-$HOME/.ssh/codex_hetzner}"
+CONTROLLER_HOST="${CONTROLLER_HOST:-}"
+CONTROLLER_KEY="${CONTROLLER_KEY:-$HOME/.ssh/codex_hetzner}"
+TARGET_NESTED_KEY="${TARGET_NESTED_KEY:-/root/.ssh/google_compute_engine}"
+
+if [ -z "$CONTROLLER_HOST" ]; then
+  echo "confirmation_error=CONTROLLER_HOST_REQUIRED" >&2
+  exit 2
+fi
+
 LOG_SNAPSHOT="$({
-ssh -i "$HETZNER_KEY" "$HETZNER_HOST" "ssh -i /root/.ssh/google_compute_engine -o BatchMode=yes -o ConnectTimeout=10 root@$TARGET_HOST '
+ssh -i "$CONTROLLER_KEY" "$CONTROLLER_HOST" "ssh -i $TARGET_NESTED_KEY -o BatchMode=yes -o ConnectTimeout=10 root@$TARGET_HOST '
   set -euo pipefail
   cd \"$TARGET_REPO_PATH\"
   pm2 describe \"$PM2_APP\" 2>/dev/null | sed -n \"1,80p\"
