@@ -2,15 +2,15 @@
 
 ## Purpose
 
-Describe the first believable execution plan for extracting the `Synrail` kernel into its own repository once the remaining operational unlock is reached.
+Describe the first believable execution plan that was used to extract the `Synrail` kernel into its own repository once the remaining operational unlock was reached.
 
 This document exists to turn extraction from a broad intention into a nearly mechanical sequence.
 
-It is not extraction approval.
+It is not a standing license to keep widening the extracted cut.
 
 ## Precondition
 
-Do not execute this plan until all of the following are true:
+This plan was gated on all of the following being true:
 
 1. one accepted proof-complete closure or accepted live-fix confirmation exists through the disciplined incident flow
 2. the result has been evaluated honestly via `docs/reference/INCIDENT_FLOW_EVALUATION_TEMPLATE.md`
@@ -126,6 +126,6 @@ Not:
 - broad refactors
 - downstream integrations
 
-## Decision rule
+## Post-execution rule
 
-If we reach the operational unlock, this plan should let us perform the first extraction as a careful copy-and-curate move rather than another planning phase.
+Now that the first extraction move has happened, this plan should be treated as a historical move-order reference and a guard against retroactively widening the first cut.

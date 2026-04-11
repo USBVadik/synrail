@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Define the smallest honest `Synrail` kernel slice that could later move into a dedicated repository without dragging most of the current proving-ground noise with it.
+Define the smallest honest `Synrail` kernel slice that could move into a dedicated repository without dragging most of the current proving-ground noise with it.
 
-This document exists to make extraction planning concrete while the project is still proving value.
+This document exists to keep the original extraction cut legible even after the first move has already happened.
 
-It is not an extraction approval.
+It is not permission to keep broadening the extracted repo.
 
 ## Core rule
 
@@ -101,9 +101,9 @@ More precisely:
 - operational separation is now strong enough for extraction
 - the remaining risk is execution sloppiness during the first extraction move
 
-## What would unlock the cut
+## What unlocked the cut
 
-The smallest credible unlock has now been reached through:
+The smallest credible unlock was reached through:
 
 1. multiple real narrow production incidents that went strictly through `incident_operator_flow.sh`
 2. accepted live-fix confirmations reached honestly through that flow

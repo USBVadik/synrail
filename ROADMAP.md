@@ -67,6 +67,18 @@ Examples:
 - keep commit history intentional
 - avoid broad cleanup that changes repo identity mid-review
 
+### 5. Strengthen post-extraction proof and examples
+
+Goal:
+
+- reduce the gap between strong structure and still-limited proving evidence
+
+Examples:
+
+- improve repeatability confidence for closure-grade exact-task runs
+- add one or two sanitized examples or fixtures
+- define a minimal private-stable target for the repo
+
 ## Explicitly not current priorities
 
 These may matter later, but they are not the current focus:
@@ -89,3 +101,9 @@ If a proposed change makes the repo:
 it is likely on-roadmap.
 
 If it mostly adds breadth, downstream behavior, or battlefield history, it is probably off-roadmap for this phase.
+
+## Review anchor
+
+The current product-review anchor for this phase is:
+
+- `docs/boundary/FIRST_PRODUCT_REVIEW_PASS.md`

@@ -85,3 +85,4 @@ For small repo hygiene and change-shape expectations, see:
 - `CONTRIBUTING.md`
 - `ROADMAP.md`
 - `docs/boundary/POST_CRITIQUE_HARDENING.md`
+- `docs/boundary/FIRST_PRODUCT_REVIEW_PASS.md`
