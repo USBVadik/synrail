@@ -78,3 +78,4 @@ It is meant to establish identity and boundary clearly before any broader packag
 For small repo hygiene and change-shape expectations, see:
 
 - `CONTRIBUTING.md`
+- `ROADMAP.md`
