@@ -49,6 +49,7 @@ This first cut intentionally does not include:
 For a quick document map, start with:
 
 - `docs/README.md`
+- `tools/reference/README.md`
 
 ## First Reference Helpers
 
@@ -73,9 +74,14 @@ This is the first bounded extraction move.
 
 It is meant to establish identity and boundary clearly before any broader packaging, repo publishing, or integration work.
 
+The current working mode is:
+
+- private review-first hardening before any public release pressure
+
 ## Contributing
 
 For small repo hygiene and change-shape expectations, see:
 
 - `CONTRIBUTING.md`
 - `ROADMAP.md`
+- `docs/boundary/POST_CRITIQUE_HARDENING.md`

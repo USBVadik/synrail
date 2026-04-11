@@ -1,0 +1,114 @@
+# Reference Helpers
+
+These scripts are intentionally small.
+
+They are included to show narrow `Synrail` control behaviors clearly.
+
+They are **not** a full orchestration platform.
+
+## What these helpers are for
+
+Use them as:
+
+- reference implementations
+- operator-facing examples
+- small boundary-preserving utilities
+
+Do not treat them as:
+
+- the full product
+- a complete deployment system
+- a generic automation framework
+
+## Included helpers
+
+### `attest_target_surface.sh`
+
+Purpose:
+
+- collect enough evidence to say whether the intended target surface is actually the one being inspected
+
+Useful when:
+
+- a fix, test, or deploy claim depends on the truth of the target environment
+
+Guarantees:
+
+- emits an explicit pass/fail attestation result
+- records concrete surface facts
+
+Does not guarantee:
+
+- that the target is healthy
+- that a fix is correct
+- that production behavior is repaired
+
+### `require_attested_target_surface.sh`
+
+Purpose:
+
+- enforce attestation as a gate before a target-surface claim is treated as reviewable
+
+Guarantees:
+
+- blocks the next step if attestation did not pass
+
+Does not guarantee:
+
+- quality of the patch or test
+- correctness of the target repo contents
+
+### `intake_incident_hypothesis.sh`
+
+Purpose:
+
+- capture one narrow runtime clue as a bounded hypothesis
+
+Guarantees:
+
+- records a search-space reducer explicitly
+
+Does not guarantee:
+
+- diagnosis truth
+- fix proof
+- runtime confirmation
+
+### `confirm_live_production_fix.sh`
+
+Purpose:
+
+- record one post-deploy runtime check against an expected outcome
+
+Guarantees:
+
+- compares observed external behavior to an expected result
+- emits an explicit confirmation result
+
+Does not guarantee:
+
+- full feature completeness
+- broad system health
+
+### `incident_operator_flow.sh`
+
+Purpose:
+
+- preserve the intended incident order:
+  - intake
+  - attestation
+  - confirmation
+
+Guarantees:
+
+- makes the basic flow harder to skip accidentally
+
+Does not guarantee:
+
+- good diagnosis
+- good patches
+- closure on its own
+
+## Operating rule
+
+If a helper starts accumulating broad product logic, large orchestration behavior, or environment-specific sprawl, it should probably stop living under `tools/reference/` in this repo shape.
