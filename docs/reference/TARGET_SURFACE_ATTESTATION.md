@@ -4,10 +4,10 @@
 
 Prevent agents from claiming they inspected, patched, tested, or deployed on the intended target surface when that surface has not been proven.
 
-This slice exists because the latest Gemini incident showed a basic control failure:
+This slice exists because a proving-ground incident showed a basic control failure:
 
-- the agent operated on the Hetzner copy
-- the agent claimed Node 2 / Google VM verification
+- the agent operated on one reachable copy
+- the agent claimed verification on a different intended target
 - the claim was stronger than the available environment proof
 
 That is not a semantic problem.
@@ -18,8 +18,8 @@ It is an execution-truth problem.
 
 No agent may claim any of the following without prior target-surface attestation:
 
-- `I checked the bot on Node 2`
-- `I tested the fix on Google VM`
+- `I checked the live target`
+- `I tested the fix on the intended runtime host`
 - `I changed the active runtime repo`
 - `I deployed the patch to the live target`
 
@@ -31,7 +31,7 @@ If attestation is missing, the correct behavior is:
 
 ## Minimum attestation proof
 
-For the Node 2 bot path, attestation must prove:
+For an intended target path, attestation must prove:
 
 - the current controller surface
 - the target host identity
@@ -69,15 +69,15 @@ The current minimal helper is:
 
 It attests:
 
-- controller host identity on Hetzner
-- nested reachability to Node 2
-- target repo presence on Node 2
-- target repo branch and head on Node 2
-- whether runtime-like bot processes are observed on Node 2
+- controller host identity
+- reachability to the intended target
+- target repo presence on that surface
+- target repo branch and head on that surface
+- whether runtime-like target processes are observed
 
 ## Mandatory pre-step
 
-Before any bugfix, test, or deploy run that claims Node 2 truth, run:
+Before any bugfix, test, or deploy run that claims target-surface truth, run:
 
 - `tools/reference/require_attested_target_surface.sh`
 
@@ -85,13 +85,13 @@ If that command does not end in:
 
 - `attested_target_surface=PASS`
 
-the run must not be treated as a valid Node 2 bugfix/test/deploy action.
+the run must not be treated as a valid target-surface bugfix/test/deploy action.
 
 In the standard incident workflow, this step now comes immediately after any bounded incident-hypothesis intake and before any bounded probe, patch review, bugfix run, or deploy claim.
 
 ## Acceptance rule
 
-A Node 2 diagnosis/fix/test/deploy claim may be treated as reviewable only if:
+A target-surface diagnosis/fix/test/deploy claim may be treated as reviewable only if:
 
 - `attestation_result=PASS`
 

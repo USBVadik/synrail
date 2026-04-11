@@ -83,7 +83,7 @@ These are valuable, but they are one step closer to proving-ground operations th
 Keep in the current repo until operational proof is stronger:
 
 - proving-ground incidents like `NODE2_IMAGE_TRIGGER_FIX_001`
-- runtime artifacts under `docs/context/runtime_artifacts/`
+- runtime artifact dumps from the upstream proving ground
 - incident-specific records
 - production confirmation records for one live bot
 - dirty repo archaeology

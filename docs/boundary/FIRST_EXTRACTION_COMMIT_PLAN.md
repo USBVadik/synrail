@@ -98,8 +98,8 @@ The first `README.md` should cover only:
 
 Do not include:
 
-- `USBAGENT` runtime files
-- Node 2 incident records
+- downstream product runtime files
+- proving-ground incident records
 - downstream photoreal/image-routing policy docs
 - runtime artifact dumps
 - one-off debugging shells or transport archaeology
@@ -122,7 +122,7 @@ Not:
 Before creating the first commit in the new repo, verify:
 
 1. the copied files match the allowlist
-2. the repo can be understood without mentioning `USBAGENT` as the product
+2. the repo can be understood without mentioning one downstream product as the product
 3. downstream agent capability-layer files were not copied by accident
 4. helper scripts still make sense under `tools/reference/`
 5. the boundary docs remain internally consistent

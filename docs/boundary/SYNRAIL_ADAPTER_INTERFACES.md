@@ -117,9 +117,9 @@ The important requirement is:
 
 Current project reality already suggests mappings:
 
-- `Codex -> Hetzner -> Gemini` transport path
+- one `Codex -> remote host -> execution agent` transport path
   - execution-surface / provider-adjacent adapter concern
-- trusted clean clone path on Node 2
+- one trusted clean clone path on the target surface
   - execution-surface adapter concern
 - direct Aider invocation
   - provider invocation adapter concern

@@ -63,8 +63,8 @@ These helpers are still proving-ground implementations, but they now express nar
 
 The following should remain adapter-side or environment-side, not kernel identity:
 
-- Hetzner transport specifics
-- Google VM / Node 2 specifics
+- one environment's transport specifics
+- one environment's target-runtime specifics
 - PM2 process details
 - Bedrock/Aider invocation particulars
 - helper-path contamination details
@@ -78,8 +78,8 @@ The kernel should not define itself by them.
 
 The following remain proving-ground-only and should not shape the extracted repo as product identity:
 
-- `NODE2_IMAGE_TRIGGER_FIX_001`
-- `USBAGENT_V2_1_STABLE`
+- one proving-ground exact-task campaign
+- one downstream product repo
 - one-off runtime incidents
 - incident-specific hypothesis records
 - production confirmation records for one downstream bot
@@ -88,28 +88,28 @@ The following remain proving-ground-only and should not shape the extracted repo
 
 ## Current honest blocker to extraction
 
-The main blocker is no longer best described as a credential-surface problem.
+The main blocker is no longer a missing proof-complete closure.
 
 The current blocker is:
 
-- no accepted proof-complete exact-task closure yet under the current minimal kernel
+- disciplined execution of the first bounded extraction move without widening the cut
 
 More precisely:
 
 - architectural separation is already strong
 - product separation is already strong
-- operational separation is still incomplete because closure value has not yet been proven through a completed kernel-governed cycle
+- operational separation is now strong enough for extraction
+- the remaining risk is execution sloppiness during the first extraction move
 
 ## What would unlock the cut
 
-The smallest credible unlock is now:
+The smallest credible unlock has now been reached through:
 
-1. one real narrow production incident goes strictly through `incident_operator_flow.sh`
-2. that incident reaches accepted closure or accepted live-fix confirmation honestly
-3. the post-incident evaluation shows the flow is at least not worse on `blocker-to-closure cycle count`
-4. the same discipline then survives at least one more narrow incident
+1. multiple real narrow production incidents that went strictly through `incident_operator_flow.sh`
+2. accepted live-fix confirmations reached honestly through that flow
+3. one accepted proof-complete exact-task closure under governed exact-retry conditions
 
-This is still weaker than the full campaign target, but strong enough to make a separate-repo cut stop looking premature.
+What remains is disciplined extraction execution, not proof absence.
 
 ## Decision rule
 

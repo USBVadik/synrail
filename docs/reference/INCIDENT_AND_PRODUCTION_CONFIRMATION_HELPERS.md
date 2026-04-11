@@ -17,7 +17,7 @@ For narrow production incidents, the standard placement is now:
 
 1. if a user/operator brings one narrow runtime clue:
    - run `tools/reference/intake_incident_hypothesis.sh`
-2. before any Node 2 diagnosis/fix/test/deploy claim:
+2. before any target-surface diagnosis/fix/test/deploy claim:
    - run `tools/reference/require_attested_target_surface.sh`
 3. after live patch delivery or process restart:
    - run `tools/reference/confirm_live_production_fix.sh`

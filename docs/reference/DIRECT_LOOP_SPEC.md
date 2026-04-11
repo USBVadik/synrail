@@ -2,7 +2,7 @@
 
 ## Goal
 
-Establish the minimum direct operational loop for `Codex -> Hetzner -> Gemini CLI` so Codex can send one narrow task, receive literal output, validate proof, and decide the next safe step without human relay.
+Establish the minimum direct operational loop for `Codex -> remote execution host -> execution agent CLI` so Codex can send one narrow task, receive literal output, validate proof, and decide the next safe step without human relay.
 
 This spec is for the first direct loop only.
 It does not change product code, Slice 2 semantics, or broader automation scope.
@@ -10,11 +10,11 @@ It does not change product code, Slice 2 semantics, or broader automation scope.
 ## Transport Path
 
 - Local controller: `Codex`
-- Remote host: `49.13.140.183`
-- Remote user: `root`
-- SSH auth method: `dedicated automation key via ~/.ssh/codex_hetzner`
-- Remote working directory: `/root/`
-- Gemini entrypoint: `/usr/bin/gemini`
+- Remote host: `controller-defined target`
+- Remote user: `controller-defined user`
+- SSH auth method: `controller-defined dedicated automation key`
+- Remote working directory: `controller-defined remote workdir`
+- Execution agent entrypoint: `controller-defined CLI command`
 - Transport mode: `ssh -> remote CLI -> raw output capture`
 - Prompt handoff form: `headless prompt argument via --prompt`
 - Response return form: `stdout with possible leading non-JSON prelude, followed by JSON response`
@@ -33,7 +33,7 @@ For production-facing incident work, the standard loop now also requires:
 
 - if a user/operator brings one narrow runtime clue, record it first as a bounded hypothesis
 - do not treat that clue as diagnosis proof
-- if the run claims Node 2 truth, require target-surface attestation first
+- if the run claims target-surface truth, require target-surface attestation first
 - if the run applies a production fix, require one post-deploy external runtime confirmation before accepting the fix claim
 
 The relevant helpers are:
@@ -58,7 +58,7 @@ For a narrow production bugfix incident, the default workflow is now:
 Mandatory rules inside that workflow:
 
 - step 1 may reduce search space, but may not count as proof
-- step 2 is mandatory before any Node 2 diagnosis/fix/test/deploy claim
+- step 2 is mandatory before any target-surface diagnosis/fix/test/deploy claim
 - step 6 is mandatory before any production-fix claim is accepted
 
 The smallest convenience wrapper for this workflow is now:
@@ -196,15 +196,15 @@ Probe acceptance:
 
 ## Required Connection Details
 
-- `HETZNER_HOST_OR_IP` = `49.13.140.183`
-- `HETZNER_SSH_USER` = `root`
-- `SSH_KEY_PATH_OR_AGENT` = `~/.ssh/codex_hetzner`
-- `REMOTE_WORKDIR` = `/root/`
-- `GEMINI_CLI_COMMAND` = `/usr/bin/gemini`
+- `REMOTE_HOST_OR_IP` = `<controller-defined>`
+- `REMOTE_SSH_USER` = `<controller-defined>`
+- `SSH_KEY_PATH_OR_AGENT` = `<controller-defined>`
+- `REMOTE_WORKDIR` = `<controller-defined>`
+- `EXECUTION_AGENT_COMMAND` = `<controller-defined>`
 - `PROMPT_HANDOFF_FORM` = `headless prompt argument via --prompt`
 - `RESPONSE_RETURN_FORM` = `stdout with possible leading non-JSON prelude, followed by JSON response`
-- `DEFAULT_REMOTE_BRANCH` = `main`
-- `REPO_PATH_ON_HETZNER` = `/root/USBAGENT_V2_1_STABLE/`
+- `DEFAULT_REMOTE_BRANCH` = `<controller-defined>`
+- `REMOTE_REPO_PATH` = `<controller-defined>`
 - `ENV_SETUP_REQUIRED` = `NONE`
 - `AUTHORITATIVE_ARTIFACT_AFTER_RUN` = `captured stdout of the probe run`
 
