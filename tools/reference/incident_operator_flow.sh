@@ -29,7 +29,7 @@ case "$MODE" in
     SEARCH_REDUCTION="$4"
     HYP_OUTFILE="$5"
     RUNTIME_CLUE="${6:-NONE_PROVIDED}"
-    TARGET_REPO_PATH="${7:-/root/USBAGENT_V2_1_STABLE}"
+    TARGET_REPO_PATH="${7:-/srv/target-app}"
 
     "$SCRIPT_DIR/intake_incident_hypothesis.sh" \
       "$INCIDENT_ID" \
@@ -54,8 +54,8 @@ case "$MODE" in
     OBSERVED_OUTCOME="$4"
     CONFIRM_OUTFILE="$5"
     DEPLOY_NOTE="$6"
-    PM2_APP="${7:-USBAGENT-V1}"
-    TARGET_REPO_PATH="${8:-/root/USBAGENT_V2_1_STABLE}"
+    PM2_APP="${7:-target-app}"
+    TARGET_REPO_PATH="${8:-/srv/target-app}"
 
     "$SCRIPT_DIR/confirm_live_production_fix.sh" \
       "$INCIDENT_ID" \
