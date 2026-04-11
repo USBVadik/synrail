@@ -46,6 +46,10 @@ This first cut intentionally does not include:
 - `examples/`: reserved for later curated examples
 - `fixtures/`: reserved for later sanitized fixtures
 
+For a quick document map, start with:
+
+- `docs/README.md`
+
 ## First Reference Helpers
 
 - `attest_target_surface.sh`
