@@ -72,3 +72,9 @@ For a quick document map, start with:
 This is the first bounded extraction move.
 
 It is meant to establish identity and boundary clearly before any broader packaging, repo publishing, or integration work.
+
+## Contributing
+
+For small repo hygiene and change-shape expectations, see:
+
+- `CONTRIBUTING.md`
