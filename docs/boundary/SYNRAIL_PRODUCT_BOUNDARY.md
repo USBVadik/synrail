@@ -58,11 +58,11 @@ These are valid growth paths, but not extraction prerequisites for the kernel it
 
 The following do **not** belong to the core:
 
-- `USBAGENT` as a product
+- one downstream bot or product as the product
 - Telegram bot behavior as a product
 - `ccgram`
-- Hetzner host specifics
-- Node 2 host specifics
+- one host topology's specifics
+- one target-runtime topology's specifics
 - one-off shell probes
 - temporary transport workarounds
 - temporary helper contamination states
@@ -112,9 +112,9 @@ The core decides how those facts affect trust, readiness, promotion, and accepta
 
 From the current project reality, these are adapter-like, not core truth:
 
-- `Codex -> Hetzner -> Gemini` transport path
-- Node 2 remote execution path
-- trusted clean clone path on Node 2
+- one `Codex -> remote host -> execution agent` transport path
+- one remote execution path
+- one trusted clean clone path
 - Bedrock/Aider invocation path
 - helper scripts like `run-aider.sh`
 - remote shell/runtime discovery commands
@@ -128,7 +128,7 @@ But they should not define the product identity.
 The following should be treated as proving grounds, not as the product:
 
 - `NODE2_IMAGE_TRIGGER_FIX_001`
-- `USBAGENT_V2_1_STABLE`
+- one downstream product repo
 - live dirty working tree states
 - current host auth/credential gaps
 - current helper contamination history

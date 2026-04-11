@@ -110,10 +110,10 @@ kernel_identity:
   product: Synrail
   status_contract_version: 1
 trusted_baseline:
-  path: /tmp/usbagent_clean_clone
+  path: /tmp/trusted_clean_clone
   head: 3cc13f6f80378ed303797393f2fe47299780f8a4
 observed_live_surface:
-  path: /root/USBAGENT_V2_1_STABLE
+  path: /srv/target-app
 current_target_run_class: exact_retry
 doctor_verdicts:
   exact_retry: NOT_ACCEPTABLE_CREDENTIAL_SURFACE

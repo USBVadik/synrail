@@ -39,7 +39,7 @@ Current status:
 
 Why:
 
-- `Synrail` can now be described without treating `USBAGENT` as the product
+- `Synrail` can now be described without treating one downstream bot as the product
 - proving-ground task and downstream bot are explicitly treated as proving ground, not core
 - future shell/UI is explicitly separated from kernel
 - machine-readable kernel status now exists as product-level state surface
@@ -76,7 +76,7 @@ The following now appear cleanly separable from the proving ground:
 The following remain semi-coupled to the current proving ground:
 
 - exact-task closure proof
-- historical Node 2 runtime specifics
+- historical proving-ground runtime specifics
 - the first fully accepted exact-task cycle used as extraction proof
 - downstream capability-layer incidents that still provide the strongest live test surface
 

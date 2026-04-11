@@ -21,7 +21,7 @@ The goal is to test whether the new incident flow materially reduces `blocker-to
 Mark each as `YES` or `NO`:
 
 - bounded hypothesis intake used first when a narrow runtime clue existed: `<YES|NO|NOT_APPLICABLE>`
-- target-surface attestation completed before any Node 2 claim: `<YES|NO>`
+- target-surface attestation completed before any target-runtime claim: `<YES|NO>`
 - production confirmation completed after deploy/restart: `<YES|NO|NOT_APPLICABLE>`
 - closure/fix claim delayed until external runtime confirmation: `<YES|NO|NOT_APPLICABLE>`
 

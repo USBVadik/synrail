@@ -22,7 +22,7 @@ Extract by curated copy, not by broad move.
 
 The first extracted repo should be assembled from an explicit allowlist of kernel files.
 
-Do not begin by moving the whole `docs/context` tree.
+Do not begin by moving the whole upstream documentation tree.
 
 ## Source of truth for the file allowlist
 
@@ -78,14 +78,14 @@ Copy the narrow operational helpers:
 
 Only after Batches 1–4 are stable, consider adding small sanitized examples.
 
-Do not add raw production history, runtime artifacts, or one-off Node 2 archaeology in the first extraction commit.
+Do not add raw production history, runtime artifacts, or one-off proving-ground archaeology in the first extraction commit.
 
 ## What must stay behind in the first move
 
 Do not copy these into the first extracted repo:
 
-- `USBAGENT`-specific implementation files
-- Node 2 runtime residue
+- one downstream product's implementation files
+- proving-ground runtime residue
 - production incident artifacts tied to one live bot
 - photoreal/image-enhancer/backend-routing policies for the Gemini agent
 - one-off image-quality investigations
