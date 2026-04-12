@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/doctor_record_v0.schema.json",
+  "title": "Synrail Doctor Record v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "doctor_run_id",
+    "doctor_level",
+    "target_execution_surface",
+    "trusted_baseline",
+    "intended_run_class",
+    "gate_results",
+    "blocking_failure_classes",
+    "final_verdict",
+    "recommended_next_safe_step"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "doctor_record_v0"
+    },
+    "doctor_run_id": {
+      "type": "string"
+    },
+    "doctor_level": {
+      "type": "string",
+      "enum": ["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"]
+    },
+    "target_execution_surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "classification"],
+      "properties": {
+        "path": {"type": "string"},
+        "classification": {"type": "string"}
+      }
+    },
+    "trusted_baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity"],
+      "properties": {
+        "identity": {"type": "string"}
+      }
+    },
+    "intended_run_class": {
+      "type": "string",
+      "enum": ["core_probe", "support_run", "exact_retry"]
+    },
+    "gate_results": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_identity",
+        "clean_execution_surface",
+        "helper_integrity",
+        "credential_surface",
+        "artifact_viability",
+        "prompt_task_identity"
+      ],
+      "properties": {
+        "baseline_identity": {"$ref": "#/$defs/gate"},
+        "clean_execution_surface": {"$ref": "#/$defs/gate"},
+        "helper_integrity": {"$ref": "#/$defs/gate"},
+        "credential_surface": {"$ref": "#/$defs/gate"},
+        "artifact_viability": {"$ref": "#/$defs/gate"},
+        "prompt_task_identity": {"$ref": "#/$defs/gate"}
+      }
+    },
+    "blocking_failure_classes": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "final_verdict": {
+      "type": "string"
+    },
+    "recommended_next_safe_step": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "note"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["PASS", "FAIL", "NOT_APPLICABLE"]
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

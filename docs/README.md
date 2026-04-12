@@ -31,6 +31,7 @@ Start here when you want to understand the kernel itself:
 - `core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
 - `core/SYNRAIL_EVIDENCE_PRECEDENCE.md`
 - `core/SYNRAIL_DOCTOR.md`
+- `core/DOCTOR_001.md`
 - `core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
 - `core/SYNRAIL_KERNEL_STATUS_CONTRACT.md`
 - `core/RUN_STATE_SCHEMA_001.md`

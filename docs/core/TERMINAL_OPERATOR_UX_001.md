@@ -32,6 +32,8 @@ The CLI v0 currently exposes:
    - refresh state after a doctor, bundle, closure, or recovery event
 8. `validate`
    - validate one machine-readable artifact against one schema
+9. `doctor`
+   - emit one machine-readable doctor record and optionally write it back into the run state
 
 ## Why this matters
 

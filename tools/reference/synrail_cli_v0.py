@@ -16,6 +16,7 @@ BUNDLE = HERE / "synrail_bundle_v0.py"
 CLOSURE = HERE / "synrail_closure_v0.py"
 REFRESH = HERE / "synrail_refresh_v0.py"
 VALIDATE = HERE / "synrail_validate_v0.py"
+DOCTOR = HERE / "synrail_doctor_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -123,6 +124,33 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return run_python(VALIDATE, forwarded)
 
 
+def cmd_doctor(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--doctor-run-id", args.doctor_run_id,
+        "--doctor-level", args.doctor_level,
+        "--target-path", args.target_path,
+        "--target-classification", args.target_classification,
+        "--baseline-identity", args.baseline_identity,
+        "--intended-run-class", args.intended_run_class,
+        "--output", args.output,
+    ]
+    if args.state_file:
+        forwarded.extend(["--state-file", args.state_file])
+    if args.update_state:
+        forwarded.append("--update-state")
+    if args.clean_surface:
+        forwarded.append("--clean-surface")
+    if args.artifact_viable:
+        forwarded.append("--artifact-viable")
+    if args.helper_ok:
+        forwarded.append("--helper-ok")
+    if args.credentials_ok:
+        forwarded.append("--credentials-ok")
+    if args.prompt_identity_ok:
+        forwarded.append("--prompt-identity-ok")
+    return run_python(DOCTOR, forwarded)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="synrail")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -183,6 +211,23 @@ def build_parser() -> argparse.ArgumentParser:
     p_validate.add_argument("--schema", required=True)
     p_validate.add_argument("--document", required=True)
     p_validate.set_defaults(func=cmd_validate)
+
+    p_doctor = sub.add_parser("doctor")
+    p_doctor.add_argument("--doctor-run-id", required=True)
+    p_doctor.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
+    p_doctor.add_argument("--target-path", required=True)
+    p_doctor.add_argument("--target-classification", required=True)
+    p_doctor.add_argument("--baseline-identity", required=True)
+    p_doctor.add_argument("--intended-run-class", required=True, choices=["core_probe", "support_run", "exact_retry"])
+    p_doctor.add_argument("--output", required=True)
+    p_doctor.add_argument("--state-file")
+    p_doctor.add_argument("--update-state", action="store_true")
+    p_doctor.add_argument("--clean-surface", action="store_true")
+    p_doctor.add_argument("--artifact-viable", action="store_true")
+    p_doctor.add_argument("--helper-ok", action="store_true")
+    p_doctor.add_argument("--credentials-ok", action="store_true")
+    p_doctor.add_argument("--prompt-identity-ok", action="store_true")
+    p_doctor.set_defaults(func=cmd_doctor)
 
     return parser
 

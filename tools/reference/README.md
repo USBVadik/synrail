@@ -236,6 +236,24 @@ Does not guarantee:
 - semantic correctness
 - broad enforcement by itself
 
+### `synrail_doctor_v0.py`
+
+Purpose:
+
+- emit one machine-readable readiness verdict for the intended run class
+
+Guarantees:
+
+- evaluates a narrow gate set
+- emits a doctor record with blocking failure classes
+- can write doctor status back into the run state
+
+Does not guarantee:
+
+- deep environment probing
+- provider reachability validation
+- full diagnostics coverage
+
 ## Operating rule
 
 If a helper starts accumulating broad product logic, large orchestration behavior, or environment-specific sprawl, it should probably stop living under `tools/reference/` in this repo shape.
