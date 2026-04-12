@@ -359,6 +359,50 @@ def discover_repair_packet_file(args: argparse.Namespace) -> Path | None:
     return None
 
 
+def apply_resume_output_defaults(args: argparse.Namespace, state: dict) -> None:
+    state_path = Path(args.state_file)
+    root = state_path.parent
+    defaults = {
+        "doctor_output": str(root / "doctor.json"),
+        "bundle_output": str(root / "bundle.json"),
+        "closure_output": str(root / "closure.json"),
+        "refresh_output": str(root / "refresh.json"),
+        "report_output": str(root / "report.json"),
+        "worked_artifact_output": str(root / "orchestration.json"),
+        "run_artifact_output": str(root / "run.json"),
+        "repair_handoff_output": str(root / "repair_handoff.json"),
+        "repair_packet_output": str(root / "repair_packet.json"),
+        "plan_output": str(root / "plan.json"),
+        "preparation_receipt_output": str(root / "preparation_receipt.json"),
+    }
+    for attr, value in defaults.items():
+        if not getattr(args, attr, None):
+            setattr(args, attr, value)
+
+    baseline_identity = state.get("target_surface", {}).get("identity", "") or state["run_id"]
+    execution_surface_identity = state.get("target_surface", {}).get("identity", "") or baseline_identity
+    context_defaults = {
+        "doctor_run_id": f"{state['run_id']}_RESUME",
+        "doctor_level": "CORE_DOCTOR",
+        "target_path": str(root),
+        "target_classification": "resume_surface",
+        "baseline_identity": baseline_identity,
+        "intended_run_class": "core_probe",
+        "task_class": state["task_class"],
+        "execution_surface_identity": execution_surface_identity,
+    }
+    for attr, value in context_defaults.items():
+        if not getattr(args, attr, None):
+            setattr(args, attr, value)
+
+    if getattr(args, "prompt_identity", None) is None:
+        args.prompt_identity = ""
+    if getattr(args, "task_identity", None) is None:
+        args.task_identity = ""
+    if getattr(args, "final_result", None) is None:
+        args.final_result = ""
+
+
 def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> list[str]:
     packet_path = discover_repair_packet_file(args)
     if not packet_path:
@@ -525,6 +569,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
 def cmd_resume(args: argparse.Namespace) -> int:
     state = load_json(Path(args.state_file))
     args.resume_from_state = state["state"]
+    apply_resume_output_defaults(args, state)
     temp_runtime_files: list[str] = []
     try:
         temp_runtime_files = maybe_apply_repair_packet(args, state)
@@ -549,13 +594,6 @@ def cmd_resume(args: argparse.Namespace) -> int:
         if not getattr(args, attr, None):
             print(json.dumps({"result": "ERROR", "reason": "RESUME_CONTEXT_INCOMPLETE", "missing_field": attr}, ensure_ascii=True))
             return 2
-
-    if getattr(args, "prompt_identity", None) is None:
-        args.prompt_identity = ""
-    if getattr(args, "task_identity", None) is None:
-        args.task_identity = ""
-    if getattr(args, "final_result", None) is None:
-        args.final_result = ""
 
     try:
         return cmd_orchestrate(args)

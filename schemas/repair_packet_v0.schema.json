@@ -8,6 +8,10 @@
     "from_state",
     "continuation_entrypoint",
     "repair_handoff",
+    "resumability",
+    "repair_policy",
+    "artifact_quality_hints",
+    "artifact_quality_summary",
     "continuation_plan",
     "resume_context",
     "repair_inputs",
@@ -51,6 +55,8 @@
         "blocking_reason",
         "continuation_allowed",
         "continuation_entrypoint",
+        "repair_policy",
+        "artifact_quality_hints",
         "required_inputs",
         "runtime_defaults",
         "next_safe_step"
@@ -88,6 +94,85 @@
             },
             "requires_new_run": {"type": "boolean"},
             "explanation": {"type": "string", "minLength": 1}
+          }
+        },
+        "repair_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "policy_type",
+            "next_step_id",
+            "ready_now_step_ids",
+            "ordered_steps"
+          ],
+          "properties": {
+            "policy_type": {"type": "string", "minLength": 1},
+            "next_step_id": {"type": "string"},
+            "ready_now_step_ids": {
+              "type": "array",
+              "items": {"type": "string", "minLength": 1}
+            },
+            "ordered_steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "step_id",
+                  "status",
+                  "required_inputs",
+                  "repairs_artifacts",
+                  "resolves_pressures",
+                  "why"
+                ],
+                "properties": {
+                  "step_id": {"type": "string", "minLength": 1},
+                  "status": {"type": "string", "minLength": 1},
+                  "required_inputs": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1}
+                  },
+                  "repairs_artifacts": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1}
+                  },
+                  "resolves_pressures": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1}
+                  },
+                  "why": {"type": "string", "minLength": 1}
+                }
+              }
+            }
+          }
+        },
+        "artifact_quality_hints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "artifact_id",
+              "quality",
+              "still_stale_parts",
+              "mapped_inputs",
+              "repair_step",
+              "why"
+            ],
+            "properties": {
+              "artifact_id": {"type": "string", "minLength": 1},
+              "quality": {"type": "string", "enum": ["STALE", "NON_RESUMABLE"]},
+              "still_stale_parts": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1}
+              },
+              "mapped_inputs": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1}
+              },
+              "repair_step": {"type": "string", "minLength": 1},
+              "why": {"type": "string", "minLength": 1}
+            }
           }
         },
         "required_inputs": {
@@ -142,6 +227,108 @@
         },
         "requires_new_run": {"type": "boolean"},
         "explanation": {"type": "string", "minLength": 1}
+      }
+    },
+    "repair_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_type",
+        "next_step_id",
+        "ready_now_step_ids",
+        "ordered_steps"
+      ],
+      "properties": {
+        "policy_type": {"type": "string", "minLength": 1},
+        "next_step_id": {"type": "string"},
+        "ready_now_step_ids": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "ordered_steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "step_id",
+              "status",
+              "required_inputs",
+              "repairs_artifacts",
+              "resolves_pressures",
+              "why"
+            ],
+            "properties": {
+              "step_id": {"type": "string", "minLength": 1},
+              "status": {"type": "string", "minLength": 1},
+              "required_inputs": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1}
+              },
+              "repairs_artifacts": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1}
+              },
+              "resolves_pressures": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1}
+              },
+              "why": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
+    "artifact_quality_hints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifact_id",
+          "quality",
+          "still_stale_parts",
+          "mapped_inputs",
+          "repair_step",
+          "why"
+        ],
+        "properties": {
+          "artifact_id": {"type": "string", "minLength": 1},
+          "quality": {"type": "string", "enum": ["STALE", "NON_RESUMABLE"]},
+          "still_stale_parts": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1}
+          },
+          "mapped_inputs": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1}
+          },
+          "repair_step": {"type": "string", "minLength": 1},
+          "why": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "artifact_quality_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_ids",
+        "stale_artifact_ids",
+        "non_resumable_artifact_ids"
+      ],
+      "properties": {
+        "artifact_ids": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "stale_artifact_ids": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "non_resumable_artifact_ids": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        }
       }
     },
     "continuation_plan": {

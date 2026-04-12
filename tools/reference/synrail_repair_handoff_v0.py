@@ -99,6 +99,32 @@ PROOF_SECTION_INPUTS = {
     "scenario_proof": "scenario_proof",
 }
 
+STEP_ARTIFACTS = {
+    "restore_readiness_truth": ["readiness_surface"],
+    "repair_final_result_artifact": ["final_result_artifact"],
+    "complete_missing_proof_sections": ["supporting_proof_artifacts"],
+    "rebuild_proof_bundle": ["proof_bundle_snapshot"],
+    "complete_recovery_reverification": ["recovery_reverification_surface"],
+    "run_refresh_reconciliation": ["closure_refresh_surface"],
+    "rerun_closure": ["closure_verdict_surface"],
+    "switch_to_lighter_mode": ["mode_selection_receipt"],
+    "start_new_run": ["terminal_run_state"],
+    "inspect_runtime_state": ["runtime_state"],
+}
+
+STEP_PRESSURES = {
+    "restore_readiness_truth": ["DOCTOR_BLOCKED"],
+    "repair_final_result_artifact": ["INVALID_PROOF"],
+    "complete_missing_proof_sections": ["PARTIAL_PROOF"],
+    "rebuild_proof_bundle": ["INVALID_PROOF", "PARTIAL_PROOF"],
+    "complete_recovery_reverification": ["RECOVERY_PENDING"],
+    "run_refresh_reconciliation": ["RECOVERY_PENDING"],
+    "rerun_closure": ["DOCTOR_BLOCKED", "INVALID_PROOF", "PARTIAL_PROOF", "RECOVERY_PENDING"],
+    "switch_to_lighter_mode": ["SELECTION_BLOCKED"],
+    "start_new_run": ["TERMINAL_STATE"],
+    "inspect_runtime_state": [],
+}
+
 REPAIRABLE_PRESSURE_ORDER = [
     "DOCTOR_BLOCKED",
     "INVALID_PROOF",
@@ -120,31 +146,22 @@ def add_unique(target: list[str], value: str) -> None:
         target.append(value)
 
 
-def build_required_input_ids(state: dict) -> list[str]:
-    required: list[str] = []
-
-    for failure_class in state.get("doctor", {}).get("blocking_failure_classes", []):
-        for input_id in DOCTOR_FAILURE_INPUTS.get(failure_class, []):
-            add_unique(required, input_id)
-
-    blocking_reason = state.get("closure", {}).get("blocking_reason", "")
-    if blocking_reason in {"ARTIFACT_BUNDLE_MISSING", "INVALID_PROOF_BUNDLE"}:
-        add_unique(required, "final_result")
-
+def merged_missing_sections(state: dict) -> list[str]:
     missing_sections = list(state.get("proof_bundle", {}).get("missing_sections", []))
     for section in state.get("closure", {}).get("missing_sections", []):
         if section not in missing_sections:
             missing_sections.append(section)
-    for section in missing_sections:
-        mapped = PROOF_SECTION_INPUTS.get(section)
-        if mapped:
-            add_unique(required, mapped)
+    return missing_sections
 
-    recovery = state.get("recovery", {})
-    if recovery.get("status") == "PENDING" and not recovery.get("reverification_complete", False):
-        add_unique(required, "refresh_recovery_complete")
-        add_unique(required, "refresh_reverification_complete")
 
+def build_required_input_ids(repair_policy: dict, artifact_quality_hints: list[dict]) -> list[str]:
+    required: list[str] = []
+    ready_steps = set(repair_policy.get("ready_now_step_ids", []))
+    for hint in artifact_quality_hints:
+        if hint["repair_step"] not in ready_steps:
+            continue
+        for input_id in hint.get("mapped_inputs", []):
+            add_unique(required, input_id)
     return required
 
 
@@ -247,6 +264,175 @@ def recommended_repair_order(active_pressures: list[str], family: str) -> list[s
     return steps
 
 
+def build_artifact_quality_hints(state: dict) -> list[dict]:
+    hints: list[dict] = []
+
+    readiness_parts: list[str] = []
+    readiness_inputs: list[str] = []
+    readiness_why: list[str] = []
+    for failure_class in state.get("doctor", {}).get("blocking_failure_classes", []):
+        mapped_inputs = DOCTOR_FAILURE_INPUTS.get(failure_class, [])
+        for input_id in mapped_inputs:
+            add_unique(readiness_inputs, input_id)
+        if failure_class == "baseline-identity ambiguous":
+            add_unique(readiness_parts, "target_identity")
+        elif failure_class == "dirty-surface unsafe":
+            add_unique(readiness_parts, "clean_execution_surface")
+        elif failure_class == "helper-integrity unknown":
+            add_unique(readiness_parts, "helper_entrypoint")
+        elif failure_class == "credential-surface missing":
+            add_unique(readiness_parts, "credential_surface")
+        elif failure_class == "artifact-viability missing":
+            add_unique(readiness_parts, "artifact_path")
+        elif failure_class == "exact-prompt-artifact-missing":
+            add_unique(readiness_parts, "prompt_identity")
+            add_unique(readiness_parts, "task_identity")
+        add_unique(readiness_why, failure_class)
+    if readiness_parts:
+        hints.append(
+            {
+                "artifact_id": "readiness_surface",
+                "quality": "STALE",
+                "still_stale_parts": readiness_parts,
+                "mapped_inputs": readiness_inputs,
+                "repair_step": "restore_readiness_truth",
+                "why": "doctor still sees stale readiness evidence: " + ", ".join(readiness_why),
+            }
+        )
+
+    missing_sections = merged_missing_sections(state)
+    final_result_parts = [part for part in ["final_result", "diff_provenance", "cleanup_status"] if part in missing_sections]
+    if state.get("closure", {}).get("blocking_reason") in {"ARTIFACT_BUNDLE_MISSING", "INVALID_PROOF_BUNDLE"} and "final_result" not in final_result_parts:
+        final_result_parts.insert(0, "final_result")
+    if final_result_parts:
+        hints.append(
+            {
+                "artifact_id": "final_result_artifact",
+                "quality": "STALE",
+                "still_stale_parts": final_result_parts,
+                "mapped_inputs": ["final_result"],
+                "repair_step": "repair_final_result_artifact",
+                "why": "the final-result truth surface is still stale or incomplete",
+            }
+        )
+
+    supporting_parts = [part for part in ["readback", "scenario_proof"] if part in missing_sections]
+    supporting_inputs = [PROOF_SECTION_INPUTS[part] for part in supporting_parts if part in PROOF_SECTION_INPUTS]
+    if supporting_parts:
+        hints.append(
+            {
+                "artifact_id": "supporting_proof_artifacts",
+                "quality": "STALE",
+                "still_stale_parts": supporting_parts,
+                "mapped_inputs": supporting_inputs,
+                "repair_step": "complete_missing_proof_sections",
+                "why": "supporting proof sections are still missing from the current bundle",
+            }
+        )
+
+    recovery = state.get("recovery", {})
+    if recovery.get("status") == "PENDING":
+        hints.append(
+            {
+                "artifact_id": "recovery_reverification_surface",
+                "quality": "STALE",
+                "still_stale_parts": [
+                    "recovery_status",
+                    "reverification_complete",
+                ],
+                "mapped_inputs": ["refresh_recovery_complete", "refresh_reverification_complete"],
+                "repair_step": "complete_recovery_reverification",
+                "why": "recovery was started but reverification has not been completed yet",
+            }
+        )
+
+    if state.get("closure", {}).get("blocking_reason") == "MODE_SELECTION_NOT_GOVERNED":
+        hints.append(
+            {
+                "artifact_id": "mode_selection_receipt",
+                "quality": "NON_RESUMABLE",
+                "still_stale_parts": ["selected_mode_policy"],
+                "mapped_inputs": [],
+                "repair_step": "switch_to_lighter_mode",
+                "why": "the current selected mode explicitly keeps this run out of the governed continuation contour",
+            }
+        )
+
+    if state.get("state") in {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"} or state.get("closure", {}).get("status") in {"ACCEPTED", "REJECTED"}:
+        hints.append(
+            {
+                "artifact_id": "terminal_run_state",
+                "quality": "NON_RESUMABLE",
+                "still_stale_parts": ["terminal_closure_status"],
+                "mapped_inputs": [],
+                "repair_step": "start_new_run",
+                "why": "the current run is already terminal and continuation should yield to a new run",
+            }
+        )
+
+    if not hints:
+        hints.append(
+            {
+                "artifact_id": "runtime_state",
+                "quality": "STALE",
+                "still_stale_parts": ["runtime_state"],
+                "mapped_inputs": [],
+                "repair_step": "inspect_runtime_state",
+                "why": "the bounded runtime sees a resumable contour but does not have a narrower artifact-quality hint yet",
+            }
+        )
+    return hints
+
+
+def build_repair_policy(resumability: dict, artifact_quality_hints: list[dict]) -> dict:
+    steps: list[dict] = []
+    ready_now_step_ids: list[str] = []
+    step_to_inputs = {
+        step_id: [] for step_id in resumability["recommended_repair_order"]
+    }
+    for hint in artifact_quality_hints:
+        step_inputs = step_to_inputs.setdefault(hint["repair_step"], [])
+        for input_id in hint.get("mapped_inputs", []):
+            add_unique(step_inputs, input_id)
+
+    ordered_ids = list(resumability["recommended_repair_order"])
+    policy_type = "MULTI_STEP_REPAIR" if resumability["status"] == "REPAIRABLE" else "NON_RESUMABLE_NEXT_STEP"
+    for index, step_id in enumerate(ordered_ids):
+        if resumability["status"] == "REPAIRABLE":
+            status = "READY_NOW" if index == 0 else "WAITING_ON_PREVIOUS_STEP"
+        else:
+            status = "TERMINAL_NEXT_STEP" if index == 0 else "NOT_AVAILABLE"
+        if status == "READY_NOW":
+            ready_now_step_ids.append(step_id)
+        steps.append(
+            {
+                "step_id": step_id,
+                "status": status,
+                "required_inputs": list(step_to_inputs.get(step_id, [])),
+                "repairs_artifacts": list(STEP_ARTIFACTS.get(step_id, [])),
+                "resolves_pressures": [pressure for pressure in STEP_PRESSURES.get(step_id, []) if pressure in resumability["active_pressures"]],
+                "why": {
+                    "restore_readiness_truth": "doctor-blocked truth must be repaired before governed continuation can restart honestly",
+                    "repair_final_result_artifact": "invalid final-result truth should be repaired before later proof or recovery steps run",
+                    "complete_missing_proof_sections": "missing proof sections should be completed before bundle rebuild and closure recheck",
+                    "rebuild_proof_bundle": "the bundle should be rebuilt only after the stale proof artifacts above are repaired",
+                    "complete_recovery_reverification": "recovery should be completed before refresh reconciliation can restore closure acceptance",
+                    "run_refresh_reconciliation": "refresh reconciliation should only run once recovery reverification is complete",
+                    "rerun_closure": "closure should be rechecked only after earlier repair steps finish",
+                    "switch_to_lighter_mode": "this contour should follow the lighter selected mode instead of resuming governed execution",
+                    "start_new_run": "terminal state should yield to a new run rather than another resume attempt",
+                    "inspect_runtime_state": "runtime state should be inspected before the next continuation decision is made",
+                }.get(step_id, "follow the bounded repair order before resuming"),
+            }
+        )
+    return {
+        "policy_type": policy_type,
+        "next_step_id": ordered_ids[0] if ordered_ids else "",
+        "ready_now_step_ids": ready_now_step_ids,
+        "ordered_steps": steps,
+    }
+
+
 def resumability_explanation(family: str) -> str:
     return {
         "REPAIRABLE_DOCTOR_BLOCKED": "readiness failed early, but the contour can resume once the doctor inputs are repaired",
@@ -292,9 +478,11 @@ def build_required_inputs(required_input_ids: list[str]) -> list[dict]:
 
 
 def build_repair_handoff(state: dict) -> dict:
-    required_input_ids = build_required_input_ids(state)
     allowed = continuation_allowed(state)
     resumability = build_resumability(state)
+    artifact_quality_hints = build_artifact_quality_hints(state)
+    repair_policy = build_repair_policy(resumability, artifact_quality_hints)
+    required_input_ids = build_required_input_ids(repair_policy, artifact_quality_hints)
     return {
         "schema_version": "repair_handoff_v0",
         "run_id": state["run_id"],
@@ -305,6 +493,8 @@ def build_repair_handoff(state: dict) -> dict:
         "continuation_allowed": allowed,
         "continuation_entrypoint": "resume" if allowed else "",
         "resumability": resumability,
+        "repair_policy": repair_policy,
+        "artifact_quality_hints": artifact_quality_hints,
         "required_inputs": build_required_inputs(required_input_ids),
         "runtime_defaults": build_runtime_defaults(state, required_input_ids),
         "next_safe_step": state["next_safe_step"],

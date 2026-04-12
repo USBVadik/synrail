@@ -40,6 +40,7 @@ That means the packet can now say both:
 - how the runtime should continue once those inputs exist
 - whether the current non-green contour is still repairable at all
 - what repair order the runtime believes should come next
+- which existing artifact surface is still stale while that repair order is unfolding
 
 ## Why this matters
 
@@ -84,6 +85,10 @@ Current canonical packet surfaces are:
   - `fixtures/executable_loop_compound_continuation_run_004/stage0_repair_packet.json`
   - `fixtures/executable_loop_compound_continuation_run_004/stage1_repair_packet.json`
   - `fixtures/executable_loop_compound_continuation_run_004/stage2_repair_packet.json`
+- richer artifact-quality and ordered-repair continuation:
+  - `fixtures/executable_loop_compound_continuation_run_005/stage0_repair_packet.json`
+  - `fixtures/executable_loop_compound_continuation_run_005/stage1_repair_packet.json`
+  - `fixtures/executable_loop_compound_continuation_run_005/stage2_repair_packet.json`
 
 These prove:
 
@@ -93,6 +98,8 @@ These prove:
 - runtime-owned packets can now distinguish:
   - repairable compound invalid or degraded states
   - and terminal accepted states that should start a new run instead
+- runtime-owned packets can now narrow `required_inputs` to the current repair step instead of flattening the whole future repair debt into one giant input list
+- runtime-owned packets can now emit artifact-quality hints that say which existing artifact surface is still stale during continuation
 
 ## Current boundary
 

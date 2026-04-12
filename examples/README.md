@@ -72,6 +72,9 @@ They are here to show how `Synrail` artifacts fit together without importing raw
 - `../fixtures/executable_loop_runtime_resume_run_003/`
   - third canonical contour where a true `DOCTOR_BLOCKED` state continues through the named `resume` runtime path
   - includes `run.json` as the doctor-blocked runtime-continuation primary run artifact
+- `../fixtures/executable_loop_runtime_non_resumable_run_001/`
+  - first canonical contour where a governed continuation attempt is honestly rejected because the current selected mode is not resumable into governed execution
+  - includes `run.json` as the non-resumable runtime-continuation primary run artifact
 - `../fixtures/repair_handoff_run_001/`
   - first canonical contour where `resume` is blocked explicitly at `repair_handoff` because the continuation contract is still incomplete
   - includes `repair_handoff.json` as the machine-readable continuation contract
@@ -96,6 +99,10 @@ They are here to show how `Synrail` artifacts fit together without importing raw
   - fourth uglier packet-first continuation contour using selection/preparation handoff plus richer resumability-aware repair packets
   - crosses repair-handoff blocking, repairable recovery, and one explicit terminal not-resumable finish on the same runtime surface
   - includes `run.json` as the richer packet-first compound runtime-continuation primary run artifact
+- `../fixtures/executable_loop_compound_continuation_run_005/`
+  - fifth uglier packet-first continuation contour using selection/preparation handoff plus stale-artifact hints and explicit multi-step repair order
+  - crosses out-of-order repair blocking, doctor-blocked readiness, degraded recovery, and accepted closure on the same runtime surface
+  - includes `run.json` as the ordered packet-first compound runtime-continuation primary run artifact
 
 ## Rule
 

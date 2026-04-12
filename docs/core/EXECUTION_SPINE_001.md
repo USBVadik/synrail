@@ -163,3 +163,8 @@ Any future spine growth should strengthen one of these:
 - next-safe-step emission
 
 If it mostly adds breadth before enforcement depth, it is premature.
+
+It now also proves two stronger continuation edges than before:
+
+- one explicit truly not-resumable selection-blocked family that stops at `resume` with `STATE_NOT_RESUMABLE`
+- one fifth uglier packet-first continuation family that carries stale-artifact hints, explicit repair order, one newly surfaced readiness failure, recovery repair, and accepted closure on the same runtime surface

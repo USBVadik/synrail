@@ -1,0 +1,18 @@
+{
+  "schema_version": "mode_selection_receipt_v0",
+  "recommendation_file": "fixtures/executable_loop_runtime_non_resumable_run_001/recommendation.json",
+  "scenario_class": "low_risk_honesty_restoration",
+  "task_class": "honesty_restoration_guard",
+  "recommended_mode": "LIGHTWEIGHT_BASELINE",
+  "selected_mode": "LIGHTWEIGHT_BASELINE",
+  "secondary_exception_mode": "",
+  "governed_preparation_recommended": false,
+  "selected_with_preparation": false,
+  "followed_recommendation": true,
+  "heavier_contour_entered": false,
+  "estimated_avoided_operator_minutes": 20,
+  "estimated_avoided_interventions": 3,
+  "estimated_avoided_closure_latency_minutes": 22,
+  "why": "measured class evidence already says baseline is good enough here; using baseline likely avoids about 20 added operator minutes, 3 extra interventions, and 22 extra closure-latency minutes without giving up a decisive safety gain",
+  "next_safe_step": "use the lightweight baseline and only escalate if cheap validation leaves a named ambiguity unresolved"
+}

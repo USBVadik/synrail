@@ -188,6 +188,15 @@ def build_runtime_truth(state: dict, report: dict | None) -> dict:
     }
 
 
+def build_artifact_quality_summary(handoff: dict) -> dict:
+    hints = handoff.get("artifact_quality_hints", [])
+    return {
+        "artifact_ids": [hint["artifact_id"] for hint in hints],
+        "stale_artifact_ids": [hint["artifact_id"] for hint in hints if hint.get("quality") == "STALE"],
+        "non_resumable_artifact_ids": [hint["artifact_id"] for hint in hints if hint.get("quality") == "NON_RESUMABLE"],
+    }
+
+
 def build_packet_from_runtime_truth(
     *,
     state: dict,
@@ -265,6 +274,9 @@ def build_packet_from_runtime_truth(
         "continuation_entrypoint": "resume",
         "repair_handoff": handoff,
         "resumability": resumability,
+        "repair_policy": handoff.get("repair_policy", {}),
+        "artifact_quality_hints": list(handoff.get("artifact_quality_hints", [])),
+        "artifact_quality_summary": build_artifact_quality_summary(handoff),
         "continuation_plan": build_continuation_plan(packet_args, handoff),
         "resume_context": {
             "doctor_run_id": doctor_run_id,

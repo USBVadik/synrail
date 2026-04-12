@@ -69,10 +69,12 @@ Start here when you want to understand the kernel itself:
 - `core/EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_001.md`
 - `core/EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_002.md`
 - `core/EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003.md`
+- `core/EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_001.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_001.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_002.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_003.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_004.md`
+- `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005.md`
 - `core/SCHEMA_VALIDATION_001.md`
 - `core/EXECUTABLE_LOOP_RUN_001.md`
 - `core/EXECUTABLE_LOOP_RUN_002.md`
@@ -120,12 +122,14 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/executable_loop_runtime_resume_run_001/run.json`
 - `../fixtures/executable_loop_runtime_resume_run_002/run.json`
 - `../fixtures/executable_loop_runtime_resume_run_003/run.json`
+- `../fixtures/executable_loop_runtime_non_resumable_run_001/run.json`
 - `../fixtures/repair_packet_run_001/run.json`
 - `../fixtures/repair_handoff_run_001/run.json`
 - `../fixtures/executable_loop_compound_continuation_run_001/run.json`
 - `../fixtures/executable_loop_compound_continuation_run_002/run.json`
 - `../fixtures/executable_loop_compound_continuation_run_003/run.json`
 - `../fixtures/executable_loop_compound_continuation_run_004/run.json`
+- `../fixtures/executable_loop_compound_continuation_run_005/run.json`
 - `../fixtures/governed_path_cost_delta_001.json`
 - `../fixtures/executable_loop_hybrid_pressure_run_003/run.json`
 

@@ -112,6 +112,24 @@ Current pressure-tested slice:
 
 - one cost-aware mode selector now exists so obvious non-winning paths can be steered back to baseline before entering a heavier contour
 
+### 7. Strengthen packet-first continuation truth
+
+Goal:
+
+- make continuation more runtime-owned and less dependent on operator reconstruction
+
+Current pressure-tested slice:
+
+- repair packets now carry explicit artifact-quality hints in addition to missing-input truth
+- one truly not-resumable selection-blocked continuation family now exists beside repairable and terminal families
+- one uglier packet-first continuation run now proves explicit repair order, stale-artifact hints, mid-continuation doctor failure, and return to accepted closure
+
+Next likely strengthening moves:
+
+- sharpen artifact-quality hints so they name narrower stale sub-surfaces inside larger artifacts
+- pressure-test more non-resumable families beyond lighter-mode selection and terminal acceptance
+- keep reducing manual flag replay around packet-first `resume`
+
 ### 6. Sharpen doctor on expensive false-readiness modes
 
 Goal:

@@ -138,6 +138,30 @@
           "items": {
             "type": "string"
           }
+        },
+        "policy_type": {
+          "type": "string"
+        },
+        "policy_next_step": {
+          "type": "string"
+        },
+        "policy_ready_steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stale_artifact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "non_resumable_artifact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -162,7 +186,17 @@
           "type": "array",
           "items": {"type": "string"}
         },
-        "resumability_requires_new_run": {"type": "boolean"}
+        "resumability_requires_new_run": {"type": "boolean"},
+        "resumability_policy_type": {"type": "string"},
+        "resumability_policy_next_step": {"type": "string"},
+        "resumability_ready_now_steps": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "resumability_stale_artifact_ids": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
       }
     },
     "selection": {

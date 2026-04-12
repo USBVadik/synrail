@@ -94,6 +94,7 @@ Current strongest value carriers are:
 - one repair handoff layer that now tells the runtime and the operator exactly which continuation inputs are still missing before a non-green contour can resume honestly
 - one richer repair packet that is now runtime-owned enough to group continuation contract, continuation plan, selection/preparation truth, repair inputs, and runtime output defaults above the handoff itself
 - one richer repair packet that now also carries explicit resumability family, active repair pressures, repair order, and a clearer separation between repairable and terminal continuation truth
+- one richer repair packet that now also points to which existing artifact surface is still stale during continuation, not only which next input is missing
 - one governed-path preparation slice that predeclares the proof surface and records complete first-pass bundle assembly
 - one preparation-aware prepared governed run that reaches accepted closure inside the same bounded orchestration path
 - one measured governed-path cost-reduction slice that treats preparation as a bounded economic improvement rather than only a cleaner ritual
@@ -106,6 +107,8 @@ Current strongest value carriers are:
 - one canonical degraded-to-accepted re-entry contour
 - one canonical ugly compound repair contour across blocked, partial, degraded, and accepted stages
 - one canonical hybrid pressure contour that stops on partial proof and then returns to accepted closure
+- one canonical truly not-resumable selection-blocked continuation contour
+- one fifth uglier packet-first compound continuation contour that now carries stale-artifact hints, explicit repair order, one newly surfaced readiness failure, and accepted closure on the same runtime surface
 - explicit precedence for competing spine-side blockers
 - explicit precedence for competing degradations
 - anti-drift refresh after state degradation
@@ -117,7 +120,7 @@ Current weaker areas are:
 - doctor is now stronger than v0, includes bounded filesystem/env probes, and now catches one credential-path false-green, one exact-task-identity mismatch, and one wrong-target-surface mismatch, but it is still narrower than a mature readiness layer
 - the stack now has one bounded spine-driven runtime contour, but not yet a deeper end-to-end runtime
 - blocked-to-accepted, partial-to-accepted, and degraded-to-accepted re-entry are now canonical, and one ugly mixed repair family is now canonical too, but compound reality is still much weaker than it should be
-- repair handoff and repair packet now both exist, and packet-first continuation is now the default operator path, but the packet is still narrower than a mature continuation surface should eventually become
+- repair handoff and repair packet now both exist, packet-first continuation is now the default operator path, and current-step stale-artifact hints now exist too, but the packet is still narrower than a mature continuation surface should eventually become
 - terminal vs repairable continuation is now materially clearer than before, but not every future non-green family is yet pressure-tested
 - comparison harness now has a six-scenario economics slice, but it is still too narrow to count as product-grade economics
 - production-grade runtime readiness is not yet proven

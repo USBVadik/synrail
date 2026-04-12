@@ -37,11 +37,19 @@ The handoff slice reads one current `run_state` and emits:
 - `required_inputs`
 - `runtime_defaults`
 - `next_safe_step`
+- `repair_policy`
+- `artifact_quality_hints`
 
 That output is intentionally narrow.
 
 It does not try to solve the repair.
 It names the missing continuation contract clearly enough for the runtime and the operator to stay aligned.
+
+It now also names:
+
+- which repair step is current
+- which existing artifact surface is still stale
+- and whether the current contour is repairable at all or should follow a non-resumable next step instead
 
 ## Current mappings
 
@@ -81,6 +89,32 @@ Observed blocked reading:
 
 - `BLOCKED | repair_handoff | CONTINUATION_INPUTS_MISSING | DOCTOR_BLOCKED | CLAIMED_NOT_ACCEPTED`
 
+## Expanded handoff reading
+
+The current handoff layer now also proves one non-resumable family:
+
+- `fixtures/executable_loop_runtime_non_resumable_run_001/repair_handoff.json`
+
+That handoff records:
+
+- `resumability.family = NOT_RESUMABLE_SELECTION_BLOCKED`
+- `repair_policy.policy_type = NON_RESUMABLE_NEXT_STEP`
+- `repair_policy.next_step_id = switch_to_lighter_mode`
+- artifact-quality hint:
+  - `mode_selection_receipt`
+
+The current handoff layer also now supports one stricter multi-step compound family:
+
+- `fixtures/executable_loop_compound_continuation_run_005/stage0_repair_handoff.json`
+- `fixtures/executable_loop_compound_continuation_run_005/stage1_repair_handoff.json`
+- `fixtures/executable_loop_compound_continuation_run_005/stage2_repair_handoff.json`
+
+Those prove:
+
+- required inputs now narrow to the current repair step
+- the repair order is explicit
+- the handoff can point to the stale artifact surface that still needs repair
+
 ## Why this matters
 
 This is the first time `Synrail` can say, in one machine-readable artifact:
@@ -102,4 +136,6 @@ The shortest honest reading is:
 
 - `Synrail` now has one first-class repair handoff layer
 - the runtime can now block continuation at `repair_handoff` when required inputs are still missing
+- the same handoff layer can now also say when a continuation family is truly not resumable
+- and it can now point to which artifact surface is still stale while multi-step repair is unfolding
 - named continuation is starting to look like a real product contour instead of only a repaired evidence pattern

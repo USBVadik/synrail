@@ -1,0 +1,44 @@
+{
+  "schema_version": "doctor_record_v0",
+  "doctor_run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005_RESUME",
+  "doctor_level": "CORE_DOCTOR",
+  "target_execution_surface": {
+    "path": "fixtures/executable_loop_compound_continuation_run_005",
+    "classification": "resume_surface",
+    "observed_identity": "",
+    "expected_identity": "compound-prepared-surface-004"
+  },
+  "trusted_baseline": {
+    "identity": "compound-prepared-surface-004"
+  },
+  "intended_run_class": "core_probe",
+  "gate_results": {
+    "baseline_identity": {
+      "status": "PASS",
+      "note": "trusted baseline identity is present"
+    },
+    "clean_execution_surface": {
+      "status": "PASS",
+      "note": "non-git execution surface exists and is explicitly observed"
+    },
+    "artifact_viability": {
+      "status": "PASS",
+      "note": "artifact path parent exists and is writable by convention"
+    },
+    "helper_integrity": {
+      "status": "NOT_APPLICABLE",
+      "note": "helper integrity not required for this level"
+    },
+    "credential_surface": {
+      "status": "NOT_APPLICABLE",
+      "note": "credential surface not required for this level"
+    },
+    "prompt_task_identity": {
+      "status": "PASS",
+      "note": "exact prompt and task identity are present"
+    }
+  },
+  "blocking_failure_classes": [],
+  "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+  "recommended_next_safe_step": "run execution"
+}

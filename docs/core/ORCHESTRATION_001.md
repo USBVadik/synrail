@@ -212,6 +212,11 @@ And now, when explicitly requested:
 - baseline comparison after the run contour
 - economics-aware comparison when the supplied inputs use the `v1` comparison schema
 
+That continuation layer now also does two stricter things:
+
+- it blocks at `repair_handoff` with `REPAIR_POLICY_STEP_OUT_OF_ORDER` when later-step repair inputs arrive before the current repair step is satisfied
+- it blocks at `resume` with `STATE_NOT_RESUMABLE` when the current contour is selection-blocked and should follow a lighter mode instead of governed continuation
+
 ## Decision rule
 
 Future orchestration growth should improve one of these:

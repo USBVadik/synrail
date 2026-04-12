@@ -118,21 +118,33 @@ def load_repair_handoff(path: Path) -> dict:
 
 
 def report_resumability_fields(state: dict, handoff: dict | None = None) -> dict:
-    if handoff and handoff.get("from_state") == state.get("state"):
-        resumability = handoff.get("resumability", build_resumability(state))
-    else:
-        resumability = build_repair_handoff(state).get("resumability", build_resumability(state))
+    current_handoff = handoff if handoff and handoff.get("from_state") == state.get("state") else build_repair_handoff(state)
+    resumability = current_handoff.get("resumability", build_resumability(state))
+    repair_policy = current_handoff.get("repair_policy", {})
+    artifact_quality_hints = current_handoff.get("artifact_quality_hints", [])
     return {
         "resumability_status": resumability["status"],
         "resumability_family": resumability["family"],
         "resumability_active_pressures": list(resumability["active_pressures"]),
         "resumability_repair_order": list(resumability["recommended_repair_order"]),
         "resumability_requires_new_run": resumability["requires_new_run"],
+        "resumability_policy_type": repair_policy.get("policy_type", ""),
+        "resumability_policy_next_step": repair_policy.get("next_step_id", ""),
+        "resumability_ready_now_steps": list(repair_policy.get("ready_now_step_ids", [])),
+        "resumability_stale_artifact_ids": [
+            hint["artifact_id"] for hint in artifact_quality_hints if hint.get("quality") == "STALE"
+        ],
     }
 
 
 def repair_packet_summary(packet: dict | None, state: dict) -> dict:
-    resumability = packet["resumability"] if packet else build_resumability(state)
+    handoff = packet["repair_handoff"] if packet else build_repair_handoff(state)
+    resumability = packet["resumability"] if packet else handoff.get("resumability", build_resumability(state))
+    repair_policy = packet["repair_policy"] if packet else handoff.get("repair_policy", {})
+    artifact_quality_summary = packet.get("artifact_quality_summary", {}) if packet else {
+        "stale_artifact_ids": [hint["artifact_id"] for hint in handoff.get("artifact_quality_hints", []) if hint.get("quality") == "STALE"],
+        "non_resumable_artifact_ids": [hint["artifact_id"] for hint in handoff.get("artifact_quality_hints", []) if hint.get("quality") == "NON_RESUMABLE"],
+    }
     return {
         "emitted": packet is not None,
         "from_state": packet["from_state"] if packet else "",
@@ -143,6 +155,11 @@ def repair_packet_summary(packet: dict | None, state: dict) -> dict:
         "resumability_family": resumability["family"],
         "active_pressures": list(resumability["active_pressures"]),
         "repair_order": list(resumability["recommended_repair_order"]),
+        "policy_type": repair_policy.get("policy_type", ""),
+        "policy_next_step": repair_policy.get("next_step_id", ""),
+        "policy_ready_steps": list(repair_policy.get("ready_now_step_ids", [])),
+        "stale_artifact_ids": list(artifact_quality_summary.get("stale_artifact_ids", [])),
+        "non_resumable_artifact_ids": list(artifact_quality_summary.get("non_resumable_artifact_ids", [])),
     }
 
 
@@ -220,6 +237,49 @@ def missing_continuation_inputs(args: argparse.Namespace, handoff: dict | None) 
         elif input_id == "refresh_reverification_complete" and not args.refresh_reverification_complete:
             missing.append(input_id)
     return missing
+
+
+def provided_continuation_inputs(args: argparse.Namespace) -> list[str]:
+    provided: list[str] = []
+    checks = [
+        ("prompt_identity", bool(args.prompt_identity.strip())),
+        ("task_identity", bool(args.task_identity.strip())),
+        ("target_identity_file", bool(args.target_identity_file)),
+        ("clean_surface_confirmation", args.clean_surface),
+        ("artifact_path", bool(args.artifact_path)),
+        ("helper_path", bool(args.helper_path)),
+        ("credential_surface", bool(args.credentials_ok or args.credential_env)),
+        ("final_result", bool(args.final_result)),
+        ("readback", bool(args.readback)),
+        ("scenario_proof", bool(args.scenario_proof)),
+        ("refresh_recovery_complete", args.refresh_recovery_status == "COMPLETE"),
+        ("refresh_reverification_complete", args.refresh_reverification_complete),
+    ]
+    for input_id, present in checks:
+        if present:
+            provided.append(input_id)
+    return provided
+
+
+def repair_policy_out_of_order_steps(args: argparse.Namespace, handoff: dict | None, missing_inputs: list[str]) -> list[str]:
+    if not handoff or not missing_inputs:
+        return []
+    repair_policy = handoff.get("repair_policy", {})
+    if repair_policy.get("policy_type") != "MULTI_STEP_REPAIR":
+        return []
+    ordered_steps = list(repair_policy.get("ordered_steps", []))
+    if len(ordered_steps) < 2:
+        return []
+    next_required_inputs = set(ordered_steps[0].get("required_inputs", []))
+    if not next_required_inputs.intersection(missing_inputs):
+        return []
+    provided_inputs = set(provided_continuation_inputs(args))
+    out_of_order: list[str] = []
+    for step in ordered_steps[1:]:
+        step_inputs = set(step.get("required_inputs", []))
+        if step_inputs and step_inputs.intersection(provided_inputs):
+            out_of_order.append(step["step_id"])
+    return out_of_order
 
 
 def maybe_emit_repair_handoff(args: argparse.Namespace, state: dict) -> dict | None:
@@ -989,6 +1049,10 @@ def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict, rep
             "resumability_active_pressures": list(report.get("resumability_active_pressures", [])),
             "resumability_repair_order": list(report.get("resumability_repair_order", [])),
             "resumability_requires_new_run": report.get("resumability_requires_new_run", False),
+            "resumability_policy_type": report.get("resumability_policy_type", ""),
+            "resumability_policy_next_step": report.get("resumability_policy_next_step", ""),
+            "resumability_ready_now_steps": list(report.get("resumability_ready_now_steps", [])),
+            "resumability_stale_artifact_ids": list(report.get("resumability_stale_artifact_ids", [])),
             "resulting_state": report["resulting_state"],
             "next_safe_step": report["next_safe_step"],
         },
@@ -1010,6 +1074,10 @@ def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict, rep
             "active_pressures": list(report.get("resumability_active_pressures", [])),
             "repair_order": list(report.get("resumability_repair_order", [])),
             "requires_new_run": report.get("resumability_requires_new_run", False),
+            "policy_type": report.get("resumability_policy_type", ""),
+            "policy_next_step": report.get("resumability_policy_next_step", ""),
+            "ready_now_steps": list(report.get("resumability_ready_now_steps", [])),
+            "stale_artifact_ids": list(report.get("resumability_stale_artifact_ids", [])),
         },
     }
 
@@ -1074,7 +1142,12 @@ def finalize_runtime_outputs(
     refresh_report: dict | None = None,
     comparison: dict | None = None,
 ) -> None:
-    current_handoff = repair_handoff or maybe_emit_repair_handoff(args, state)
+    if repair_handoff and repair_handoff.get("from_state") == state["state"]:
+        current_handoff = repair_handoff
+    else:
+        current_handoff = maybe_emit_repair_handoff(args, state)
+    if current_handoff and getattr(args, "repair_handoff_output", None):
+        save_json(Path(args.repair_handoff_output), current_handoff)
     report.update(report_resumability_fields(state, current_handoff))
     if getattr(args, "report_output", None):
         save_json(Path(args.report_output), report)
@@ -1317,22 +1390,87 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                     selection_receipt=selection_receipt,
                 )
                 return 2
-            apply_repair_handoff_defaults(args, repair_handoff)
-            continuation_missing_inputs = missing_continuation_inputs(args, repair_handoff)
-            if continuation_missing_inputs:
-                report = build_repair_handoff_blocked_report(
-                    state,
-                    doctor_verdict="",
-                    resume_applied=True,
-                    resume_from_state=resume_from_state,
-                    repair_handoff=repair_handoff,
-                    missing_inputs=continuation_missing_inputs,
-                    selection_applied=selection_applied,
-                    selected_mode=selected_mode,
-                    selected_with_preparation=selected_with_preparation,
-                    preparation_applied=False,
-                    preparation_ready_for_closure=False,
-                )
+        current_resume_handoff = repair_handoff or build_repair_handoff(state)
+        repair_handoff = current_resume_handoff
+        if not current_resume_handoff.get("continuation_allowed", False):
+            report = {
+                "schema_version": "orchestration_report_v0",
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "result": "BLOCKED",
+                "stopping_stage": "resume",
+                "reason": "STATE_NOT_RESUMABLE",
+                "doctor_verdict": "",
+                "resume_applied": True,
+                "resume_from_state": resume_from_state,
+                "repair_handoff_applied": repair_handoff_applied,
+                "repair_handoff_from_state": current_resume_handoff["from_state"],
+                "repair_handoff_required_inputs": repair_handoff_required_input_ids(current_resume_handoff),
+                "missing_continuation_inputs": [],
+                "selection_applied": selection_applied,
+                "selected_mode": selected_mode,
+                "selected_with_preparation": selected_with_preparation,
+                "preparation_applied": False,
+                "preparation_ready_for_closure": False,
+                "bundle_status": state["proof_bundle"]["status"],
+                "closure_status": state["closure"]["status"],
+                "refresh_applied": False,
+                "refresh_resulting_closure_status": "",
+                "comparison_applied": False,
+                "comparison_verdict": "",
+                "blockers": [current_resume_handoff["resumability"]["family"]],
+                "dominant_blocker": "STATE_NOT_RESUMABLE",
+                "resulting_state": state["state"],
+                "next_safe_step": state["next_safe_step"],
+            }
+            save_state(state_path, state)
+            save_json(Path(args.report_output), report)
+            finalize_runtime_outputs(
+                args,
+                state=state,
+                report=report,
+                resume_applied=True,
+                resume_from_state=resume_from_state,
+                repair_handoff=current_resume_handoff,
+                selection_receipt=selection_receipt,
+            )
+            print(json.dumps({"result": "BLOCKED", "stopping_stage": "resume", "reason": "STATE_NOT_RESUMABLE"}, ensure_ascii=True))
+            return 0
+        apply_repair_handoff_defaults(args, current_resume_handoff)
+        continuation_missing_inputs = missing_continuation_inputs(args, current_resume_handoff)
+        if continuation_missing_inputs:
+            out_of_order_steps = repair_policy_out_of_order_steps(args, current_resume_handoff, continuation_missing_inputs)
+            if out_of_order_steps:
+                report = {
+                    "schema_version": "orchestration_report_v0",
+                    "run_id": state["run_id"],
+                    "task_class": state["task_class"],
+                    "result": "BLOCKED",
+                    "stopping_stage": "repair_handoff",
+                    "reason": "REPAIR_POLICY_STEP_OUT_OF_ORDER",
+                    "doctor_verdict": "",
+                    "resume_applied": True,
+                    "resume_from_state": resume_from_state,
+                    "repair_handoff_applied": repair_handoff_applied,
+                    "repair_handoff_from_state": current_resume_handoff["from_state"],
+                    "repair_handoff_required_inputs": repair_handoff_required_input_ids(current_resume_handoff),
+                    "missing_continuation_inputs": list(continuation_missing_inputs),
+                    "selection_applied": selection_applied,
+                    "selected_mode": selected_mode,
+                    "selected_with_preparation": selected_with_preparation,
+                    "preparation_applied": False,
+                    "preparation_ready_for_closure": False,
+                    "bundle_status": state["proof_bundle"]["status"],
+                    "closure_status": state["closure"]["status"],
+                    "refresh_applied": False,
+                    "refresh_resulting_closure_status": "",
+                    "comparison_applied": False,
+                    "comparison_verdict": "",
+                    "blockers": list(out_of_order_steps),
+                    "dominant_blocker": "REPAIR_POLICY_STEP_OUT_OF_ORDER",
+                    "resulting_state": state["state"],
+                    "next_safe_step": state["next_safe_step"],
+                }
                 save_state(state_path, state)
                 save_json(Path(args.report_output), report)
                 finalize_runtime_outputs(
@@ -1341,12 +1479,39 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                     report=report,
                     resume_applied=True,
                     resume_from_state=resume_from_state,
-                    repair_handoff=repair_handoff,
+                    repair_handoff=current_resume_handoff,
                     missing_continuation_inputs=continuation_missing_inputs,
                     selection_receipt=selection_receipt,
                 )
-                print(json.dumps({"result": "BLOCKED", "stopping_stage": "repair_handoff", "reason": "CONTINUATION_INPUTS_MISSING"}, ensure_ascii=True))
+                print(json.dumps({"result": "BLOCKED", "stopping_stage": "repair_handoff", "reason": "REPAIR_POLICY_STEP_OUT_OF_ORDER"}, ensure_ascii=True))
                 return 0
+            report = build_repair_handoff_blocked_report(
+                state,
+                doctor_verdict="",
+                resume_applied=True,
+                resume_from_state=resume_from_state,
+                repair_handoff=current_resume_handoff,
+                missing_inputs=continuation_missing_inputs,
+                selection_applied=selection_applied,
+                selected_mode=selected_mode,
+                selected_with_preparation=selected_with_preparation,
+                preparation_applied=False,
+                preparation_ready_for_closure=False,
+            )
+            save_state(state_path, state)
+            save_json(Path(args.report_output), report)
+            finalize_runtime_outputs(
+                args,
+                state=state,
+                report=report,
+                resume_applied=True,
+                resume_from_state=resume_from_state,
+                repair_handoff=current_resume_handoff,
+                missing_continuation_inputs=continuation_missing_inputs,
+                selection_receipt=selection_receipt,
+            )
+            print(json.dumps({"result": "BLOCKED", "stopping_stage": "repair_handoff", "reason": "CONTINUATION_INPUTS_MISSING"}, ensure_ascii=True))
+            return 0
 
     if selection_applied and selected_mode != "FULL_GOVERNED_PATH":
         state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"

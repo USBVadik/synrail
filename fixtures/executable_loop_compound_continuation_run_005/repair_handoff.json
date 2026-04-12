@@ -1,0 +1,60 @@
+{
+  "schema_version": "repair_handoff_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "CLOSURE_ACCEPTED",
+  "closure_status": "ACCEPTED",
+  "blocking_reason": "",
+  "continuation_allowed": false,
+  "continuation_entrypoint": "",
+  "resumability": {
+    "status": "NOT_RESUMABLE",
+    "family": "NOT_RESUMABLE_TERMINAL",
+    "active_pressures": [
+      "TERMINAL_STATE"
+    ],
+    "recommended_repair_order": [
+      "start_new_run"
+    ],
+    "requires_new_run": true,
+    "explanation": "accepted or rejected terminal state should start a new run instead of resuming"
+  },
+  "repair_policy": {
+    "policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "next_step_id": "start_new_run",
+    "ready_now_step_ids": [],
+    "ordered_steps": [
+      {
+        "step_id": "start_new_run",
+        "status": "TERMINAL_NEXT_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "terminal_run_state"
+        ],
+        "resolves_pressures": [
+          "TERMINAL_STATE"
+        ],
+        "why": "terminal state should yield to a new run rather than another resume attempt"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "terminal_run_state",
+      "quality": "NON_RESUMABLE",
+      "still_stale_parts": [
+        "terminal_closure_status"
+      ],
+      "mapped_inputs": [],
+      "repair_step": "start_new_run",
+      "why": "the current run is already terminal and continuation should yield to a new run"
+    }
+  ],
+  "required_inputs": [],
+  "runtime_defaults": {
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false
+  },
+  "next_safe_step": "NONE"
+}

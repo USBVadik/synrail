@@ -281,6 +281,65 @@ Why this matters:
 - it removes one important ambiguity between repairable continuation states and truly terminal finishes
 - it makes the continuation lattice look more like a bounded runtime contract and less like a stack of adjacent artifacts
 
+## 9. Truly not-resumable selection-blocked continuation
+
+Current readable path:
+
+- starting surface:
+  - `fixtures/executable_loop_runtime_non_resumable_run_001/starting_state.json`
+- blocked runtime continuation surface:
+  - `fixtures/executable_loop_runtime_non_resumable_run_001/run.json`
+
+Readable transition:
+
+- lighter mode is selected
+- governed continuation is attempted anyway
+- runtime returns:
+  - `BLOCKED`
+  - `resume`
+  - `STATE_NOT_RESUMABLE`
+  - `NOT_RESUMABLE_SELECTION_BLOCKED`
+
+What this proves:
+
+- continuation truth now has one truly not-resumable family beyond terminal accepted finish
+- packet-first runtime can now say “do not resume this governed contour at all” instead of pretending every non-green state belongs to repair
+
+Why this matters:
+
+- it reduces one more ambiguity between repairable governed failures and legitimate lighter-mode exits
+- it makes the continuation lattice more honest around policy-selected non-governed paths
+
+## 10. Ordered multi-step continuation with stale-artifact hints
+
+Current readable path:
+
+- starting surface:
+  - `fixtures/executable_loop_compound_continuation_run_005/stage0_run.json`
+- final surface:
+  - `fixtures/executable_loop_compound_continuation_run_005/run.json`
+
+Readable transition:
+
+- prepared strong-path continuation starts in one repairable invalid-proof state
+- out-of-order repair is blocked at `repair_handoff`
+- proof repair is accepted
+- doctor then surfaces one narrower readiness failure
+- readiness is repaired
+- recovery repair is completed
+- final run returns to `CLOSURE_ACCEPTED`
+
+What this proves:
+
+- packet-first continuation now has one clearer multi-step repair policy order
+- the runtime can point to which artifact surface is still stale at each repair step
+- continuation can still survive one newly surfaced readiness failure in the middle of a longer repair chain
+
+Why this matters:
+
+- it makes continuation more product-real under messy repair order
+- it reduces the gap between “missing input” truth and “existing artifact still stale” truth
+
 ## What the re-entry lattice now supports
 
 The current re-entry lattice supports a stronger kernel-level claim:
@@ -291,8 +350,10 @@ The current re-entry lattice supports a stronger kernel-level claim:
   - one explicit reverse edge from a degraded recovery state back to accepted closure
   - one explicit compound repair family that crosses blocked, partial, and degraded contours on the way back to accepted closure
   - one richer packet-first continuation family that now distinguishes repairable compound truth from terminal accepted truth on the same runtime surface
+  - one explicit non-resumable selection-blocked continuation family
   - one packet-driven compound continuation family that crosses blocked, invalid, degraded, and accepted contours on the way back to honest closure
   - one packet-first continuation family that carries selection/preparation handoff through invalid-proof and degraded-recovery repair back to accepted closure
+  - one stricter packet-first continuation family that now carries repair order and stale-artifact hints through invalid-proof, readiness repair, and recovery repair back to accepted closure
 
 That is stronger than saying only:
 
@@ -307,7 +368,7 @@ because it shows the kernel can sometimes recover honestly after a prior block.
 The re-entry lattice still has visible gaps:
 
 - the current canonical reverse edges now cover readiness repair, proof completion, one recovery repair, and one ugly mixed family, but not the full set of future compound families
-- named runtime `resume` now exists for partial-proof, degraded-recovery, and doctor-blocked continuation, and repair handoff plus repair packet now name the continuation contract much more honestly, but the packet is still narrower than a mature continuation surface should be
+- named runtime `resume` now exists for partial-proof, degraded-recovery, doctor-blocked continuation, and one explicit non-resumable selection-blocked family, and repair handoff plus repair packet now name the continuation contract much more honestly, but the packet is still narrower than a mature continuation surface should be
 - hybrid compound repair is still much weaker than it should be
 
 ## How this relates to other readings
@@ -338,8 +399,8 @@ That is a healthier internal product surface than treating repair only as someth
 
 The next strongest kernel work should improve one of these:
 
-1. make the continuation packet richer where the runtime already knows more than the current bounded fields express
-2. reduce ambiguity between “repairable blocked”, “repairable partial”, “repairable degraded”, and “still not re-enterable” states
+1. make artifact-quality hints even sharper where the runtime already knows more than the current bounded fields express
+2. pressure-test more truly not-resumable families beyond selection-blocked and terminal accepted
 3. strengthen the economics reading around compound re-entry rather than only its state semantics
 4. keep packet-first continuation the default operator path instead of letting raw flag replay creep back in
 

@@ -123,12 +123,15 @@ The current proof reading is:
 - the repo now also has one richer repair-packet slice that carries continuation context, continuation plan, repair inputs, and runtime output defaults in one machine-readable bundle
 - the repo now also auto-synthesizes that richer repair packet from current runtime truth, so the operator no longer has to assemble most continuation context by hand
 - the repo now also lets that richer repair packet carry explicit resumability family, active repair pressures, and repair order so runtime continuation can distinguish repairable contours from terminal ones more honestly
+- the repo now also lets that richer repair packet point to which existing artifact surface is still stale, not only which next input is missing
 - the repo now also has one canonical blocked repair-handoff run showing that `resume` now stops explicitly at `repair_handoff` when the continuation contract is still incomplete
+- the repo now also has one canonical runtime non-resumable run showing that a lighter-mode selection block now stops governed continuation at `resume` with `STATE_NOT_RESUMABLE`
 - the repo now also has one bounded governed-path cost delta showing that preparation can reduce operator tax inside the winning contour without weakening closure safety
 - the repo now also has one canonical ugly compound continuation run showing that two staged repair handoffs plus named `resume` can cross doctor-blocked, partial-proof, and degraded-recovery pressure on the same runtime surface
 - the repo now also has one second uglier compound continuation run showing that richer repair packets plus named `resume` can cross blocked readiness, invalid proof, degraded recovery, and accepted closure on the same runtime surface
 - the repo now also has one third uglier packet-first compound continuation run showing that selection/preparation handoff, auto-synthesized repair packets, and named `resume` can now cross invalid proof and degraded recovery on the same runtime surface
 - the repo now also has one fourth uglier packet-first compound continuation run showing that selection/preparation handoff, packet-first `resume`, repair-handoff blocking, degraded recovery, and a final explicit terminal not-resumable reading can now live on the same runtime surface
+- the repo now also has one fifth uglier packet-first compound continuation run showing that selection/preparation handoff, stale-artifact hints, explicit repair order, one mid-continuation readiness failure, and accepted closure can now live on the same runtime surface
 
 The current wedge reading is:
 
@@ -148,11 +151,13 @@ The current executable output reading is:
 - the repo now also carries one third canonical runtime-resume fixture on that same artifact surface
 - the repo now also carries one canonical repair-packet blocked fixture on that same artifact surface
 - the repo now also carries one canonical repair-handoff blocked fixture on that same artifact surface
+- the repo now also carries one canonical runtime non-resumable fixture on that same artifact surface
 - the repo now also carries one canonical ugly compound repair fixture on that same artifact surface
 - the repo now also carries one canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one second canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one third canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one fourth canonical ugly compound continuation fixture on that same artifact surface
+- the repo now also carries one fifth canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one canonical hybrid pressure fixture on that same artifact surface
 - the repo now also has one explicit outcome lattice across accepted, partial, degraded, and blocked contours
 - the repo now also has one explicit re-entry reading for blocked-to-accepted, partial-to-accepted, and degraded-to-accepted repair
