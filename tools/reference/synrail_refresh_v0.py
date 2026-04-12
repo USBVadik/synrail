@@ -17,6 +17,14 @@ def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
+PRECEDENCE = [
+    "closure_invalidated_by_doctor",
+    "closure_invalidated_by_invalid_bundle",
+    "closure_invalidated_by_partial_bundle",
+    "closure_invalidated_by_recovery",
+]
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="synrail-refresh-v0")
     parser.add_argument("--state-file", required=True)
@@ -31,8 +39,28 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def downgrade_for_doctor(state: dict, invalidations: list[str]) -> None:
+def applicable_invalidations(state: dict) -> list[str]:
+    invalidations: list[str] = []
     if state["doctor"]["status"] == "FAIL":
+        invalidations.append("closure_invalidated_by_doctor")
+    if state["proof_bundle"]["status"] == "INVALID":
+        invalidations.append("closure_invalidated_by_invalid_bundle")
+    elif state["proof_bundle"]["status"] != "COMPLETE":
+        invalidations.append("closure_invalidated_by_partial_bundle")
+    if state["recovery"]["status"] == "PENDING" and not state["recovery"]["reverification_complete"]:
+        invalidations.append("closure_invalidated_by_recovery")
+    return invalidations
+
+
+def dominant_invalidation(invalidations: list[str]) -> str:
+    for candidate in PRECEDENCE:
+        if candidate in invalidations:
+            return candidate
+    return ""
+
+
+def apply_dominant_invalidation(state: dict, dominant: str) -> None:
+    if dominant == "closure_invalidated_by_doctor":
         state["state"] = "DOCTOR_BLOCKED"
         state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
         state["closure"]["blocking_reason"] = "DOCTOR_NOT_GREEN"
@@ -40,29 +68,29 @@ def downgrade_for_doctor(state: dict, invalidations: list[str]) -> None:
         state["closure"]["narrow_next_safe_step"] = "run doctor and clear blocking failure classes"
         state["closure"]["missing_sections"] = []
         state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
-        invalidations.append("closure_invalidated_by_doctor")
+        return
 
-
-def downgrade_for_partial_bundle(state: dict, invalidations: list[str]) -> None:
-    if state["proof_bundle"]["status"] != "COMPLETE":
-        if state["proof_bundle"]["status"] == "INVALID":
-            state["state"] = "PROOF_BUNDLE_INVALID"
-            state["closure"]["blocking_reason"] = "INVALID_PROOF_BUNDLE"
-            state["closure"]["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
-            state["closure"]["narrow_next_safe_step"] = "repair the final result artifact and rebuild the proof bundle"
-        else:
-            state["state"] = "PROOF_BUNDLE_PARTIAL"
-            state["closure"]["blocking_reason"] = "MISSING_PROOF_SECTIONS"
-            state["closure"]["next_allowed_transition"] = "PROOF_BUNDLE_COMPLETION"
-            state["closure"]["narrow_next_safe_step"] = "complete the missing proof sections"
+    if dominant == "closure_invalidated_by_invalid_bundle":
+        state["state"] = "PROOF_BUNDLE_INVALID"
         state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+        state["closure"]["blocking_reason"] = "INVALID_PROOF_BUNDLE"
+        state["closure"]["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
+        state["closure"]["narrow_next_safe_step"] = "repair the final result artifact and rebuild the proof bundle"
         state["closure"]["missing_sections"] = list(state["proof_bundle"]["missing_sections"])
         state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
-        invalidations.append("closure_invalidated_by_partial_bundle")
+        return
 
+    if dominant == "closure_invalidated_by_partial_bundle":
+        state["state"] = "PROOF_BUNDLE_PARTIAL"
+        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+        state["closure"]["blocking_reason"] = "MISSING_PROOF_SECTIONS"
+        state["closure"]["next_allowed_transition"] = "PROOF_BUNDLE_COMPLETION"
+        state["closure"]["narrow_next_safe_step"] = "complete the missing proof sections"
+        state["closure"]["missing_sections"] = list(state["proof_bundle"]["missing_sections"])
+        state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+        return
 
-def downgrade_for_recovery(state: dict, invalidations: list[str]) -> None:
-    if state["recovery"]["status"] == "PENDING" and not state["recovery"]["reverification_complete"]:
+    if dominant == "closure_invalidated_by_recovery":
         state["state"] = "RECOVERY_PENDING"
         state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
         state["closure"]["blocking_reason"] = "RECOVERY_REVERIFICATION_INCOMPLETE"
@@ -70,12 +98,11 @@ def downgrade_for_recovery(state: dict, invalidations: list[str]) -> None:
         state["closure"]["narrow_next_safe_step"] = "run reverification against the attested target surface"
         state["closure"]["missing_sections"] = []
         state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
-        invalidations.append("closure_invalidated_by_recovery")
+        return
 
 
 def apply_event(args: argparse.Namespace, state: dict) -> tuple[dict, dict]:
     steps_applied: list[str] = []
-    invalidations: list[str] = []
 
     if args.doctor_status:
         state["doctor"]["status"] = args.doctor_status
@@ -103,9 +130,10 @@ def apply_event(args: argparse.Namespace, state: dict) -> tuple[dict, dict]:
         state["recovery"]["reverification_complete"] = bool(args.reverification_complete)
         steps_applied.append("recovery_status_refreshed")
 
-    downgrade_for_doctor(state, invalidations)
-    downgrade_for_partial_bundle(state, invalidations)
-    downgrade_for_recovery(state, invalidations)
+    invalidations = applicable_invalidations(state)
+    dominant = dominant_invalidation(invalidations)
+    if dominant:
+        apply_dominant_invalidation(state, dominant)
 
     if state["closure"]["status"] == "ACCEPTED":
         state["state"] = "CLOSURE_ACCEPTED"
@@ -119,6 +147,7 @@ def apply_event(args: argparse.Namespace, state: dict) -> tuple[dict, dict]:
         "event_type": args.event_type,
         "steps_applied": steps_applied,
         "invalidations": invalidations,
+        "dominant_invalidation": dominant,
         "resulting_state": state["state"],
         "resulting_closure_status": state["closure"]["status"],
         "next_safe_step": state["next_safe_step"],

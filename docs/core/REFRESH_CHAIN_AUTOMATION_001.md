@@ -21,7 +21,7 @@ The refresh automation v0 can:
 2. apply one explicit event type
 3. refresh doctor, proof-bundle, closure, and recovery surfaces in deterministic order
 4. invalidate over-green closure state when lower-level evidence worsens
-5. emit one machine-readable refresh report
+5. emit one machine-readable refresh report with explicit dominant invalidation
 6. optionally write the refreshed state back to disk
 
 ## Why this matters
@@ -49,6 +49,18 @@ Those downgrades now also land in explicit degradation states instead of only ch
 - `PROOF_BUNDLE_PARTIAL`
 - `PROOF_BUNDLE_INVALID`
 - `RECOVERY_PENDING`
+
+The current precedence rule is now explicit:
+
+1. `closure_invalidated_by_doctor`
+2. `closure_invalidated_by_invalid_bundle`
+3. `closure_invalidated_by_partial_bundle`
+4. `closure_invalidated_by_recovery`
+
+So when multiple degradations apply at once, the refresh report names:
+
+- all applicable invalidations
+- one `dominant_invalidation`
 
 ## v0 limitations
 

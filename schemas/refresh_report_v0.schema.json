@@ -10,6 +10,7 @@
     "event_type",
     "steps_applied",
     "invalidations",
+    "dominant_invalidation",
     "resulting_state",
     "resulting_closure_status",
     "next_safe_step"
@@ -36,6 +37,9 @@
       "items": {
         "type": "string"
       }
+    },
+    "dominant_invalidation": {
+      "type": "string"
     },
     "resulting_state": {
       "type": "string"
