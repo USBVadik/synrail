@@ -97,4 +97,7 @@ For small repo hygiene and change-shape expectations, see:
 - `docs/boundary/KILLER_PATH_001.md`
 - `docs/boundary/BASELINE_COMPARISON_PLAN_001.md`
 - `docs/boundary/BASELINE_RUNBOOK_001.md`
+- `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
+- `docs/boundary/OVERHEAD_VS_VALUE_MAP_001.md`
+- `docs/boundary/CORE_COMPRESSION_PASS_001.md`

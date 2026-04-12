@@ -126,3 +126,5 @@ The current product-review anchor for this phase is:
 - `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `docs/boundary/BASELINE_COMPARISON_RECORD_001_TEMPLATE.md`
 - `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
+- `docs/boundary/OVERHEAD_VS_VALUE_MAP_001.md`
+- `docs/boundary/CORE_COMPRESSION_PASS_001.md`
