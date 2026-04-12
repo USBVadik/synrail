@@ -6,6 +6,10 @@ State the shortest honest current reading of the canonical outcome classes the e
 
 This document exists so the repo can summarize kernel behavior through outcome types, not only through scenario-by-scenario narratives.
 
+For the current transition-focused reading across those outcome classes, see:
+
+- `TRANSITION_LATTICE_001.md`
+
 ## Canonical outcome surfaces
 
 The current lattice is anchored by four canonical surfaces:

@@ -107,6 +107,10 @@ The shortest current outcome-class reading for those surfaces now lives at:
 
 - `OUTCOME_LATTICE_001.md`
 
+The shortest current transition reading for those surfaces now lives at:
+
+- `TRANSITION_LATTICE_001.md`
+
 ## What this changes for product direction
 
 The next phase should optimize for:

@@ -67,12 +67,13 @@ Read these first:
 
 1. `docs/boundary/EXECUTABLE_STACK_READING_001.md`
 2. `docs/boundary/OUTCOME_LATTICE_001.md`
-3. `docs/boundary/TRIO_READING_001.md`
-4. `docs/boundary/KILLER_PATH_001.md`
-5. `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
-6. `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
-7. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
-8. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
+3. `docs/boundary/TRANSITION_LATTICE_001.md`
+4. `docs/boundary/TRIO_READING_001.md`
+5. `docs/boundary/KILLER_PATH_001.md`
+6. `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
+7. `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
+8. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
+9. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
 
 Read these next only if you need them:
 
