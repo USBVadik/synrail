@@ -368,6 +368,8 @@ def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> list[str
     packet = load_repair_packet(packet_path)
     if packet["run_id"] != state["run_id"] or packet["from_state"] != state["state"]:
         raise ValueError("repair packet does not match the requested state")
+    if packet.get("resumability", {}).get("status", "REPAIRABLE") != "REPAIRABLE":
+        raise ValueError("repair packet does not describe a resumable continuation state")
 
     context = packet["resume_context"]
     continuation_plan = packet.get("continuation_plan", {})

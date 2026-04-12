@@ -14,7 +14,7 @@ but also whether the kernel can return from a less-green contour after the block
 
 ## Current re-entry anchors
 
-The current re-entry lattice is anchored by four canonical repair families, three named runtime continuation contours, one richer repair-packet layer, one packet-first continuation family, and one explicit repair-handoff layer:
+The current re-entry lattice is anchored by four canonical repair families, three named runtime continuation contours, one richer repair-packet layer, two packet-first continuation families, and one explicit repair-handoff layer:
 
 1. blocked readiness to accepted closure
 2. partial proof to accepted closure
@@ -26,6 +26,7 @@ The current re-entry lattice is anchored by four canonical repair families, thre
 8. one machine-readable repair handoff layer plus one ugly compound continuation family through named `resume`
 9. one richer repair-packet layer plus one second uglier compound continuation family through named `resume`
 10. one packet-first continuation family where selection/preparation handoff survives into named `resume`
+11. one richer packet-first continuation family where selection/preparation truth, repairable compound truth, and terminal not-resumable truth now all appear on the same continuation path
 
 That is still bounded, but it is already materially stronger than one or two repaired contours.
 
@@ -249,6 +250,37 @@ Why this matters:
 - it makes runtime continuation more product-real and less tied only to later-stage repairs
 - it reduces the gap between canonical repaired evidence and explicit operator/runtime behavior
 
+## 8. Richer packet-first continuation with explicit terminal stop
+
+Current readable path:
+
+- richer packet-first starting surface:
+  - `fixtures/executable_loop_compound_continuation_run_004/stage0_run.json`
+- richer packet-first final surface:
+  - `fixtures/executable_loop_compound_continuation_run_004/run.json`
+
+Readable transition:
+
+- strong selection chooses prepared governed contour
+- prepared contour lands in one repairable compound invalid-proof state
+- packet-first `resume` blocks honestly at `repair_handoff`
+- proof inputs are repaired
+- continuation reaches `RECOVERY_PENDING`
+- recovery is completed and reverification is confirmed
+- final run lands in `CLOSURE_ACCEPTED`
+- final canonical run now records `NOT_RESUMABLE_TERMINAL`
+
+What this proves:
+
+- packet-first continuation can now preserve selection and preparation truth even when the first continuation attempt blocks
+- the runtime can now narrow one repairable compound family into one repairable recovery family before closure returns to green
+- the final accepted artifact now states that continuation should stop and a new run should begin instead
+
+Why this matters:
+
+- it removes one important ambiguity between repairable continuation states and truly terminal finishes
+- it makes the continuation lattice look more like a bounded runtime contract and less like a stack of adjacent artifacts
+
 ## What the re-entry lattice now supports
 
 The current re-entry lattice supports a stronger kernel-level claim:
@@ -258,6 +290,7 @@ The current re-entry lattice supports a stronger kernel-level claim:
   - one explicit reverse edge from a partial proof state back to accepted closure
   - one explicit reverse edge from a degraded recovery state back to accepted closure
   - one explicit compound repair family that crosses blocked, partial, and degraded contours on the way back to accepted closure
+  - one richer packet-first continuation family that now distinguishes repairable compound truth from terminal accepted truth on the same runtime surface
   - one packet-driven compound continuation family that crosses blocked, invalid, degraded, and accepted contours on the way back to honest closure
   - one packet-first continuation family that carries selection/preparation handoff through invalid-proof and degraded-recovery repair back to accepted closure
 

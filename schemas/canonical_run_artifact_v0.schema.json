@@ -75,6 +75,17 @@
           }
         },
         "dominant_blocker": {"type": "string"},
+        "resumability_status": {"type": "string"},
+        "resumability_family": {"type": "string"},
+        "resumability_active_pressures": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "resumability_repair_order": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "resumability_requires_new_run": {"type": "boolean"},
         "resulting_state": {"type": "string", "minLength": 1},
         "next_safe_step": {"type": "string"}
       }
@@ -127,7 +138,42 @@
           "items": {
             "type": "string"
           }
+        },
+        "selected_with_preparation": {"type": "boolean"},
+        "resumability_status": {"type": "string"},
+        "resumability_family": {"type": "string"},
+        "active_pressures": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "repair_order": {
+          "type": "array",
+          "items": {"type": "string"}
         }
+      }
+    },
+    "resumability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "family",
+        "active_pressures",
+        "repair_order",
+        "requires_new_run"
+      ],
+      "properties": {
+        "status": {"type": "string"},
+        "family": {"type": "string"},
+        "active_pressures": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "repair_order": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "requires_new_run": {"type": "boolean"}
       }
     }
   }

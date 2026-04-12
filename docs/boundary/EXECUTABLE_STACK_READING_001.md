@@ -33,7 +33,8 @@ The current executable stack can already provide:
 21. one canonical ugly compound continuation contour that crosses readiness repair, proof repair, and recovery repair through staged handoffs plus named `resume`
 22. one second uglier compound continuation contour that crosses blocked readiness, invalid proof, degraded recovery, and accepted closure through richer repair packets plus named `resume`
 23. one third uglier packet-first continuation contour that crosses selection/preparation handoff, invalid proof, degraded recovery, and accepted closure through named `resume`
-24. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
+24. one fourth uglier packet-first continuation contour that keeps selection/preparation truth through repair-handoff blocking, recovery repair, and a final explicit terminal not-resumable reading
+25. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
 
 That is enough to say:
 
@@ -92,6 +93,7 @@ Current strongest value carriers are:
 - one named runtime resume path that starts turning repaired re-entry from repo evidence into explicit operator behavior across partial-proof, degraded-recovery, and doctor-blocked families
 - one repair handoff layer that now tells the runtime and the operator exactly which continuation inputs are still missing before a non-green contour can resume honestly
 - one richer repair packet that is now runtime-owned enough to group continuation contract, continuation plan, selection/preparation truth, repair inputs, and runtime output defaults above the handoff itself
+- one richer repair packet that now also carries explicit resumability family, active repair pressures, repair order, and a clearer separation between repairable and terminal continuation truth
 - one governed-path preparation slice that predeclares the proof surface and records complete first-pass bundle assembly
 - one preparation-aware prepared governed run that reaches accepted closure inside the same bounded orchestration path
 - one measured governed-path cost-reduction slice that treats preparation as a bounded economic improvement rather than only a cleaner ritual
@@ -116,6 +118,7 @@ Current weaker areas are:
 - the stack now has one bounded spine-driven runtime contour, but not yet a deeper end-to-end runtime
 - blocked-to-accepted, partial-to-accepted, and degraded-to-accepted re-entry are now canonical, and one ugly mixed repair family is now canonical too, but compound reality is still much weaker than it should be
 - repair handoff and repair packet now both exist, and packet-first continuation is now the default operator path, but the packet is still narrower than a mature continuation surface should eventually become
+- terminal vs repairable continuation is now materially clearer than before, but not every future non-green family is yet pressure-tested
 - comparison harness now has a six-scenario economics slice, but it is still too narrow to count as product-grade economics
 - production-grade runtime readiness is not yet proven
 
@@ -144,6 +147,7 @@ The shortest current output reading is:
 - one repaired degraded contour now also has a stable canonical repo fixture
 - one ugly compound repair contour now also has a stable canonical repo fixture
 - one third ugly compound continuation contour now also has a stable canonical repo fixture
+- one fourth ugly compound continuation contour now also has a stable canonical repo fixture
 - one hybrid pressure contour now also has a stable canonical repo fixture
 - that artifact is a better single entrypoint than reconstructing a run from report, state, and worked envelope separately
 
@@ -190,6 +194,10 @@ The second canonical ugly compound continuation reference surface for that outpu
 The third canonical ugly compound continuation reference surface for that output now lives at:
 
 - `fixtures/executable_loop_compound_continuation_run_003/run.json`
+
+The fourth canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_004/run.json`
 
 The first canonical selection-blocked reference surface for that output now lives at:
 

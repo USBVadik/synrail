@@ -221,10 +221,12 @@ Purpose:
 Guarantees:
 
 - embeds one repair handoff
+- embeds one explicit resumability reading
 - embeds one continuation plan
 - embeds one repair-input set
 - embeds one runtime output-default set
 - records provided vs missing continuation inputs
+- records whether the current contour is repairable or terminal
 
 Does not guarantee:
 

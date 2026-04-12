@@ -8,7 +8,12 @@ import json
 import sys
 from pathlib import Path
 
-from synrail_repair_handoff_v0 import build_repair_handoff, load_json as load_state_json
+from synrail_repair_handoff_v0 import (
+    build_repair_handoff,
+    build_resumability,
+    collect_active_pressures,
+    load_json as load_state_json,
+)
 
 
 def save_json(path: Path, payload: dict) -> None:
@@ -105,17 +110,29 @@ def build_selection_context(selection_receipt: dict | None) -> dict:
     if not selection_receipt:
         return {
             "applied": False,
+            "scenario_class": "",
             "recommended_mode": "",
             "selected_mode": "",
+            "followed_recommendation": False,
+            "governed_preparation_recommended": False,
             "selected_with_preparation": False,
             "heavier_contour_entered": False,
+            "estimated_avoided_operator_minutes": 0,
+            "estimated_avoided_interventions": 0,
+            "estimated_avoided_closure_latency_minutes": 0,
         }
     return {
         "applied": True,
+        "scenario_class": selection_receipt.get("scenario_class", ""),
         "recommended_mode": selection_receipt["recommended_mode"],
         "selected_mode": selection_receipt["selected_mode"],
+        "followed_recommendation": selection_receipt.get("followed_recommendation", False),
+        "governed_preparation_recommended": selection_receipt.get("governed_preparation_recommended", False),
         "selected_with_preparation": selection_receipt.get("selected_with_preparation", False),
         "heavier_contour_entered": selection_receipt.get("heavier_contour_entered", False),
+        "estimated_avoided_operator_minutes": selection_receipt.get("estimated_avoided_operator_minutes", 0),
+        "estimated_avoided_interventions": selection_receipt.get("estimated_avoided_interventions", 0),
+        "estimated_avoided_closure_latency_minutes": selection_receipt.get("estimated_avoided_closure_latency_minutes", 0),
     }
 
 
@@ -125,16 +142,23 @@ def build_preparation_context(preparation_receipt: dict | None) -> dict:
             "applied": False,
             "ready_for_closure": False,
             "complete_on_first_bundle_pass": False,
+            "bundle_status": "",
+            "planned_required_sections_count": 0,
+            "planned_required_sections_present_count": 0,
         }
     return {
         "applied": True,
         "ready_for_closure": preparation_receipt.get("ready_for_closure", False),
         "complete_on_first_bundle_pass": preparation_receipt.get("complete_on_first_bundle_pass", False),
+        "bundle_status": preparation_receipt.get("bundle_status", ""),
+        "planned_required_sections_count": preparation_receipt.get("planned_required_sections_count", 0),
+        "planned_required_sections_present_count": preparation_receipt.get("planned_required_sections_present_count", 0),
     }
 
 
 def build_runtime_truth(state: dict, report: dict | None) -> dict:
     report = report or {}
+    active_pressures = collect_active_pressures(state)
     return {
         "report_result": report.get("result", ""),
         "stopping_stage": report.get("stopping_stage", ""),
@@ -146,6 +170,21 @@ def build_runtime_truth(state: dict, report: dict | None) -> dict:
         "refresh_resulting_closure_status": report.get("refresh_resulting_closure_status", ""),
         "resulting_state": report.get("resulting_state", state.get("state", "")),
         "next_safe_step": report.get("next_safe_step", state.get("next_safe_step", "")),
+        "active_pressures": active_pressures,
+        "state_snapshot": {
+            "state": state.get("state", ""),
+            "target_surface_status": state.get("target_surface", {}).get("status", ""),
+            "doctor_status": state.get("doctor", {}).get("status", ""),
+            "doctor_failure_classes": list(state.get("doctor", {}).get("blocking_failure_classes", [])),
+            "integrity_status": state.get("integrity", {}).get("status", ""),
+            "execution_status": state.get("execution", {}).get("status", ""),
+            "proof_bundle_status": state.get("proof_bundle", {}).get("status", ""),
+            "proof_missing_sections": list(state.get("proof_bundle", {}).get("missing_sections", [])),
+            "closure_status": state.get("closure", {}).get("status", ""),
+            "closure_blocking_reason": state.get("closure", {}).get("blocking_reason", ""),
+            "recovery_status": state.get("recovery", {}).get("status", ""),
+            "recovery_reverification_complete": state.get("recovery", {}).get("reverification_complete", False),
+        },
     }
 
 
@@ -187,6 +226,7 @@ def build_packet_from_runtime_truth(
     report: dict | None = None,
 ) -> dict:
     handoff = repair_handoff or build_repair_handoff(state)
+    resumability = build_resumability(state)
     packet_args = argparse.Namespace(
         refresh_event_type=refresh_event_type,
         refresh_recovery_status=refresh_recovery_status,
@@ -224,6 +264,7 @@ def build_packet_from_runtime_truth(
         "from_state": state["state"],
         "continuation_entrypoint": "resume",
         "repair_handoff": handoff,
+        "resumability": resumability,
         "continuation_plan": build_continuation_plan(packet_args, handoff),
         "resume_context": {
             "doctor_run_id": doctor_run_id,

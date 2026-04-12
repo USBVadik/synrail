@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from synrail_repair_handoff_v0 import build_repair_handoff
+from synrail_repair_handoff_v0 import build_repair_handoff, build_resumability
 from synrail_repair_packet_v0 import build_packet_from_runtime_truth
 
 
@@ -115,6 +115,35 @@ def load_repair_handoff(path: Path) -> dict:
     if handoff.get("schema_version") != "repair_handoff_v0":
         raise ValueError("repair handoff must use repair_handoff_v0")
     return handoff
+
+
+def report_resumability_fields(state: dict, handoff: dict | None = None) -> dict:
+    if handoff and handoff.get("from_state") == state.get("state"):
+        resumability = handoff.get("resumability", build_resumability(state))
+    else:
+        resumability = build_repair_handoff(state).get("resumability", build_resumability(state))
+    return {
+        "resumability_status": resumability["status"],
+        "resumability_family": resumability["family"],
+        "resumability_active_pressures": list(resumability["active_pressures"]),
+        "resumability_repair_order": list(resumability["recommended_repair_order"]),
+        "resumability_requires_new_run": resumability["requires_new_run"],
+    }
+
+
+def repair_packet_summary(packet: dict | None, state: dict) -> dict:
+    resumability = packet["resumability"] if packet else build_resumability(state)
+    return {
+        "emitted": packet is not None,
+        "from_state": packet["from_state"] if packet else "",
+        "ready_for_resume": packet["ready_for_resume"] if packet else False,
+        "missing_inputs": list(packet["missing_inputs"]) if packet else [],
+        "selected_with_preparation": packet["selection_context"]["selected_with_preparation"] if packet else False,
+        "resumability_status": resumability["status"],
+        "resumability_family": resumability["family"],
+        "active_pressures": list(resumability["active_pressures"]),
+        "repair_order": list(resumability["recommended_repair_order"]),
+    }
 
 
 def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path:
@@ -732,12 +761,9 @@ def build_worked_orchestration_artifact(
             "missing_inputs": list(missing_continuation_inputs),
         },
         "repair_packet": {
-            "emitted": repair_packet is not None,
-            "from_state": repair_packet["from_state"] if repair_packet else "",
-            "ready_for_resume": repair_packet["ready_for_resume"] if repair_packet else False,
-            "missing_inputs": list(repair_packet["missing_inputs"]) if repair_packet else [],
-            "selected_with_preparation": repair_packet["selection_context"]["selected_with_preparation"] if repair_packet else False,
+            **repair_packet_summary(repair_packet, state),
         },
+        "resumability": report_resumability_fields(state, repair_handoff),
         "selection": {
             "applied": selection_receipt is not None,
             "selected_mode": selection_receipt["selected_mode"] if selection_receipt else "",
@@ -958,6 +984,11 @@ def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict, rep
             "comparison_applied": report["comparison_applied"],
             "blockers": list(report["blockers"]),
             "dominant_blocker": report["dominant_blocker"],
+            "resumability_status": report.get("resumability_status", ""),
+            "resumability_family": report.get("resumability_family", ""),
+            "resumability_active_pressures": list(report.get("resumability_active_pressures", [])),
+            "resumability_repair_order": list(report.get("resumability_repair_order", [])),
+            "resumability_requires_new_run": report.get("resumability_requires_new_run", False),
             "resulting_state": report["resulting_state"],
             "next_safe_step": report["next_safe_step"],
         },
@@ -972,11 +1003,13 @@ def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict, rep
             "current_closure_status": worked["current_closure_status"],
             "next_safe_step": worked["next_safe_step"],
         },
-        "repair_packet": {
-            "emitted": repair_packet is not None,
-            "from_state": repair_packet["from_state"] if repair_packet else "",
-            "ready_for_resume": repair_packet["ready_for_resume"] if repair_packet else False,
-            "missing_inputs": list(repair_packet["missing_inputs"]) if repair_packet else [],
+        "repair_packet": repair_packet_summary(repair_packet, state),
+        "resumability": {
+            "status": report.get("resumability_status", ""),
+            "family": report.get("resumability_family", ""),
+            "active_pressures": list(report.get("resumability_active_pressures", [])),
+            "repair_order": list(report.get("resumability_repair_order", [])),
+            "requires_new_run": report.get("resumability_requires_new_run", False),
         },
     }
 
@@ -1042,6 +1075,9 @@ def finalize_runtime_outputs(
     comparison: dict | None = None,
 ) -> None:
     current_handoff = repair_handoff or maybe_emit_repair_handoff(args, state)
+    report.update(report_resumability_fields(state, current_handoff))
+    if getattr(args, "report_output", None):
+        save_json(Path(args.report_output), report)
     repair_packet = maybe_emit_repair_packet(
         args,
         state=state,
@@ -1149,121 +1185,6 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     preparation_applied = False
     preparation_ready_for_closure = False
 
-    if resume_applied:
-        if state["state"] != resume_from_state:
-            report = build_error_report(state, reason="RESUME_STATE_MISMATCH", stopping_stage="resume")
-            report["resume_applied"] = True
-            report["resume_from_state"] = resume_from_state
-            save_json(Path(args.report_output), report)
-            finalize_runtime_outputs(args, state=state, report=report, resume_applied=True, resume_from_state=resume_from_state)
-            return 2
-        if state["state"] in TERMINAL_STATES:
-            state["closure"]["status"] = state["closure"]["status"] or "CLAIMED_NOT_ACCEPTED"
-            state["closure"]["blocking_reason"] = "TERMINAL_STATE_NOT_RESUMABLE"
-            state["closure"]["next_allowed_transition"] = "NONE"
-            state["closure"]["narrow_next_safe_step"] = "start a new run instead of resuming a terminal state"
-            state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
-            report = {
-                "schema_version": "orchestration_report_v0",
-                "run_id": state["run_id"],
-                "task_class": state["task_class"],
-                "result": "BLOCKED",
-                "stopping_stage": "resume",
-                "reason": "TERMINAL_STATE_NOT_RESUMABLE",
-                "doctor_verdict": "",
-                "resume_applied": True,
-                "resume_from_state": resume_from_state,
-                "selection_applied": False,
-                "selected_mode": "",
-                "selected_with_preparation": False,
-                "preparation_applied": False,
-                "preparation_ready_for_closure": False,
-                "bundle_status": state["proof_bundle"]["status"],
-                "closure_status": state["closure"]["status"],
-                "refresh_applied": False,
-                "refresh_resulting_closure_status": "",
-                "comparison_applied": False,
-                "comparison_verdict": "",
-                "blockers": ["TERMINAL_STATE_NOT_RESUMABLE"],
-                "dominant_blocker": "TERMINAL_STATE_NOT_RESUMABLE",
-                "resulting_state": state["state"],
-                "next_safe_step": state["next_safe_step"],
-            }
-            save_state(state_path, state)
-            save_json(Path(args.report_output), report)
-            finalize_runtime_outputs(args, state=state, report=report, resume_applied=True, resume_from_state=resume_from_state)
-            print(json.dumps({"result": "BLOCKED", "stopping_stage": "resume", "reason": "TERMINAL_STATE_NOT_RESUMABLE"}, ensure_ascii=True))
-            return 0
-        if getattr(args, "repair_handoff_file", None):
-            try:
-                repair_handoff = load_repair_handoff(Path(args.repair_handoff_file))
-            except ValueError:
-                report = build_error_report(state, reason="INVALID_REPAIR_HANDOFF", stopping_stage="repair_handoff")
-                report["resume_applied"] = True
-                report["resume_from_state"] = resume_from_state
-                report["repair_handoff_applied"] = True
-                report["repair_handoff_from_state"] = state["state"]
-                report["repair_handoff_required_inputs"] = []
-                report["missing_continuation_inputs"] = []
-                save_json(Path(args.report_output), report)
-                finalize_runtime_outputs(
-                    args,
-                    state=state,
-                    report=report,
-                    resume_applied=True,
-                    resume_from_state=resume_from_state,
-                    missing_continuation_inputs=continuation_missing_inputs,
-                )
-                return 2
-            repair_handoff_applied = True
-            if repair_handoff["run_id"] != state["run_id"] or repair_handoff["from_state"] != state["state"]:
-                report = build_error_report(state, reason="REPAIR_HANDOFF_STATE_MISMATCH", stopping_stage="repair_handoff")
-                report["resume_applied"] = True
-                report["resume_from_state"] = resume_from_state
-                report["repair_handoff_applied"] = True
-                report["repair_handoff_from_state"] = repair_handoff["from_state"]
-                report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(repair_handoff)
-                report["missing_continuation_inputs"] = []
-                save_json(Path(args.report_output), report)
-                finalize_runtime_outputs(
-                    args,
-                    state=state,
-                    report=report,
-                    resume_applied=True,
-                    resume_from_state=resume_from_state,
-                    repair_handoff=repair_handoff,
-                )
-                return 2
-            apply_repair_handoff_defaults(args, repair_handoff)
-            continuation_missing_inputs = missing_continuation_inputs(args, repair_handoff)
-            if continuation_missing_inputs:
-                report = build_repair_handoff_blocked_report(
-                    state,
-                    doctor_verdict="",
-                    resume_applied=True,
-                    resume_from_state=resume_from_state,
-                    repair_handoff=repair_handoff,
-                    missing_inputs=continuation_missing_inputs,
-                    selection_applied=False,
-                    selected_mode="",
-                    selected_with_preparation=False,
-                    preparation_applied=False,
-                    preparation_ready_for_closure=False,
-                )
-                save_state(state_path, state)
-                save_json(Path(args.report_output), report)
-                finalize_runtime_outputs(
-                    args,
-                    state=state,
-                    report=report,
-                    resume_applied=True,
-                    resume_from_state=resume_from_state,
-                    repair_handoff=repair_handoff,
-                    missing_continuation_inputs=continuation_missing_inputs,
-                )
-                print(json.dumps({"result": "BLOCKED", "stopping_stage": "repair_handoff", "reason": "CONTINUATION_INPUTS_MISSING"}, ensure_ascii=True))
-                return 0
-
     if args.mode_selection_receipt:
         try:
             selection_receipt = load_mode_selection_receipt(Path(args.mode_selection_receipt))
@@ -1285,39 +1206,54 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         selection_applied = True
         selected_mode = selection_receipt["selected_mode"]
         selected_with_preparation = bool(selection_receipt.get("selected_with_preparation", False))
-        if selected_mode != "FULL_GOVERNED_PATH":
-            state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
-            state["closure"]["blocking_reason"] = "MODE_SELECTION_NOT_GOVERNED"
-            state["closure"]["next_allowed_transition"] = "FOLLOW_SELECTED_MODE"
-            state["closure"]["narrow_next_safe_step"] = "follow the selected lighter mode instead of entering governed orchestration"
+
+    if resume_applied:
+        if state["state"] != resume_from_state:
+            report = build_error_report(state, reason="RESUME_STATE_MISMATCH", stopping_stage="resume")
+            report["resume_applied"] = True
+            report["resume_from_state"] = resume_from_state
+            report["selection_applied"] = selection_applied
+            report["selected_mode"] = selected_mode
+            report["selected_with_preparation"] = selected_with_preparation
+            save_json(Path(args.report_output), report)
+            finalize_runtime_outputs(
+                args,
+                state=state,
+                report=report,
+                resume_applied=True,
+                resume_from_state=resume_from_state,
+                selection_receipt=selection_receipt,
+            )
+            return 2
+        if state["state"] in TERMINAL_STATES:
+            state["closure"]["status"] = state["closure"]["status"] or "CLAIMED_NOT_ACCEPTED"
+            state["closure"]["blocking_reason"] = "TERMINAL_STATE_NOT_RESUMABLE"
+            state["closure"]["next_allowed_transition"] = "NONE"
+            state["closure"]["narrow_next_safe_step"] = "start a new run instead of resuming a terminal state"
             state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
             report = {
                 "schema_version": "orchestration_report_v0",
                 "run_id": state["run_id"],
                 "task_class": state["task_class"],
                 "result": "BLOCKED",
-                "stopping_stage": "selection",
-                "reason": "MODE_SELECTION_NOT_GOVERNED",
+                "stopping_stage": "resume",
+                "reason": "TERMINAL_STATE_NOT_RESUMABLE",
                 "doctor_verdict": "",
-                "resume_applied": resume_applied,
+                "resume_applied": True,
                 "resume_from_state": resume_from_state,
-                "repair_handoff_applied": repair_handoff_applied,
-                "repair_handoff_from_state": repair_handoff["from_state"] if repair_handoff else "",
-                "repair_handoff_required_inputs": repair_handoff_required_input_ids(repair_handoff),
-                "missing_continuation_inputs": list(continuation_missing_inputs),
-                "selection_applied": True,
+                "selection_applied": selection_applied,
                 "selected_mode": selected_mode,
                 "selected_with_preparation": selected_with_preparation,
                 "preparation_applied": False,
                 "preparation_ready_for_closure": False,
-                "bundle_status": "",
+                "bundle_status": state["proof_bundle"]["status"],
                 "closure_status": state["closure"]["status"],
                 "refresh_applied": False,
                 "refresh_resulting_closure_status": "",
                 "comparison_applied": False,
                 "comparison_verdict": "",
-                "blockers": ["MODE_SELECTION_NOT_GOVERNED"],
-                "dominant_blocker": "MODE_SELECTION_NOT_GOVERNED",
+                "blockers": ["TERMINAL_STATE_NOT_RESUMABLE"],
+                "dominant_blocker": "TERMINAL_STATE_NOT_RESUMABLE",
                 "resulting_state": state["state"],
                 "next_safe_step": state["next_safe_step"],
             }
@@ -1327,21 +1263,148 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                 args,
                 state=state,
                 report=report,
-                resume_applied=resume_applied,
+                resume_applied=True,
                 resume_from_state=resume_from_state,
-                repair_handoff=repair_handoff,
-                missing_continuation_inputs=continuation_missing_inputs,
                 selection_receipt=selection_receipt,
             )
-            print(json.dumps({"result": "BLOCKED", "stopping_stage": "selection", "reason": "MODE_SELECTION_NOT_GOVERNED"}, ensure_ascii=True))
+            print(json.dumps({"result": "BLOCKED", "stopping_stage": "resume", "reason": "TERMINAL_STATE_NOT_RESUMABLE"}, ensure_ascii=True))
             return 0
-        if selected_with_preparation:
-            if not args.plan_output:
-                args.plan_output = str(Path(args.report_output).with_name("plan.json"))
-            if not args.preparation_receipt_output:
-                args.preparation_receipt_output = str(Path(args.report_output).with_name("preparation_receipt.json"))
-            if not args.preparation_artifact_root:
-                args.preparation_artifact_root = str(Path(args.report_output).parent)
+        if getattr(args, "repair_handoff_file", None):
+            try:
+                repair_handoff = load_repair_handoff(Path(args.repair_handoff_file))
+            except ValueError:
+                report = build_error_report(state, reason="INVALID_REPAIR_HANDOFF", stopping_stage="repair_handoff")
+                report["resume_applied"] = True
+                report["resume_from_state"] = resume_from_state
+                report["repair_handoff_applied"] = True
+                report["repair_handoff_from_state"] = state["state"]
+                report["repair_handoff_required_inputs"] = []
+                report["missing_continuation_inputs"] = []
+                report["selection_applied"] = selection_applied
+                report["selected_mode"] = selected_mode
+                report["selected_with_preparation"] = selected_with_preparation
+                save_json(Path(args.report_output), report)
+                finalize_runtime_outputs(
+                    args,
+                    state=state,
+                    report=report,
+                    resume_applied=True,
+                    resume_from_state=resume_from_state,
+                    missing_continuation_inputs=continuation_missing_inputs,
+                    selection_receipt=selection_receipt,
+                )
+                return 2
+            repair_handoff_applied = True
+            if repair_handoff["run_id"] != state["run_id"] or repair_handoff["from_state"] != state["state"]:
+                report = build_error_report(state, reason="REPAIR_HANDOFF_STATE_MISMATCH", stopping_stage="repair_handoff")
+                report["resume_applied"] = True
+                report["resume_from_state"] = resume_from_state
+                report["repair_handoff_applied"] = True
+                report["repair_handoff_from_state"] = repair_handoff["from_state"]
+                report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(repair_handoff)
+                report["missing_continuation_inputs"] = []
+                report["selection_applied"] = selection_applied
+                report["selected_mode"] = selected_mode
+                report["selected_with_preparation"] = selected_with_preparation
+                save_json(Path(args.report_output), report)
+                finalize_runtime_outputs(
+                    args,
+                    state=state,
+                    report=report,
+                    resume_applied=True,
+                    resume_from_state=resume_from_state,
+                    repair_handoff=repair_handoff,
+                    selection_receipt=selection_receipt,
+                )
+                return 2
+            apply_repair_handoff_defaults(args, repair_handoff)
+            continuation_missing_inputs = missing_continuation_inputs(args, repair_handoff)
+            if continuation_missing_inputs:
+                report = build_repair_handoff_blocked_report(
+                    state,
+                    doctor_verdict="",
+                    resume_applied=True,
+                    resume_from_state=resume_from_state,
+                    repair_handoff=repair_handoff,
+                    missing_inputs=continuation_missing_inputs,
+                    selection_applied=selection_applied,
+                    selected_mode=selected_mode,
+                    selected_with_preparation=selected_with_preparation,
+                    preparation_applied=False,
+                    preparation_ready_for_closure=False,
+                )
+                save_state(state_path, state)
+                save_json(Path(args.report_output), report)
+                finalize_runtime_outputs(
+                    args,
+                    state=state,
+                    report=report,
+                    resume_applied=True,
+                    resume_from_state=resume_from_state,
+                    repair_handoff=repair_handoff,
+                    missing_continuation_inputs=continuation_missing_inputs,
+                    selection_receipt=selection_receipt,
+                )
+                print(json.dumps({"result": "BLOCKED", "stopping_stage": "repair_handoff", "reason": "CONTINUATION_INPUTS_MISSING"}, ensure_ascii=True))
+                return 0
+
+    if selection_applied and selected_mode != "FULL_GOVERNED_PATH":
+        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+        state["closure"]["blocking_reason"] = "MODE_SELECTION_NOT_GOVERNED"
+        state["closure"]["next_allowed_transition"] = "FOLLOW_SELECTED_MODE"
+        state["closure"]["narrow_next_safe_step"] = "follow the selected lighter mode instead of entering governed orchestration"
+        state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+        report = {
+            "schema_version": "orchestration_report_v0",
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "result": "BLOCKED",
+            "stopping_stage": "selection",
+            "reason": "MODE_SELECTION_NOT_GOVERNED",
+            "doctor_verdict": "",
+            "resume_applied": resume_applied,
+            "resume_from_state": resume_from_state,
+            "repair_handoff_applied": repair_handoff_applied,
+            "repair_handoff_from_state": repair_handoff["from_state"] if repair_handoff else "",
+            "repair_handoff_required_inputs": repair_handoff_required_input_ids(repair_handoff),
+            "missing_continuation_inputs": list(continuation_missing_inputs),
+            "selection_applied": True,
+            "selected_mode": selected_mode,
+            "selected_with_preparation": selected_with_preparation,
+            "preparation_applied": False,
+            "preparation_ready_for_closure": False,
+            "bundle_status": "",
+            "closure_status": state["closure"]["status"],
+            "refresh_applied": False,
+            "refresh_resulting_closure_status": "",
+            "comparison_applied": False,
+            "comparison_verdict": "",
+            "blockers": ["MODE_SELECTION_NOT_GOVERNED"],
+            "dominant_blocker": "MODE_SELECTION_NOT_GOVERNED",
+            "resulting_state": state["state"],
+            "next_safe_step": state["next_safe_step"],
+        }
+        save_state(state_path, state)
+        save_json(Path(args.report_output), report)
+        finalize_runtime_outputs(
+            args,
+            state=state,
+            report=report,
+            resume_applied=resume_applied,
+            resume_from_state=resume_from_state,
+            repair_handoff=repair_handoff,
+            missing_continuation_inputs=continuation_missing_inputs,
+            selection_receipt=selection_receipt,
+        )
+        print(json.dumps({"result": "BLOCKED", "stopping_stage": "selection", "reason": "MODE_SELECTION_NOT_GOVERNED"}, ensure_ascii=True))
+        return 0
+    if selected_with_preparation:
+        if not args.plan_output:
+            args.plan_output = str(Path(args.report_output).with_name("plan.json"))
+        if not args.preparation_receipt_output:
+            args.preparation_receipt_output = str(Path(args.report_output).with_name("preparation_receipt.json"))
+        if not args.preparation_artifact_root:
+            args.preparation_artifact_root = str(Path(args.report_output).parent)
 
     state = apply_target_surface(
         state,

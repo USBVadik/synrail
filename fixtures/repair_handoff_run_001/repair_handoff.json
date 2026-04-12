@@ -7,6 +7,19 @@
   "blocking_reason": "DOCTOR_NOT_GREEN",
   "continuation_allowed": true,
   "continuation_entrypoint": "resume",
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_DOCTOR_BLOCKED",
+    "active_pressures": [
+      "DOCTOR_BLOCKED"
+    ],
+    "recommended_repair_order": [
+      "restore_readiness_truth",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "explanation": "readiness failed early, but the contour can resume once the doctor inputs are repaired"
+  },
   "required_inputs": [
     {
       "input_id": "prompt_identity",

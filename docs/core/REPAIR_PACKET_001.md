@@ -23,20 +23,23 @@ The repair-packet slice now lives at:
 The packet keeps the existing handoff, but now auto-synthesizes one fuller continuation envelope from current runtime truth:
 
 1. embedded `repair_handoff`
-2. embedded `continuation_plan`
-3. embedded `selection_context`
-4. embedded `repair_inputs`
-5. embedded `output_defaults`
-6. explicit `provided_inputs`
-7. explicit `missing_inputs`
-8. explicit `ready_for_resume`
-9. embedded `preparation_context`
-10. embedded `runtime_truth`
+2. embedded `resumability`
+3. embedded `continuation_plan`
+4. embedded `selection_context`
+5. embedded `repair_inputs`
+6. embedded `output_defaults`
+7. explicit `provided_inputs`
+8. explicit `missing_inputs`
+9. explicit `ready_for_resume`
+10. embedded `preparation_context`
+11. embedded `runtime_truth`
 
 That means the packet can now say both:
 
 - what is still missing
 - how the runtime should continue once those inputs exist
+- whether the current non-green contour is still repairable at all
+- what repair order the runtime believes should come next
 
 ## Why this matters
 
@@ -77,12 +80,19 @@ Current canonical packet surfaces are:
 - auto-synthesized selection/preparation packet-driven continuation:
   - `fixtures/executable_loop_compound_continuation_run_003/stage0_packet.json`
   - `fixtures/executable_loop_compound_continuation_run_003/stage1_packet.json`
+- richer resumability-aware selection/preparation continuation:
+  - `fixtures/executable_loop_compound_continuation_run_004/stage0_repair_packet.json`
+  - `fixtures/executable_loop_compound_continuation_run_004/stage1_repair_packet.json`
+  - `fixtures/executable_loop_compound_continuation_run_004/stage2_repair_packet.json`
 
 These prove:
 
 - blocked continuation can now be expressed without a fake `final_result`
 - packet-driven resume can now cross invalid bundle and recovery degradation without restating the full runtime surface each time
 - runtime-owned packets can now carry selection and preparation handoff through a nastier continuation contour without making the operator rebuild that context by hand
+- runtime-owned packets can now distinguish:
+  - repairable compound invalid or degraded states
+  - and terminal accepted states that should start a new run instead
 
 ## Current boundary
 
@@ -98,7 +108,7 @@ It is one continuation packet for one named `resume` path.
 
 The next improvement should make that packet:
 
-- richer where runtime truth already knows more than the current bounded fields express
+- stronger where runtime truth already knows more than the current bounded fields express, especially around continuation ergonomics and deeper multi-step repair order
 
 not:
 

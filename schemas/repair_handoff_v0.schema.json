@@ -43,6 +43,52 @@
     "continuation_entrypoint": {
       "type": "string"
     },
+    "resumability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "family",
+        "active_pressures",
+        "recommended_repair_order",
+        "requires_new_run",
+        "explanation"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "REPAIRABLE",
+            "NOT_RESUMABLE"
+          ]
+        },
+        "family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "active_pressures": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "recommended_repair_order": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "requires_new_run": {
+          "type": "boolean"
+        },
+        "explanation": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "required_inputs": {
       "type": "array",
       "items": {

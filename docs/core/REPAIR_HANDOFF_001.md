@@ -33,6 +33,7 @@ The handoff slice reads one current `run_state` and emits:
 - `blocking_reason`
 - `continuation_allowed`
 - `continuation_entrypoint`
+- `resumability`
 - `required_inputs`
 - `runtime_defaults`
 - `next_safe_step`
@@ -66,6 +67,7 @@ The first blocked repair handoff run now records:
 
 - `from_state = DOCTOR_BLOCKED`
 - `blocking_reason = DOCTOR_NOT_GREEN`
+- `resumability.family = REPAIRABLE_DOCTOR_BLOCKED`
 - required inputs:
   - `prompt_identity`
   - `task_identity`
@@ -85,6 +87,7 @@ This is the first time `Synrail` can say, in one machine-readable artifact:
 
 - what state continuation is coming from
 - why that state is still non-green
+- whether that state is repairable or terminal
 - which concrete inputs are missing before honest continuation can resume
 
 That is stronger than only having:

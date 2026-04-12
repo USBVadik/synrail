@@ -63,7 +63,8 @@ Current status:
 - packet-first continuation is now the default operator path around `resume`
 - one uglier packet-driven compound continuation path now exists through staged packets plus named `resume`
 - one third uglier packet-first continuation path now also exists through selection/preparation handoff, runtime-owned packets, invalid proof, degraded recovery, and accepted closure
-- the next strongest move is no longer basic packet synthesis; it is making that packet richer and reducing the remaining continuation ambiguity inside the runtime itself
+- one fourth uglier packet-first continuation path now also exists through selection/preparation handoff, repair-handoff blocking, recovery repair, and one explicit terminal not-resumable finish
+- the next strongest move is no longer basic packet synthesis; it is turning the richer packet and packet-first `resume` into the cleanest default continuation contract the runtime has
 
 ### 3. Run one ugly compound scenario end-to-end
 

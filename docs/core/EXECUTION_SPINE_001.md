@@ -76,6 +76,7 @@ It can now also emit and consume one repair handoff contract around that continu
 It can now also auto-synthesize and participate in one richer repair-packet continuation flow, where the spine itself can now provide:
 
 - one embedded handoff
+- one embedded resumability family
 - one continuation plan
 - one repair-input bundle
 - one runtime output-default set
@@ -98,6 +99,7 @@ That repair-packet layer is now proven on:
 - one blocked continuation packet that no longer needs a fake `final_result`
 - one second uglier compound continuation that crosses blocked readiness, invalid proof, degraded recovery, and accepted closure
 - one third uglier compound continuation that carries selection/preparation handoff through packet-first runtime continuation
+- one fourth uglier compound continuation that carries selection/preparation handoff through repair-handoff blocking, recovery repair, and one explicit terminal not-resumable finish
 
 It now also chooses the comparison harness by input schema version, so the same bounded contour can still read legacy comparison inputs while moving the active pressure-testing path toward economics-aware comparison records.
 

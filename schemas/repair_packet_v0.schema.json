@@ -64,6 +64,32 @@
         "blocking_reason": {"type": "string"},
         "continuation_allowed": {"type": "boolean"},
         "continuation_entrypoint": {"type": "string"},
+        "resumability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "family",
+            "active_pressures",
+            "recommended_repair_order",
+            "requires_new_run",
+            "explanation"
+          ],
+          "properties": {
+            "status": {"type": "string", "enum": ["REPAIRABLE", "NOT_RESUMABLE"]},
+            "family": {"type": "string", "minLength": 1},
+            "active_pressures": {
+              "type": "array",
+              "items": {"type": "string", "minLength": 1}
+            },
+            "recommended_repair_order": {
+              "type": "array",
+              "items": {"type": "string", "minLength": 1}
+            },
+            "requires_new_run": {"type": "boolean"},
+            "explanation": {"type": "string", "minLength": 1}
+          }
+        },
         "required_inputs": {
           "type": "array",
           "items": {
@@ -90,6 +116,32 @@
           }
         },
         "next_safe_step": {"type": "string"}
+      }
+    },
+    "resumability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "family",
+        "active_pressures",
+        "recommended_repair_order",
+        "requires_new_run",
+        "explanation"
+      ],
+      "properties": {
+        "status": {"type": "string", "enum": ["REPAIRABLE", "NOT_RESUMABLE"]},
+        "family": {"type": "string", "minLength": 1},
+        "active_pressures": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "recommended_repair_order": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "requires_new_run": {"type": "boolean"},
+        "explanation": {"type": "string", "minLength": 1}
       }
     },
     "continuation_plan": {
@@ -195,10 +247,16 @@
       ],
       "properties": {
         "applied": {"type": "boolean"},
+        "scenario_class": {"type": "string"},
         "recommended_mode": {"type": "string"},
         "selected_mode": {"type": "string"},
+        "followed_recommendation": {"type": "boolean"},
+        "governed_preparation_recommended": {"type": "boolean"},
         "selected_with_preparation": {"type": "boolean"},
-        "heavier_contour_entered": {"type": "boolean"}
+        "heavier_contour_entered": {"type": "boolean"},
+        "estimated_avoided_operator_minutes": {"type": "integer"},
+        "estimated_avoided_interventions": {"type": "integer"},
+        "estimated_avoided_closure_latency_minutes": {"type": "integer"}
       }
     },
     "selection_receipt": {
@@ -250,7 +308,10 @@
       "properties": {
         "applied": {"type": "boolean"},
         "ready_for_closure": {"type": "boolean"},
-        "complete_on_first_bundle_pass": {"type": "boolean"}
+        "complete_on_first_bundle_pass": {"type": "boolean"},
+        "bundle_status": {"type": "string"},
+        "planned_required_sections_count": {"type": "integer"},
+        "planned_required_sections_present_count": {"type": "integer"}
       }
     },
     "runtime_truth": {
@@ -278,7 +339,49 @@
         "refresh_applied": {"type": "boolean"},
         "refresh_resulting_closure_status": {"type": "string"},
         "resulting_state": {"type": "string"},
-        "next_safe_step": {"type": "string"}
+        "next_safe_step": {"type": "string"},
+        "active_pressures": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "state_snapshot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "target_surface_status",
+            "doctor_status",
+            "doctor_failure_classes",
+            "integrity_status",
+            "execution_status",
+            "proof_bundle_status",
+            "proof_missing_sections",
+            "closure_status",
+            "closure_blocking_reason",
+            "recovery_status",
+            "recovery_reverification_complete"
+          ],
+          "properties": {
+            "state": {"type": "string"},
+            "target_surface_status": {"type": "string"},
+            "doctor_status": {"type": "string"},
+            "doctor_failure_classes": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "integrity_status": {"type": "string"},
+            "execution_status": {"type": "string"},
+            "proof_bundle_status": {"type": "string"},
+            "proof_missing_sections": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "closure_status": {"type": "string"},
+            "closure_blocking_reason": {"type": "string"},
+            "recovery_status": {"type": "string"},
+            "recovery_reverification_complete": {"type": "boolean"}
+          }
+        }
       }
     },
     "output_defaults": {

@@ -50,7 +50,7 @@ The CLI v0 currently exposes:
 12. `repair-handoff`
    - emit one machine-readable continuation contract naming the missing inputs and bounded runtime defaults for a non-green state
 13. `repair-packet`
-   - emit one richer machine-readable continuation packet carrying the handoff, continuation plan, repair inputs, and output defaults for a non-green state
+   - emit one richer machine-readable continuation packet carrying the handoff, resumability truth, continuation plan, repair inputs, and output defaults for a non-green state
 14. `compare`
    - emit one machine-readable baseline comparison record through the CLI layer
    - route to the legacy comparison harness for `v0` inputs and the economics harness for `v1` inputs
@@ -76,6 +76,7 @@ The terminal layer now also exposes one named `resume` path plus one explicit `r
 It now also exposes one `repair-packet` path, so the operator can group:
 
 - the continuation contract
+- the resumability family
 - the continuation plan
 - the repair inputs
 - the runtime output defaults
@@ -87,6 +88,7 @@ That packet path is now more useful for:
 - inspection
 - explicit override
 - artifact export
+- checking whether the current contour is still repairable or now terminal
 
 than for everyday authoring, because the runtime can now synthesize most continuation packets directly from current truth.
 

@@ -136,6 +136,7 @@ That continuation path is now proven on:
 - one ugly compound continuation that now crosses readiness repair, proof repair, and recovery repair through staged handoffs plus named `resume`
 - one second uglier packet-driven continuation that now crosses blocked readiness, invalid proof, degraded recovery, and accepted closure through named `resume`
 - one third uglier packet-first continuation that now crosses selection/preparation handoff, invalid proof, degraded recovery, and accepted closure through named `resume`
+- one fourth uglier packet-first continuation that now preserves selection/preparation truth through repair-handoff blocking, recovery repair, and an explicit terminal not-resumable finish
 
 That matters because it keeps the canonical worked artifact aligned with the final runtime contour, including post-refresh closure state when refresh is part of the run.
 

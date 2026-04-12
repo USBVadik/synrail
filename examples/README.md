@@ -92,6 +92,10 @@ They are here to show how `Synrail` artifacts fit together without importing raw
   - third uglier packet-first continuation contour using selection/preparation handoff plus auto-synthesized repair packets
   - crosses invalid proof, degraded recovery, and accepted closure on the same runtime surface
   - includes `run.json` as the packet-first compound runtime-continuation primary run artifact
+- `../fixtures/executable_loop_compound_continuation_run_004/`
+  - fourth uglier packet-first continuation contour using selection/preparation handoff plus richer resumability-aware repair packets
+  - crosses repair-handoff blocking, repairable recovery, and one explicit terminal not-resumable finish on the same runtime surface
+  - includes `run.json` as the richer packet-first compound runtime-continuation primary run artifact
 
 ## Rule
 

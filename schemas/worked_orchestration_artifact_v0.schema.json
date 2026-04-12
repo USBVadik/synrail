@@ -120,7 +120,49 @@
         },
         "selected_with_preparation": {
           "type": "boolean"
+        },
+        "resumability_status": {
+          "type": "string"
+        },
+        "resumability_family": {
+          "type": "string"
+        },
+        "active_pressures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repair_order": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
+      }
+    },
+    "resumability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resumability_status",
+        "resumability_family",
+        "resumability_active_pressures",
+        "resumability_repair_order",
+        "resumability_requires_new_run"
+      ],
+      "properties": {
+        "resumability_status": {"type": "string"},
+        "resumability_family": {"type": "string"},
+        "resumability_active_pressures": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "resumability_repair_order": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "resumability_requires_new_run": {"type": "boolean"}
       }
     },
     "selection": {

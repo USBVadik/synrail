@@ -105,6 +105,27 @@
     "comparison_verdict": {
       "type": "string"
     },
+    "resumability_status": {
+      "type": "string"
+    },
+    "resumability_family": {
+      "type": "string"
+    },
+    "resumability_active_pressures": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "resumability_repair_order": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "resumability_requires_new_run": {
+      "type": "boolean"
+    },
     "blockers": {
       "type": "array",
       "items": {
