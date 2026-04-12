@@ -403,6 +403,37 @@ def build_blocked_report(state: dict, doctor_record: dict) -> dict:
     }
 
 
+def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict) -> dict:
+    return {
+        "schema_version": "canonical_run_artifact_v0",
+        "run_id": state["run_id"],
+        "task_class": state["task_class"],
+        "report": {
+            "result": report["result"],
+            "stopping_stage": report["stopping_stage"],
+            "reason": report["reason"],
+            "doctor_verdict": report["doctor_verdict"],
+            "bundle_status": report["bundle_status"],
+            "closure_status": report["closure_status"],
+            "refresh_applied": report["refresh_applied"],
+            "comparison_applied": report["comparison_applied"],
+            "resulting_state": report["resulting_state"],
+            "next_safe_step": report["next_safe_step"],
+        },
+        "resulting_state": {
+            "state": state["state"],
+            "closure_status": state["closure"]["status"],
+            "blocking_reason": state["closure"]["blocking_reason"],
+            "next_safe_step": state["next_safe_step"],
+        },
+        "worked_envelope": {
+            "resulting_state": worked["resulting_state"],
+            "current_closure_status": worked["current_closure_status"],
+            "next_safe_step": worked["next_safe_step"],
+        },
+    }
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     state = default_state(args.run_id, args.task_class)
     save_state(Path(args.output), state)
@@ -632,7 +663,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     }
     save_json(Path(args.report_output), report)
 
-    if args.worked_artifact_output:
+    worked = None
+    if args.worked_artifact_output or args.run_artifact_output:
         worked = build_worked_orchestration_artifact(
             state=state,
             doctor_record=doctor_record,
@@ -641,7 +673,21 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             refresh_report=refresh_report,
             comparison=comparison,
         )
-        save_json(Path(args.worked_artifact_output), worked)
+        if args.worked_artifact_output:
+            save_json(Path(args.worked_artifact_output), worked)
+
+    if args.run_artifact_output:
+        if worked is None:
+            worked = build_worked_orchestration_artifact(
+                state=state,
+                doctor_record=doctor_record,
+                bundle=bundle,
+                closure=closure,
+                refresh_report=refresh_report,
+                comparison=comparison,
+            )
+        canonical = build_canonical_run_artifact(state=state, report=report, worked=worked)
+        save_json(Path(args.run_artifact_output), canonical)
 
     print(json.dumps({"result": "OK", "closure_status": closure["closure_status"]}, ensure_ascii=True))
     return 0
@@ -711,6 +757,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--synrail-file")
     p_orchestrate.add_argument("--comparison-output")
     p_orchestrate.add_argument("--worked-artifact-output")
+    p_orchestrate.add_argument("--run-artifact-output")
     p_orchestrate.add_argument("--clean-surface", action="store_true")
     p_orchestrate.add_argument("--artifact-viable", action="store_true")
     p_orchestrate.add_argument("--helper-ok", action="store_true")

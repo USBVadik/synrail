@@ -104,6 +104,11 @@ The current wedge reading is:
 - it is not yet justified as a full governed path for every small incident
 - the hybrid subset remains promising, but still under-proven relative to the other two modes
 
+The current executable output reading is:
+
+- the spine can now emit one primary canonical run artifact
+- that artifact is now the best single machine-readable entrypoint into a bounded internal run
+
 ## Contributing
 
 For active contribution shape, start here:

@@ -1,0 +1,83 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "report",
+    "resulting_state",
+    "worked_envelope"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "canonical_run_artifact_v0"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "result",
+        "stopping_stage",
+        "reason",
+        "doctor_verdict",
+        "bundle_status",
+        "closure_status",
+        "refresh_applied",
+        "comparison_applied",
+        "resulting_state",
+        "next_safe_step"
+      ],
+      "properties": {
+        "result": {"type": "string", "minLength": 1},
+        "stopping_stage": {"type": "string", "minLength": 1},
+        "reason": {"type": "string"},
+        "doctor_verdict": {"type": "string"},
+        "bundle_status": {"type": "string"},
+        "closure_status": {"type": "string"},
+        "refresh_applied": {"type": "boolean"},
+        "comparison_applied": {"type": "boolean"},
+        "resulting_state": {"type": "string", "minLength": 1},
+        "next_safe_step": {"type": "string"}
+      }
+    },
+    "resulting_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "closure_status",
+        "blocking_reason",
+        "next_safe_step"
+      ],
+      "properties": {
+        "state": {"type": "string", "minLength": 1},
+        "closure_status": {"type": "string", "minLength": 1},
+        "blocking_reason": {"type": "string"},
+        "next_safe_step": {"type": "string"}
+      }
+    },
+    "worked_envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resulting_state",
+        "current_closure_status",
+        "next_safe_step"
+      ],
+      "properties": {
+        "resulting_state": {"type": "string", "minLength": 1},
+        "current_closure_status": {"type": "string", "minLength": 1},
+        "next_safe_step": {"type": "string"}
+      }
+    }
+  }
+}

@@ -201,6 +201,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ("--synrail-file", args.synrail_file),
         ("--comparison-output", args.comparison_output),
         ("--worked-artifact-output", args.worked_artifact_output),
+        ("--run-artifact-output", args.run_artifact_output),
         ("--artifact-path", args.artifact_path),
         ("--helper-path", args.helper_path),
         ("--prompt-identity-file", args.prompt_identity_file),
@@ -342,6 +343,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--synrail-file")
     p_orchestrate.add_argument("--comparison-output")
     p_orchestrate.add_argument("--worked-artifact-output")
+    p_orchestrate.add_argument("--run-artifact-output")
     p_orchestrate.add_argument("--clean-surface", action="store_true")
     p_orchestrate.add_argument("--artifact-viable", action="store_true")
     p_orchestrate.add_argument("--helper-ok", action="store_true")

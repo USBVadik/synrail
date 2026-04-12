@@ -15,6 +15,7 @@ The first bounded orchestration slice now lives at:
 - `tools/reference/synrail_runtime_v0.py`
 - `schemas/orchestration_report_v0.schema.json`
 - `schemas/worked_orchestration_artifact_v0.schema.json`
+- `schemas/canonical_run_artifact_v0.schema.json`
 
 ## What it does
 
@@ -33,6 +34,7 @@ The `orchestrate` command currently runs one bounded path:
 11. optionally run baseline comparison
 12. emit one machine-readable orchestration report
 13. optionally emit one canonical worked orchestration artifact
+14. optionally emit one primary canonical run artifact
 
 The bounded orchestration contour now lives in:
 
@@ -62,6 +64,14 @@ The first canonical worked orchestration envelope now lives at:
 The CLI can now emit that envelope directly through the orchestration path, instead of requiring a hand-assembled artifact after the fact.
 
 That matters because it keeps the canonical worked artifact aligned with the final runtime contour, including post-refresh closure state when refresh is part of the run.
+
+The spine can now also emit one primary canonical run artifact that compresses:
+
+- the report reading
+- the resulting state reading
+- the worked-envelope reading
+
+That artifact is now the best single machine-readable starting point for an internal run reading.
 
 The spine-driven contour now also emits explicit blocked state lanes instead of leaving the main failures only in report fields:
 

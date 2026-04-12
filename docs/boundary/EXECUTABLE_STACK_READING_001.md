@@ -18,6 +18,7 @@ The current executable stack can already provide:
 6. terminal-first operator commands
 7. machine-readable baseline comparison records
 8. one bounded orchestration path across attestation, doctor, integrity, bundle, closure, optional refresh, and optional comparison
+9. one primary spine-produced canonical run artifact
 
 That is enough to say:
 
@@ -84,6 +85,11 @@ The shortest current product reading is:
 - use `Synrail` when getting the truth wrong is expensive
 - do not assume the full governed path is justified for lower-risk honesty-restoration work
 - treat the hybrid subset as promising but still evidence-light
+
+The shortest current output reading is:
+
+- the spine can now emit one primary canonical run artifact
+- that artifact is a better single entrypoint than reconstructing a run from report, state, and worked envelope separately
 
 ## What this changes for product direction
 

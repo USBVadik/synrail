@@ -23,7 +23,8 @@ The v0 spine can:
 5. apply a closure verdict back into the state machine
 6. run one bounded orchestration contour across doctor, bundle, closure, optional refresh, and optional comparison
 7. deny disallowed transitions through hard gate checks
-8. emit the current machine-readable state
+8. emit one primary canonical run artifact for the bounded contour
+9. emit the current machine-readable state
 
 ## Current transition contour
 
