@@ -61,7 +61,8 @@ Examples:
 Current measured status:
 
 - hybrid is now `PROVISIONAL`
-- hybrid should stay `secondary` until it wins more than one measured pressure-test
+- hybrid now has one `SYNRAIL_BETTER` pressure-test and one `UNCLEAR` case
+- hybrid should stay `secondary` until the class-level measured signal stops being mixed
 
 ### 4. Instrument the cost of Synrail itself
 

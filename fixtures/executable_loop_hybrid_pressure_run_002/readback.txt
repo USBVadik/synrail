@@ -1,0 +1,1 @@
+active artifact readback confirms the bounded fix landed on the intended surface

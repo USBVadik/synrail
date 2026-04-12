@@ -18,31 +18,32 @@ but also about:
 
 ## Primary artifact
 
-The first aggregate cost-of-control artifact now lives at:
+The current aggregate cost-of-control artifact now lives at:
 
-- `fixtures/cost_of_control_001.json`
+- `fixtures/cost_of_control_002.json`
 
-It is built from these four economics-aware comparison records:
+It is built from these five economics-aware comparison records:
 
 - `fixtures/executable_loop_run_001/comparison_economics.json`
 - `fixtures/executable_loop_run_002/comparison_economics.json`
 - `fixtures/executable_loop_run_003/comparison_economics.json`
 - `fixtures/executable_loop_compound_run_001/comparison_economics.json`
+- `fixtures/executable_loop_hybrid_pressure_run_002/comparison_economics.json`
 
 ## Current measured reading
 
-Across the current four-scenario set, `Synrail` currently adds on average:
+Across the current five-scenario set, `Synrail` currently adds on average:
 
-- `21` operator minutes
+- `19` operator minutes
 - `2` extra interventions
 - `1` extra repair cycle
 - `1` extra invalidation
-- `26` extra minutes of closure latency
+- `23` extra minutes of closure latency
 
 Across that same set, `Synrail` currently gains on average:
 
 - `2` units of false-green exposure reduction
-- `45` points of artifact completeness
+- `44` points of artifact completeness
 
 This is the shortest honest current cost reading in the repo.
 
@@ -50,7 +51,7 @@ This is the shortest honest current cost reading in the repo.
 
 The current verdict mix is:
 
-- `2` scenarios: `SYNRAIL_BETTER`
+- `3` scenarios: `SYNRAIL_BETTER`
 - `1` scenario: `BASELINE_GOOD_ENOUGH`
 - `1` scenario: `UNCLEAR`
 
@@ -65,6 +66,7 @@ The current buckets are:
 - justified cost paths:
   - `SCENARIO_STRONG_001`
   - `SCENARIO_COMPOUND_001`
+  - `SCENARIO_HYBRID_002`
 - baseline-sufficient path:
   - `SCENARIO_WEAK_001`
 - under-proven path:
@@ -100,9 +102,9 @@ depending on the scenario class.
 
 The current shortest strategic reading is:
 
-- `Synrail` already earns its cost on the strong and compound proof-sensitive paths
+- `Synrail` already earns its cost on the strong, compound, and one uglier hybrid pressure path
 - the weak low-risk path still looks too expensive for the gain
-- the hybrid path is still not measured strongly enough to deserve active middle-mode status, so it should remain secondary for now
+- the hybrid class is no longer empty, but it is still mixed at the class level and should remain secondary for now
 
 This is exactly the kind of reading the repo needed.
 

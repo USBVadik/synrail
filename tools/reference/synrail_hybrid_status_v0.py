@@ -38,7 +38,7 @@ def derive_status(verdicts: list[str]) -> tuple[str, str, str]:
     return (
         "PROVISIONAL",
         "KEEP_HYBRID_SECONDARY",
-        "keep hybrid secondary and explicit; do not expand its semantics until it wins more than one measured pressure-test",
+        "keep hybrid secondary and explicit; do not expand its semantics until the class-level measured signal stops being mixed",
     )
 
 
@@ -67,9 +67,9 @@ def build_record(cost_record_path: Path, hybrid_record_paths: list[Path]) -> dic
         "promotion_requirements": [
             "add at least one more economics-aware hybrid comparison record",
             "add one uglier hybrid pressure-test instead of another clean policy example",
-            "only promote hybrid if the measured verdict stops staying unclear",
+            "only promote hybrid if the class-level measured signal stops staying unclear",
         ],
-        "next_action": "either gather one more measured hybrid pressure-test soon or keep hybrid explicitly provisional",
+        "next_action": "either gather one more measured hybrid pressure-test soon or keep hybrid explicitly provisional while the class-level signal stays mixed",
     }
 
 

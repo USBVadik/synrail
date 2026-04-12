@@ -1,0 +1,19 @@
+{
+  "schema_version": "orchestration_report_v0",
+  "run_id": "EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_002",
+  "task_class": "medium_risk_conflicting_artifact_fix",
+  "result": "OK",
+  "stopping_stage": "closure",
+  "reason": "MISSING_PROOF_SECTIONS",
+  "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+  "bundle_status": "PARTIAL",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "refresh_applied": false,
+  "refresh_resulting_closure_status": "",
+  "comparison_applied": false,
+  "comparison_verdict": "",
+  "blockers": [],
+  "dominant_blocker": "",
+  "resulting_state": "PROOF_BUNDLE_PARTIAL",
+  "next_safe_step": "rerun the scenario check against the attested target surface"
+}

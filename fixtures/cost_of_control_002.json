@@ -1,0 +1,91 @@
+{
+  "schema_version": "cost_of_control_record_v0",
+  "scenario_count": 5,
+  "source_records": [
+    {
+      "path": "synrail/fixtures/executable_loop_run_001/comparison_economics.json",
+      "scenario_id": "SCENARIO_STRONG_001",
+      "scenario_class": "expensive_wrong_closure",
+      "verdict": "SYNRAIL_BETTER"
+    },
+    {
+      "path": "synrail/fixtures/executable_loop_run_002/comparison_economics.json",
+      "scenario_id": "SCENARIO_WEAK_001",
+      "scenario_class": "low_risk_honesty_restoration",
+      "verdict": "BASELINE_GOOD_ENOUGH"
+    },
+    {
+      "path": "synrail/fixtures/executable_loop_run_003/comparison_economics.json",
+      "scenario_id": "SCENARIO_HYBRID_001",
+      "scenario_class": "medium_risk_ambiguous_closure",
+      "verdict": "UNCLEAR"
+    },
+    {
+      "path": "synrail/fixtures/executable_loop_compound_run_001/comparison_economics.json",
+      "scenario_id": "SCENARIO_COMPOUND_001",
+      "scenario_class": "compound_proof_sensitive_repair",
+      "verdict": "SYNRAIL_BETTER"
+    },
+    {
+      "path": "synrail/fixtures/executable_loop_hybrid_pressure_run_002/comparison_economics.json",
+      "scenario_id": "SCENARIO_HYBRID_002",
+      "scenario_class": "medium_risk_ambiguous_closure",
+      "verdict": "SYNRAIL_BETTER"
+    }
+  ],
+  "verdict_counts": {
+    "SYNRAIL_BETTER": 3,
+    "BASELINE_GOOD_ENOUGH": 1,
+    "UNCLEAR": 1
+  },
+  "aggregate_deltas": {
+    "avg_operator_minutes_added": 19,
+    "avg_intervention_count_added": 2,
+    "avg_repair_cycles_added": 1,
+    "avg_invalidation_count_added": 1,
+    "avg_closure_latency_minutes_added": 23,
+    "avg_false_green_exposure_reduced": 2,
+    "avg_artifact_completeness_percent_gain": 44
+  },
+  "hotspots": {
+    "highest_operator_minutes_added": {
+      "scenario_id": "SCENARIO_COMPOUND_001",
+      "path": "full_governed_path",
+      "value": 33
+    },
+    "highest_closure_latency_minutes_added": {
+      "scenario_id": "SCENARIO_COMPOUND_001",
+      "path": "full_governed_path",
+      "value": 39
+    },
+    "highest_false_green_exposure_reduced": {
+      "scenario_id": "SCENARIO_COMPOUND_001",
+      "path": "full_governed_path",
+      "value": 3
+    },
+    "highest_artifact_completeness_percent_gain": {
+      "scenario_id": "SCENARIO_COMPOUND_001",
+      "path": "full_governed_path",
+      "value": 70
+    }
+  },
+  "path_buckets": {
+    "justified_cost_paths": [
+      "SCENARIO_STRONG_001",
+      "SCENARIO_COMPOUND_001",
+      "SCENARIO_HYBRID_002"
+    ],
+    "baseline_sufficient_paths": [
+      "SCENARIO_WEAK_001"
+    ],
+    "under_proven_paths": [
+      "SCENARIO_HYBRID_001"
+    ]
+  },
+  "reading": {
+    "strongest_justified_path": "SCENARIO_COMPOUND_001",
+    "clearest_overhead_path": "SCENARIO_WEAK_001",
+    "hybrid_status": "UNCLEAR",
+    "compound_status": "SYNRAIL_BETTER"
+  }
+}

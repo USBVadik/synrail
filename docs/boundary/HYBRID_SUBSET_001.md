@@ -80,15 +80,21 @@ It is currently:
 - policy-relevant
 - but not yet strong enough to stand as a default policy tier
 
-The first measured status artifact for this now lives at:
+The current measured status artifact for this now lives at:
 
-- `fixtures/hybrid_status_001.json`
+- `fixtures/hybrid_status_002.json`
 
 That artifact currently says:
 
 - keep hybrid secondary and explicit
 - do not expand hybrid semantics yet
 - do not let “mixed answers” alone auto-select hybrid
+
+There is now one stronger hybrid pressure-test in the repo.
+
+That helps justify keeping hybrid alive.
+
+It still does not justify promoting hybrid to a default middle lane.
 
 ## Decision rule
 

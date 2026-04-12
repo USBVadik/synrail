@@ -1,0 +1,22 @@
+{
+  "schema_version": "hybrid_status_v0",
+  "source_cost_record": "synrail/fixtures/cost_of_control_002.json",
+  "hybrid_record_paths": [
+    "synrail/fixtures/executable_loop_run_003/comparison_economics.json",
+    "synrail/fixtures/executable_loop_hybrid_pressure_run_002/comparison_economics.json"
+  ],
+  "evidence_count": 2,
+  "current_verdicts": [
+    "UNCLEAR",
+    "SYNRAIL_BETTER"
+  ],
+  "current_status": "PROVISIONAL",
+  "decision": "KEEP_HYBRID_SECONDARY",
+  "default_policy": "keep hybrid secondary and explicit; do not expand its semantics until the class-level measured signal stops being mixed",
+  "promotion_requirements": [
+    "add at least one more economics-aware hybrid comparison record",
+    "add one uglier hybrid pressure-test instead of another clean policy example",
+    "only promote hybrid if the class-level measured signal stops staying unclear"
+  ],
+  "next_action": "either gather one more measured hybrid pressure-test soon or keep hybrid explicitly provisional while the class-level signal stays mixed"
+}

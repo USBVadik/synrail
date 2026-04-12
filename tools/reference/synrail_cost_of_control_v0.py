@@ -64,10 +64,18 @@ def clearest_overhead_path(records: list[dict]) -> str:
     return winner["scenario_id"]
 
 
-def find_verdict_for_class(records: list[dict], scenario_class: str) -> str:
-    for record in records:
-        if record["scenario_class"] == scenario_class:
-            return record["verdict"]
+def aggregate_verdict_for_class(records: list[dict], scenario_class: str) -> str:
+    class_records = [record for record in records if record["scenario_class"] == scenario_class]
+    if not class_records:
+        return "UNKNOWN"
+
+    verdicts = {record["verdict"] for record in class_records}
+    if "BASELINE_GOOD_ENOUGH" in verdicts:
+        return "BASELINE_GOOD_ENOUGH"
+    if "UNCLEAR" in verdicts:
+        return "UNCLEAR"
+    if "SYNRAIL_BETTER" in verdicts:
+        return "SYNRAIL_BETTER"
     return "UNKNOWN"
 
 
@@ -119,8 +127,8 @@ def build_cost_record(paths: list[Path]) -> dict:
         "reading": {
             "strongest_justified_path": strongest_justified_path(records),
             "clearest_overhead_path": clearest_overhead_path(records),
-            "hybrid_status": find_verdict_for_class(records, "medium_risk_ambiguous_closure"),
-            "compound_status": find_verdict_for_class(records, "compound_proof_sensitive_repair"),
+            "hybrid_status": aggregate_verdict_for_class(records, "medium_risk_ambiguous_closure"),
+            "compound_status": aggregate_verdict_for_class(records, "compound_proof_sensitive_repair"),
         },
     }
 

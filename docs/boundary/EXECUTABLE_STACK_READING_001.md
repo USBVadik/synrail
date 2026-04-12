@@ -37,7 +37,7 @@ The current stack does **not** support the broader claim:
 
 ## Why that reading is credible
 
-Because the repo now contains three internal executable comparison readings:
+Because the repo now contains three canonical comparison readings plus one uglier hybrid pressure-test:
 
 1. strong path:
    - `docs/core/EXECUTABLE_LOOP_RUN_001.md`
@@ -48,6 +48,9 @@ Because the repo now contains three internal executable comparison readings:
 3. hybrid path:
    - `docs/core/EXECUTABLE_LOOP_RUN_003.md`
    - verdict: `UNCLEAR`
+4. hybrid pressure path:
+   - `docs/core/EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_002.md`
+   - verdict: `SYNRAIL_BETTER`
 
 This set is stronger than any single result alone.
 
@@ -55,7 +58,7 @@ It shows that the stack can express:
 
 - where `Synrail` currently earns its cost
 - where a simpler baseline may already be enough
-- where a middle mode looks plausible but not yet decisive
+- where a middle mode still looks mixed at the class level even after one stronger win
 
 ## What is currently strongest in the stack
 
@@ -71,6 +74,7 @@ Current strongest value carriers are:
 - one canonical partial-to-accepted re-entry contour
 - one canonical degraded-to-accepted re-entry contour
 - one canonical ugly compound repair contour across blocked, partial, degraded, and accepted stages
+- one canonical hybrid pressure contour that stops on partial proof and then returns to accepted closure
 - explicit precedence for competing spine-side blockers
 - explicit precedence for competing degradations
 - anti-drift refresh after state degradation
@@ -82,7 +86,7 @@ Current weaker areas are:
 - doctor is now stronger than v0 and includes bounded filesystem/env probes, but it is still narrower than a mature readiness layer
 - the stack now has one bounded spine-driven runtime contour, but not yet a deeper end-to-end runtime
 - blocked-to-accepted, partial-to-accepted, and degraded-to-accepted re-entry are now canonical, and one ugly mixed repair family is now canonical too, but compound reality is still much weaker than it should be
-- comparison harness now has a first economics slice, but it is still too narrow to count as product-grade economics
+- comparison harness now has a five-scenario economics slice, but it is still too narrow to count as product-grade economics
 - production-grade runtime readiness is not yet proven
 
 ## Current wedge reading
@@ -91,7 +95,7 @@ The shortest current product reading is:
 
 - use `Synrail` when getting the truth wrong is expensive
 - do not assume the full governed path is justified for lower-risk honesty-restoration work
-- treat the hybrid subset as promising but still evidence-light, and keep it secondary until it wins more measured pressure-tests
+- treat the hybrid subset as now having one stronger measured win, but keep it secondary until the class-level signal stops being mixed
 
 The shortest current output reading is:
 
@@ -102,6 +106,7 @@ The shortest current output reading is:
 - one repaired partial-proof contour now also has a stable canonical repo fixture
 - one repaired degraded contour now also has a stable canonical repo fixture
 - one ugly compound repair contour now also has a stable canonical repo fixture
+- one hybrid pressure contour now also has a stable canonical repo fixture
 - that artifact is a better single entrypoint than reconstructing a run from report, state, and worked envelope separately
 
 The first canonical accepted reference surface for that output now lives at:

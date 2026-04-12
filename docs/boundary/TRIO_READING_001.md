@@ -82,6 +82,7 @@ Important nuance:
 - this is not a failure
 - it is a useful signal that the hybrid mode is plausible but still under-proven
 - current policy should therefore keep hybrid secondary, not treat it as a default middle lane
+- the repo now also has a second uglier hybrid pressure-test outside the trio, and that newer case says `SYNRAIL_BETTER`
 
 ## What the trio now supports
 
@@ -113,10 +114,20 @@ This trio is stronger than any single run because it gives the repo:
 
 That is a healthier product reading than trying to compress everything into a universal success story.
 
+The trio is no longer the whole hybrid evidence surface.
+
+It is now:
+
+- the clean policy triangle
+
+while the newer hybrid pressure-test adds:
+
+- one stronger measured hybrid win
+
 The next useful pressure on this trio is now:
 
 - one more measured hybrid pressure-test or an even firmer secondary status
-- additional cost-of-control readings beyond the current four-scenario set
+- additional cost-of-control readings beyond the current five-scenario set
 - more ugly compound paths that test whether the trio still holds outside curated clean flows
 - cost reduction on paths that still do not justify the extra control
 

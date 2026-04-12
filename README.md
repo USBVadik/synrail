@@ -101,6 +101,7 @@ The current proof reading is:
 - one economics-aware strong-path comparison now says `SYNRAIL_BETTER`
 - one economics-aware weak-path comparison now says `BASELINE_GOOD_ENOUGH`
 - one economics-aware hybrid comparison still says `UNCLEAR`
+- one uglier hybrid pressure-test now also says `SYNRAIL_BETTER`
 - one ugly compound run now also says `SYNRAIL_BETTER`
 - the current pressure-testing tranche now has one aggregate cost-of-control surface and one explicit hybrid-secondary status
 
@@ -108,17 +109,19 @@ The current wedge reading is:
 
 - `Synrail` is strongest on proof-sensitive closure paths where false completion is expensive
 - it is not yet justified as a full governed path for every small incident
-- the hybrid subset remains promising, but it is now explicitly kept provisional and secondary until more measured wins exist
+- the hybrid subset now has one stronger measured pressure-test, but the class-level reading is still mixed so it remains provisional and secondary
 
 The current executable output reading is:
 
 - the spine can now emit one primary canonical run artifact
 - the repo now carries canonical accepted, blocked, blocked-reentry, partial-reentry, and degraded-reentry fixtures on that same artifact surface
 - the repo now also carries one canonical ugly compound repair fixture on that same artifact surface
+- the repo now also carries one canonical hybrid pressure fixture on that same artifact surface
 - the repo now also has one explicit outcome lattice across accepted, partial, degraded, and blocked contours
 - the repo now also has one explicit re-entry reading for blocked-to-accepted, partial-to-accepted, and degraded-to-accepted repair
 - the repo now also has one first compound economics comparison record on a proof-sensitive ugly path
-- the repo now also has one aggregate machine-readable cost-of-control record across strong, weak, hybrid, and compound paths
+- the repo now also has one second hybrid pressure-test with a `SYNRAIL_BETTER` economics verdict
+- the repo now also has one aggregate machine-readable cost-of-control record across strong, weak, hybrid, compound, and hybrid-pressure paths
 - that artifact is now the best single machine-readable entrypoint into a bounded internal run
 - the trio now also has first `comparison_economics` records with simple operator-cost and false-green metrics
 

@@ -136,7 +136,7 @@ Current evidence suggests:
 
 - full governed path is justified on the killer path
 - lightweight baseline is often good enough on small honesty-restoration incidents
-- hybrid subset is still under-proven and should remain secondary until measured evidence improves
+- hybrid subset now has one stronger measured win, but it is still under-proven overall and should remain secondary until the class-level signal improves
 
 ## Decision rule
 
