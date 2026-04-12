@@ -25,10 +25,11 @@ The v0 spine can:
 7. run one bounded orchestration contour across doctor, optional preparation, bundle, closure, optional refresh, and optional comparison
 8. absorb one mode-selection receipt into that bounded orchestration contour
 9. emit one machine-readable repair handoff from the current non-green state
-10. record one explicit runtime-resume origin for continuation from a non-green state
-11. deny disallowed transitions through hard gate checks
-12. emit one primary canonical run artifact for the bounded contour
-13. emit the current machine-readable state
+10. auto-synthesize one machine-readable repair packet from the current non-green truth surface
+11. record one explicit runtime-resume origin for continuation from a non-green state
+12. deny disallowed transitions through hard gate checks
+13. emit one primary canonical run artifact for the bounded contour
+14. emit the current machine-readable state
 
 ## Current transition contour
 
@@ -72,12 +73,14 @@ It can now also carry one explicit runtime continuation marker from a non-green 
 
 It can now also emit and consume one repair handoff contract around that continuation path, which is the first move toward making continuation inputs machine-readable instead of leaving them mostly in operator memory.
 
-It can now also participate in one richer repair-packet continuation flow, where the CLI brings the spine:
+It can now also auto-synthesize and participate in one richer repair-packet continuation flow, where the spine itself can now provide:
 
 - one embedded handoff
 - one continuation plan
 - one repair-input bundle
 - one runtime output-default set
+- one embedded selection/preparation context
+- one summarized runtime-truth slice
 
 That continuation marker is now proven on:
 
@@ -94,6 +97,7 @@ That repair-packet layer is now proven on:
 
 - one blocked continuation packet that no longer needs a fake `final_result`
 - one second uglier compound continuation that crosses blocked readiness, invalid proof, degraded recovery, and accepted closure
+- one third uglier compound continuation that carries selection/preparation handoff through packet-first runtime continuation
 
 It now also chooses the comparison harness by input schema version, so the same bounded contour can still read legacy comparison inputs while moving the active pressure-testing path toward economics-aware comparison records.
 

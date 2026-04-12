@@ -130,7 +130,7 @@ Guarantees:
 - can run one bounded `doctor -> optional preparation -> bundle -> closure` contour with optional `refresh`, `compare`, and worked-envelope emission
 - can now absorb one `mode_selection_receipt_v0` so a preparation-aware strong-path choice can enter that bounded contour directly
 - can now emit one machine-readable repair handoff naming the missing continuation inputs and bounded runtime defaults for a non-green state
-- can now continue from one richer repair packet carried by the CLI layer instead of depending only on a long raw flag replay
+- can now auto-synthesize one richer repair packet from current runtime truth and continue from that packet instead of depending only on a long raw flag replay
 - can now record one explicit runtime-resume origin so continuation from a non-green state is machine-readable on the same artifact surface
 - can now block continuation explicitly at `repair_handoff` when the supplied continuation inputs are still incomplete
 - can carry one blocked-readiness contour back into accepted closure when the missing identity and proof inputs are repaired
@@ -230,7 +230,7 @@ Does not guarantee:
 
 - broad workflow planning
 - deep multi-run coordination
-- automatic packet synthesis from every runtime artifact
+- a mature continuation packet that captures every future runtime dependency
 
 ### `synrail_closure_v0.py`
 
@@ -280,8 +280,8 @@ Guarantees:
 - exposes compact state reading
 - exposes bundle, closure, and refresh commands through one CLI
 - exposes one bounded orchestration path for `doctor -> optional preparation -> bundle -> closure`
-- exposes one named `resume` path that can now continue from a richer repair packet
-- exposes one `repair-packet` command that groups continuation contract, continuation plan, repair inputs, and output defaults
+- exposes one named `resume` path that now defaults to packet-first continuation through a sibling `repair_packet.json`
+- exposes one `repair-packet` command that groups continuation contract, continuation plan, repair inputs, output defaults, and current selection/preparation context
 - exposes baseline comparison through the same CLI layer
 
 Does not guarantee:

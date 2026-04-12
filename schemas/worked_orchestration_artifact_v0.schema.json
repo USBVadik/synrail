@@ -92,6 +92,37 @@
         }
       }
     },
+    "repair_packet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "emitted",
+        "from_state",
+        "ready_for_resume",
+        "missing_inputs",
+        "selected_with_preparation"
+      ],
+      "properties": {
+        "emitted": {
+          "type": "boolean"
+        },
+        "from_state": {
+          "type": "string"
+        },
+        "ready_for_resume": {
+          "type": "boolean"
+        },
+        "missing_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selected_with_preparation": {
+          "type": "boolean"
+        }
+      }
+    },
     "selection": {
       "type": "object",
       "additionalProperties": false,

@@ -20,16 +20,18 @@ The repair-packet slice now lives at:
 
 ## What the packet adds
 
-The packet keeps the existing handoff, but adds one fuller continuation envelope:
+The packet keeps the existing handoff, but now auto-synthesizes one fuller continuation envelope from current runtime truth:
 
 1. embedded `repair_handoff`
 2. embedded `continuation_plan`
-3. embedded `resume_context`
+3. embedded `selection_context`
 4. embedded `repair_inputs`
 5. embedded `output_defaults`
 6. explicit `provided_inputs`
 7. explicit `missing_inputs`
 8. explicit `ready_for_resume`
+9. embedded `preparation_context`
+10. embedded `runtime_truth`
 
 That means the packet can now say both:
 
@@ -47,6 +49,18 @@ The packet is now the richer operator/runtime bundle for:
 - continuing through `resume`
 - restoring bounded runtime defaults
 - carrying refresh intent when continuation should re-enter refresh reconciliation
+- carrying selection/preparation truth forward without forcing the operator to replay it manually
+
+The runtime now auto-emits that packet from the current non-green truth surface whenever continuation is still honestly possible.
+
+That means the packet is no longer mainly:
+
+- a hand-authored convenience bundle
+
+It is now mainly:
+
+- a runtime-owned continuation packet
+- the default artifact that packet-first `resume` expects to consume
 
 ## Current proof points
 
@@ -60,12 +74,15 @@ Current canonical packet surfaces are:
   - `fixtures/executable_loop_compound_continuation_run_002/stage0_packet.json`
   - `fixtures/executable_loop_compound_continuation_run_002/stage1_packet.json`
   - `fixtures/executable_loop_compound_continuation_run_002/stage2_packet.json`
-  - `fixtures/executable_loop_compound_continuation_run_002/stage3_packet.json`
+- auto-synthesized selection/preparation packet-driven continuation:
+  - `fixtures/executable_loop_compound_continuation_run_003/stage0_packet.json`
+  - `fixtures/executable_loop_compound_continuation_run_003/stage1_packet.json`
 
 These prove:
 
 - blocked continuation can now be expressed without a fake `final_result`
 - packet-driven resume can now cross invalid bundle and recovery degradation without restating the full runtime surface each time
+- runtime-owned packets can now carry selection and preparation handoff through a nastier continuation contour without making the operator rebuild that context by hand
 
 ## Current boundary
 
@@ -78,3 +95,11 @@ It does not yet try to become:
 - a replacement for all runtime artifacts
 
 It is one continuation packet for one named `resume` path.
+
+The next improvement should make that packet:
+
+- richer where runtime truth already knows more than the current bounded fields express
+
+not:
+
+- broader for its own sake

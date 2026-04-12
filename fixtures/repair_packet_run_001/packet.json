@@ -74,6 +74,30 @@
     "refresh_recovery_status": "NOT_REQUIRED",
     "refresh_reverification_complete": false
   },
+  "selection_context": {
+    "applied": false,
+    "recommended_mode": "",
+    "selected_mode": "",
+    "selected_with_preparation": false,
+    "heavier_contour_entered": false
+  },
+  "preparation_context": {
+    "applied": false,
+    "ready_for_closure": false,
+    "complete_on_first_bundle_pass": false
+  },
+  "runtime_truth": {
+    "report_result": "BLOCKED",
+    "stopping_stage": "repair_handoff",
+    "report_reason": "CONTINUATION_INPUTS_MISSING",
+    "doctor_verdict": "",
+    "bundle_status": "MISSING",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": false,
+    "refresh_resulting_closure_status": "",
+    "resulting_state": "DOCTOR_BLOCKED",
+    "next_safe_step": "restore the exact prompt and task identity artifacts"
+  },
   "output_defaults": {
     "artifact_root": "fixtures/repair_packet_run_001",
     "doctor_output": "fixtures/repair_packet_run_001/doctor.json",
@@ -82,7 +106,11 @@
     "refresh_output": "fixtures/repair_packet_run_001/refresh.json",
     "report_output": "fixtures/repair_packet_run_001/report.json",
     "worked_artifact_output": "fixtures/repair_packet_run_001/orchestration.json",
-    "run_artifact_output": "fixtures/repair_packet_run_001/run.json"
+    "run_artifact_output": "fixtures/repair_packet_run_001/run.json",
+    "repair_handoff_output": "fixtures/repair_packet_run_001/repair_handoff.json",
+    "repair_packet_output": "fixtures/repair_packet_run_001/repair_packet.json",
+    "plan_output": "fixtures/repair_packet_run_001/plan.json",
+    "preparation_receipt_output": "fixtures/repair_packet_run_001/preparation_receipt.json"
   },
   "provided_inputs": [
     "clean_surface_confirmation",

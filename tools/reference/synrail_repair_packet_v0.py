@@ -56,6 +56,10 @@ def default_output_paths(root: Path) -> dict:
         "report_output": str(root / "report.json"),
         "worked_artifact_output": str(root / "orchestration.json"),
         "run_artifact_output": str(root / "run.json"),
+        "repair_handoff_output": str(root / "repair_handoff.json"),
+        "repair_packet_output": str(root / "repair_packet.json"),
+        "plan_output": str(root / "plan.json"),
+        "preparation_receipt_output": str(root / "preparation_receipt.json"),
     }
 
 
@@ -97,6 +101,171 @@ def build_continuation_plan(args: argparse.Namespace, handoff: dict) -> dict:
     }
 
 
+def build_selection_context(selection_receipt: dict | None) -> dict:
+    if not selection_receipt:
+        return {
+            "applied": False,
+            "recommended_mode": "",
+            "selected_mode": "",
+            "selected_with_preparation": False,
+            "heavier_contour_entered": False,
+        }
+    return {
+        "applied": True,
+        "recommended_mode": selection_receipt["recommended_mode"],
+        "selected_mode": selection_receipt["selected_mode"],
+        "selected_with_preparation": selection_receipt.get("selected_with_preparation", False),
+        "heavier_contour_entered": selection_receipt.get("heavier_contour_entered", False),
+    }
+
+
+def build_preparation_context(preparation_receipt: dict | None) -> dict:
+    if not preparation_receipt:
+        return {
+            "applied": False,
+            "ready_for_closure": False,
+            "complete_on_first_bundle_pass": False,
+        }
+    return {
+        "applied": True,
+        "ready_for_closure": preparation_receipt.get("ready_for_closure", False),
+        "complete_on_first_bundle_pass": preparation_receipt.get("complete_on_first_bundle_pass", False),
+    }
+
+
+def build_runtime_truth(state: dict, report: dict | None) -> dict:
+    report = report or {}
+    return {
+        "report_result": report.get("result", ""),
+        "stopping_stage": report.get("stopping_stage", ""),
+        "report_reason": report.get("reason", ""),
+        "doctor_verdict": report.get("doctor_verdict", ""),
+        "bundle_status": report.get("bundle_status", state.get("proof_bundle", {}).get("status", "")),
+        "closure_status": report.get("closure_status", state.get("closure", {}).get("status", "")),
+        "refresh_applied": report.get("refresh_applied", False),
+        "refresh_resulting_closure_status": report.get("refresh_resulting_closure_status", ""),
+        "resulting_state": report.get("resulting_state", state.get("state", "")),
+        "next_safe_step": report.get("next_safe_step", state.get("next_safe_step", "")),
+    }
+
+
+def build_packet_from_runtime_truth(
+    *,
+    state: dict,
+    artifact_root: Path,
+    doctor_run_id: str,
+    doctor_level: str,
+    target_path: str,
+    target_classification: str,
+    baseline_identity: str,
+    intended_run_class: str,
+    execution_surface_identity: str,
+    repair_handoff: dict | None = None,
+    final_result: str = "",
+    prompt_identity: str = "",
+    task_identity: str = "",
+    prompt_identity_ok: bool = False,
+    readback: str = "",
+    scenario_proof: str = "",
+    target_identity_file: str = "",
+    clean_surface: bool = False,
+    artifact_viable: bool = False,
+    helper_ok: bool = False,
+    credentials_ok: bool = False,
+    artifact_path: str = "",
+    helper_path: str = "",
+    credential_env: list[str] | None = None,
+    refresh_output: str = "",
+    refresh_event_type: str = "",
+    refresh_recovery_status: str = "NOT_REQUIRED",
+    refresh_reverification_complete: bool = False,
+    refresh_use_bundle: bool = False,
+    refresh_use_closure: bool = False,
+    output_defaults_overrides: dict | None = None,
+    selection_receipt: dict | None = None,
+    preparation_receipt: dict | None = None,
+    report: dict | None = None,
+) -> dict:
+    handoff = repair_handoff or build_repair_handoff(state)
+    packet_args = argparse.Namespace(
+        refresh_event_type=refresh_event_type,
+        refresh_recovery_status=refresh_recovery_status,
+        refresh_reverification_complete=refresh_reverification_complete,
+        refresh_use_bundle=refresh_use_bundle,
+        refresh_use_closure=refresh_use_closure,
+        prompt_identity=prompt_identity,
+        task_identity=task_identity,
+        target_identity_file=target_identity_file,
+        clean_surface=clean_surface,
+        artifact_path=artifact_path,
+        helper_path=helper_path,
+        credentials_ok=credentials_ok,
+        credential_env=list(credential_env or []),
+        final_result=final_result,
+        readback=readback,
+        scenario_proof=scenario_proof,
+    )
+
+    prompt_identity_ok = prompt_identity_ok or bool(prompt_identity.strip() and task_identity.strip())
+    provided_ids = provided_input_ids(packet_args)
+    missing_ids = missing_input_ids(handoff, provided_ids)
+
+    output_defaults = default_output_paths(artifact_root)
+    for key, value in (output_defaults_overrides or {}).items():
+        if value:
+            output_defaults[key] = value
+    if refresh_output:
+        output_defaults["refresh_output"] = refresh_output
+
+    packet = {
+        "schema_version": "repair_packet_v0",
+        "run_id": state["run_id"],
+        "task_class": state["task_class"],
+        "from_state": state["state"],
+        "continuation_entrypoint": "resume",
+        "repair_handoff": handoff,
+        "continuation_plan": build_continuation_plan(packet_args, handoff),
+        "resume_context": {
+            "doctor_run_id": doctor_run_id,
+            "doctor_level": doctor_level,
+            "target_path": target_path,
+            "target_classification": target_classification,
+            "baseline_identity": baseline_identity,
+            "intended_run_class": intended_run_class,
+            "execution_surface_identity": execution_surface_identity,
+        },
+        "repair_inputs": {
+            "prompt_identity": prompt_identity,
+            "task_identity": task_identity,
+            "prompt_identity_ok": prompt_identity_ok,
+            "target_identity_file": target_identity_file,
+            "clean_surface": clean_surface,
+            "artifact_viable": artifact_viable,
+            "helper_ok": helper_ok,
+            "credentials_ok": credentials_ok,
+            "artifact_path": artifact_path,
+            "helper_path": helper_path,
+            "credential_env": list(credential_env or []),
+            "final_result": final_result,
+            "readback": readback,
+            "scenario_proof": scenario_proof,
+            "refresh_recovery_status": refresh_recovery_status,
+            "refresh_reverification_complete": refresh_reverification_complete,
+        },
+        "selection_context": build_selection_context(selection_receipt),
+        "preparation_context": build_preparation_context(preparation_receipt),
+        "runtime_truth": build_runtime_truth(state, report),
+        "output_defaults": output_defaults,
+        "provided_inputs": provided_ids,
+        "missing_inputs": missing_ids,
+        "ready_for_resume": handoff.get("continuation_allowed", False) and not missing_ids,
+        "next_safe_step": handoff["next_safe_step"],
+    }
+    if selection_receipt:
+        packet["selection_receipt"] = selection_receipt
+    return packet
+
+
 def build_packet(args: argparse.Namespace) -> dict:
     state = load_state_json(Path(args.state_file))
     if args.repair_handoff_file:
@@ -104,57 +273,45 @@ def build_packet(args: argparse.Namespace) -> dict:
     else:
         handoff = build_repair_handoff(state)
 
-    prompt_identity_ok = args.prompt_identity_ok or bool(args.prompt_identity.strip() and args.task_identity.strip())
+    selection_receipt = load_json(Path(args.mode_selection_receipt)) if getattr(args, "mode_selection_receipt", None) else None
+    preparation_receipt = load_json(Path(args.preparation_receipt_file)) if getattr(args, "preparation_receipt_file", None) else None
+    report = load_json(Path(args.report_file)) if getattr(args, "report_file", None) else None
 
-    provided_ids = provided_input_ids(args)
-    missing_ids = missing_input_ids(handoff, provided_ids)
-
-    output_defaults = default_output_paths(Path(args.artifact_root))
-    if args.refresh_output:
-        output_defaults["refresh_output"] = args.refresh_output
-    continuation_plan = build_continuation_plan(args, handoff)
-
-    return {
-        "schema_version": "repair_packet_v0",
-        "run_id": state["run_id"],
-        "task_class": state["task_class"],
-        "from_state": state["state"],
-        "continuation_entrypoint": "resume",
-        "repair_handoff": handoff,
-        "continuation_plan": continuation_plan,
-        "resume_context": {
-            "doctor_run_id": args.doctor_run_id,
-            "doctor_level": args.doctor_level,
-            "target_path": args.target_path,
-            "target_classification": args.target_classification,
-            "baseline_identity": args.baseline_identity,
-            "intended_run_class": args.intended_run_class,
-            "execution_surface_identity": args.execution_surface_identity,
-        },
-        "repair_inputs": {
-            "prompt_identity": args.prompt_identity,
-            "task_identity": args.task_identity,
-            "prompt_identity_ok": prompt_identity_ok,
-            "target_identity_file": args.target_identity_file or "",
-            "clean_surface": args.clean_surface,
-            "artifact_viable": args.artifact_viable,
-            "helper_ok": args.helper_ok,
-            "credentials_ok": args.credentials_ok,
-            "artifact_path": args.artifact_path or "",
-            "helper_path": args.helper_path or "",
-            "credential_env": list(args.credential_env),
-            "final_result": args.final_result,
-            "readback": args.readback or "",
-            "scenario_proof": args.scenario_proof or "",
-            "refresh_recovery_status": args.refresh_recovery_status,
-            "refresh_reverification_complete": args.refresh_reverification_complete,
-        },
-        "output_defaults": output_defaults,
-        "provided_inputs": provided_ids,
-        "missing_inputs": missing_ids,
-        "ready_for_resume": handoff.get("continuation_allowed", False) and not missing_ids,
-        "next_safe_step": handoff["next_safe_step"],
-    }
+    return build_packet_from_runtime_truth(
+        state=state,
+        artifact_root=Path(args.artifact_root),
+        doctor_run_id=args.doctor_run_id,
+        doctor_level=args.doctor_level,
+        target_path=args.target_path,
+        target_classification=args.target_classification,
+        baseline_identity=args.baseline_identity,
+        intended_run_class=args.intended_run_class,
+        execution_surface_identity=args.execution_surface_identity,
+        repair_handoff=handoff,
+        final_result=args.final_result,
+        prompt_identity=args.prompt_identity,
+        task_identity=args.task_identity,
+        prompt_identity_ok=args.prompt_identity_ok,
+        readback=args.readback or "",
+        scenario_proof=args.scenario_proof or "",
+        target_identity_file=args.target_identity_file or "",
+        clean_surface=args.clean_surface,
+        artifact_viable=args.artifact_viable,
+        helper_ok=args.helper_ok,
+        credentials_ok=args.credentials_ok,
+        artifact_path=args.artifact_path or "",
+        helper_path=args.helper_path or "",
+        credential_env=list(args.credential_env),
+        refresh_output=args.refresh_output or "",
+        refresh_event_type=args.refresh_event_type or "",
+        refresh_recovery_status=args.refresh_recovery_status,
+        refresh_reverification_complete=args.refresh_reverification_complete,
+        refresh_use_bundle=args.refresh_use_bundle,
+        refresh_use_closure=args.refresh_use_closure,
+        selection_receipt=selection_receipt,
+        preparation_receipt=preparation_receipt,
+        report=report,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -163,6 +320,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--artifact-root", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--repair-handoff-file")
+    parser.add_argument("--mode-selection-receipt")
+    parser.add_argument("--preparation-receipt-file")
+    parser.add_argument("--report-file")
     parser.add_argument("--doctor-run-id", required=True)
     parser.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
     parser.add_argument("--target-path", required=True)

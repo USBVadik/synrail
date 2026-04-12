@@ -11,6 +11,9 @@
     "continuation_plan",
     "resume_context",
     "repair_inputs",
+    "selection_context",
+    "preparation_context",
+    "runtime_truth",
     "output_defaults",
     "provided_inputs",
     "missing_inputs",
@@ -180,6 +183,104 @@
         "refresh_reverification_complete": {"type": "boolean"}
       }
     },
+    "selection_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "recommended_mode",
+        "selected_mode",
+        "selected_with_preparation",
+        "heavier_contour_entered"
+      ],
+      "properties": {
+        "applied": {"type": "boolean"},
+        "recommended_mode": {"type": "string"},
+        "selected_mode": {"type": "string"},
+        "selected_with_preparation": {"type": "boolean"},
+        "heavier_contour_entered": {"type": "boolean"}
+      }
+    },
+    "selection_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "recommendation_file",
+        "scenario_class",
+        "task_class",
+        "recommended_mode",
+        "selected_mode",
+        "secondary_exception_mode",
+        "followed_recommendation",
+        "heavier_contour_entered",
+        "estimated_avoided_operator_minutes",
+        "estimated_avoided_interventions",
+        "estimated_avoided_closure_latency_minutes",
+        "why",
+        "next_safe_step"
+      ],
+      "properties": {
+        "schema_version": {"const": "mode_selection_receipt_v0"},
+        "recommendation_file": {"type": "string"},
+        "scenario_class": {"type": "string"},
+        "task_class": {"type": "string"},
+        "recommended_mode": {"type": "string"},
+        "selected_mode": {"type": "string"},
+        "secondary_exception_mode": {"type": "string"},
+        "governed_preparation_recommended": {"type": "boolean"},
+        "selected_with_preparation": {"type": "boolean"},
+        "followed_recommendation": {"type": "boolean"},
+        "heavier_contour_entered": {"type": "boolean"},
+        "estimated_avoided_operator_minutes": {"type": "integer"},
+        "estimated_avoided_interventions": {"type": "integer"},
+        "estimated_avoided_closure_latency_minutes": {"type": "integer"},
+        "why": {"type": "string"},
+        "next_safe_step": {"type": "string"}
+      }
+    },
+    "preparation_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "ready_for_closure",
+        "complete_on_first_bundle_pass"
+      ],
+      "properties": {
+        "applied": {"type": "boolean"},
+        "ready_for_closure": {"type": "boolean"},
+        "complete_on_first_bundle_pass": {"type": "boolean"}
+      }
+    },
+    "runtime_truth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "report_result",
+        "stopping_stage",
+        "report_reason",
+        "doctor_verdict",
+        "bundle_status",
+        "closure_status",
+        "refresh_applied",
+        "refresh_resulting_closure_status",
+        "resulting_state",
+        "next_safe_step"
+      ],
+      "properties": {
+        "report_result": {"type": "string"},
+        "stopping_stage": {"type": "string"},
+        "report_reason": {"type": "string"},
+        "doctor_verdict": {"type": "string"},
+        "bundle_status": {"type": "string"},
+        "closure_status": {"type": "string"},
+        "refresh_applied": {"type": "boolean"},
+        "refresh_resulting_closure_status": {"type": "string"},
+        "resulting_state": {"type": "string"},
+        "next_safe_step": {"type": "string"}
+      }
+    },
     "output_defaults": {
       "type": "object",
       "additionalProperties": false,
@@ -191,7 +292,11 @@
         "refresh_output",
         "report_output",
         "worked_artifact_output",
-        "run_artifact_output"
+        "run_artifact_output",
+        "repair_handoff_output",
+        "repair_packet_output",
+        "plan_output",
+        "preparation_receipt_output"
       ],
       "properties": {
         "artifact_root": {"type": "string", "minLength": 1},
@@ -201,7 +306,11 @@
         "refresh_output": {"type": "string", "minLength": 1},
         "report_output": {"type": "string", "minLength": 1},
         "worked_artifact_output": {"type": "string", "minLength": 1},
-        "run_artifact_output": {"type": "string", "minLength": 1}
+        "run_artifact_output": {"type": "string", "minLength": 1},
+        "repair_handoff_output": {"type": "string", "minLength": 1},
+        "repair_packet_output": {"type": "string", "minLength": 1},
+        "plan_output": {"type": "string", "minLength": 1},
+        "preparation_receipt_output": {"type": "string", "minLength": 1}
       }
     },
     "provided_inputs": {

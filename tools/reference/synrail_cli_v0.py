@@ -306,6 +306,9 @@ def cmd_repair_packet(args: argparse.Namespace) -> int:
     ]
     for flag, value in [
         ("--repair-handoff-file", args.repair_handoff_file),
+        ("--mode-selection-receipt", args.mode_selection_receipt),
+        ("--preparation-receipt-file", args.preparation_receipt_file),
+        ("--report-file", args.report_file),
         ("--readback", args.readback),
         ("--scenario-proof", args.scenario_proof),
         ("--target-identity-file", args.target_identity_file),
@@ -341,11 +344,28 @@ def load_repair_packet(path: Path) -> dict:
     return packet
 
 
-def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> str | None:
-    if not getattr(args, "repair_packet_file", None):
-        return None
+def discover_repair_packet_file(args: argparse.Namespace) -> Path | None:
+    if getattr(args, "repair_packet_file", None):
+        return Path(args.repair_packet_file)
+    state_path = Path(args.state_file)
+    candidates = [
+        state_path.with_name("repair_packet.json"),
+    ]
+    if getattr(args, "report_output", None):
+        candidates.append(Path(args.report_output).with_name("repair_packet.json"))
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
 
-    packet = load_repair_packet(Path(args.repair_packet_file))
+
+def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> list[str]:
+    packet_path = discover_repair_packet_file(args)
+    if not packet_path:
+        return []
+
+    args.repair_packet_file = str(packet_path)
+    packet = load_repair_packet(packet_path)
     if packet["run_id"] != state["run_id"] or packet["from_state"] != state["state"]:
         raise ValueError("repair packet does not match the requested state")
 
@@ -353,6 +373,7 @@ def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> str | No
     continuation_plan = packet.get("continuation_plan", {})
     repair_inputs = packet["repair_inputs"]
     output_defaults = packet["output_defaults"]
+    temp_files: list[str] = []
 
     for attr, value in [
         ("doctor_run_id", context["doctor_run_id"]),
@@ -379,10 +400,17 @@ def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> str | No
         ("report_output", output_defaults["report_output"]),
         ("worked_artifact_output", output_defaults["worked_artifact_output"]),
         ("run_artifact_output", output_defaults["run_artifact_output"]),
+        ("repair_handoff_output", output_defaults["repair_handoff_output"]),
+        ("repair_packet_output", output_defaults["repair_packet_output"]),
+        ("plan_output", output_defaults["plan_output"]),
+        ("preparation_receipt_output", output_defaults["preparation_receipt_output"]),
     ]:
         current = getattr(args, attr, None)
         if current in {None, ""} and value is not None:
             setattr(args, attr, value)
+
+    if not getattr(args, "preparation_artifact_root", None):
+        args.preparation_artifact_root = output_defaults["artifact_root"]
 
     if not getattr(args, "refresh_recovery_status", None):
         args.refresh_recovery_status = repair_inputs["refresh_recovery_status"]
@@ -407,12 +435,22 @@ def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> str | No
     if not args.credential_env:
         args.credential_env = list(repair_inputs["credential_env"])
 
+    selection_receipt = packet.get("selection_receipt")
+    if selection_receipt and not getattr(args, "mode_selection_receipt", None):
+        temp_selection = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump(selection_receipt, temp_selection, indent=2, ensure_ascii=True)
+        temp_selection.write("\n")
+        temp_selection.close()
+        args.mode_selection_receipt = temp_selection.name
+        temp_files.append(temp_selection.name)
+
     temp_handoff = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
     json.dump(packet["repair_handoff"], temp_handoff, indent=2, ensure_ascii=True)
     temp_handoff.write("\n")
     temp_handoff.close()
     args.repair_handoff_file = temp_handoff.name
-    return temp_handoff.name
+    temp_files.append(temp_handoff.name)
+    return temp_files
 
 
 def cmd_orchestrate(args: argparse.Namespace) -> int:
@@ -442,6 +480,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         forwarded.extend(["--mode-selection-receipt", args.mode_selection_receipt])
     for flag, value in [
         ("--repair-handoff-output", args.repair_handoff_output),
+        ("--repair-packet-output", args.repair_packet_output),
         ("--readback", args.readback),
         ("--scenario-proof", args.scenario_proof),
         ("--plan-output", args.plan_output),
@@ -484,9 +523,9 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
 def cmd_resume(args: argparse.Namespace) -> int:
     state = load_json(Path(args.state_file))
     args.resume_from_state = state["state"]
-    temp_handoff_path = None
+    temp_runtime_files: list[str] = []
     try:
-        temp_handoff_path = maybe_apply_repair_packet(args, state)
+        temp_runtime_files = maybe_apply_repair_packet(args, state)
     except ValueError as exc:
         print(json.dumps({"result": "ERROR", "reason": "INVALID_REPAIR_PACKET", "detail": str(exc)}, ensure_ascii=True))
         return 2
@@ -519,8 +558,8 @@ def cmd_resume(args: argparse.Namespace) -> int:
     try:
         return cmd_orchestrate(args)
     finally:
-        if temp_handoff_path:
-            Path(temp_handoff_path).unlink(missing_ok=True)
+        for temp_path in temp_runtime_files:
+            Path(temp_path).unlink(missing_ok=True)
 
 
 def add_orchestration_args(
@@ -535,6 +574,7 @@ def add_orchestration_args(
     parser.add_argument("--repair-handoff-file")
     parser.add_argument("--repair-handoff-output")
     parser.add_argument("--repair-packet-file")
+    parser.add_argument("--repair-packet-output")
     parser.add_argument("--mode-selection-receipt")
     parser.add_argument("--doctor-run-id", required=not relaxed_runtime)
     parser.add_argument("--doctor-level", required=not relaxed_runtime, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
@@ -731,6 +771,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_repair_packet.add_argument("--artifact-root", required=True)
     p_repair_packet.add_argument("--output", required=True)
     p_repair_packet.add_argument("--repair-handoff-file")
+    p_repair_packet.add_argument("--mode-selection-receipt")
+    p_repair_packet.add_argument("--preparation-receipt-file")
+    p_repair_packet.add_argument("--report-file")
     p_repair_packet.add_argument("--doctor-run-id", required=True)
     p_repair_packet.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
     p_repair_packet.add_argument("--target-path", required=True)

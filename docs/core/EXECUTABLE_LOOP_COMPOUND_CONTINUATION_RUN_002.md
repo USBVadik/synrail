@@ -28,7 +28,10 @@ The richer continuation packets for that same contour now live at:
 - `fixtures/executable_loop_compound_continuation_run_002/stage0_packet.json`
 - `fixtures/executable_loop_compound_continuation_run_002/stage1_packet.json`
 - `fixtures/executable_loop_compound_continuation_run_002/stage2_packet.json`
-- `fixtures/executable_loop_compound_continuation_run_002/stage3_packet.json`
+
+There is intentionally no `stage3_packet.json`.
+
+That final accepted stage no longer emits a continuation packet, because the runtime now only synthesizes repair packets from still-repairable non-green truth.
 
 ## Run shape
 
@@ -90,3 +93,5 @@ This is a stronger runtime proof than the first compound continuation contour be
 - a degraded recovery repair
 
 through packet-driven `resume`.
+
+It is now also a cleaner truth surface than before, because the accepted final stage no longer pretends it still needs a continuation packet.

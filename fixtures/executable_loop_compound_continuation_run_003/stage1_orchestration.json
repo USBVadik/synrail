@@ -1,0 +1,61 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_003",
+  "task_class": "bounded_router_trigger_fix",
+  "doctor": {
+    "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "blocking_failure_classes": []
+  },
+  "resume": {
+    "applied": true,
+    "from_state": "PROOF_BUNDLE_INVALID"
+  },
+  "repair_handoff": {
+    "applied": true,
+    "from_state": "PROOF_BUNDLE_INVALID",
+    "required_inputs": [
+      "final_result"
+    ],
+    "missing_inputs": []
+  },
+  "repair_packet": {
+    "emitted": true,
+    "from_state": "RECOVERY_PENDING",
+    "ready_for_resume": false,
+    "missing_inputs": [
+      "refresh_recovery_complete",
+      "refresh_reverification_complete"
+    ],
+    "selected_with_preparation": true
+  },
+  "selection": {
+    "applied": true,
+    "selected_mode": "FULL_GOVERNED_PATH",
+    "selected_with_preparation": true
+  },
+  "preparation": {
+    "applied": true,
+    "ready_for_closure": false
+  },
+  "bundle": {
+    "status": "COMPLETE",
+    "missing_sections": []
+  },
+  "closure": {
+    "closure_status": "ACCEPTED",
+    "blocking_reason": ""
+  },
+  "refresh": {
+    "applied": true,
+    "event_type": "RECOVERY_EVENT",
+    "resulting_closure_status": "CLAIMED_NOT_ACCEPTED"
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "RECOVERY_PENDING",
+  "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "run reverification against the attested target surface"
+}

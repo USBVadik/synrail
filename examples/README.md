@@ -88,6 +88,10 @@ They are here to show how `Synrail` artifacts fit together without importing raw
   - second uglier packet-driven continuation contour using staged repair packets plus named `resume`
   - crosses blocked readiness, invalid proof, degraded recovery, and accepted closure on the same runtime surface
   - includes `run.json` as the richer compound runtime-continuation primary run artifact
+- `../fixtures/executable_loop_compound_continuation_run_003/`
+  - third uglier packet-first continuation contour using selection/preparation handoff plus auto-synthesized repair packets
+  - crosses invalid proof, degraded recovery, and accepted closure on the same runtime surface
+  - includes `run.json` as the packet-first compound runtime-continuation primary run artifact
 
 ## Rule
 

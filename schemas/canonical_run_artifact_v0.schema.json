@@ -108,6 +108,27 @@
         "current_closure_status": {"type": "string", "minLength": 1},
         "next_safe_step": {"type": "string"}
       }
+    },
+    "repair_packet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "emitted",
+        "from_state",
+        "ready_for_resume",
+        "missing_inputs"
+      ],
+      "properties": {
+        "emitted": {"type": "boolean"},
+        "from_state": {"type": "string"},
+        "ready_for_resume": {"type": "boolean"},
+        "missing_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     }
   }
 }

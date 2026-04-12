@@ -14,7 +14,7 @@ but also whether the kernel can return from a less-green contour after the block
 
 ## Current re-entry anchors
 
-The current re-entry lattice is anchored by four canonical repair families, three named runtime continuation contours, one richer repair-packet layer, and one explicit repair-handoff layer:
+The current re-entry lattice is anchored by four canonical repair families, three named runtime continuation contours, one richer repair-packet layer, one packet-first continuation family, and one explicit repair-handoff layer:
 
 1. blocked readiness to accepted closure
 2. partial proof to accepted closure
@@ -25,6 +25,7 @@ The current re-entry lattice is anchored by four canonical repair families, thre
 7. one doctor-blocked runtime continuation back to accepted closure
 8. one machine-readable repair handoff layer plus one ugly compound continuation family through named `resume`
 9. one richer repair-packet layer plus one second uglier compound continuation family through named `resume`
+10. one packet-first continuation family where selection/preparation handoff survives into named `resume`
 
 That is still bounded, but it is already materially stronger than one or two repaired contours.
 
@@ -187,7 +188,38 @@ Why this matters:
 - it reduces continuation fragility
 - it makes compound continuation more product-real and less like a one-off stitched replay
 
-## 6. Doctor-blocked runtime continuation to accepted closure
+## 6. Packet-first selection/preparation continuation to accepted closure
+
+Current readable path:
+
+- prepared-selection starting surface:
+  - `fixtures/executable_loop_compound_continuation_run_003/stage0_run.json`
+- packet-first continuation surface:
+  - `fixtures/executable_loop_compound_continuation_run_003/run.json`
+
+Readable transition:
+
+- strong selection chooses prepared governed contour
+- prepared contour lands in `PROOF_BUNDLE_INVALID`
+- runtime auto-synthesizes `stage0_packet.json`
+- packet-first `resume` repairs invalid proof
+- runtime auto-synthesizes `stage1_packet.json`
+- packet-first `resume` completes degraded recovery
+- `CLOSURE_ACCEPTED`
+
+What this proves:
+
+- packet synthesis is now part of runtime truth rather than mostly an operator-authored bridge
+- selection and preparation handoff now survive into continuation without a long manual replay
+- named `resume` now reads more like the main continuation surface than a convenience wrapper
+
+Why this matters:
+
+- it reduces continuation tax on the strong prepared path
+- it makes the current continuation contour more product-real
+- it turns one previously separate handoff family into the same runtime continuation surface
+
+## 7. Doctor-blocked runtime continuation to accepted closure
 
 Current readable path:
 
@@ -227,6 +259,7 @@ The current re-entry lattice supports a stronger kernel-level claim:
   - one explicit reverse edge from a degraded recovery state back to accepted closure
   - one explicit compound repair family that crosses blocked, partial, and degraded contours on the way back to accepted closure
   - one packet-driven compound continuation family that crosses blocked, invalid, degraded, and accepted contours on the way back to honest closure
+  - one packet-first continuation family that carries selection/preparation handoff through invalid-proof and degraded-recovery repair back to accepted closure
 
 That is stronger than saying only:
 
@@ -241,7 +274,7 @@ because it shows the kernel can sometimes recover honestly after a prior block.
 The re-entry lattice still has visible gaps:
 
 - the current canonical reverse edges now cover readiness repair, proof completion, one recovery repair, and one ugly mixed family, but not the full set of future compound families
-- named runtime `resume` now exists for partial-proof, degraded-recovery, and doctor-blocked continuation, and repair handoff plus repair packet now name the continuation contract more honestly, but packet synthesis is still narrower than a mature continuation surface should be
+- named runtime `resume` now exists for partial-proof, degraded-recovery, and doctor-blocked continuation, and repair handoff plus repair packet now name the continuation contract much more honestly, but the packet is still narrower than a mature continuation surface should be
 - hybrid compound repair is still much weaker than it should be
 
 ## How this relates to other readings
@@ -272,9 +305,9 @@ That is a healthier internal product surface than treating repair only as someth
 
 The next strongest kernel work should improve one of these:
 
-1. add one repair-handoff layer that tells the operator exactly which inputs are needed for continuation
-2. make the next ugly continuation contour run through that named runtime path instead of only through the broader orchestration surface
-3. reduce ambiguity between “repairable blocked”, “repairable partial”, “repairable degraded”, and “still not re-enterable” states
-4. strengthen the economics reading around compound re-entry rather than only its state semantics
+1. make the continuation packet richer where the runtime already knows more than the current bounded fields express
+2. reduce ambiguity between “repairable blocked”, “repairable partial”, “repairable degraded”, and “still not re-enterable” states
+3. strengthen the economics reading around compound re-entry rather than only its state semantics
+4. keep packet-first continuation the default operator path instead of letting raw flag replay creep back in
 
 If a change does not strengthen one of those, it is probably not the best next move for the executable kernel right now.

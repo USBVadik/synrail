@@ -28,11 +28,12 @@ The current executable stack can already provide:
 16. one second named runtime resume path that can continue a degraded recovery state back toward accepted closure through that same artifact surface
 17. one third named runtime resume path that can continue a true `DOCTOR_BLOCKED` state back toward accepted closure through that same artifact surface
 18. one first-class repair handoff layer that names missing continuation inputs and bounded runtime defaults in machine-readable form
-19. one richer repair-packet layer that carries continuation context, continuation plan, repair inputs, and output defaults in one machine-readable bundle
+19. one richer repair-packet layer that is now auto-synthesized from current runtime truth and carries continuation context, continuation plan, repair inputs, and output defaults in one machine-readable bundle
 20. one canonical blocked repair-packet contour that proves `resume` no longer needs a fake final-result input just to stop honestly at `repair_handoff`
 21. one canonical ugly compound continuation contour that crosses readiness repair, proof repair, and recovery repair through staged handoffs plus named `resume`
 22. one second uglier compound continuation contour that crosses blocked readiness, invalid proof, degraded recovery, and accepted closure through richer repair packets plus named `resume`
-23. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
+23. one third uglier packet-first continuation contour that crosses selection/preparation handoff, invalid proof, degraded recovery, and accepted closure through named `resume`
+24. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
 
 That is enough to say:
 
@@ -90,7 +91,7 @@ Current strongest value carriers are:
 - one direct selection-to-runtime handoff where a preparation-aware strong-path receipt now enters the prepared governed contour without separately restating preparation outputs
 - one named runtime resume path that starts turning repaired re-entry from repo evidence into explicit operator behavior across partial-proof, degraded-recovery, and doctor-blocked families
 - one repair handoff layer that now tells the runtime and the operator exactly which continuation inputs are still missing before a non-green contour can resume honestly
-- one richer repair packet that now groups continuation contract, continuation plan, repair inputs, and runtime output defaults above the handoff itself
+- one richer repair packet that is now runtime-owned enough to group continuation contract, continuation plan, selection/preparation truth, repair inputs, and runtime output defaults above the handoff itself
 - one governed-path preparation slice that predeclares the proof surface and records complete first-pass bundle assembly
 - one preparation-aware prepared governed run that reaches accepted closure inside the same bounded orchestration path
 - one measured governed-path cost-reduction slice that treats preparation as a bounded economic improvement rather than only a cleaner ritual
@@ -114,7 +115,7 @@ Current weaker areas are:
 - doctor is now stronger than v0, includes bounded filesystem/env probes, and now catches one credential-path false-green, one exact-task-identity mismatch, and one wrong-target-surface mismatch, but it is still narrower than a mature readiness layer
 - the stack now has one bounded spine-driven runtime contour, but not yet a deeper end-to-end runtime
 - blocked-to-accepted, partial-to-accepted, and degraded-to-accepted re-entry are now canonical, and one ugly mixed repair family is now canonical too, but compound reality is still much weaker than it should be
-- repair handoff and repair packet now both exist, but packet authoring is still more manual than a mature continuation surface should be
+- repair handoff and repair packet now both exist, and packet-first continuation is now the default operator path, but the packet is still narrower than a mature continuation surface should eventually become
 - comparison harness now has a six-scenario economics slice, but it is still too narrow to count as product-grade economics
 - production-grade runtime readiness is not yet proven
 
@@ -142,6 +143,7 @@ The shortest current output reading is:
 - one repaired partial-proof contour now also has a stable canonical repo fixture
 - one repaired degraded contour now also has a stable canonical repo fixture
 - one ugly compound repair contour now also has a stable canonical repo fixture
+- one third ugly compound continuation contour now also has a stable canonical repo fixture
 - one hybrid pressure contour now also has a stable canonical repo fixture
 - that artifact is a better single entrypoint than reconstructing a run from report, state, and worked envelope separately
 
@@ -184,6 +186,10 @@ The first canonical ugly compound continuation reference surface for that output
 The second canonical ugly compound continuation reference surface for that output now lives at:
 
 - `fixtures/executable_loop_compound_continuation_run_002/run.json`
+
+The third canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_003/run.json`
 
 The first canonical selection-blocked reference surface for that output now lives at:
 

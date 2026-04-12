@@ -122,6 +122,7 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/repair_handoff_run_001/run.json`
 - `../fixtures/executable_loop_compound_continuation_run_001/run.json`
 - `../fixtures/executable_loop_compound_continuation_run_002/run.json`
+- `../fixtures/executable_loop_compound_continuation_run_003/run.json`
 - `../fixtures/governed_path_cost_delta_001.json`
 - `../fixtures/executable_loop_hybrid_pressure_run_003/run.json`
 

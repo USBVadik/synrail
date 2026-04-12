@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from synrail_repair_handoff_v0 import build_repair_handoff
+from synrail_repair_packet_v0 import build_packet_from_runtime_truth
 
 
 TERMINAL_STATES = {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}
@@ -198,6 +199,90 @@ def maybe_emit_repair_handoff(args: argparse.Namespace, state: dict) -> dict | N
     handoff = build_repair_handoff(state)
     save_json(Path(args.repair_handoff_output), handoff)
     return handoff
+
+
+def resolve_repair_packet_output(args: argparse.Namespace) -> Path | None:
+    if getattr(args, "repair_packet_output", None):
+        return Path(args.repair_packet_output)
+    if getattr(args, "report_output", None):
+        return Path(args.report_output).with_name("repair_packet.json")
+    return None
+
+
+def packet_output_defaults(args: argparse.Namespace, packet_output: Path) -> dict:
+    return {
+        "doctor_output": getattr(args, "doctor_output", ""),
+        "bundle_output": getattr(args, "bundle_output", ""),
+        "closure_output": getattr(args, "closure_output", ""),
+        "refresh_output": getattr(args, "refresh_output", ""),
+        "report_output": getattr(args, "report_output", ""),
+        "worked_artifact_output": getattr(args, "worked_artifact_output", ""),
+        "run_artifact_output": getattr(args, "run_artifact_output", ""),
+        "repair_handoff_output": getattr(args, "repair_handoff_output", "") or str(packet_output.with_name("repair_handoff.json")),
+        "repair_packet_output": str(packet_output),
+        "plan_output": getattr(args, "plan_output", "") or str(packet_output.with_name("plan.json")),
+        "preparation_receipt_output": getattr(args, "preparation_receipt_output", "") or str(packet_output.with_name("preparation_receipt.json")),
+    }
+
+
+def maybe_emit_repair_packet(
+    args: argparse.Namespace,
+    *,
+    state: dict,
+    report: dict,
+    repair_handoff: dict | None,
+    selection_receipt: dict | None = None,
+    preparation_receipt: dict | None = None,
+) -> dict | None:
+    packet_output = resolve_repair_packet_output(args)
+    if not packet_output:
+        return None
+
+    state_handoff = build_repair_handoff(state)
+    handoff = state_handoff
+    if repair_handoff and repair_handoff.get("from_state") == state["state"]:
+        handoff = repair_handoff
+    if not handoff.get("continuation_allowed", False):
+        return None
+
+    packet = build_packet_from_runtime_truth(
+        state=state,
+        artifact_root=packet_output.parent,
+        doctor_run_id=args.doctor_run_id,
+        doctor_level=args.doctor_level,
+        target_path=args.target_path,
+        target_classification=args.target_classification,
+        baseline_identity=args.baseline_identity,
+        intended_run_class=args.intended_run_class,
+        execution_surface_identity=args.execution_surface_identity,
+        repair_handoff=handoff,
+        final_result=args.final_result or "",
+        prompt_identity=args.prompt_identity or "",
+        task_identity=args.task_identity or "",
+        prompt_identity_ok=getattr(args, "prompt_identity_ok", False),
+        readback=args.readback or "",
+        scenario_proof=args.scenario_proof or "",
+        target_identity_file=args.target_identity_file or "",
+        clean_surface=getattr(args, "clean_surface", False),
+        artifact_viable=getattr(args, "artifact_viable", False),
+        helper_ok=getattr(args, "helper_ok", False),
+        credentials_ok=getattr(args, "credentials_ok", False),
+        artifact_path=args.artifact_path or "",
+        helper_path=args.helper_path or "",
+        credential_env=list(getattr(args, "credential_env", [])),
+        refresh_output=args.refresh_output or "",
+        refresh_event_type=args.refresh_event_type or "",
+        refresh_recovery_status=args.refresh_recovery_status or "NOT_REQUIRED",
+        refresh_reverification_complete=getattr(args, "refresh_reverification_complete", False),
+        refresh_use_bundle=getattr(args, "refresh_use_bundle", False),
+        refresh_use_closure=getattr(args, "refresh_use_closure", False),
+        output_defaults_overrides=packet_output_defaults(args, packet_output),
+        selection_receipt=selection_receipt,
+        preparation_receipt=preparation_receipt,
+        report=report,
+    )
+    save_json(packet_output, packet)
+    return packet
 
 
 def run_python_capture(script: Path, args: list[str]) -> tuple[int, str]:
@@ -610,6 +695,7 @@ def build_worked_orchestration_artifact(
     missing_continuation_inputs: list[str],
     selection_receipt: dict | None,
     preparation_receipt: dict | None,
+    repair_packet: dict | None,
     bundle: dict | None,
     closure: dict | None,
     refresh_report: dict | None,
@@ -644,6 +730,13 @@ def build_worked_orchestration_artifact(
             "from_state": repair_handoff["from_state"] if repair_handoff else "",
             "required_inputs": repair_handoff_required_input_ids(repair_handoff),
             "missing_inputs": list(missing_continuation_inputs),
+        },
+        "repair_packet": {
+            "emitted": repair_packet is not None,
+            "from_state": repair_packet["from_state"] if repair_packet else "",
+            "ready_for_resume": repair_packet["ready_for_resume"] if repair_packet else False,
+            "missing_inputs": list(repair_packet["missing_inputs"]) if repair_packet else [],
+            "selected_with_preparation": repair_packet["selection_context"]["selected_with_preparation"] if repair_packet else False,
         },
         "selection": {
             "applied": selection_receipt is not None,
@@ -838,7 +931,7 @@ def build_repair_handoff_blocked_report(
     }
 
 
-def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict) -> dict:
+def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict, repair_packet: dict | None) -> dict:
     return {
         "schema_version": "canonical_run_artifact_v0",
         "run_id": state["run_id"],
@@ -879,6 +972,12 @@ def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict) -> 
             "current_closure_status": worked["current_closure_status"],
             "next_safe_step": worked["next_safe_step"],
         },
+        "repair_packet": {
+            "emitted": repair_packet is not None,
+            "from_state": repair_packet["from_state"] if repair_packet else "",
+            "ready_for_resume": repair_packet["ready_for_resume"] if repair_packet else False,
+            "missing_inputs": list(repair_packet["missing_inputs"]) if repair_packet else [],
+        },
     }
 
 
@@ -894,6 +993,7 @@ def emit_requested_artifacts(
     missing_continuation_inputs: list[str] | None = None,
     selection_receipt: dict | None = None,
     preparation_receipt: dict | None = None,
+    repair_packet: dict | None = None,
     bundle: dict | None = None,
     closure: dict | None = None,
     refresh_report: dict | None = None,
@@ -911,6 +1011,7 @@ def emit_requested_artifacts(
         missing_continuation_inputs=list(missing_continuation_inputs or []),
         selection_receipt=selection_receipt,
         preparation_receipt=preparation_receipt,
+        repair_packet=repair_packet,
         bundle=bundle,
         closure=closure,
         refresh_report=refresh_report,
@@ -919,8 +1020,53 @@ def emit_requested_artifacts(
     if args.worked_artifact_output:
         save_json(Path(args.worked_artifact_output), worked)
     if args.run_artifact_output:
-        canonical = build_canonical_run_artifact(state=state, report=report, worked=worked)
+        canonical = build_canonical_run_artifact(state=state, report=report, worked=worked, repair_packet=repair_packet)
         save_json(Path(args.run_artifact_output), canonical)
+
+
+def finalize_runtime_outputs(
+    args: argparse.Namespace,
+    *,
+    state: dict,
+    report: dict,
+    doctor_record: dict | None = None,
+    resume_applied: bool = False,
+    resume_from_state: str = "",
+    repair_handoff: dict | None = None,
+    missing_continuation_inputs: list[str] | None = None,
+    selection_receipt: dict | None = None,
+    preparation_receipt: dict | None = None,
+    bundle: dict | None = None,
+    closure: dict | None = None,
+    refresh_report: dict | None = None,
+    comparison: dict | None = None,
+) -> None:
+    current_handoff = repair_handoff or maybe_emit_repair_handoff(args, state)
+    repair_packet = maybe_emit_repair_packet(
+        args,
+        state=state,
+        report=report,
+        repair_handoff=current_handoff,
+        selection_receipt=selection_receipt,
+        preparation_receipt=preparation_receipt,
+    )
+    emit_requested_artifacts(
+        args,
+        state=state,
+        report=report,
+        doctor_record=doctor_record,
+        resume_applied=resume_applied,
+        resume_from_state=resume_from_state,
+        repair_handoff=current_handoff,
+        missing_continuation_inputs=missing_continuation_inputs,
+        selection_receipt=selection_receipt,
+        preparation_receipt=preparation_receipt,
+        repair_packet=repair_packet,
+        bundle=bundle,
+        closure=closure,
+        refresh_report=refresh_report,
+        comparison=comparison,
+    )
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -1009,8 +1155,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             report["resume_applied"] = True
             report["resume_from_state"] = resume_from_state
             save_json(Path(args.report_output), report)
-            repair_handoff = maybe_emit_repair_handoff(args, state)
-            emit_requested_artifacts(args, state=state, report=report, resume_applied=True, resume_from_state=resume_from_state, repair_handoff=repair_handoff)
+            finalize_runtime_outputs(args, state=state, report=report, resume_applied=True, resume_from_state=resume_from_state)
             return 2
         if state["state"] in TERMINAL_STATES:
             state["closure"]["status"] = state["closure"]["status"] or "CLAIMED_NOT_ACCEPTED"
@@ -1046,8 +1191,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             }
             save_state(state_path, state)
             save_json(Path(args.report_output), report)
-            repair_handoff = maybe_emit_repair_handoff(args, state)
-            emit_requested_artifacts(args, state=state, report=report, resume_applied=True, resume_from_state=resume_from_state, repair_handoff=repair_handoff)
+            finalize_runtime_outputs(args, state=state, report=report, resume_applied=True, resume_from_state=resume_from_state)
             print(json.dumps({"result": "BLOCKED", "stopping_stage": "resume", "reason": "TERMINAL_STATE_NOT_RESUMABLE"}, ensure_ascii=True))
             return 0
         if getattr(args, "repair_handoff_file", None):
@@ -1062,8 +1206,14 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                 report["repair_handoff_required_inputs"] = []
                 report["missing_continuation_inputs"] = []
                 save_json(Path(args.report_output), report)
-                maybe_emit_repair_handoff(args, state)
-                emit_requested_artifacts(args, state=state, report=report, resume_applied=True, resume_from_state=resume_from_state, missing_continuation_inputs=continuation_missing_inputs)
+                finalize_runtime_outputs(
+                    args,
+                    state=state,
+                    report=report,
+                    resume_applied=True,
+                    resume_from_state=resume_from_state,
+                    missing_continuation_inputs=continuation_missing_inputs,
+                )
                 return 2
             repair_handoff_applied = True
             if repair_handoff["run_id"] != state["run_id"] or repair_handoff["from_state"] != state["state"]:
@@ -1075,8 +1225,14 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                 report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(repair_handoff)
                 report["missing_continuation_inputs"] = []
                 save_json(Path(args.report_output), report)
-                maybe_emit_repair_handoff(args, state)
-                emit_requested_artifacts(args, state=state, report=report, resume_applied=True, resume_from_state=resume_from_state, repair_handoff=repair_handoff)
+                finalize_runtime_outputs(
+                    args,
+                    state=state,
+                    report=report,
+                    resume_applied=True,
+                    resume_from_state=resume_from_state,
+                    repair_handoff=repair_handoff,
+                )
                 return 2
             apply_repair_handoff_defaults(args, repair_handoff)
             continuation_missing_inputs = missing_continuation_inputs(args, repair_handoff)
@@ -1096,8 +1252,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                 )
                 save_state(state_path, state)
                 save_json(Path(args.report_output), report)
-                maybe_emit_repair_handoff(args, state)
-                emit_requested_artifacts(
+                finalize_runtime_outputs(
                     args,
                     state=state,
                     report=report,
@@ -1117,8 +1272,15 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             report["resume_applied"] = resume_applied
             report["resume_from_state"] = resume_from_state
             save_json(Path(args.report_output), report)
-            maybe_emit_repair_handoff(args, state)
-            emit_requested_artifacts(args, state=state, report=report, resume_applied=resume_applied, resume_from_state=resume_from_state, repair_handoff=repair_handoff, missing_continuation_inputs=continuation_missing_inputs)
+            finalize_runtime_outputs(
+                args,
+                state=state,
+                report=report,
+                resume_applied=resume_applied,
+                resume_from_state=resume_from_state,
+                repair_handoff=repair_handoff,
+                missing_continuation_inputs=continuation_missing_inputs,
+            )
             return 2
         selection_applied = True
         selected_mode = selection_receipt["selected_mode"]
@@ -1161,8 +1323,16 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             }
             save_state(state_path, state)
             save_json(Path(args.report_output), report)
-            maybe_emit_repair_handoff(args, state)
-            emit_requested_artifacts(args, state=state, report=report, resume_applied=resume_applied, resume_from_state=resume_from_state, repair_handoff=repair_handoff, missing_continuation_inputs=continuation_missing_inputs, selection_receipt=selection_receipt)
+            finalize_runtime_outputs(
+                args,
+                state=state,
+                report=report,
+                resume_applied=resume_applied,
+                resume_from_state=resume_from_state,
+                repair_handoff=repair_handoff,
+                missing_continuation_inputs=continuation_missing_inputs,
+                selection_receipt=selection_receipt,
+            )
             print(json.dumps({"result": "BLOCKED", "stopping_stage": "selection", "reason": "MODE_SELECTION_NOT_GOVERNED"}, ensure_ascii=True))
             return 0
         if selected_with_preparation:
@@ -1197,8 +1367,16 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         )
         save_state(state_path, state)
         save_json(Path(args.report_output), report)
-        maybe_emit_repair_handoff(args, state)
-        emit_requested_artifacts(args, state=state, report=report, resume_applied=resume_applied, resume_from_state=resume_from_state, repair_handoff=repair_handoff, missing_continuation_inputs=continuation_missing_inputs, selection_receipt=selection_receipt)
+        finalize_runtime_outputs(
+            args,
+            state=state,
+            report=report,
+            resume_applied=resume_applied,
+            resume_from_state=resume_from_state,
+            repair_handoff=repair_handoff,
+            missing_continuation_inputs=continuation_missing_inputs,
+            selection_receipt=selection_receipt,
+        )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "target_surface_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -1247,8 +1425,16 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         report["selected_mode"] = selected_mode
         report["selected_with_preparation"] = selected_with_preparation
         save_json(Path(args.report_output), report)
-        maybe_emit_repair_handoff(args, state)
-        emit_requested_artifacts(args, state=state, report=report, resume_applied=resume_applied, resume_from_state=resume_from_state, repair_handoff=repair_handoff, missing_continuation_inputs=continuation_missing_inputs, selection_receipt=selection_receipt)
+        finalize_runtime_outputs(
+            args,
+            state=state,
+            report=report,
+            resume_applied=resume_applied,
+            resume_from_state=resume_from_state,
+            repair_handoff=repair_handoff,
+            missing_continuation_inputs=continuation_missing_inputs,
+            selection_receipt=selection_receipt,
+        )
         return code
 
     doctor_record = load_json(Path(args.doctor_output))
@@ -1266,8 +1452,17 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         report["selected_mode"] = selected_mode
         report["selected_with_preparation"] = selected_with_preparation
         save_json(Path(args.report_output), report)
-        maybe_emit_repair_handoff(args, state)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, resume_applied=resume_applied, resume_from_state=resume_from_state, repair_handoff=repair_handoff, missing_continuation_inputs=continuation_missing_inputs, selection_receipt=selection_receipt)
+        finalize_runtime_outputs(
+            args,
+            state=state,
+            report=report,
+            doctor_record=doctor_record,
+            resume_applied=resume_applied,
+            resume_from_state=resume_from_state,
+            repair_handoff=repair_handoff,
+            missing_continuation_inputs=continuation_missing_inputs,
+            selection_receipt=selection_receipt,
+        )
         print(json.dumps({"result": "ERROR", "stopping_stage": "doctor_apply", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     state = apply_integrity(
@@ -1294,8 +1489,17 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
-        maybe_emit_repair_handoff(args, state)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, resume_applied=resume_applied, resume_from_state=resume_from_state, repair_handoff=repair_handoff, missing_continuation_inputs=continuation_missing_inputs, selection_receipt=selection_receipt)
+        finalize_runtime_outputs(
+            args,
+            state=state,
+            report=report,
+            doctor_record=doctor_record,
+            resume_applied=resume_applied,
+            resume_from_state=resume_from_state,
+            repair_handoff=repair_handoff,
+            missing_continuation_inputs=continuation_missing_inputs,
+            selection_receipt=selection_receipt,
+        )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "ready_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -1311,8 +1515,17 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         report["selected_mode"] = selected_mode
         report["selected_with_preparation"] = selected_with_preparation
         save_json(Path(args.report_output), report)
-        maybe_emit_repair_handoff(args, state)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, resume_applied=resume_applied, resume_from_state=resume_from_state, repair_handoff=repair_handoff, missing_continuation_inputs=continuation_missing_inputs, selection_receipt=selection_receipt)
+        finalize_runtime_outputs(
+            args,
+            state=state,
+            report=report,
+            doctor_record=doctor_record,
+            resume_applied=resume_applied,
+            resume_from_state=resume_from_state,
+            repair_handoff=repair_handoff,
+            missing_continuation_inputs=continuation_missing_inputs,
+            selection_receipt=selection_receipt,
+        )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "doctor"}, ensure_ascii=True))
         return 0
 
@@ -1335,8 +1548,17 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
-        maybe_emit_repair_handoff(args, state)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, resume_applied=resume_applied, resume_from_state=resume_from_state, repair_handoff=repair_handoff, missing_continuation_inputs=continuation_missing_inputs, selection_receipt=selection_receipt)
+        finalize_runtime_outputs(
+            args,
+            state=state,
+            report=report,
+            doctor_record=doctor_record,
+            resume_applied=resume_applied,
+            resume_from_state=resume_from_state,
+            repair_handoff=repair_handoff,
+            missing_continuation_inputs=continuation_missing_inputs,
+            selection_receipt=selection_receipt,
+        )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "execution_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -1432,8 +1654,19 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
-        maybe_emit_repair_handoff(args, state)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, resume_applied=resume_applied, resume_from_state=resume_from_state, repair_handoff=repair_handoff, missing_continuation_inputs=continuation_missing_inputs, selection_receipt=selection_receipt, preparation_receipt=preparation_receipt, bundle=bundle)
+        finalize_runtime_outputs(
+            args,
+            state=state,
+            report=report,
+            doctor_record=doctor_record,
+            resume_applied=resume_applied,
+            resume_from_state=resume_from_state,
+            repair_handoff=repair_handoff,
+            missing_continuation_inputs=continuation_missing_inputs,
+            selection_receipt=selection_receipt,
+            preparation_receipt=preparation_receipt,
+            bundle=bundle,
+        )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "proof_bundle_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -1462,8 +1695,20 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
-        maybe_emit_repair_handoff(args, state)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, resume_applied=resume_applied, resume_from_state=resume_from_state, repair_handoff=repair_handoff, missing_continuation_inputs=continuation_missing_inputs, selection_receipt=selection_receipt, preparation_receipt=preparation_receipt, bundle=bundle, closure=closure)
+        finalize_runtime_outputs(
+            args,
+            state=state,
+            report=report,
+            doctor_record=doctor_record,
+            resume_applied=resume_applied,
+            resume_from_state=resume_from_state,
+            repair_handoff=repair_handoff,
+            missing_continuation_inputs=continuation_missing_inputs,
+            selection_receipt=selection_receipt,
+            preparation_receipt=preparation_receipt,
+            bundle=bundle,
+            closure=closure,
+        )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "closure_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -1549,8 +1794,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         "next_safe_step": state["next_safe_step"],
     }
     save_json(Path(args.report_output), report)
-    maybe_emit_repair_handoff(args, state)
-    emit_requested_artifacts(
+    finalize_runtime_outputs(
         args,
         state=state,
         report=report,
@@ -1610,6 +1854,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--resume-from-state")
     p_orchestrate.add_argument("--repair-handoff-file")
     p_orchestrate.add_argument("--repair-handoff-output")
+    p_orchestrate.add_argument("--repair-packet-output")
     p_orchestrate.add_argument("--mode-selection-receipt")
     p_orchestrate.add_argument("--doctor-run-id", required=True)
     p_orchestrate.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])

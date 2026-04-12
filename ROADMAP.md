@@ -59,9 +59,11 @@ Current status:
   - `DOCTOR_BLOCKED`
 - repair handoff now exists as one machine-readable continuation contract that can name missing inputs and bounded runtime defaults
 - named `resume` can now consume that handoff directly and stop at `repair_handoff` when the continuation contract is still incomplete
-- one richer repair packet now exists above that handoff, so continuation can carry context, plan, repair inputs, and runtime output defaults in one machine-readable bundle
-- one uglier packet-driven compound continuation path now also exists through staged packets plus named `resume`
-- the next strongest move is now reducing packet authoring tax even further, so more of the packet can be synthesized directly from runtime truth instead of restated manually
+- one richer repair packet now exists above that handoff, and the runtime can now auto-synthesize it from current truth so continuation can carry context, plan, repair inputs, and runtime output defaults in one machine-readable bundle
+- packet-first continuation is now the default operator path around `resume`
+- one uglier packet-driven compound continuation path now exists through staged packets plus named `resume`
+- one third uglier packet-first continuation path now also exists through selection/preparation handoff, runtime-owned packets, invalid proof, degraded recovery, and accepted closure
+- the next strongest move is no longer basic packet synthesis; it is making that packet richer and reducing the remaining continuation ambiguity inside the runtime itself
 
 ### 3. Run one ugly compound scenario end-to-end
 

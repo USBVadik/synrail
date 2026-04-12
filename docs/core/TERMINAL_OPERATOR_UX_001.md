@@ -40,6 +40,7 @@ The CLI v0 currently exposes:
 11. `resume`
    - run the same bounded runtime contour from an existing non-green state and record the starting state as runtime continuation truth
    - can now consume one repair handoff artifact and block at `repair_handoff` when the continuation contract is still incomplete
+   - now auto-discovers one sibling `repair_packet.json` by default, so packet-first continuation becomes the normal operator path instead of an optional extra
    - can now consume one richer repair packet so the operator no longer has to replay the full runtime surface as raw flags on every continuation
    - now proven on:
      - `DOCTOR_BLOCKED`
@@ -80,6 +81,14 @@ It now also exposes one `repair-packet` path, so the operator can group:
 - the runtime output defaults
 
 before handing the run back into `resume`.
+
+That packet path is now more useful for:
+
+- inspection
+- explicit override
+- artifact export
+
+than for everyday authoring, because the runtime can now synthesize most continuation packets directly from current truth.
 
 ## Why this matters
 
