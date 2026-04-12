@@ -65,7 +65,7 @@ Current strongest value carriers are:
 
 Current weaker areas are:
 
-- doctor remains less executable than the rest of the loop
+- doctor is now executable, but still narrower and less deeply integrated than the rest of the loop
 - the stack is still assembled from small cooperating slices rather than one deeper orchestrating runtime
 - comparison harness is still narrow and heuristic
 - production-grade runtime readiness is not yet proven

@@ -24,6 +24,7 @@ The run artifacts now live under:
 Included artifacts:
 
 - `state.json`
+- `doctor.json`
 - `bundle.json`
 - `closure.json`
 - `comparison.json`
@@ -38,15 +39,20 @@ The comparison fixtures used for this run are:
 The run used the current executable stack:
 
 1. `synrail_cli_v0.py init`
-2. `synrail_cli_v0.py bundle-check`
-3. `synrail_cli_v0.py apply-bundle`
-4. `synrail_cli_v0.py closure`
-5. `synrail_cli_v0.py apply-closure`
-6. `synrail_baseline_harness_v0.py`
+2. `synrail_cli_v0.py doctor`
+3. `synrail_cli_v0.py bundle-check`
+4. `synrail_cli_v0.py apply-bundle`
+5. `synrail_cli_v0.py closure`
+6. `synrail_cli_v0.py apply-closure`
+7. `synrail_baseline_harness_v0.py`
 
 ## Observed path
 
 ### 1. Bundle path
+
+Before proof assembly, the run emitted a green doctor record:
+
+- verdict = `ACCEPTABLE_FOR_CORE_RUN`
 
 This run intentionally used a partial bundle shape.
 
