@@ -168,6 +168,7 @@ because it shows the kernel can sometimes recover honestly after a prior block.
 The re-entry lattice still has visible gaps:
 
 - the current canonical reverse edges now cover readiness repair, proof completion, one recovery repair, and one ugly mixed family, but not the full set of future compound families
+- one named runtime `resume` path now exists for partial-proof continuation, but runtime continuation is still much narrower than the full repaired surface family
 - standalone doctor-blocked re-entry is still less explicit than the new compound family
 - hybrid compound repair is still much weaker than it should be
 

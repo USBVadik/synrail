@@ -24,7 +24,8 @@ The current executable stack can already provide:
 12. one governed-path preparation plan and receipt that prove the planned proof surface can reach a complete first bundle pass before closure starts
 13. one canonical prepared governed-path run that proves preparation can now live inside the spine-owned contour
 14. one canonical selected-prepared governed-path run that proves a strong selection receipt can now hand off directly into that same prepared contour
-15. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
+15. one named runtime resume path that can continue a partial-proof state back toward accepted closure through the same artifact surface
+16. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
 
 That is enough to say:
 
@@ -80,6 +81,7 @@ Current strongest value carriers are:
 - cost-aware steering back to baseline on weak and demoted-hybrid paths
 - one preparation-aware strong-path steering slice that now points the wedge toward the prepared governed contour instead of the unprepared one
 - one direct selection-to-runtime handoff where a preparation-aware strong-path receipt now enters the prepared governed contour without separately restating preparation outputs
+- one named runtime resume path that starts turning repaired re-entry from repo evidence into explicit operator behavior
 - one governed-path preparation slice that predeclares the proof surface and records complete first-pass bundle assembly
 - one preparation-aware prepared governed run that reaches accepted closure inside the same bounded orchestration path
 - one measured governed-path cost-reduction slice that treats preparation as a bounded economic improvement rather than only a cleaner ritual
@@ -120,6 +122,7 @@ The shortest current output reading is:
 - accepted contours now have a stable canonical repo fixture
 - prepared governed contours now also have a stable canonical repo fixture
 - selected-prepared governed contours now also have a stable canonical repo fixture
+- runtime-resume contours now also have a stable canonical repo fixture
 - selection-blocked contours now also have a stable canonical repo fixture
 - blocked contours now emit the same primary run artifact shape
 - one repaired blocked contour now also has a stable canonical repo fixture
@@ -140,6 +143,10 @@ The first canonical prepared governed reference surface for that output now live
 The first canonical selected-prepared governed reference surface for that output now lives at:
 
 - `fixtures/executable_loop_selected_prepared_run_001/run.json`
+
+The first canonical runtime-resume reference surface for that output now lives at:
+
+- `fixtures/executable_loop_runtime_resume_run_001/run.json`
 
 The first canonical selection-blocked reference surface for that output now lives at:
 

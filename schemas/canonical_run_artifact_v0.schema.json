@@ -43,6 +43,8 @@
         "stopping_stage": {"type": "string", "minLength": 1},
         "reason": {"type": "string"},
         "doctor_verdict": {"type": "string"},
+        "resume_applied": {"type": "boolean"},
+        "resume_from_state": {"type": "string"},
         "selection_applied": {"type": "boolean"},
         "selected_mode": {"type": "string"},
         "selected_with_preparation": {"type": "boolean"},

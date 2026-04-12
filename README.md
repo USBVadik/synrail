@@ -116,6 +116,7 @@ The current proof reading is:
 - the repo now also has one canonical prepared governed-path run showing that preparation now lives inside the runtime contour, not only beside it
 - the repo now also has one canonical selected-prepared governed-path run showing that a strong selection receipt can now hand off directly into that prepared runtime contour
 - the repo now also has one canonical selection-blocked run showing that a lighter receipt now stops governed orchestration at `selection`
+- the repo now also has one canonical runtime-resume run showing that a partial-proof state can now continue through a named `resume` path instead of only through a generic re-entry fixture
 - the repo now also has one bounded governed-path cost delta showing that preparation can reduce operator tax inside the winning contour without weakening closure safety
 
 The current wedge reading is:
@@ -131,6 +132,7 @@ The current executable output reading is:
 - the repo now also carries one canonical prepared governed-path fixture on that same artifact surface
 - the repo now also carries one canonical selected-prepared governed-path fixture on that same artifact surface
 - the repo now also carries one canonical selection-blocked fixture on that same artifact surface
+- the repo now also carries one canonical runtime-resume fixture on that same artifact surface
 - the repo now also carries one canonical ugly compound repair fixture on that same artifact surface
 - the repo now also carries one canonical hybrid pressure fixture on that same artifact surface
 - the repo now also has one explicit outcome lattice across accepted, partial, degraded, and blocked contours

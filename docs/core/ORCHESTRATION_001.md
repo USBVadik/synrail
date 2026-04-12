@@ -89,6 +89,17 @@ When that receipt instead says:
 
 the governed orchestration path now blocks at `selection` instead of silently ignoring the lighter policy choice.
 
+The terminal layer can now also enter that same contour through:
+
+- `resume`
+
+which records:
+
+- `resume_applied`
+- `resume_from_state`
+
+on the resulting runtime artifacts.
+
 That matters because it keeps the canonical worked artifact aligned with the final runtime contour, including post-refresh closure state when refresh is part of the run.
 
 The spine can now also emit one primary canonical run artifact that compresses:
@@ -154,6 +165,7 @@ It only tightens the most important productive contour:
 And now, when explicitly requested:
 
 - one mode-selection receipt handoff into the governed runtime contour
+- one named runtime continuation contour from a non-green starting state
 - one governed-path proof plan plus one preparation receipt
 - refresh after a bounded event
 - baseline comparison after the run contour

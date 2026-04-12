@@ -296,6 +296,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         "--prompt-identity", args.prompt_identity,
         "--task-identity", args.task_identity,
     ]
+    if getattr(args, "resume_from_state", None):
+        forwarded.extend(["--resume-from-state", args.resume_from_state])
     if args.mode_selection_receipt:
         forwarded.extend(["--mode-selection-receipt", args.mode_selection_receipt])
     for flag, value in [
@@ -336,6 +338,61 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     for env_name in args.credential_env:
         forwarded.extend(["--credential-env", env_name])
     return run_python(SPINE, ["orchestrate", *forwarded])
+
+
+def cmd_resume(args: argparse.Namespace) -> int:
+    state = load_json(Path(args.state_file))
+    args.resume_from_state = state["state"]
+    return cmd_orchestrate(args)
+
+
+def add_orchestration_args(parser: argparse.ArgumentParser, *, include_resume_from_state: bool) -> None:
+    parser.add_argument("--state-file", required=True)
+    if include_resume_from_state:
+        parser.add_argument("--resume-from-state")
+    parser.add_argument("--mode-selection-receipt")
+    parser.add_argument("--doctor-run-id", required=True)
+    parser.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
+    parser.add_argument("--target-path", required=True)
+    parser.add_argument("--target-classification", required=True)
+    parser.add_argument("--baseline-identity", required=True)
+    parser.add_argument("--intended-run-class", required=True, choices=["core_probe", "support_run", "exact_retry"])
+    parser.add_argument("--doctor-output", required=True)
+    parser.add_argument("--final-result", required=True)
+    parser.add_argument("--task-class", required=True)
+    parser.add_argument("--bundle-output", required=True)
+    parser.add_argument("--closure-output", required=True)
+    parser.add_argument("--report-output", required=True)
+    parser.add_argument("--execution-surface-identity", required=True)
+    parser.add_argument("--prompt-identity", required=True)
+    parser.add_argument("--task-identity", required=True)
+    parser.add_argument("--readback")
+    parser.add_argument("--scenario-proof")
+    parser.add_argument("--plan-output")
+    parser.add_argument("--preparation-receipt-output")
+    parser.add_argument("--preparation-artifact-root")
+    parser.add_argument("--refresh-output")
+    parser.add_argument("--refresh-event-type")
+    parser.add_argument("--refresh-doctor-status", choices=["PASS", "FAIL"])
+    parser.add_argument("--refresh-recovery-status", choices=["NOT_REQUIRED", "PENDING", "COMPLETE"])
+    parser.add_argument("--refresh-reverification-complete", action="store_true")
+    parser.add_argument("--refresh-use-bundle", action="store_true")
+    parser.add_argument("--refresh-use-closure", action="store_true")
+    parser.add_argument("--baseline-file")
+    parser.add_argument("--synrail-file")
+    parser.add_argument("--comparison-output")
+    parser.add_argument("--worked-artifact-output")
+    parser.add_argument("--run-artifact-output")
+    parser.add_argument("--clean-surface", action="store_true")
+    parser.add_argument("--artifact-viable", action="store_true")
+    parser.add_argument("--helper-ok", action="store_true")
+    parser.add_argument("--credentials-ok", action="store_true")
+    parser.add_argument("--prompt-identity-ok", action="store_true")
+    parser.add_argument("--artifact-path")
+    parser.add_argument("--helper-path")
+    parser.add_argument("--credential-env", action="append", default=[])
+    parser.add_argument("--prompt-identity-file")
+    parser.add_argument("--target-identity-file")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -480,51 +537,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_governed_cost.set_defaults(func=cmd_governed_cost)
 
     p_orchestrate = sub.add_parser("orchestrate")
-    p_orchestrate.add_argument("--state-file", required=True)
-    p_orchestrate.add_argument("--mode-selection-receipt")
-    p_orchestrate.add_argument("--doctor-run-id", required=True)
-    p_orchestrate.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
-    p_orchestrate.add_argument("--target-path", required=True)
-    p_orchestrate.add_argument("--target-classification", required=True)
-    p_orchestrate.add_argument("--baseline-identity", required=True)
-    p_orchestrate.add_argument("--intended-run-class", required=True, choices=["core_probe", "support_run", "exact_retry"])
-    p_orchestrate.add_argument("--doctor-output", required=True)
-    p_orchestrate.add_argument("--final-result", required=True)
-    p_orchestrate.add_argument("--task-class", required=True)
-    p_orchestrate.add_argument("--bundle-output", required=True)
-    p_orchestrate.add_argument("--closure-output", required=True)
-    p_orchestrate.add_argument("--report-output", required=True)
-    p_orchestrate.add_argument("--execution-surface-identity", required=True)
-    p_orchestrate.add_argument("--prompt-identity", required=True)
-    p_orchestrate.add_argument("--task-identity", required=True)
-    p_orchestrate.add_argument("--readback")
-    p_orchestrate.add_argument("--scenario-proof")
-    p_orchestrate.add_argument("--plan-output")
-    p_orchestrate.add_argument("--preparation-receipt-output")
-    p_orchestrate.add_argument("--preparation-artifact-root")
-    p_orchestrate.add_argument("--refresh-output")
-    p_orchestrate.add_argument("--refresh-event-type")
-    p_orchestrate.add_argument("--refresh-doctor-status", choices=["PASS", "FAIL"])
-    p_orchestrate.add_argument("--refresh-recovery-status", choices=["NOT_REQUIRED", "PENDING", "COMPLETE"])
-    p_orchestrate.add_argument("--refresh-reverification-complete", action="store_true")
-    p_orchestrate.add_argument("--refresh-use-bundle", action="store_true")
-    p_orchestrate.add_argument("--refresh-use-closure", action="store_true")
-    p_orchestrate.add_argument("--baseline-file")
-    p_orchestrate.add_argument("--synrail-file")
-    p_orchestrate.add_argument("--comparison-output")
-    p_orchestrate.add_argument("--worked-artifact-output")
-    p_orchestrate.add_argument("--run-artifact-output")
-    p_orchestrate.add_argument("--clean-surface", action="store_true")
-    p_orchestrate.add_argument("--artifact-viable", action="store_true")
-    p_orchestrate.add_argument("--helper-ok", action="store_true")
-    p_orchestrate.add_argument("--credentials-ok", action="store_true")
-    p_orchestrate.add_argument("--prompt-identity-ok", action="store_true")
-    p_orchestrate.add_argument("--artifact-path")
-    p_orchestrate.add_argument("--helper-path")
-    p_orchestrate.add_argument("--credential-env", action="append", default=[])
-    p_orchestrate.add_argument("--prompt-identity-file")
-    p_orchestrate.add_argument("--target-identity-file")
+    add_orchestration_args(p_orchestrate, include_resume_from_state=True)
     p_orchestrate.set_defaults(func=cmd_orchestrate)
+
+    p_resume = sub.add_parser("resume")
+    add_orchestration_args(p_resume, include_resume_from_state=False)
+    p_resume.set_defaults(func=cmd_resume)
 
     return parser
 

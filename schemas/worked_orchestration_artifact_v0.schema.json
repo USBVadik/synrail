@@ -46,6 +46,22 @@
         }
       }
     },
+    "resume": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "from_state"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "from_state": {
+          "type": "string"
+        }
+      }
+    },
     "selection": {
       "type": "object",
       "additionalProperties": false,

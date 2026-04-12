@@ -24,9 +24,10 @@ The v0 spine can:
 6. apply a closure verdict back into the state machine
 7. run one bounded orchestration contour across doctor, optional preparation, bundle, closure, optional refresh, and optional comparison
 8. absorb one mode-selection receipt into that bounded orchestration contour
-9. deny disallowed transitions through hard gate checks
-10. emit one primary canonical run artifact for the bounded contour
-11. emit the current machine-readable state
+9. record one explicit runtime-resume origin for continuation from a non-green state
+10. deny disallowed transitions through hard gate checks
+11. emit one primary canonical run artifact for the bounded contour
+12. emit the current machine-readable state
 
 ## Current transition contour
 
@@ -65,6 +66,8 @@ It now also owns the current bounded orchestration contour directly, instead of 
 It can now also emit one governed-path proof plan and one preparation receipt from inside that same bounded contour, which is the first move toward reducing governed-path proof scrambling before closure.
 
 It can now also absorb one preparation-aware strong-path selection receipt into that same bounded contour, which is the first move toward turning mode selection into an executable runtime handoff instead of leaving it as a separate advisory layer.
+
+It can now also carry one explicit runtime continuation marker from a non-green starting state, which is the first move toward making re-entry a first-class runtime behavior instead of leaving it only as a family of canonical repaired fixtures.
 
 It now also chooses the comparison harness by input schema version, so the same bounded contour can still read legacy comparison inputs while moving the active pressure-testing path toward economics-aware comparison records.
 

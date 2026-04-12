@@ -48,6 +48,12 @@
     "doctor_verdict": {
       "type": "string"
     },
+    "resume_applied": {
+      "type": "boolean"
+    },
+    "resume_from_state": {
+      "type": "string"
+    },
     "selection_applied": {
       "type": "boolean"
     },

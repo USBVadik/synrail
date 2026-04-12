@@ -63,6 +63,9 @@ They are here to show how `Synrail` artifacts fit together without importing raw
 - `../fixtures/executable_loop_selection_blocked_run_001/`
   - first canonical contour where a lighter selection receipt blocks governed orchestration at `selection`
   - includes `run.json` as the selection-guard primary run artifact
+- `../fixtures/executable_loop_runtime_resume_run_001/`
+  - first canonical contour where a partial-proof state continues through the named `resume` runtime path
+  - includes `run.json` as the runtime-continuation primary run artifact
 
 ## Rule
 

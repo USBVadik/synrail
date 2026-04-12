@@ -37,25 +37,29 @@ The CLI v0 currently exposes:
 10. `orchestrate`
    - run one bounded `doctor -> optional preparation -> bundle -> closure` contour, optionally apply `refresh` and `compare`, and emit one machine-readable orchestration report plus an optional worked run envelope
    - can now absorb one `mode-selection receipt` so a prepared strong-path selection can enter the runtime contour directly
-11. `compare`
+11. `resume`
+   - run the same bounded runtime contour from an existing non-green state and record the starting state as runtime continuation truth
+12. `compare`
    - emit one machine-readable baseline comparison record through the CLI layer
    - route to the legacy comparison harness for `v0` inputs and the economics harness for `v1` inputs
-12. `hybrid-status`
+13. `hybrid-status`
    - emit one machine-readable hybrid-mode status artifact from the current economics and hybrid evidence set
-13. `recommend-mode`
+14. `recommend-mode`
    - emit one machine-readable cost-aware mode recommendation before the operator enters a heavier contour
-14. `select-mode`
+15. `select-mode`
    - emit one machine-readable receipt that records whether the operator followed the recommendation and whether a heavier contour was skipped
-15. `plan-proof`
+16. `plan-proof`
    - emit one governed-path proof preparation plan before bundle assembly starts
-16. `preparation-receipt`
+17. `preparation-receipt`
    - emit one machine-readable receipt showing whether the planned proof surface reached a complete first bundle pass
-17. `governed-cost`
+18. `governed-cost`
    - emit one machine-readable cost delta between an unprepared and prepared governed path
 
 The selection layer can now also carry one preparation-aware strong-path recommendation when bounded governed-path cost evidence exists.
 
 The orchestration layer can now also absorb that preparation-aware strong-path receipt directly, instead of forcing the operator to restate preparation outputs manually.
+
+The terminal layer now also exposes one named `resume` path, so continuation from a blocked or partial state no longer has to feel like a disguised replay of the base orchestration command.
 
 ## Why this matters
 

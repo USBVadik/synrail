@@ -4,20 +4,20 @@ This roadmap is intentionally short-horizon.
 
 `Synrail` has now crossed the line from extraction shell into a small executable control system. That changes the next job.
 
-The repo no longer needs another growth tranche. It needs a pressure-testing tranche.
+The repo no longer needs another growth tranche. It needs a product-tightening tranche that stays pressure-tested.
 
 ## Current phase
 
 Current phase:
 
-- pressure-test whether the current kernel is actually worth its extra control cost
+- harden the current kernel into a more usable product contour while keeping cost and evidence pressure on it
 
 That means the near-term work is now mostly about:
 
-- comparator economics instead of comparison prose
-- ugly compound reality instead of only clean family examples
-- proving or demoting the hybrid mode quickly
-- measuring the cost of `Synrail` itself
+- first-class continuation and re-entry instead of manual repaired replay
+- stronger runtime handoff between policy, selection, and execution
+- comparator economics as a guardrail instead of a sidecar
+- measuring the cost of `Synrail` itself where it changes product choices
 - sharpening doctor only where it reduces expensive false-readiness decisions
 
 ## Near-term priorities
@@ -34,7 +34,24 @@ Examples:
 - compare operator minutes, interventions, repair cycles, invalidations, and closure latency
 - keep verdicts tied to both proof value and control cost
 
-### 2. Run one ugly compound scenario end-to-end
+Current status:
+
+- enough economics now exists to guide product decisions
+- the next strongest moves should spend that signal on runtime/product tightening rather than grow economics for its own sake
+
+### 2. Make continuation first-class
+
+Goal:
+
+- stop treating repaired re-entry as mostly canonical evidence and turn it into explicit operator/runtime behavior
+
+Examples:
+
+- add named runtime continuation entrypoints
+- carry continuation truth in the same primary run artifacts
+- reduce operator stitching from blocked, partial, and degraded states
+
+### 3. Run one ugly compound scenario end-to-end
 
 Goal:
 
@@ -47,7 +64,7 @@ Examples:
 - hit partial proof or degraded confidence
 - repair again and return to accepted closure only if the proof basis really supports it
 
-### 3. Prove or demote the hybrid mode quickly
+### 4. Prove or demote the hybrid mode quickly
 
 Goal:
 
@@ -64,7 +81,7 @@ Current measured status:
 - hybrid now has one `SYNRAIL_BETTER`, one `UNCLEAR`, and one `BASELINE_GOOD_ENOUGH` case
 - hybrid should now be treated as an explicit exception pattern rather than a default middle lane
 
-### 4. Instrument the cost of Synrail itself
+### 5. Instrument the cost of Synrail itself
 
 Goal:
 
@@ -80,7 +97,7 @@ Current pressure-tested slice:
 
 - one cost-aware mode selector now exists so obvious non-winning paths can be steered back to baseline before entering a heavier contour
 
-### 5. Sharpen doctor on expensive false-readiness modes
+### 6. Sharpen doctor on expensive false-readiness modes
 
 Goal:
 
