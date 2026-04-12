@@ -176,6 +176,7 @@ A doctor record should minimally contain:
 From current observed history, `Synrail Doctor` must be able to incorporate findings such as:
 
 - `dirty_repo_before_execution`
+- `wrong_target_surface_assumption`
 - `branch-collision silent exit`
 - `executor-timeout orphan path`
 - `execution-surface contamination`

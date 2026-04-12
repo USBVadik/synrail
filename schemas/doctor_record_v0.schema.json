@@ -34,7 +34,9 @@
       "required": ["path", "classification"],
       "properties": {
         "path": {"type": "string"},
-        "classification": {"type": "string"}
+        "classification": {"type": "string"},
+        "observed_identity": {"type": "string"},
+        "expected_identity": {"type": "string"}
       }
     },
     "trusted_baseline": {

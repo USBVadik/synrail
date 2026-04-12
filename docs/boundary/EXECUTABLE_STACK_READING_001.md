@@ -70,6 +70,7 @@ Current strongest value carriers are:
 - target-surface truth discipline
 - explicit exact-task integrity
 - targeted doctor reduction of two false-readiness shapes: broken credential paths and exact task identity mismatch
+- targeted doctor reduction of one wrong-target-surface readiness lie
 - proof-bundle completeness reading
 - closure acceptance vs claimed-not-accepted separation
 - explicit blocked state lanes for main failure branches
@@ -87,7 +88,7 @@ Current strongest value carriers are:
 
 Current weaker areas are:
 
-- doctor is now stronger than v0, includes bounded filesystem/env probes, and now catches one credential-path false-green plus one exact-task-identity mismatch, but it is still narrower than a mature readiness layer
+- doctor is now stronger than v0, includes bounded filesystem/env probes, and now catches one credential-path false-green, one exact-task-identity mismatch, and one wrong-target-surface mismatch, but it is still narrower than a mature readiness layer
 - the stack now has one bounded spine-driven runtime contour, but not yet a deeper end-to-end runtime
 - blocked-to-accepted, partial-to-accepted, and degraded-to-accepted re-entry are now canonical, and one ugly mixed repair family is now canonical too, but compound reality is still much weaker than it should be
 - comparison harness now has a six-scenario economics slice, but it is still too narrow to count as product-grade economics

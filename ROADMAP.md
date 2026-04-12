@@ -92,6 +92,7 @@ Current pressure-tested slice:
 
 - doctor now catches one path-validity false-green on credential envs
 - doctor now catches one exact artifact mismatch case, not only missing exact artifacts
+- doctor now also catches one wrong-target-surface mismatch before execution starts
 
 ## Current reading
 

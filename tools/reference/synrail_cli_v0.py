@@ -171,6 +171,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         ("--helper-path", args.helper_path),
         ("--prompt-identity-file", args.prompt_identity_file),
         ("--expected-task-identity", args.expected_task_identity),
+        ("--target-identity-file", args.target_identity_file),
+        ("--expected-target-identity", args.expected_target_identity),
     ]
     for flag, value in optional_pairs:
         if value:
@@ -238,6 +240,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ("--artifact-path", args.artifact_path),
         ("--helper-path", args.helper_path),
         ("--prompt-identity-file", args.prompt_identity_file),
+        ("--target-identity-file", args.target_identity_file),
+        ("--expected-target-identity", args.execution_surface_identity),
     ]:
         if value:
             forwarded.extend([flag, value])
@@ -339,6 +343,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_doctor.add_argument("--credential-env", action="append", default=[])
     p_doctor.add_argument("--prompt-identity-file")
     p_doctor.add_argument("--expected-task-identity")
+    p_doctor.add_argument("--target-identity-file")
+    p_doctor.add_argument("--expected-target-identity")
     p_doctor.set_defaults(func=cmd_doctor)
 
     p_compare = sub.add_parser("compare")
@@ -393,6 +399,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--helper-path")
     p_orchestrate.add_argument("--credential-env", action="append", default=[])
     p_orchestrate.add_argument("--prompt-identity-file")
+    p_orchestrate.add_argument("--target-identity-file")
     p_orchestrate.set_defaults(func=cmd_orchestrate)
 
     return parser

@@ -819,6 +819,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ("--helper-path", args.helper_path),
         ("--prompt-identity-file", args.prompt_identity_file),
         ("--expected-task-identity", args.task_identity),
+        ("--target-identity-file", args.target_identity_file),
+        ("--expected-target-identity", args.execution_surface_identity),
     ]:
         if value:
             doctor_args.extend([flag, value])
@@ -1093,6 +1095,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--helper-path")
     p_orchestrate.add_argument("--credential-env", action="append", default=[])
     p_orchestrate.add_argument("--prompt-identity-file")
+    p_orchestrate.add_argument("--target-identity-file")
+    p_orchestrate.add_argument("--expected-target-identity")
     p_orchestrate.set_defaults(func=cmd_orchestrate)
 
     return parser

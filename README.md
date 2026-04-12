@@ -106,6 +106,7 @@ The current proof reading is:
 - one ugly compound run now also says `SYNRAIL_BETTER`
 - the current pressure-testing tranche now has one aggregate cost-of-control surface and one explicit hybrid-secondary status
 - doctor now also has one targeted false-readiness pressure-test slice for broken credential paths and exact task identity mismatch
+- doctor now also has one targeted wrong-target-surface pressure-test slice
 
 The current wedge reading is:
 

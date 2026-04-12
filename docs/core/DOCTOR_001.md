@@ -23,6 +23,7 @@ The current doctor can:
 4. emit one recommended next safe step
 5. optionally write the doctor result back into the run state
 6. catch two more expensive false-readiness shapes through targeted pressure-tests
+7. block one wrong-target-surface assumption before execution begins
 
 ## Current gate set
 
@@ -44,10 +45,12 @@ And it can now probe several of those from real local conditions instead of only
 - credential path validity when env points at a file or directory
 - exact prompt identity file presence
 - exact task identity match when an expected exact task is supplied
+- target identity match when an expected target surface is supplied
 
 The first targeted doctor pressure-test slice for those stronger probes now lives at:
 
 - `docs/core/DOCTOR_PRESSURE_TEST_001.md`
+- `docs/core/DOCTOR_PRESSURE_TEST_002.md`
 
 ## Why this matters
 

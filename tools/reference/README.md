@@ -317,6 +317,7 @@ Guarantees:
 - can probe whether a path-based credential env points at something real
 - can probe exact prompt identity file presence
 - can probe expected exact task identity mismatch
+- can probe expected target-surface identity mismatch
 - emits a doctor record with blocking failure classes
 - can write doctor status back into the run state
 

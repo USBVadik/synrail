@@ -36,7 +36,7 @@ FAILURE_CLASSES = {
 }
 
 NEXT_STEPS = {
-    "baseline_identity": "name the trusted baseline identity",
+    "baseline_identity": "restore the trusted baseline and expected target-surface identity",
     "clean_execution_surface": "move to a clean or explicitly observed-safe execution surface",
     "helper_integrity": "trust or safely bypass the helper entrypoint",
     "credential_surface": "restore required provider credentials",
@@ -61,6 +61,12 @@ def non_empty_identity(value: str) -> bool:
     return bool(value and value.strip() and value.strip().upper() != "UNKNOWN")
 
 
+def read_non_empty_text(path: Path) -> str:
+    if not path.exists():
+        return ""
+    return path.read_text().strip()
+
+
 def env_value_looks_path_like(name: str, value: str) -> bool:
     upper_name = name.upper()
     if upper_name in {"GOOGLE_APPLICATION_CREDENTIALS", "AWS_SHARED_CREDENTIALS_FILE", "AWS_CONFIG_FILE", "AZURE_CONFIG_DIR"}:
@@ -74,6 +80,34 @@ def env_value_looks_path_like(name: str, value: str) -> bool:
     if os.sep in value or (os.altsep and os.altsep in value):
         return True
     return value.endswith(".json")
+
+
+def probe_baseline_identity(args: argparse.Namespace) -> tuple[dict, str, str]:
+    if not non_empty_identity(args.baseline_identity):
+        return gate("FAIL", "trusted baseline identity is missing"), "", args.expected_target_identity or ""
+
+    observed_target_identity = ""
+    if args.target_identity_file:
+        observed_target_identity = read_non_empty_text(Path(args.target_identity_file))
+        if not observed_target_identity:
+            return gate("FAIL", "target identity artifact is missing or empty"), "", args.expected_target_identity or ""
+
+    expected_target_identity = (args.expected_target_identity or "").strip()
+    if observed_target_identity and expected_target_identity and observed_target_identity != expected_target_identity:
+        return (
+            gate("FAIL", "target identity artifact does not match the expected target surface"),
+            observed_target_identity,
+            expected_target_identity,
+        )
+
+    if observed_target_identity and expected_target_identity:
+        return (
+            gate("PASS", "trusted baseline identity is present and target identity matches expectation"),
+            observed_target_identity,
+            expected_target_identity,
+        )
+
+    return gate("PASS", "trusted baseline identity is present"), observed_target_identity, expected_target_identity
 
 
 def probe_clean_execution_surface(args: argparse.Namespace) -> dict:
@@ -183,11 +217,9 @@ def probe_prompt_task_identity(args: argparse.Namespace) -> dict:
 
 
 def build_record(args: argparse.Namespace) -> dict:
+    baseline_identity_gate, observed_target_identity, expected_target_identity = probe_baseline_identity(args)
     gates = {
-        "baseline_identity": gate(
-            "PASS" if non_empty_identity(args.baseline_identity) else "FAIL",
-            "trusted baseline identity is present" if non_empty_identity(args.baseline_identity) else "trusted baseline identity is missing",
-        ),
+        "baseline_identity": baseline_identity_gate,
         "clean_execution_surface": probe_clean_execution_surface(args),
         "artifact_viability": probe_artifact_viability(args),
         "helper_integrity": probe_helper_integrity(args),
@@ -213,6 +245,8 @@ def build_record(args: argparse.Namespace) -> dict:
         "target_execution_surface": {
             "path": args.target_path,
             "classification": args.target_classification,
+            "observed_identity": observed_target_identity,
+            "expected_identity": expected_target_identity,
         },
         "trusted_baseline": {
             "identity": args.baseline_identity,
@@ -260,6 +294,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--credential-env", action="append", default=[])
     parser.add_argument("--prompt-identity-file")
     parser.add_argument("--expected-task-identity")
+    parser.add_argument("--target-identity-file")
+    parser.add_argument("--expected-target-identity")
     return parser
 
 
