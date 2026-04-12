@@ -43,6 +43,16 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_init(args: argparse.Namespace) -> int:
+    forwarded = [
+        "init",
+        "--run-id", args.run_id,
+        "--task-class", args.task_class,
+        "--output", args.output,
+    ]
+    return run_python(SPINE, forwarded)
+
+
 def cmd_bundle_check(args: argparse.Namespace) -> int:
     forwarded = [
         "--final-result", args.final_result,
@@ -64,6 +74,10 @@ def cmd_bundle_check(args: argparse.Namespace) -> int:
     return run_python(BUNDLE, forwarded)
 
 
+def cmd_apply_bundle(args: argparse.Namespace) -> int:
+    return run_python(SPINE, ["apply-bundle", args.state_file, args.bundle_file])
+
+
 def cmd_closure(args: argparse.Namespace) -> int:
     forwarded = [
         "--state-file", args.state_file,
@@ -73,6 +87,10 @@ def cmd_closure(args: argparse.Namespace) -> int:
     if args.update_state:
         forwarded.append("--update-state")
     return run_python(CLOSURE, forwarded)
+
+
+def cmd_apply_closure(args: argparse.Namespace) -> int:
+    return run_python(SPINE, ["apply-closure", args.state_file, args.closure_file])
 
 
 def cmd_refresh(args: argparse.Namespace) -> int:
@@ -109,6 +127,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="synrail")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
+    p_init = sub.add_parser("init")
+    p_init.add_argument("--run-id", required=True)
+    p_init.add_argument("--task-class", required=True)
+    p_init.add_argument("--output", required=True)
+    p_init.set_defaults(func=cmd_init)
+
     p_status = sub.add_parser("status")
     p_status.add_argument("state_file")
     p_status.set_defaults(func=cmd_status)
@@ -126,12 +150,22 @@ def build_parser() -> argparse.ArgumentParser:
     p_bundle.add_argument("--task-identity")
     p_bundle.set_defaults(func=cmd_bundle_check)
 
+    p_apply_bundle = sub.add_parser("apply-bundle")
+    p_apply_bundle.add_argument("state_file")
+    p_apply_bundle.add_argument("bundle_file")
+    p_apply_bundle.set_defaults(func=cmd_apply_bundle)
+
     p_closure = sub.add_parser("closure")
     p_closure.add_argument("--state-file", required=True)
     p_closure.add_argument("--bundle-file", required=True)
     p_closure.add_argument("--output", required=True)
     p_closure.add_argument("--update-state", action="store_true")
     p_closure.set_defaults(func=cmd_closure)
+
+    p_apply_closure = sub.add_parser("apply-closure")
+    p_apply_closure.add_argument("state_file")
+    p_apply_closure.add_argument("closure_file")
+    p_apply_closure.set_defaults(func=cmd_apply_closure)
 
     p_refresh = sub.add_parser("refresh")
     p_refresh.add_argument("--state-file", required=True)

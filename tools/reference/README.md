@@ -123,6 +123,7 @@ Guarantees:
 
 - can initialize a run state
 - can deny disallowed transitions
+- can apply bundle and closure artifacts back into the state machine
 - can emit machine-readable state
 
 Does not guarantee:

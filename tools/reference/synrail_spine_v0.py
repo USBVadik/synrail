@@ -58,6 +58,10 @@ def load_state(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
+def load_json(path: Path) -> dict:
+    return json.loads(path.read_text())
+
+
 def save_state(path: Path, state: dict) -> None:
     path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
 
@@ -166,6 +170,50 @@ def transition(state: dict, target: str) -> tuple[int, dict | None]:
     return deny(f"UNKNOWN_TARGET_STATE:{target}"), None
 
 
+def apply_bundle(state: dict, bundle: dict) -> tuple[int, dict | None]:
+    state["execution"]["artifact_bundle_present"] = bool(bundle.get("final_result", {}).get("present", False))
+    state["proof_bundle"]["status"] = bundle.get("status", "INVALID")
+    state["proof_bundle"]["missing_sections"] = list(bundle.get("missing_sections", []))
+
+    if bundle.get("status") == "COMPLETE":
+        return transition(state, "PROOF_BUNDLE_COMPLETE")
+
+    state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+    if bundle.get("status") == "INVALID":
+        state["closure"]["blocking_reason"] = "INVALID_PROOF_BUNDLE"
+        state["closure"]["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
+        state["closure"]["narrow_next_safe_step"] = "repair the final result artifact and rebuild the proof bundle"
+    else:
+        state["closure"]["blocking_reason"] = "MISSING_PROOF_SECTIONS"
+        state["closure"]["next_allowed_transition"] = "PROOF_BUNDLE_COMPLETION"
+        state["closure"]["narrow_next_safe_step"] = "complete the missing proof sections"
+    state["closure"]["missing_sections"] = list(bundle.get("missing_sections", []))
+    state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+    state["state"] = "EXECUTION_COMPLETED"
+    return 0, state
+
+
+def apply_closure(state: dict, verdict: dict) -> tuple[int, dict | None]:
+    state["closure"]["status"] = verdict["closure_status"]
+    state["closure"]["blocking_reason"] = verdict["blocking_reason"]
+    state["closure"]["next_allowed_transition"] = verdict["next_allowed_transition"]
+    state["closure"]["narrow_next_safe_step"] = verdict["narrow_next_safe_step"]
+    state["closure"]["missing_sections"] = list(verdict["missing_sections"])
+    state["next_safe_step"] = verdict["narrow_next_safe_step"]
+
+    if verdict["closure_status"] == "ACCEPTED":
+        return transition(state, "CLOSURE_ACCEPTED")
+
+    if verdict["closure_status"] == "REJECTED":
+        return transition(state, "CLOSURE_REJECTED")
+
+    if state["proof_bundle"]["status"] == "COMPLETE":
+        state["state"] = "PROOF_BUNDLE_COMPLETE"
+    else:
+        state["state"] = "EXECUTION_COMPLETED"
+    return 0, state
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     state = default_state(args.run_id, args.task_class)
     save_state(Path(args.output), state)
@@ -190,6 +238,30 @@ def cmd_show(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_apply_bundle(args: argparse.Namespace) -> int:
+    state_path = Path(args.state_file)
+    state = load_state(state_path)
+    bundle = load_json(Path(args.bundle_file))
+    code, next_state = apply_bundle(state, bundle)
+    if code != 0:
+        return code
+    save_state(state_path, next_state)
+    print(json.dumps({"result": "OK", "state": next_state["state"], "proof_bundle": next_state["proof_bundle"]["status"]}, ensure_ascii=True))
+    return 0
+
+
+def cmd_apply_closure(args: argparse.Namespace) -> int:
+    state_path = Path(args.state_file)
+    state = load_state(state_path)
+    verdict = load_json(Path(args.closure_file))
+    code, next_state = apply_closure(state, verdict)
+    if code != 0:
+        return code
+    save_state(state_path, next_state)
+    print(json.dumps({"result": "OK", "state": next_state["state"], "closure": next_state["closure"]["status"]}, ensure_ascii=True))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="synrail-spine-v0")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -208,6 +280,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_show = sub.add_parser("show")
     p_show.add_argument("state_file")
     p_show.set_defaults(func=cmd_show)
+
+    p_apply_bundle = sub.add_parser("apply-bundle")
+    p_apply_bundle.add_argument("state_file")
+    p_apply_bundle.add_argument("bundle_file")
+    p_apply_bundle.set_defaults(func=cmd_apply_bundle)
+
+    p_apply_closure = sub.add_parser("apply-closure")
+    p_apply_closure.add_argument("state_file")
+    p_apply_closure.add_argument("closure_file")
+    p_apply_closure.set_defaults(func=cmd_apply_closure)
 
     return parser
 

@@ -16,15 +16,21 @@ The first terminal UX slice now lives at:
 
 The CLI v0 currently exposes:
 
-1. `status`
+1. `init`
+   - initialize one machine-readable run state
+2. `status`
    - show the compact current run state
-2. `bundle-check`
+3. `bundle-check`
    - assemble and classify a proof bundle
-3. `closure`
+4. `apply-bundle`
+   - apply a proof-bundle artifact back into the state machine
+5. `closure`
    - compute the closure verdict
-4. `refresh`
+6. `apply-closure`
+   - apply a closure verdict back into the state machine
+7. `refresh`
    - refresh state after a doctor, bundle, closure, or recovery event
-5. `validate`
+8. `validate`
    - validate one machine-readable artifact against one schema
 
 ## Why this matters
