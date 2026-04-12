@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/proof_bundle_v0.schema.json",
+  "title": "Synrail Proof Bundle v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "status",
+    "final_result",
+    "modified_files",
+    "diff_provenance",
+    "readback",
+    "scenario_proof",
+    "artifact_identity",
+    "cleanup_status",
+    "missing_sections"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "proof_bundle_v0"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "task_class": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "COMPLETE",
+        "PARTIAL",
+        "INVALID"
+      ]
+    },
+    "final_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "status"],
+      "properties": {
+        "present": {"type": "boolean"},
+        "status": {"type": "string"}
+      }
+    },
+    "modified_files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "count"],
+      "properties": {
+        "present": {"type": "boolean"},
+        "count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "diff_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "non_empty"],
+      "properties": {
+        "present": {"type": "boolean"},
+        "non_empty": {"type": "boolean"}
+      }
+    },
+    "readback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "path"],
+      "properties": {
+        "present": {"type": "boolean"},
+        "path": {"type": "string"}
+      }
+    },
+    "scenario_proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "path"],
+      "properties": {
+        "present": {"type": "boolean"},
+        "path": {"type": "string"}
+      }
+    },
+    "artifact_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_identity",
+        "execution_surface_identity",
+        "prompt_identity",
+        "task_identity"
+      ],
+      "properties": {
+        "baseline_identity": {"type": "string"},
+        "execution_surface_identity": {"type": "string"},
+        "prompt_identity": {"type": "string"},
+        "task_identity": {"type": "string"}
+      }
+    },
+    "cleanup_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "success"],
+      "properties": {
+        "present": {"type": "boolean"},
+        "success": {"type": "boolean"}
+      }
+    },
+    "missing_sections": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}

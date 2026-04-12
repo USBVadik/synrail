@@ -35,6 +35,7 @@ Start here when you want to understand the kernel itself:
 - `core/RUN_STATE_SCHEMA_001.md`
 - `core/EXECUTION_SPINE_001.md`
 - `core/GATE_SET_001.md`
+- `core/PROOF_BUNDLE_ASSEMBLER_001.md`
 
 These documents describe how Synrail decides what is trustworthy, what is blocked, and what can be accepted.
 

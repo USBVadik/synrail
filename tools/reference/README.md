@@ -131,6 +131,23 @@ Does not guarantee:
 - complete schema validation
 - final operator UX
 
+### `synrail_bundle_v0.py`
+
+Purpose:
+
+- assemble a minimal machine-readable proof bundle from a final result artifact plus bundle inputs
+
+Guarantees:
+
+- emits one normalized bundle artifact
+- classifies it as `COMPLETE`, `PARTIAL`, or `INVALID`
+
+Does not guarantee:
+
+- semantic closure acceptance
+- deep scenario validation
+- full closure-engine behavior
+
 ## Operating rule
 
 If a helper starts accumulating broad product logic, large orchestration behavior, or environment-specific sprawl, it should probably stop living under `tools/reference/` in this repo shape.
