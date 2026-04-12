@@ -25,6 +25,11 @@ They are here to show how `Synrail` artifacts fit together without importing raw
     - refresh after degradation
     - baseline comparison
 
+## Related fixtures
+
+- `../fixtures/executable_loop_run_001/`
+  - first internal end-to-end artifact set for the current executable stack
+
 ## Rule
 
 Examples in this directory should stay:
