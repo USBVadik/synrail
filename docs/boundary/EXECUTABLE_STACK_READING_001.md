@@ -23,6 +23,7 @@ The current executable stack can already provide:
 11. three operator-facing selection receipts that prove a heavier contour can now be deliberately skipped or deliberately entered before the runtime path begins
 12. one governed-path preparation plan and receipt that prove the planned proof surface can reach a complete first bundle pass before closure starts
 13. one canonical prepared governed-path run that proves preparation can now live inside the spine-owned contour
+14. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
 
 That is enough to say:
 
@@ -78,6 +79,7 @@ Current strongest value carriers are:
 - cost-aware steering back to baseline on weak and demoted-hybrid paths
 - one governed-path preparation slice that predeclares the proof surface and records complete first-pass bundle assembly
 - one preparation-aware prepared governed run that reaches accepted closure inside the same bounded orchestration path
+- one measured governed-path cost-reduction slice that treats preparation as a bounded economic improvement rather than only a cleaner ritual
 - proof-bundle completeness reading
 - closure acceptance vs claimed-not-accepted separation
 - explicit blocked state lanes for main failure branches

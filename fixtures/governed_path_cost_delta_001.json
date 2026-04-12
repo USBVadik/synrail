@@ -1,0 +1,63 @@
+{
+  "schema_version": "governed_path_cost_delta_v0",
+  "scenario_id": "GOVERNED_PATH_COST_001",
+  "scenario_class": "proof_sensitive_governed_path",
+  "task_class": "bounded_router_trigger_fix",
+  "unprepared_path": "full_governed_path_unprepared",
+  "prepared_path": "full_governed_path_prepared",
+  "unprepared": {
+    "schema_version": "governed_path_cost_input_v0",
+    "scenario_id": "GOVERNED_PATH_COST_001",
+    "scenario_class": "proof_sensitive_governed_path",
+    "task_class": "bounded_router_trigger_fix",
+    "path_id": "full_governed_path_unprepared",
+    "operator_minutes": 17,
+    "intervention_count": 2,
+    "repair_cycles": 1,
+    "closure_latency_minutes": 21,
+    "first_bundle_status": "PARTIAL",
+    "first_pass_closure_ready": false,
+    "final_closure_status": "ACCEPTED",
+    "false_green_exposure": 0,
+    "artifact_completeness_percent": 100,
+    "notes": "Without predeclared proof planning, one proof section was discovered late and repaired before accepted closure."
+  },
+  "prepared": {
+    "schema_version": "governed_path_cost_input_v0",
+    "scenario_id": "GOVERNED_PATH_COST_001",
+    "scenario_class": "proof_sensitive_governed_path",
+    "task_class": "bounded_router_trigger_fix",
+    "path_id": "full_governed_path_prepared",
+    "operator_minutes": 12,
+    "intervention_count": 1,
+    "repair_cycles": 0,
+    "closure_latency_minutes": 14,
+    "first_bundle_status": "COMPLETE",
+    "first_pass_closure_ready": true,
+    "final_closure_status": "ACCEPTED",
+    "false_green_exposure": 0,
+    "artifact_completeness_percent": 100,
+    "notes": "Preparation kept the governed proof surface complete on the first pass and removed one repair loop."
+  },
+  "economics_summary": {
+    "operator_minutes_reduced": 5,
+    "intervention_count_reduced": 1,
+    "repair_cycles_reduced": 1,
+    "closure_latency_minutes_reduced": 7,
+    "false_green_exposure_change": 0,
+    "artifact_completeness_percent_change": 0,
+    "first_bundle_status_improved": true,
+    "first_pass_closure_ready_improved": true,
+    "safety_regression": false
+  },
+  "verdict": "PREPARATION_REDUCES_GOVERNED_PATH_COST",
+  "why_verdict": "The prepared governed path stays equally safe while reducing operator tax and improving first-pass proof readiness.",
+  "reasons": [
+    "preparation_reduces_operator_minutes",
+    "preparation_reduces_interventions",
+    "preparation_reduces_repair_cycles",
+    "preparation_reduces_closure_latency",
+    "preparation_improves_first_bundle_status",
+    "preparation_improves_first_pass_closure_readiness"
+  ]
+}

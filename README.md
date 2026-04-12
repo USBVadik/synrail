@@ -113,6 +113,7 @@ The current proof reading is:
 - the repo now also has a third operator-facing selection receipt showing that the strong expensive-wrong-closure path explicitly entered the governed contour
 - the repo now also has one governed-path preparation plan and receipt showing that the planned proof surface can reach a complete first bundle pass before closure starts
 - the repo now also has one canonical prepared governed-path run showing that preparation now lives inside the runtime contour, not only beside it
+- the repo now also has one bounded governed-path cost delta showing that preparation can reduce operator tax inside the winning contour without weakening closure safety
 
 The current wedge reading is:
 

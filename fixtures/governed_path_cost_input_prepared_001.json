@@ -1,0 +1,17 @@
+{
+  "schema_version": "governed_path_cost_input_v0",
+  "scenario_id": "GOVERNED_PATH_COST_001",
+  "scenario_class": "proof_sensitive_governed_path",
+  "task_class": "bounded_router_trigger_fix",
+  "path_id": "full_governed_path_prepared",
+  "operator_minutes": 12,
+  "intervention_count": 1,
+  "repair_cycles": 0,
+  "closure_latency_minutes": 14,
+  "first_bundle_status": "COMPLETE",
+  "first_pass_closure_ready": true,
+  "final_closure_status": "ACCEPTED",
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 100,
+  "notes": "Preparation kept the governed proof surface complete on the first pass and removed one repair loop."
+}

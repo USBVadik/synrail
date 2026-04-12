@@ -24,6 +24,7 @@ MODE_SELECTOR = HERE / "synrail_mode_selector_v0.py"
 MODE_RECEIPT = HERE / "synrail_mode_receipt_v0.py"
 PROOF_PLAN = HERE / "synrail_proof_plan_v0.py"
 PREPARATION_RECEIPT = HERE / "synrail_preparation_receipt_v0.py"
+GOVERNED_COST = HERE / "synrail_governed_cost_delta_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -263,6 +264,15 @@ def cmd_preparation_receipt(args: argparse.Namespace) -> int:
     return run_python(PREPARATION_RECEIPT, forwarded)
 
 
+def cmd_governed_cost(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--unprepared-file", args.unprepared_file,
+        "--prepared-file", args.prepared_file,
+        "--output", args.output,
+    ]
+    return run_python(GOVERNED_COST, forwarded)
+
+
 def cmd_orchestrate(args: argparse.Namespace) -> int:
     forwarded = [
         "--state-file", args.state_file,
@@ -454,6 +464,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_prep.add_argument("--bundle-file", required=True)
     p_prep.add_argument("--output", required=True)
     p_prep.set_defaults(func=cmd_preparation_receipt)
+
+    p_governed_cost = sub.add_parser("governed-cost")
+    p_governed_cost.add_argument("--unprepared-file", required=True)
+    p_governed_cost.add_argument("--prepared-file", required=True)
+    p_governed_cost.add_argument("--output", required=True)
+    p_governed_cost.set_defaults(func=cmd_governed_cost)
 
     p_orchestrate = sub.add_parser("orchestrate")
     p_orchestrate.add_argument("--state-file", required=True)

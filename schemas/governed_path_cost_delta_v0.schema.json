@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/governed_path_cost_delta_v0.schema.json",
+  "title": "Synrail Governed Path Cost Delta v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scenario_id",
+    "scenario_class",
+    "task_class",
+    "unprepared_path",
+    "prepared_path",
+    "unprepared",
+    "prepared",
+    "economics_summary",
+    "verdict",
+    "why_verdict",
+    "reasons"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "governed_path_cost_delta_v0"
+    },
+    "scenario_id": {
+      "type": "string"
+    },
+    "scenario_class": {
+      "type": "string"
+    },
+    "task_class": {
+      "type": "string"
+    },
+    "unprepared_path": {
+      "type": "string"
+    },
+    "prepared_path": {
+      "type": "string"
+    },
+    "unprepared": {
+      "type": "object"
+    },
+    "prepared": {
+      "type": "object"
+    },
+    "economics_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operator_minutes_reduced",
+        "intervention_count_reduced",
+        "repair_cycles_reduced",
+        "closure_latency_minutes_reduced",
+        "false_green_exposure_change",
+        "artifact_completeness_percent_change",
+        "first_bundle_status_improved",
+        "first_pass_closure_ready_improved",
+        "safety_regression"
+      ],
+      "properties": {
+        "operator_minutes_reduced": {
+          "type": "integer"
+        },
+        "intervention_count_reduced": {
+          "type": "integer"
+        },
+        "repair_cycles_reduced": {
+          "type": "integer"
+        },
+        "closure_latency_minutes_reduced": {
+          "type": "integer"
+        },
+        "false_green_exposure_change": {
+          "type": "integer"
+        },
+        "artifact_completeness_percent_change": {
+          "type": "integer"
+        },
+        "first_bundle_status_improved": {
+          "type": "boolean"
+        },
+        "first_pass_closure_ready_improved": {
+          "type": "boolean"
+        },
+        "safety_regression": {
+          "type": "boolean"
+        }
+      }
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "PREPARATION_REDUCES_GOVERNED_PATH_COST",
+        "PREPARATION_NOT_JUSTIFIED",
+        "UNCLEAR"
+      ]
+    },
+    "why_verdict": {
+      "type": "string"
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

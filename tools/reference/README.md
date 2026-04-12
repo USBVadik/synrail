@@ -191,6 +191,22 @@ Does not guarantee:
 
 It can now also be called from the bounded orchestration path when preparation outputs are requested.
 
+### `synrail_governed_cost_delta_v0.py`
+
+Purpose:
+
+- compare an unprepared and prepared governed path as one bounded cost-reduction slice
+
+Guarantees:
+
+- emits one machine-readable delta for operator minutes, interventions, repair cycles, and closure latency
+- records whether first-pass proof readiness improved without a safety regression
+
+Does not guarantee:
+
+- broad economics proof across every governed path
+- baseline-vs-Synrail comparison on its own
+
 ### `synrail_closure_v0.py`
 
 Purpose:

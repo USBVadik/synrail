@@ -120,6 +120,16 @@ The next product pressure should now go first to:
 2. proving the hybrid mode further or continuing to keep it secondary
 3. keeping compound-path wins honest without pretending the whole system is cheap
 
+The repo now also has one bounded internal governed-path cost-reduction slice:
+
+- `core/GOVERNED_PATH_COST_REDUCTION_001.md`
+
+That slice does not replace the baseline-vs-Synrail economics reading.
+
+It complements it by asking a narrower question:
+
+- can the winning governed contour itself get cheaper without weakening closure safety?
+
 It should not go first to:
 
 - more explanation layers

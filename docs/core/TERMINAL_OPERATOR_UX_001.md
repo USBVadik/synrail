@@ -49,6 +49,8 @@ The CLI v0 currently exposes:
    - emit one governed-path proof preparation plan before bundle assembly starts
 16. `preparation-receipt`
    - emit one machine-readable receipt showing whether the planned proof surface reached a complete first bundle pass
+17. `governed-cost`
+   - emit one machine-readable cost delta between an unprepared and prepared governed path
 
 ## Why this matters
 

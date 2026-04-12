@@ -81,5 +81,6 @@ The shortest honest reading is:
 - `Synrail` can now predeclare the governed-path proof surface before bundle assembly
 - it can now emit one receipt showing that a planned governed-path bundle reached `COMPLETE` on the first pass
 - it can now also carry that preparation slice through the bounded `orchestrate` path
+- it now also has one bounded governed-path cost-delta record that says preparation reduces human tax without weakening the final safety surface
 - this does not yet prove a broad cost reduction inside every strong path
 - it does prove one bounded executable move away from post-run proof scrambling

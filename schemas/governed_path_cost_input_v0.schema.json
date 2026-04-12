@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/governed_path_cost_input_v0.schema.json",
+  "title": "Synrail Governed Path Cost Input v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scenario_id",
+    "scenario_class",
+    "task_class",
+    "path_id",
+    "operator_minutes",
+    "intervention_count",
+    "repair_cycles",
+    "closure_latency_minutes",
+    "first_bundle_status",
+    "first_pass_closure_ready",
+    "final_closure_status",
+    "false_green_exposure",
+    "artifact_completeness_percent",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "governed_path_cost_input_v0"
+    },
+    "scenario_id": {
+      "type": "string"
+    },
+    "scenario_class": {
+      "type": "string"
+    },
+    "task_class": {
+      "type": "string"
+    },
+    "path_id": {
+      "type": "string"
+    },
+    "operator_minutes": {
+      "type": "integer"
+    },
+    "intervention_count": {
+      "type": "integer"
+    },
+    "repair_cycles": {
+      "type": "integer"
+    },
+    "closure_latency_minutes": {
+      "type": "integer"
+    },
+    "first_bundle_status": {
+      "type": "string",
+      "enum": ["COMPLETE", "PARTIAL", "INVALID"]
+    },
+    "first_pass_closure_ready": {
+      "type": "boolean"
+    },
+    "final_closure_status": {
+      "type": "string",
+      "enum": ["ACCEPTED", "CLAIMED_NOT_ACCEPTED", "REJECTED"]
+    },
+    "false_green_exposure": {
+      "type": "integer"
+    },
+    "artifact_completeness_percent": {
+      "type": "integer"
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}
