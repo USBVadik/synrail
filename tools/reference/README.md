@@ -113,6 +113,24 @@ Does not guarantee:
 - good patches
 - closure on its own
 
+### `synrail_spine_v0.py`
+
+Purpose:
+
+- provide a minimal executable spine prototype with machine-readable state and hard transition gates
+
+Guarantees:
+
+- can initialize a run state
+- can deny disallowed transitions
+- can emit machine-readable state
+
+Does not guarantee:
+
+- full product orchestration
+- complete schema validation
+- final operator UX
+
 ## Operating rule
 
 If a helper starts accumulating broad product logic, large orchestration behavior, or environment-specific sprawl, it should probably stop living under `tools/reference/` in this repo shape.

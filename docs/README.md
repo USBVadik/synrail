@@ -32,6 +32,9 @@ Start here when you want to understand the kernel itself:
 - `core/SYNRAIL_DOCTOR.md`
 - `core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
 - `core/SYNRAIL_KERNEL_STATUS_CONTRACT.md`
+- `core/RUN_STATE_SCHEMA_001.md`
+- `core/EXECUTION_SPINE_001.md`
+- `core/GATE_SET_001.md`
 
 These documents describe how Synrail decides what is trustworthy, what is blocked, and what can be accepted.
 

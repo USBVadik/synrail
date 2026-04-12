@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/run_state_v0.schema.json",
+  "title": "Synrail Run State v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "state",
+    "target_surface",
+    "doctor",
+    "integrity",
+    "execution",
+    "proof_bundle",
+    "closure",
+    "recovery",
+    "next_safe_step"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "run_state_v0"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "INITIALIZED",
+        "TARGET_SURFACE_ATTESTED",
+        "READY",
+        "EXECUTION_COMPLETED",
+        "PROOF_BUNDLE_COMPLETE",
+        "CLOSURE_ACCEPTED",
+        "CLOSURE_REJECTED",
+        "RECOVERY_PENDING"
+      ]
+    },
+    "target_surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "identity",
+        "baseline_relation"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "ATTESTED"
+          ]
+        },
+        "identity": {
+          "type": "string"
+        },
+        "baseline_relation": {
+          "type": "string"
+        }
+      }
+    },
+    "doctor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "blocking_failure_classes"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "PASS",
+            "FAIL"
+          ]
+        },
+        "blocking_failure_classes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "exact_task_identity_ok"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "PASS",
+            "FAIL"
+          ]
+        },
+        "exact_task_identity_ok": {
+          "type": "boolean"
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "artifact_bundle_present"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "NOT_RUN",
+            "COMPLETED",
+            "FAILED"
+          ]
+        },
+        "artifact_bundle_present": {
+          "type": "boolean"
+        }
+      }
+    },
+    "proof_bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "missing_sections"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "MISSING",
+            "PARTIAL",
+            "COMPLETE",
+            "INVALID"
+          ]
+        },
+        "missing_sections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "closure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "blocking_reason"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "OPEN",
+            "CLAIMED_NOT_ACCEPTED",
+            "ACCEPTED",
+            "REJECTED"
+          ]
+        },
+        "blocking_reason": {
+          "type": "string"
+        }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reverification_complete"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "NOT_REQUIRED",
+            "PENDING",
+            "COMPLETE"
+          ]
+        },
+        "reverification_complete": {
+          "type": "boolean"
+        }
+      }
+    },
+    "next_safe_step": {
+      "type": "string"
+    }
+  }
+}
