@@ -26,8 +26,8 @@
   "artifact_identity": {
     "baseline_identity": "trusted_local_state",
     "execution_surface_identity": "local_checked_path",
-    "prompt_identity": "fallback_guard_prompt",
-    "task_identity": "HONESTY_RESTORATION_GUARD_001"
+    "prompt_identity": "weak_prompt_001",
+    "task_identity": "HONESTY_GUARD_001"
   },
   "cleanup_status": {
     "present": true,

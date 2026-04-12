@@ -17,7 +17,7 @@
   },
   "readback": {
     "present": true,
-    "path": "fixtures/executable_loop_run_003/readback.txt"
+    "path": "synrail/fixtures/executable_loop_run_003/readback.txt"
   },
   "scenario_proof": {
     "present": false,

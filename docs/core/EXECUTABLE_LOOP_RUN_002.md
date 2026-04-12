@@ -28,6 +28,7 @@ Included artifacts:
 - `bundle.json`
 - `closure.json`
 - `comparison.json`
+- `orchestration.json`
 
 The comparison fixtures used for this run are:
 
@@ -54,10 +55,10 @@ Before proof assembly, the run emitted a green doctor record:
 
 - verdict = `ACCEPTABLE_FOR_CORE_RUN`
 
-The doctor artifact here now reads as a probe-based green path:
+The doctor artifact here now reads as a bounded green path for this lighter scenario:
 
-- observed execution surface
-- viable artifact path
+- explicit clean execution input
+- explicit artifact viability input
 - no extra helper or credential gates required at this level
 
 This run intentionally used a partial bundle shape.
@@ -86,6 +87,10 @@ This confirms that the current stack still behaves honestly on a weaker scenario
 Using the weak comparison fixtures, the harness emitted:
 
 - verdict = `BASELINE_GOOD_ENOUGH`
+
+This run now also has a canonical worked orchestration envelope:
+
+- `fixtures/executable_loop_run_002/orchestration.json`
 
 ## Why this run matters
 

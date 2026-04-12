@@ -33,8 +33,10 @@ They are here to show how `Synrail` artifacts fit together without importing raw
   - that envelope now matches a direct `orchestrate` output shape
 - `../fixtures/executable_loop_run_002/`
   - second internal end-to-end artifact set on a weaker scenario
+  - includes `orchestration.json` as the weak-path worked envelope
 - `../fixtures/executable_loop_run_003/`
   - third internal end-to-end artifact set on a hybrid middle-mode scenario
+  - includes `orchestration.json` as the hybrid-path worked envelope
 
 ## Rule
 

@@ -17,11 +17,11 @@
     },
     "clean_execution_surface": {
       "status": "PASS",
-      "note": "non-git execution surface exists and is explicitly observed"
+      "note": "execution surface is acceptable"
     },
     "artifact_viability": {
       "status": "PASS",
-      "note": "artifact path parent exists and is writable by convention"
+      "note": "machine-readable artifact path is viable"
     },
     "helper_integrity": {
       "status": "NOT_APPLICABLE",

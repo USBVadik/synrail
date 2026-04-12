@@ -4,7 +4,7 @@
   "doctor_level": "CORE_DOCTOR",
   "target_execution_surface": {
     "path": "/tmp/local_checked_path",
-    "classification": "trusted_local_path"
+    "classification": "observed_checked_path"
   },
   "trusted_baseline": {
     "identity": "trusted_local_state"
@@ -17,11 +17,11 @@
     },
     "clean_execution_surface": {
       "status": "PASS",
-      "note": "non-git execution surface exists and is explicitly observed"
+      "note": "execution surface is acceptable"
     },
     "artifact_viability": {
       "status": "PASS",
-      "note": "artifact path parent exists and is writable by convention"
+      "note": "machine-readable artifact path is viable"
     },
     "helper_integrity": {
       "status": "NOT_APPLICABLE",

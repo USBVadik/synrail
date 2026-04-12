@@ -34,6 +34,7 @@ Included artifacts:
 - `bundle.json`
 - `closure.json`
 - `comparison.json`
+- `orchestration.json`
 - `readback.txt`
 
 The comparison fixtures used for this run are:
@@ -65,8 +66,8 @@ This is important because the hybrid mode still keeps one explicit readiness che
 
 The doctor artifact now also reflects the stronger `v1` reading style:
 
-- observed execution surface
-- viable artifact path
+- explicit clean execution input
+- explicit artifact viability input
 - bounded readiness without full heavy diagnostics
 
 ### 2. Bundle path
@@ -119,6 +120,10 @@ The current comparison reading is therefore:
 - the baseline remains plausible
 - `Synrail` adds some truth discipline
 - but the current evidence is not decisive enough to claim a clear win
+
+This run now also has a canonical worked orchestration envelope:
+
+- `fixtures/executable_loop_run_003/orchestration.json`
 
 ## Why this run matters
 
