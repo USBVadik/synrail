@@ -14,7 +14,7 @@ but also whether the kernel can return from a less-green contour after the block
 
 ## Current re-entry anchors
 
-The current re-entry lattice is anchored by four canonical repair families plus two named runtime continuation contours:
+The current re-entry lattice is anchored by four canonical repair families plus three named runtime continuation contours:
 
 1. blocked readiness to accepted closure
 2. partial proof to accepted closure
@@ -22,6 +22,7 @@ The current re-entry lattice is anchored by four canonical repair families plus 
 4. one ugly compound blocked-plus-partial-plus-degraded contour back to accepted closure
 5. one partial-proof runtime continuation back to accepted closure
 6. one degraded-recovery runtime continuation back to accepted closure
+7. one doctor-blocked runtime continuation back to accepted closure
 
 That is still bounded, but it is already materially stronger than one or two repaired contours.
 
@@ -151,6 +152,36 @@ Why this matters:
 - it reduces the gap between clean repair families and messier real execution
 - it makes the re-entry lattice less ceremonial and more pressure-tested
 
+## 5. Doctor-blocked runtime continuation to accepted closure
+
+Current readable path:
+
+- doctor-blocked starting surface:
+  - `fixtures/executable_loop_runtime_resume_run_003/starting_state.json`
+- runtime continuation surface:
+  - `fixtures/executable_loop_runtime_resume_run_003/run.json`
+
+Readable transition:
+
+- `DOCTOR_BLOCKED`
+- repair prompt/task identity
+- rerun doctor readiness
+- `READY`
+- `EXECUTION_COMPLETED`
+- `PROOF_BUNDLE_COMPLETE`
+- `CLOSURE_ACCEPTED`
+
+What this proves:
+
+- the named runtime `resume` path is no longer limited to proof or recovery repair
+- the kernel can continue from an early readiness-failure state through the same primary artifact surface
+- doctor-blocked continuation now exists as a canonical machine-readable runtime family
+
+Why this matters:
+
+- it makes runtime continuation more product-real and less tied only to later-stage repairs
+- it reduces the gap between canonical repaired evidence and explicit operator/runtime behavior
+
 ## What the re-entry lattice now supports
 
 The current re-entry lattice supports a stronger kernel-level claim:
@@ -174,8 +205,7 @@ because it shows the kernel can sometimes recover honestly after a prior block.
 The re-entry lattice still has visible gaps:
 
 - the current canonical reverse edges now cover readiness repair, proof completion, one recovery repair, and one ugly mixed family, but not the full set of future compound families
-- named runtime `resume` now exists for both partial-proof and degraded-recovery continuation, but runtime continuation is still much narrower than the full repaired surface family
-- standalone doctor-blocked re-entry is still less explicit than the new compound family
+- named runtime `resume` now exists for partial-proof, degraded-recovery, and doctor-blocked continuation, but runtime continuation is still much narrower than the full repaired surface family
 - hybrid compound repair is still much weaker than it should be
 
 ## How this relates to other readings
@@ -206,8 +236,8 @@ That is a healthier internal product surface than treating repair only as someth
 
 The next strongest kernel work should improve one of these:
 
-1. make one more mixed or compound re-entry family canonical
-2. make degraded-to-greener re-entry less manual and more spine-owned
+1. add one repair-handoff layer that tells the operator exactly which inputs are needed for continuation
+2. make the next ugly continuation contour run through that named runtime path instead of only through the broader orchestration surface
 3. reduce ambiguity between “repairable blocked”, “repairable partial”, “repairable degraded”, and “still not re-enterable” states
 4. strengthen the economics reading around compound re-entry rather than only its state semantics
 

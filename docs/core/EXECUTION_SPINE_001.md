@@ -73,6 +73,7 @@ That continuation marker is now proven on:
 
 - one partial-proof continuation family
 - one degraded recovery continuation family
+- one doctor-blocked readiness continuation family
 
 It now also chooses the comparison harness by input schema version, so the same bounded contour can still read legacy comparison inputs while moving the active pressure-testing path toward economics-aware comparison records.
 

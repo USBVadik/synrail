@@ -104,6 +104,7 @@ That continuation path is now proven on:
 
 - one partial-proof repair family
 - one degraded recovery repair family
+- one doctor-blocked readiness repair family
 
 That matters because it keeps the canonical worked artifact aligned with the final runtime contour, including post-refresh closure state when refresh is part of the run.
 
@@ -171,6 +172,7 @@ And now, when explicitly requested:
 
 - one mode-selection receipt handoff into the governed runtime contour
 - one named runtime continuation contour from a non-green starting state
+- one doctor-blocked runtime continuation contour from an early readiness-failure state
 - one governed-path proof plan plus one preparation receipt
 - refresh after a bounded event
 - baseline comparison after the run contour

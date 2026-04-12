@@ -51,6 +51,14 @@ Examples:
 - carry continuation truth in the same primary run artifacts
 - reduce operator stitching from blocked, partial, and degraded states
 
+Current status:
+
+- named runtime continuation now exists for:
+  - `PROOF_BUNDLE_PARTIAL`
+  - `RECOVERY_PENDING`
+  - `DOCTOR_BLOCKED`
+- the next strongest move is now a repair-handoff layer so continuation inputs are carried more explicitly than operator memory
+
 ### 3. Run one ugly compound scenario end-to-end
 
 Goal:
