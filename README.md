@@ -94,6 +94,11 @@ The current proof reading is:
 - the next priority is proving one killer path against a simpler baseline, not widening the shell
 - a second comparison on a less favorable scenario now says the simpler baseline may already be good enough there
 
+The current wedge reading is:
+
+- `Synrail` is strongest on proof-sensitive closure paths where false completion is expensive
+- it is not yet justified as a full governed path for every small incident
+
 ## Contributing
 
 For active contribution shape, start here:
@@ -101,7 +106,10 @@ For active contribution shape, start here:
 - `CONTRIBUTING.md`
 - `ROADMAP.md`
 - `docs/boundary/KILLER_PATH_001.md`
+- `docs/boundary/WEDGE_STATEMENT_001.md`
 - `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
+- `docs/boundary/BASELINE_COMPARISON_RECORD_002.md`
 - `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
+- `docs/boundary/SYNRAIL_NOT_FOR_001.md`
 
 Secondary repo-history and hardening context remains available in `docs/boundary/`, but it is not the first route through the project anymore.
