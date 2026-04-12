@@ -127,6 +127,10 @@ That gives one compact machine-readable entrypoint for the full internal reading
 - comparison verdict
 - resulting state
 
+This envelope is now representable as a direct orchestration output, not only as a manually assembled repo artifact.
+
+It also now reflects the final post-refresh reading rather than an earlier pre-refresh closure snapshot.
+
 ## What this does not prove
 
 It does not prove:

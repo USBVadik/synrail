@@ -43,6 +43,47 @@ def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
+def build_worked_orchestration_artifact(
+    *,
+    state: dict,
+    doctor_record: dict,
+    bundle: dict,
+    closure: dict,
+    refresh_report: dict | None,
+    comparison: dict | None,
+) -> dict:
+    return {
+        "schema_version": "worked_orchestration_artifact_v0",
+        "run_id": state["run_id"],
+        "task_class": state["task_class"],
+        "doctor": {
+            "final_verdict": doctor_record["final_verdict"],
+            "blocking_failure_classes": list(doctor_record["blocking_failure_classes"]),
+        },
+        "bundle": {
+            "status": bundle["status"],
+            "missing_sections": list(bundle["missing_sections"]),
+        },
+        "closure": {
+            "closure_status": closure["closure_status"],
+            "blocking_reason": closure["blocking_reason"],
+        },
+        "refresh": {
+            "applied": refresh_report is not None,
+            "event_type": refresh_report["event_type"] if refresh_report else "",
+            "resulting_closure_status": refresh_report["resulting_closure_status"] if refresh_report else "",
+        },
+        "comparison": {
+            "applied": comparison is not None,
+            "verdict": comparison["verdict"] if comparison else "",
+            "reasons": list(comparison["reasons"]) if comparison else [],
+        },
+        "resulting_state": state["state"],
+        "current_closure_status": state["closure"]["status"],
+        "next_safe_step": state["next_safe_step"],
+    }
+
+
 def cmd_status(args: argparse.Namespace) -> int:
     state = load_json(Path(args.state_file))
     summary = {
@@ -302,6 +343,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     refresh_resulting_closure_status = ""
     comparison_applied = False
     comparison_verdict = ""
+    refresh_report = None
+    comparison = None
     stopping_stage = "closure" if closure["closure_status"] != "ACCEPTED" else "accepted"
     reason = closure["blocking_reason"] or "NONE"
 
@@ -368,6 +411,18 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         "next_safe_step": final_state["next_safe_step"],
     }
     save_json(Path(args.report_output), report)
+
+    if args.worked_artifact_output:
+        worked = build_worked_orchestration_artifact(
+            state=final_state,
+            doctor_record=doctor_record,
+            bundle=bundle,
+            closure=closure,
+            refresh_report=refresh_report,
+            comparison=comparison,
+        )
+        save_json(Path(args.worked_artifact_output), worked)
+
     print(json.dumps({"result": "OK", "closure_status": closure["closure_status"]}, ensure_ascii=True))
     return 0
 
@@ -489,6 +544,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--baseline-file")
     p_orchestrate.add_argument("--synrail-file")
     p_orchestrate.add_argument("--comparison-output")
+    p_orchestrate.add_argument("--worked-artifact-output")
     p_orchestrate.add_argument("--clean-surface", action="store_true")
     p_orchestrate.add_argument("--artifact-viable", action="store_true")
     p_orchestrate.add_argument("--helper-ok", action="store_true")

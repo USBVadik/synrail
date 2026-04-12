@@ -11,8 +11,8 @@
     "missing_sections": []
   },
   "closure": {
-    "closure_status": "ACCEPTED",
-    "blocking_reason": ""
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "RECOVERY_REVERIFICATION_INCOMPLETE"
   },
   "refresh": {
     "applied": true,

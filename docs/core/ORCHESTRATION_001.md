@@ -27,6 +27,7 @@ The `orchestrate` command currently runs one bounded path:
 7. optionally run refresh after a state-changing event
 8. optionally run baseline comparison
 9. emit one machine-readable orchestration report
+10. optionally emit one canonical worked orchestration artifact
 
 ## Why this matters
 
@@ -41,6 +42,10 @@ The orchestration pass is the first move toward:
 The first canonical worked orchestration envelope now lives at:
 
 - `fixtures/executable_loop_run_001/orchestration.json`
+
+The CLI can now emit that envelope directly through the orchestration path, instead of requiring a hand-assembled artifact after the fact.
+
+That matters because it keeps the canonical worked artifact aligned with the final runtime contour, including post-refresh closure state when refresh is part of the run.
 
 ## Current boundaries
 
