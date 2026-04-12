@@ -43,7 +43,7 @@ This first cut intentionally does not include:
 - `docs/boundary/`: product boundary and extraction-definition docs
 - `docs/reference/`: narrow operational reference behavior
 - `tools/reference/`: small helper scripts that express kernel behavior clearly
-- `examples/`: reserved for later curated examples
+- `examples/`: small curated and sanitized examples
 - `fixtures/`: reserved for later sanitized fixtures
 
 For a quick document map, start with:
