@@ -39,6 +39,8 @@ The CLI v0 currently exposes:
 11. `compare`
    - emit one machine-readable baseline comparison record through the CLI layer
    - route to the legacy comparison harness for `v0` inputs and the economics harness for `v1` inputs
+12. `hybrid-status`
+   - emit one machine-readable hybrid-mode status artifact from the current economics and hybrid evidence set
 
 ## Why this matters
 

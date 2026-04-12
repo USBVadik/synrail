@@ -44,7 +44,7 @@ This first cut intentionally does not include:
 - `docs/reference/`: narrow operational reference behavior
 - `tools/reference/`: small helper scripts that express kernel behavior clearly
 - `examples/`: small curated and sanitized examples
-- `fixtures/`: reserved for later sanitized fixtures
+- `fixtures/`: sanitized machine-readable fixtures, run artifacts, and economics records
 
 For a quick document map, start with:
 
@@ -71,11 +71,12 @@ Read these first:
 4. `docs/boundary/REENTRY_LATTICE_001.md`
 5. `docs/boundary/TRIO_READING_001.md`
 6. `docs/boundary/COST_OF_CONTROL_001.md`
-7. `docs/boundary/KILLER_PATH_001.md`
-8. `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
-9. `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
-10. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
-11. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
+7. `docs/boundary/HYBRID_STATUS_001.md`
+8. `docs/boundary/KILLER_PATH_001.md`
+9. `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
+10. `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
+11. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
+12. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
 
 Read these next only if you need them:
 
@@ -97,17 +98,17 @@ The current working mode is:
 
 The current proof reading is:
 
-- one closure-grade exact-task proof floor exists
-- one initial repeatability signal now exists on the same narrow task class
-- the next priority is proving one killer path against a simpler baseline, not widening the shell
-- a second comparison on a less favorable scenario now says the simpler baseline may already be good enough there
-- the next pressure-testing tranche is now centered on comparator economics, one ugly compound run, hybrid prove-or-demote pressure, and explicit cost-of-control truth
+- one economics-aware strong-path comparison now says `SYNRAIL_BETTER`
+- one economics-aware weak-path comparison now says `BASELINE_GOOD_ENOUGH`
+- one economics-aware hybrid comparison still says `UNCLEAR`
+- one ugly compound run now also says `SYNRAIL_BETTER`
+- the current pressure-testing tranche now has one aggregate cost-of-control surface and one explicit hybrid-secondary status
 
 The current wedge reading is:
 
 - `Synrail` is strongest on proof-sensitive closure paths where false completion is expensive
 - it is not yet justified as a full governed path for every small incident
-- the hybrid subset remains promising, but still under-proven relative to the other two modes
+- the hybrid subset remains promising, but it is now explicitly kept provisional and secondary until more measured wins exist
 
 The current executable output reading is:
 
@@ -131,6 +132,7 @@ For active contribution shape, start here:
 - `docs/boundary/WEDGE_STATEMENT_001.md`
 - `docs/boundary/APPLICATION_POLICY_001.md`
 - `docs/boundary/HYBRID_SUBSET_001.md`
+- `docs/boundary/HYBRID_STATUS_001.md`
 - `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `docs/boundary/BASELINE_COMPARISON_RECORD_002.md`
 - `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`

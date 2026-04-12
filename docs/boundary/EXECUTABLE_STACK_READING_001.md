@@ -91,7 +91,7 @@ The shortest current product reading is:
 
 - use `Synrail` when getting the truth wrong is expensive
 - do not assume the full governed path is justified for lower-risk honesty-restoration work
-- treat the hybrid subset as promising but still evidence-light
+- treat the hybrid subset as promising but still evidence-light, and keep it secondary until it wins more measured pressure-tests
 
 The shortest current output reading is:
 

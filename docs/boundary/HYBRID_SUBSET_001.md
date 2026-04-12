@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the smallest useful middle mode between the full `Synrail` governed path and the lightweight baseline.
+Define the smallest useful middle mode between the full `Synrail` governed path and the lightweight baseline, while keeping that middle mode explicitly secondary until the measured evidence improves.
 
 This document exists because the current evidence suggests the full path is sometimes too expensive, while the lightweight baseline can sometimes be too loose.
 
@@ -15,6 +15,13 @@ The current evidence now supports three truths at once:
 - there is a real middle zone where some truth discipline is useful, but the full path is too expensive
 
 The hybrid subset is for that middle zone.
+
+But the measured evidence does **not** yet justify treating hybrid as a default middle mode.
+
+Current status is:
+
+- `PROVISIONAL`
+- `KEEP_HYBRID_SECONDARY`
 
 ## What the hybrid subset must preserve
 
@@ -71,7 +78,17 @@ It is currently:
 
 - productively plausible
 - policy-relevant
-- but not yet as evidence-rich as the killer path
+- but not yet strong enough to stand as a default policy tier
+
+The first measured status artifact for this now lives at:
+
+- `fixtures/hybrid_status_001.json`
+
+That artifact currently says:
+
+- keep hybrid secondary and explicit
+- do not expand hybrid semantics yet
+- do not let “mixed answers” alone auto-select hybrid
 
 ## Decision rule
 
@@ -79,6 +96,12 @@ Use the hybrid subset when:
 
 - the scenario is too ambiguous for the lightweight baseline
 - but not expensive enough to justify the full governed path
+
+And only use it when you can name the specific ambiguity the lightweight baseline is failing to control.
+
+If you cannot name that ambiguity clearly:
+
+- stay lightweight by default
 
 If you keep adding steps to the hybrid subset, stop and reconsider.
 

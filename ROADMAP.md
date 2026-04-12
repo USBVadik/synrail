@@ -58,6 +58,11 @@ Examples:
 - run two or three stronger hybrid cases soon
 - if the signal remains weak, keep hybrid explicitly provisional rather than expanding its semantics
 
+Current measured status:
+
+- hybrid is now `PROVISIONAL`
+- hybrid should stay `secondary` until it wins more than one measured pressure-test
+
 ### 4. Instrument the cost of Synrail itself
 
 Goal:
@@ -95,6 +100,7 @@ The next pressure now belongs on:
 - value proof
 - cost truth
 - compound repair truth
+- explicit hybrid secondary status until stronger evidence exists
 
 not on:
 
@@ -145,3 +151,4 @@ The next practical operating layer around that anchor is:
 
 - `docs/boundary/APPLICATION_POLICY_001.md`
 - `docs/boundary/HYBRID_SUBSET_001.md`
+- `docs/boundary/HYBRID_STATUS_001.md`

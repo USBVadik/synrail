@@ -81,6 +81,7 @@ Important nuance:
 
 - this is not a failure
 - it is a useful signal that the hybrid mode is plausible but still under-proven
+- current policy should therefore keep hybrid secondary, not treat it as a default middle lane
 
 ## What the trio now supports
 
@@ -88,7 +89,7 @@ The trio now supports a tighter wedge statement:
 
 - use full `Synrail` where wrong closure is expensive
 - do not assume the full governed path is justified on small low-risk incidents
-- treat the hybrid subset as promising but not yet settled
+- treat the hybrid subset as promising but explicitly provisional and secondary
 
 ## What the trio does not support
 
@@ -114,10 +115,10 @@ That is a healthier product reading than trying to compress everything into a un
 
 The next useful pressure on this trio is now:
 
-- economic comparison records for all three paths
-- one aggregate cost-of-control record across strong, weak, hybrid, and compound paths
-- stronger hybrid evidence or an explicit hybrid demotion
-- one ugly compound case that tests whether the trio still holds outside curated clean flows
+- one more measured hybrid pressure-test or an even firmer secondary status
+- additional cost-of-control readings beyond the current four-scenario set
+- more ugly compound paths that test whether the trio still holds outside curated clean flows
+- cost reduction on paths that still do not justify the extra control
 
 ## Decision rule
 

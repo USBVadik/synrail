@@ -14,6 +14,7 @@ Start here when you want the current product wedge rather than the full repo his
 - `boundary/REENTRY_LATTICE_001.md`
 - `boundary/TRIO_READING_001.md`
 - `boundary/COST_OF_CONTROL_001.md`
+- `boundary/HYBRID_STATUS_001.md`
 - `boundary/KILLER_PATH_001.md`
 - `boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `boundary/MINIMUM_UNDENIABLE_CORE_001.md`
@@ -30,6 +31,7 @@ Then, if you want the practical “when should we actually use this?” rule, re
 
 - `boundary/APPLICATION_POLICY_001.md`
 - `boundary/HYBRID_SUBSET_001.md`
+- `boundary/HYBRID_STATUS_001.md`
 
 ## 2. Core
 
@@ -134,8 +136,9 @@ The scripts under `../tools/reference/` are small reference helpers, not a full 
 
 ## Reading Rule
 
-If you only read three things first, use:
+If you only read four things first, use:
 
 1. `boundary/KILLER_PATH_001.md`
 2. `boundary/EXECUTABLE_STACK_READING_001.md`
 3. `boundary/TRIO_READING_001.md`
+4. `boundary/HYBRID_STATUS_001.md`

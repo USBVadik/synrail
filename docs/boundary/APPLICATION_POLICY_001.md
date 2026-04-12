@@ -12,7 +12,7 @@ Current application policy uses three modes:
 
 1. full governed path
 2. lightweight baseline
-3. hybrid subset
+3. hybrid subset, kept secondary while evidence is still thin
 
 ## 1. Full governed path
 
@@ -67,6 +67,11 @@ Expected value:
 
 Use a hybrid subset when the full governed path is too expensive, but a pure lightweight baseline feels too loose.
 
+Current status:
+
+- `PROVISIONAL`
+- `secondary rather than default`
+
 Suggested hybrid elements:
 
 - clearer task identity
@@ -88,6 +93,11 @@ Expected value:
 - better than the lightweight baseline on ambiguity
 - cheaper than the full governed path
 
+Current policy constraint:
+
+- do not auto-select hybrid just because the answers feel mixed
+- keep baseline as the default unless one explicit ambiguity justifies extra control
+
 ## Quick decision rule
 
 Ask these questions in order:
@@ -107,13 +117,16 @@ If the answers are mostly “no”:
 
 If the answers are mixed:
 
-- use a hybrid subset
+- prefer the lightweight baseline unless you can name one explicit ambiguity the baseline would leave too loose
+- only then reach for the hybrid subset
 
 ## Anti-misuse rule
 
 Do not use the full governed path just because `Synrail` exists.
 
 Do not avoid it just because it is heavier.
+
+Do not let hybrid become a vague “middle by default”.
 
 Choose the path whose truth economics match the scenario.
 
@@ -123,7 +136,7 @@ Current evidence suggests:
 
 - full governed path is justified on the killer path
 - lightweight baseline is often good enough on small honesty-restoration incidents
-- hybrid subset is the most underdeveloped but likely valuable middle mode
+- hybrid subset is still under-proven and should remain secondary until measured evidence improves
 
 ## Decision rule
 

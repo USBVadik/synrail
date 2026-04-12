@@ -249,6 +249,23 @@ Does not guarantee:
 - deep scenario normalization
 - broad benchmarking behavior
 
+### `synrail_hybrid_status_v0.py`
+
+Purpose:
+
+- read the current economics aggregate plus hybrid comparison records and emit one explicit hybrid-mode status
+
+Guarantees:
+
+- emits one machine-readable `JUSTIFIED`, `PROVISIONAL`, or `DEMOTED` reading
+- keeps hybrid policy tied to measured evidence rather than only to prose
+
+Does not guarantee:
+
+- final product economics
+- broad policy discovery
+- more hybrid evidence than the repo already has
+
 ### `synrail_cost_of_control_v0.py`
 
 Purpose:

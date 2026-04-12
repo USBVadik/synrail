@@ -102,7 +102,7 @@ The current shortest strategic reading is:
 
 - `Synrail` already earns its cost on the strong and compound proof-sensitive paths
 - the weak low-risk path still looks too expensive for the gain
-- the hybrid path is still not measured strongly enough to deserve a settled status
+- the hybrid path is still not measured strongly enough to deserve active middle-mode status, so it should remain secondary for now
 
 This is exactly the kind of reading the repo needed.
 
@@ -113,7 +113,7 @@ It turns cost from a vague worry into one bounded machine-readable surface.
 The next product pressure should now go first to:
 
 1. reducing unnecessary control cost on non-winning paths
-2. proving or demoting the hybrid mode faster
+2. proving the hybrid mode further or continuing to keep it secondary
 3. keeping compound-path wins honest without pretending the whole system is cheap
 
 It should not go first to:

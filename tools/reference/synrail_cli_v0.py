@@ -19,6 +19,7 @@ VALIDATE = HERE / "synrail_validate_v0.py"
 DOCTOR = HERE / "synrail_doctor_v1.py"
 HARNESS_V0 = HERE / "synrail_baseline_harness_v0.py"
 HARNESS_V1 = HERE / "synrail_baseline_harness_v1.py"
+HYBRID_STATUS = HERE / "synrail_hybrid_status_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -192,6 +193,16 @@ def cmd_compare(args: argparse.Namespace) -> int:
     return run_python(harness, forwarded)
 
 
+def cmd_hybrid_status(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--cost-record", args.cost_record,
+        "--output", args.output,
+    ]
+    for hybrid_record in args.hybrid_record:
+        forwarded.extend(["--hybrid-record", hybrid_record])
+    return run_python(HYBRID_STATUS, forwarded)
+
+
 def cmd_orchestrate(args: argparse.Namespace) -> int:
     forwarded = [
         "--state-file", args.state_file,
@@ -333,6 +344,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_compare.add_argument("--synrail-file", required=True)
     p_compare.add_argument("--output", required=True)
     p_compare.set_defaults(func=cmd_compare)
+
+    p_hybrid = sub.add_parser("hybrid-status")
+    p_hybrid.add_argument("--cost-record", required=True)
+    p_hybrid.add_argument("--hybrid-record", action="append", required=True)
+    p_hybrid.add_argument("--output", required=True)
+    p_hybrid.set_defaults(func=cmd_hybrid_status)
 
     p_orchestrate = sub.add_parser("orchestrate")
     p_orchestrate.add_argument("--state-file", required=True)
