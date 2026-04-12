@@ -17,19 +17,19 @@
     },
     "clean_execution_surface": {
       "status": "PASS",
-      "note": "execution surface is acceptable"
+      "note": "non-git execution surface exists and is explicitly observed"
     },
     "artifact_viability": {
       "status": "PASS",
-      "note": "machine-readable artifact path is viable"
+      "note": "artifact path parent exists and is writable by convention"
     },
     "helper_integrity": {
       "status": "PASS",
-      "note": "helper surface is trusted or safely bypassed"
+      "note": "helper entrypoint exists"
     },
     "credential_surface": {
       "status": "PASS",
-      "note": "credential surface is present"
+      "note": "required credential env is present"
     },
     "prompt_task_identity": {
       "status": "NOT_APPLICABLE",

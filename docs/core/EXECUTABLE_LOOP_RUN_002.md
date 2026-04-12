@@ -54,6 +54,12 @@ Before proof assembly, the run emitted a green doctor record:
 
 - verdict = `ACCEPTABLE_FOR_CORE_RUN`
 
+The doctor artifact here now reads as a probe-based green path:
+
+- observed execution surface
+- viable artifact path
+- no extra helper or credential gates required at this level
+
 This run intentionally used a partial bundle shape.
 
 Observed result:

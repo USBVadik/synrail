@@ -51,6 +51,13 @@ Before proof assembly, the run emitted a green doctor record:
 
 - verdict = `ACCEPTABLE_FOR_SUPPORT_RUN`
 
+And the doctor reading now reflects bounded readiness probes rather than a purely flag-driven surface:
+
+- observed execution surface
+- viable artifact path
+- helper entrypoint present
+- required credential env present
+
 With:
 
 - attested target surface

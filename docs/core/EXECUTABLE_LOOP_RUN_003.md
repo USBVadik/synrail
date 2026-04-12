@@ -63,6 +63,12 @@ Before proof assembly, the run emitted a green doctor record:
 
 This is important because the hybrid mode still keeps one explicit readiness check.
 
+The doctor artifact now also reflects the stronger `v1` reading style:
+
+- observed execution surface
+- viable artifact path
+- bounded readiness without full heavy diagnostics
+
 ### 2. Bundle path
 
 This run intentionally preserved only one artifact sanity check:
