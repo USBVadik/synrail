@@ -19,6 +19,7 @@ The current executable stack can already provide:
 7. machine-readable baseline comparison records
 8. one bounded orchestration path across attestation, doctor, integrity, bundle, closure, optional refresh, and optional comparison
 9. one primary spine-produced canonical run artifact
+10. one cost-aware mode selector that can keep obvious non-winning paths out of heavier contours
 
 That is enough to say:
 
@@ -71,6 +72,7 @@ Current strongest value carriers are:
 - explicit exact-task integrity
 - targeted doctor reduction of two false-readiness shapes: broken credential paths and exact task identity mismatch
 - targeted doctor reduction of one wrong-target-surface readiness lie
+- cost-aware steering back to baseline on weak and demoted-hybrid paths
 - proof-bundle completeness reading
 - closure acceptance vs claimed-not-accepted separation
 - explicit blocked state lanes for main failure branches
@@ -159,6 +161,7 @@ The next phase should optimize for:
 - more ugly compound scenarios instead of only clean single-family repair
 - better evidence for where the stack is worth its overhead
 - faster prove-or-demote pressure on the hybrid mode
+- cheaper pre-contour selection on paths that current evidence already says are non-winners
 
 Not for:
 

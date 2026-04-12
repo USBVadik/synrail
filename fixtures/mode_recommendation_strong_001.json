@@ -1,0 +1,25 @@
+{
+  "schema_version": "mode_recommendation_v0",
+  "scenario_class": "expensive_wrong_closure",
+  "task_class": "bounded_router_trigger_fix",
+  "risk_inputs": {
+    "false_success_risk": "HIGH",
+    "recovery_cost": "HIGH",
+    "execution_surface_ambiguous": true,
+    "artifact_truth_nontrivial": true,
+    "explicit_hybrid_ambiguity": ""
+  },
+  "evidence_summary": {
+    "class_record_count": 1,
+    "class_verdict": "SYNRAIL_BETTER",
+    "hybrid_status": "",
+    "avg_operator_minutes_added_if_synrail": 24,
+    "avg_interventions_added_if_synrail": 3,
+    "avg_closure_latency_minutes_added_if_synrail": 33,
+    "avg_false_green_exposure_reduced_if_synrail": 2
+  },
+  "recommended_mode": "FULL_GOVERNED_PATH",
+  "secondary_exception_mode": "",
+  "why": "expensive wrong-closure risk still dominates here, so the extra control remains justified despite added operator cost",
+  "next_safe_step": "run the full governed path"
+}

@@ -76,6 +76,10 @@ Examples:
 - record where operator thought tax is highest
 - record how costly repaired re-entry is in human steps or minutes
 
+Current pressure-tested slice:
+
+- one cost-aware mode selector now exists so obvious non-winning paths can be steered back to baseline before entering a heavier contour
+
 ### 5. Sharpen doctor on expensive false-readiness modes
 
 Goal:

@@ -54,6 +54,7 @@ Start here when you want to understand the kernel itself:
 - `core/TERMINAL_OPERATOR_UX_001.md`
 - `core/ORCHESTRATION_001.md`
 - `core/BASELINE_HARNESS_001.md`
+- `core/MODE_SELECTOR_001.md`
 - `core/SCHEMA_VALIDATION_001.md`
 - `core/EXECUTABLE_LOOP_RUN_001.md`
 - `core/EXECUTABLE_LOOP_RUN_002.md`
@@ -86,6 +87,9 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/executable_loop_degraded_reentry_run_001/run.json`
 - `../fixtures/executable_loop_compound_run_001/run.json`
 - `../fixtures/executable_loop_hybrid_pressure_run_002/run.json`
+- `../fixtures/mode_recommendation_strong_001.json`
+- `../fixtures/mode_recommendation_weak_001.json`
+- `../fixtures/mode_recommendation_hybrid_001.json`
 - `../fixtures/executable_loop_hybrid_pressure_run_003/run.json`
 
 That same `run.json` shape is now the canonical starting point for:

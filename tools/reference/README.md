@@ -327,6 +327,25 @@ Does not guarantee:
 - provider reachability validation
 - full diagnostics coverage
 
+### `synrail_mode_selector_v0.py`
+
+Purpose:
+
+- recommend the cheapest honest mode before the operator enters a heavier contour
+
+Guarantees:
+
+- reads current cost-of-control evidence
+- can incorporate current hybrid-status demotion
+- emits one machine-readable mode recommendation
+- can steer weak or demoted-hybrid paths back to baseline by default
+
+Does not guarantee:
+
+- perfect scenario classification
+- replacement of human judgment on novel scenarios
+- automatic enforcement by itself
+
 ## Operating rule
 
 If a helper starts accumulating broad product logic, large orchestration behavior, or environment-specific sprawl, it should probably stop living under `tools/reference/` in this repo shape.

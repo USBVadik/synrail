@@ -6,6 +6,12 @@ Define when to use the full `Synrail` governed path, when to use a lighter basel
 
 This document exists so the wedge becomes operational policy rather than staying only a descriptive insight.
 
+The first machine-readable selector surface for that policy now lives at:
+
+- `fixtures/mode_recommendation_strong_001.json`
+- `fixtures/mode_recommendation_weak_001.json`
+- `fixtures/mode_recommendation_hybrid_001.json`
+
 ## Three modes
 
 Current application policy now has:

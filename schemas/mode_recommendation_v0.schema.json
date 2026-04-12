@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/mode_recommendation_v0.schema.json",
+  "title": "Synrail Mode Recommendation v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scenario_class",
+    "task_class",
+    "risk_inputs",
+    "evidence_summary",
+    "recommended_mode",
+    "secondary_exception_mode",
+    "why",
+    "next_safe_step"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "mode_recommendation_v0"
+    },
+    "scenario_class": {
+      "type": "string"
+    },
+    "task_class": {
+      "type": "string"
+    },
+    "risk_inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "false_success_risk",
+        "recovery_cost",
+        "execution_surface_ambiguous",
+        "artifact_truth_nontrivial",
+        "explicit_hybrid_ambiguity"
+      ],
+      "properties": {
+        "false_success_risk": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH"]
+        },
+        "recovery_cost": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH"]
+        },
+        "execution_surface_ambiguous": {
+          "type": "boolean"
+        },
+        "artifact_truth_nontrivial": {
+          "type": "boolean"
+        },
+        "explicit_hybrid_ambiguity": {
+          "type": "string"
+        }
+      }
+    },
+    "evidence_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "class_record_count",
+        "class_verdict",
+        "hybrid_status",
+        "avg_operator_minutes_added_if_synrail",
+        "avg_interventions_added_if_synrail",
+        "avg_closure_latency_minutes_added_if_synrail",
+        "avg_false_green_exposure_reduced_if_synrail"
+      ],
+      "properties": {
+        "class_record_count": {
+          "type": "integer"
+        },
+        "class_verdict": {
+          "type": "string"
+        },
+        "hybrid_status": {
+          "type": "string"
+        },
+        "avg_operator_minutes_added_if_synrail": {
+          "type": "integer"
+        },
+        "avg_interventions_added_if_synrail": {
+          "type": "integer"
+        },
+        "avg_closure_latency_minutes_added_if_synrail": {
+          "type": "integer"
+        },
+        "avg_false_green_exposure_reduced_if_synrail": {
+          "type": "integer"
+        }
+      }
+    },
+    "recommended_mode": {
+      "type": "string",
+      "enum": ["FULL_GOVERNED_PATH", "LIGHTWEIGHT_BASELINE", "HYBRID_EXCEPTION"]
+    },
+    "secondary_exception_mode": {
+      "type": "string",
+      "enum": ["", "HYBRID_EXCEPTION"]
+    },
+    "why": {
+      "type": "string"
+    },
+    "next_safe_step": {
+      "type": "string"
+    }
+  }
+}

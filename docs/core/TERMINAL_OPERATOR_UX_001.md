@@ -41,6 +41,8 @@ The CLI v0 currently exposes:
    - route to the legacy comparison harness for `v0` inputs and the economics harness for `v1` inputs
 12. `hybrid-status`
    - emit one machine-readable hybrid-mode status artifact from the current economics and hybrid evidence set
+13. `recommend-mode`
+   - emit one machine-readable cost-aware mode recommendation before the operator enters a heavier contour
 
 ## Why this matters
 

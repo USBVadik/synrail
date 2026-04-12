@@ -20,6 +20,7 @@ DOCTOR = HERE / "synrail_doctor_v1.py"
 HARNESS_V0 = HERE / "synrail_baseline_harness_v0.py"
 HARNESS_V1 = HERE / "synrail_baseline_harness_v1.py"
 HYBRID_STATUS = HERE / "synrail_hybrid_status_v0.py"
+MODE_SELECTOR = HERE / "synrail_mode_selector_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -206,6 +207,26 @@ def cmd_hybrid_status(args: argparse.Namespace) -> int:
     return run_python(HYBRID_STATUS, forwarded)
 
 
+def cmd_recommend_mode(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--cost-record", args.cost_record,
+        "--scenario-class", args.scenario_class,
+        "--task-class", args.task_class,
+        "--false-success-risk", args.false_success_risk,
+        "--recovery-cost", args.recovery_cost,
+        "--output", args.output,
+    ]
+    if args.hybrid_status:
+        forwarded.extend(["--hybrid-status", args.hybrid_status])
+    if args.execution_surface_ambiguous:
+        forwarded.append("--execution-surface-ambiguous")
+    if args.artifact_truth_nontrivial:
+        forwarded.append("--artifact-truth-nontrivial")
+    if args.explicit_hybrid_ambiguity:
+        forwarded.extend(["--explicit-hybrid-ambiguity", args.explicit_hybrid_ambiguity])
+    return run_python(MODE_SELECTOR, forwarded)
+
+
 def cmd_orchestrate(args: argparse.Namespace) -> int:
     forwarded = [
         "--state-file", args.state_file,
@@ -358,6 +379,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_hybrid.add_argument("--hybrid-record", action="append", required=True)
     p_hybrid.add_argument("--output", required=True)
     p_hybrid.set_defaults(func=cmd_hybrid_status)
+
+    p_mode = sub.add_parser("recommend-mode")
+    p_mode.add_argument("--cost-record", required=True)
+    p_mode.add_argument("--hybrid-status")
+    p_mode.add_argument("--scenario-class", required=True)
+    p_mode.add_argument("--task-class", required=True)
+    p_mode.add_argument("--false-success-risk", required=True, choices=["LOW", "MEDIUM", "HIGH"])
+    p_mode.add_argument("--recovery-cost", required=True, choices=["LOW", "MEDIUM", "HIGH"])
+    p_mode.add_argument("--execution-surface-ambiguous", action="store_true")
+    p_mode.add_argument("--artifact-truth-nontrivial", action="store_true")
+    p_mode.add_argument("--explicit-hybrid-ambiguity")
+    p_mode.add_argument("--output", required=True)
+    p_mode.set_defaults(func=cmd_recommend_mode)
 
     p_orchestrate = sub.add_parser("orchestrate")
     p_orchestrate.add_argument("--state-file", required=True)
