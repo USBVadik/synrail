@@ -1,8 +1,0 @@
-{
-  "result": "compound continuation run 004 fixed",
-  "git_diff": "diff --git a/router.py b/router.py\nindex 1111111..2222222 100644\n--- a/router.py\n+++ b/router.py\n@@ -1,3 +1,7 @@\n+def route_trigger(event):\n+    return 'fixed'\n",
-  "cleanup_status": {
-    "success": true,
-    "notes": "temporary debug traces removed before closure"
-  }
-}
