@@ -123,22 +123,26 @@ Requires:
 - no contradiction across proof sections
 - exact-task closure record explicitly moves to accepted state
 
-## Current known progression state for NODE2_IMAGE_TRIGGER_FIX_001
+## Task-specific state boundary
 
-Current progression state:
+Task-specific live progression state should not be embedded in this extracted core document.
 
-- `BLOCKED_READINESS`
+Use this document for:
 
-Current active blocker:
+- generic exact-task progression states
+- generic allowed transitions
+- generic transition conditions
 
-- `credential-surface missing`
+Put live task-specific progression state in:
+
+- proving-ground records
+- sanitized examples
+- future bounded task-status artifacts that are explicitly scoped to one task
 
 ## Relation to other artifacts
 
 This progression should be read together with:
 
-- `DOCTOR_RUN_EXACT_RETRY_READINESS_001`
-- `EVALUATION_LANE_EXACT_RETRY_001`
 - `SYNRAIL_PROOF_BUNDLE_STANDARD`
 - `SYNRAIL_EXACT_TASK_CLOSURE_SPEC`
 

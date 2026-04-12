@@ -55,16 +55,21 @@ A result was claimed, but the kernel cannot accept it.
 
 The exact task is accepted as closed under kernel rules.
 
-## Current known state for NODE2_IMAGE_TRIGGER_FIX_001
+## Task-specific state boundary
 
-Current state:
+Task-specific live closure state should not be embedded in this extracted core document.
 
-- `OPEN`
+Use this document for:
 
-Current reasons:
+- generic exact-task closure semantics
+- generic acceptance rules
+- generic closure states
 
-- `credential-surface missing`
-- no proof-complete exact-task cycle exists yet
+Put live task-specific closure state in:
+
+- proving-ground records
+- sanitized examples
+- future bounded status artifacts that are explicitly scoped to one task
 
 ## Relation to extraction readiness
 
