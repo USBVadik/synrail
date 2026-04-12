@@ -101,6 +101,7 @@ The shortest current output reading is:
 - one repaired blocked contour now also has a stable canonical repo fixture
 - one repaired partial-proof contour now also has a stable canonical repo fixture
 - one repaired degraded contour now also has a stable canonical repo fixture
+- one ugly compound repair contour now also has a stable canonical repo fixture
 - that artifact is a better single entrypoint than reconstructing a run from report, state, and worked envelope separately
 
 The first canonical accepted reference surface for that output now lives at:
@@ -134,6 +135,10 @@ The shortest current transition reading for those surfaces now lives at:
 The shortest current re-entry reading for those surfaces now lives at:
 
 - `REENTRY_LATTICE_001.md`
+
+The shortest current cost reading for those surfaces now lives at:
+
+- `COST_OF_CONTROL_001.md`
 
 ## What this changes for product direction
 

@@ -115,6 +115,7 @@ That is a healthier product reading than trying to compress everything into a un
 The next useful pressure on this trio is now:
 
 - economic comparison records for all three paths
+- one aggregate cost-of-control record across strong, weak, hybrid, and compound paths
 - stronger hybrid evidence or an explicit hybrid demotion
 - one ugly compound case that tests whether the trio still holds outside curated clean flows
 

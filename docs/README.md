@@ -13,6 +13,7 @@ Start here when you want the current product wedge rather than the full repo his
 - `boundary/TRANSITION_LATTICE_001.md`
 - `boundary/REENTRY_LATTICE_001.md`
 - `boundary/TRIO_READING_001.md`
+- `boundary/COST_OF_CONTROL_001.md`
 - `boundary/KILLER_PATH_001.md`
 - `boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `boundary/MINIMUM_UNDENIABLE_CORE_001.md`
@@ -21,6 +22,7 @@ These are the shortest current path to:
 
 - what Synrail is trying to win
 - why it currently looks better than a simpler baseline on that path
+- what its current control cost actually looks like across the measured scenario set
 - what should remain in the core
 - what the next pressure-testing tranche should now measure rather than merely describe
 

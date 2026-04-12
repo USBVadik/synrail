@@ -249,6 +249,24 @@ Does not guarantee:
 - deep scenario normalization
 - broad benchmarking behavior
 
+### `synrail_cost_of_control_v0.py`
+
+Purpose:
+
+- aggregate multiple economics-aware comparison records into one cost-of-control reading
+
+Guarantees:
+
+- emits one machine-readable aggregate artifact
+- names justified-cost, baseline-sufficient, and under-proven path buckets
+- surfaces the current cost hotspots
+
+Does not guarantee:
+
+- live operator telemetry
+- a complete economic model
+- automatic CLI integration
+
 ### `synrail_validate_v0.py`
 
 Purpose:

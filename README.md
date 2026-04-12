@@ -70,11 +70,12 @@ Read these first:
 3. `docs/boundary/TRANSITION_LATTICE_001.md`
 4. `docs/boundary/REENTRY_LATTICE_001.md`
 5. `docs/boundary/TRIO_READING_001.md`
-6. `docs/boundary/KILLER_PATH_001.md`
-7. `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
-8. `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
-9. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
-10. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
+6. `docs/boundary/COST_OF_CONTROL_001.md`
+7. `docs/boundary/KILLER_PATH_001.md`
+8. `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
+9. `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
+10. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
+11. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
 
 Read these next only if you need them:
 
@@ -116,6 +117,7 @@ The current executable output reading is:
 - the repo now also has one explicit outcome lattice across accepted, partial, degraded, and blocked contours
 - the repo now also has one explicit re-entry reading for blocked-to-accepted, partial-to-accepted, and degraded-to-accepted repair
 - the repo now also has one first compound economics comparison record on a proof-sensitive ugly path
+- the repo now also has one aggregate machine-readable cost-of-control record across strong, weak, hybrid, and compound paths
 - that artifact is now the best single machine-readable entrypoint into a bounded internal run
 - the trio now also has first `comparison_economics` records with simple operator-cost and false-green metrics
 

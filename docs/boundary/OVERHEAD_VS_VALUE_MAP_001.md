@@ -4,6 +4,10 @@
 
 Map which current `Synrail` elements appear to create real value on the killer path and which elements currently look more like overhead.
 
+For the newer machine-readable economic reading across the scenario set, see:
+
+- `COST_OF_CONTROL_001.md`
+
 This document exists so the next compression pass is grounded in comparison evidence rather than taste.
 
 ## Reading rule

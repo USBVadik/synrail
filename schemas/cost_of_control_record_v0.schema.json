@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/cost_of_control_record_v0.schema.json",
+  "title": "Synrail Cost Of Control Record v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scenario_count",
+    "source_records",
+    "verdict_counts",
+    "aggregate_deltas",
+    "hotspots",
+    "path_buckets",
+    "reading"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "cost_of_control_record_v0"
+    },
+    "scenario_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source_records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "scenario_id", "scenario_class", "verdict"],
+        "properties": {
+          "path": {"type": "string"},
+          "scenario_id": {"type": "string"},
+          "scenario_class": {"type": "string"},
+          "verdict": {
+            "type": "string",
+            "enum": ["SYNRAIL_BETTER", "BASELINE_GOOD_ENOUGH", "UNCLEAR"]
+          }
+        }
+      }
+    },
+    "verdict_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["SYNRAIL_BETTER", "BASELINE_GOOD_ENOUGH", "UNCLEAR"],
+      "properties": {
+        "SYNRAIL_BETTER": {"type": "integer", "minimum": 0},
+        "BASELINE_GOOD_ENOUGH": {"type": "integer", "minimum": 0},
+        "UNCLEAR": {"type": "integer", "minimum": 0}
+      }
+    },
+    "aggregate_deltas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "avg_operator_minutes_added",
+        "avg_intervention_count_added",
+        "avg_repair_cycles_added",
+        "avg_invalidation_count_added",
+        "avg_closure_latency_minutes_added",
+        "avg_false_green_exposure_reduced",
+        "avg_artifact_completeness_percent_gain"
+      ],
+      "properties": {
+        "avg_operator_minutes_added": {"type": "integer"},
+        "avg_intervention_count_added": {"type": "integer"},
+        "avg_repair_cycles_added": {"type": "integer"},
+        "avg_invalidation_count_added": {"type": "integer"},
+        "avg_closure_latency_minutes_added": {"type": "integer"},
+        "avg_false_green_exposure_reduced": {"type": "integer"},
+        "avg_artifact_completeness_percent_gain": {"type": "integer"}
+      }
+    },
+    "hotspots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "highest_operator_minutes_added",
+        "highest_closure_latency_minutes_added",
+        "highest_false_green_exposure_reduced",
+        "highest_artifact_completeness_percent_gain"
+      ],
+      "properties": {
+        "highest_operator_minutes_added": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scenario_id", "path", "value"],
+          "properties": {
+            "scenario_id": {"type": "string"},
+            "path": {"type": "string"},
+            "value": {"type": "integer"}
+          }
+        },
+        "highest_closure_latency_minutes_added": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scenario_id", "path", "value"],
+          "properties": {
+            "scenario_id": {"type": "string"},
+            "path": {"type": "string"},
+            "value": {"type": "integer"}
+          }
+        },
+        "highest_false_green_exposure_reduced": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scenario_id", "path", "value"],
+          "properties": {
+            "scenario_id": {"type": "string"},
+            "path": {"type": "string"},
+            "value": {"type": "integer"}
+          }
+        },
+        "highest_artifact_completeness_percent_gain": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scenario_id", "path", "value"],
+          "properties": {
+            "scenario_id": {"type": "string"},
+            "path": {"type": "string"},
+            "value": {"type": "integer"}
+          }
+        }
+      }
+    },
+    "path_buckets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["justified_cost_paths", "baseline_sufficient_paths", "under_proven_paths"],
+      "properties": {
+        "justified_cost_paths": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "baseline_sufficient_paths": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "under_proven_paths": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "reading": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "strongest_justified_path",
+        "clearest_overhead_path",
+        "hybrid_status",
+        "compound_status"
+      ],
+      "properties": {
+        "strongest_justified_path": {"type": "string"},
+        "clearest_overhead_path": {"type": "string"},
+        "hybrid_status": {"type": "string"},
+        "compound_status": {"type": "string"}
+      }
+    }
+  }
+}
