@@ -103,6 +103,10 @@ The first canonical blocked reference surface for that output now lives at:
 
 - `fixtures/executable_loop_blocked_run_001/run.json`
 
+The shortest current outcome-class reading for those surfaces now lives at:
+
+- `OUTCOME_LATTICE_001.md`
+
 ## What this changes for product direction
 
 The next phase should optimize for:

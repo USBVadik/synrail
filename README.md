@@ -66,12 +66,13 @@ For a quick document map, start with:
 Read these first:
 
 1. `docs/boundary/EXECUTABLE_STACK_READING_001.md`
-2. `docs/boundary/TRIO_READING_001.md`
-3. `docs/boundary/KILLER_PATH_001.md`
-4. `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
-5. `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
-6. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
-7. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
+2. `docs/boundary/OUTCOME_LATTICE_001.md`
+3. `docs/boundary/TRIO_READING_001.md`
+4. `docs/boundary/KILLER_PATH_001.md`
+5. `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
+6. `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
+7. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
+8. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
 
 Read these next only if you need them:
 
@@ -108,6 +109,7 @@ The current executable output reading is:
 
 - the spine can now emit one primary canonical run artifact
 - the repo now carries one canonical accepted fixture and one canonical blocked fixture on that same artifact surface
+- the repo now also has one explicit outcome lattice across accepted, partial, degraded, and blocked contours
 - that artifact is now the best single machine-readable entrypoint into a bounded internal run
 
 ## Contributing

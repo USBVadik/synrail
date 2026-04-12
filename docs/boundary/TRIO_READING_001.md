@@ -6,6 +6,10 @@ State the shortest honest current reading of the three canonical run artifacts.
 
 This document exists so the repo can summarize the current product wedge from actual machine-readable run artifacts rather than from scattered prose or single-case interpretation.
 
+For the current kernel outcome-class reading beyond the comparison trio, see:
+
+- `OUTCOME_LATTICE_001.md`
+
 ## Canonical trio
 
 The current trio is:

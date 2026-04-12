@@ -9,6 +9,7 @@ Use this map when you want the fastest way to orient yourself without reading ev
 Start here when you want the current product wedge rather than the full repo history:
 
 - `boundary/EXECUTABLE_STACK_READING_001.md`
+- `boundary/OUTCOME_LATTICE_001.md`
 - `boundary/TRIO_READING_001.md`
 - `boundary/KILLER_PATH_001.md`
 - `boundary/BASELINE_COMPARISON_RECORD_001.md`
