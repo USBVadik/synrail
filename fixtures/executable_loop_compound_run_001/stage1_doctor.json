@@ -1,0 +1,44 @@
+{
+  "schema_version": "doctor_record_v0",
+  "doctor_run_id": "DOCTOR_COMPOUND_001_STAGE1",
+  "doctor_level": "EXACT_RETRY_DOCTOR",
+  "target_execution_surface": {
+    "path": "synrail/fixtures/executable_loop_compound_run_001",
+    "classification": "compound-reentry-fixture"
+  },
+  "trusted_baseline": {
+    "identity": "trusted_clean"
+  },
+  "intended_run_class": "exact_retry",
+  "gate_results": {
+    "baseline_identity": {
+      "status": "PASS",
+      "note": "trusted baseline identity is present"
+    },
+    "clean_execution_surface": {
+      "status": "PASS",
+      "note": "execution surface is acceptable"
+    },
+    "artifact_viability": {
+      "status": "PASS",
+      "note": "machine-readable artifact path is viable"
+    },
+    "helper_integrity": {
+      "status": "PASS",
+      "note": "helper surface is trusted or safely bypassed"
+    },
+    "credential_surface": {
+      "status": "PASS",
+      "note": "credential surface is present"
+    },
+    "prompt_task_identity": {
+      "status": "FAIL",
+      "note": "exact prompt identity file is not specified"
+    }
+  },
+  "blocking_failure_classes": [
+    "exact-prompt-artifact-missing"
+  ],
+  "final_verdict": "NOT_ACCEPTABLE_EXACT_PROMPT_MISSING",
+  "recommended_next_safe_step": "restore the exact prompt and task identity artifacts"
+}

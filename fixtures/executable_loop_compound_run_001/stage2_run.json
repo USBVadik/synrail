@@ -1,0 +1,30 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "report": {
+    "result": "OK",
+    "stopping_stage": "refresh",
+    "reason": "MISSING_PROOF_SECTIONS",
+    "doctor_verdict": "ACCEPTABLE_FOR_EXACT_RETRY",
+    "bundle_status": "PARTIAL",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": true,
+    "comparison_applied": false,
+    "blockers": [],
+    "dominant_blocker": "",
+    "resulting_state": "PROOF_BUNDLE_PARTIAL",
+    "next_safe_step": "complete the missing proof sections"
+  },
+  "resulting_state": {
+    "state": "PROOF_BUNDLE_PARTIAL",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "MISSING_PROOF_SECTIONS",
+    "next_safe_step": "complete the missing proof sections"
+  },
+  "worked_envelope": {
+    "resulting_state": "PROOF_BUNDLE_PARTIAL",
+    "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+    "next_safe_step": "complete the missing proof sections"
+  }
+}

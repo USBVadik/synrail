@@ -12,7 +12,7 @@ This document exists so the repo can summarize the kernel as a state machine, no
 
 ## Current transition anchors
 
-The current lattice is anchored by seven transition families:
+The current lattice is anchored by eight transition families:
 
 1. clean progression
 2. proof downgrade
@@ -21,6 +21,7 @@ The current lattice is anchored by seven transition families:
 5. blocked re-entry
 6. partial re-entry
 7. degraded re-entry
+8. compound repair chain
 
 These are the current most meaningful state edges visible in the canonical artifacts.
 
@@ -169,6 +170,32 @@ What this proves:
 - the kernel can carry one repaired recovery reverse edge back into a green closure state
 - refresh reconciliation now exists on the same primary artifact surface as the other canonical run families
 
+## 8. Compound repair chain
+
+Current readable path:
+
+- `DOCTOR_BLOCKED`
+- repaired readiness
+- `PROOF_BUNDLE_PARTIAL`
+- competing refresh invalidations:
+  - partial proof
+  - pending recovery reverification
+- repaired proof sections
+- repaired recovery reverification
+- `CLOSURE_ACCEPTED`
+
+Canonical anchors:
+
+- `fixtures/executable_loop_compound_run_001/stage1_run.json`
+- `fixtures/executable_loop_compound_run_001/stage2_run.json`
+- `fixtures/executable_loop_compound_run_001/run.json`
+
+What this proves:
+
+- the kernel can now carry one ugly chain across multiple repair families instead of only one-step reverse edges
+- precedence between competing invalidations is now pressure-tested on a canonical repo surface
+- compound repair is no longer only a hoped-for future contour
+
 ## What the transition lattice now supports
 
 The current transition lattice supports a stronger kernel-level claim:
@@ -181,6 +208,7 @@ The current transition lattice supports a stronger kernel-level claim:
   - one explicit blocked-to-accepted reverse edge
   - one explicit partial-to-accepted reverse edge
   - one explicit degraded-to-accepted reverse edge
+  - one explicit compound blocked-plus-partial-plus-degraded repair chain
 
 That is stronger than saying only:
 
@@ -192,7 +220,7 @@ because it shows the kernel can already hold meaningful edges between those stat
 
 The transition lattice still has visible gaps:
 
-- blocked-to-accepted, partial-to-accepted, and degraded-to-accepted re-entry now exist, but mixed repair families are still weaker than they should be
+- blocked-to-accepted, partial-to-accepted, and degraded-to-accepted re-entry now exist, and one mixed repair family is canonical, but broader compound repair space is still weaker than it should be
 - hybrid currently shares the partial lane, but its transition semantics are still not richer than that lane
 - blocked families are still narrower than a mature readiness graph
 - the current lattice is inferred from bounded runtime contours, not yet from a deeper general kernel runtime

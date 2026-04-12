@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v1",
+  "system": "baseline",
+  "scenario_id": "SCENARIO_COMPOUND_001",
+  "scenario_class": "compound_proof_sensitive_repair",
+  "task_class": "bounded_router_trigger_fix",
+  "path_id": "lightweight_operator_loop",
+  "closure_result": "ACCEPTED",
+  "blocker_to_closure_cycles": 3,
+  "false_success_risk": "HIGH",
+  "proof_completeness": "LOW",
+  "recovery_cost": "HIGH",
+  "coordination_overhead": "MEDIUM",
+  "operator_minutes": 24,
+  "intervention_count": 3,
+  "repair_cycles": 2,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 35,
+  "false_green_exposure": 3,
+  "artifact_completeness_percent": 30,
+  "notes": "The simpler loop may still get to a green answer, but compound repair makes it much easier to accept too early."
+}

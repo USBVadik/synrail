@@ -14,11 +14,12 @@ but also whether the kernel can return from a less-green contour after the block
 
 ## Current re-entry anchors
 
-The current re-entry lattice is anchored by three canonical reverse edges:
+The current re-entry lattice is anchored by four canonical repair families:
 
 1. blocked readiness to accepted closure
 2. partial proof to accepted closure
 3. degraded recovery to accepted closure
+4. one ugly compound blocked-plus-partial-plus-degraded contour back to accepted closure
 
 That is still bounded, but it is already materially stronger than one or two repaired contours.
 
@@ -112,6 +113,38 @@ Why this matters:
 - it strengthens `Synrail` as a recovery-completion system, not only an invalidation system
 - it gives the repo one explicit repaired degraded contour, not only a warning that reverification is still missing
 
+## 4. Compound repair to accepted closure
+
+Current readable path:
+
+- compound starting surface:
+  - `fixtures/executable_loop_compound_run_001/stage1_run.json`
+- compound middle surface:
+  - `fixtures/executable_loop_compound_run_001/stage2_run.json`
+- repaired compound surface:
+  - `fixtures/executable_loop_compound_run_001/run.json`
+
+Readable transition:
+
+- `DOCTOR_BLOCKED`
+- repair exact prompt identity
+- `PROOF_BUNDLE_PARTIAL`
+- retain `RECOVERY_PENDING` in the same compound contour
+- repair missing proof sections
+- complete recovery reverification
+- `CLOSURE_ACCEPTED`
+
+What this proves:
+
+- the kernel can now hold one ugly compound repair family rather than only one-step reverse edges
+- readiness repair, proof repair, and recovery repair can now coexist in one canonical repo surface
+- the current primary run artifact shape still works under compound re-entry
+
+Why this matters:
+
+- it reduces the gap between clean repair families and messier real execution
+- it makes the re-entry lattice less ceremonial and more pressure-tested
+
 ## What the re-entry lattice now supports
 
 The current re-entry lattice supports a stronger kernel-level claim:
@@ -120,6 +153,7 @@ The current re-entry lattice supports a stronger kernel-level claim:
   - one explicit reverse edge from a blocked readiness state back to accepted closure
   - one explicit reverse edge from a partial proof state back to accepted closure
   - one explicit reverse edge from a degraded recovery state back to accepted closure
+  - one explicit compound repair family that crosses blocked, partial, and degraded contours on the way back to accepted closure
 
 That is stronger than saying only:
 
@@ -133,9 +167,9 @@ because it shows the kernel can sometimes recover honestly after a prior block.
 
 The re-entry lattice still has visible gaps:
 
-- the current canonical reverse edges now cover readiness repair, proof completion, and one recovery repair, but not the full set of future recovery families
-- runtime support for doctor-blocked re-entry is ahead of canonical repo evidence
-- mixed degraded+partial repair is still not canonical
+- the current canonical reverse edges now cover readiness repair, proof completion, one recovery repair, and one ugly mixed family, but not the full set of future compound families
+- standalone doctor-blocked re-entry is still less explicit than the new compound family
+- hybrid compound repair is still much weaker than it should be
 
 ## How this relates to other readings
 
@@ -168,5 +202,6 @@ The next strongest kernel work should improve one of these:
 1. make one more mixed or compound re-entry family canonical
 2. make degraded-to-greener re-entry less manual and more spine-owned
 3. reduce ambiguity between “repairable blocked”, “repairable partial”, “repairable degraded”, and “still not re-enterable” states
+4. strengthen the economics reading around compound re-entry rather than only its state semantics
 
 If a change does not strengthen one of those, it is probably not the best next move for the executable kernel right now.

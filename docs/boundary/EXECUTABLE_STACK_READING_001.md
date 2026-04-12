@@ -70,6 +70,7 @@ Current strongest value carriers are:
 - one canonical blocked-to-accepted re-entry contour
 - one canonical partial-to-accepted re-entry contour
 - one canonical degraded-to-accepted re-entry contour
+- one canonical ugly compound repair contour across blocked, partial, degraded, and accepted stages
 - explicit precedence for competing spine-side blockers
 - explicit precedence for competing degradations
 - anti-drift refresh after state degradation
@@ -80,7 +81,7 @@ Current weaker areas are:
 
 - doctor is now stronger than v0 and includes bounded filesystem/env probes, but it is still narrower than a mature readiness layer
 - the stack now has one bounded spine-driven runtime contour, but not yet a deeper end-to-end runtime
-- blocked-to-accepted, partial-to-accepted, and degraded-to-accepted re-entry are now canonical, but mixed repair families are still much weaker than they should be
+- blocked-to-accepted, partial-to-accepted, and degraded-to-accepted re-entry are now canonical, and one ugly mixed repair family is now canonical too, but compound reality is still much weaker than it should be
 - comparison harness now has a first economics slice, but it is still too narrow to count as product-grade economics
 - production-grade runtime readiness is not yet proven
 
@@ -140,7 +141,7 @@ The next phase should optimize for:
 
 - stronger executable superiority on the real wedge
 - comparator economics rather than comparison prose
-- one ugly compound scenario instead of only clean single-family repair
+- more ugly compound scenarios instead of only clean single-family repair
 - better evidence for where the stack is worth its overhead
 - faster prove-or-demote pressure on the hybrid mode
 

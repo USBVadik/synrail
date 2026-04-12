@@ -112,8 +112,10 @@ The current executable output reading is:
 
 - the spine can now emit one primary canonical run artifact
 - the repo now carries canonical accepted, blocked, blocked-reentry, partial-reentry, and degraded-reentry fixtures on that same artifact surface
+- the repo now also carries one canonical ugly compound repair fixture on that same artifact surface
 - the repo now also has one explicit outcome lattice across accepted, partial, degraded, and blocked contours
 - the repo now also has one explicit re-entry reading for blocked-to-accepted, partial-to-accepted, and degraded-to-accepted repair
+- the repo now also has one first compound economics comparison record on a proof-sensitive ugly path
 - that artifact is now the best single machine-readable entrypoint into a bounded internal run
 - the trio now also has first `comparison_economics` records with simple operator-cost and false-green metrics
 

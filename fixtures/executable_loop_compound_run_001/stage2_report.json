@@ -1,0 +1,19 @@
+{
+  "schema_version": "orchestration_report_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "result": "OK",
+  "stopping_stage": "refresh",
+  "reason": "MISSING_PROOF_SECTIONS",
+  "doctor_verdict": "ACCEPTABLE_FOR_EXACT_RETRY",
+  "bundle_status": "PARTIAL",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "refresh_applied": true,
+  "refresh_resulting_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "comparison_applied": false,
+  "comparison_verdict": "",
+  "blockers": [],
+  "dominant_blocker": "",
+  "resulting_state": "PROOF_BUNDLE_PARTIAL",
+  "next_safe_step": "complete the missing proof sections"
+}
