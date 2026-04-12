@@ -1,0 +1,97 @@
+{
+  "schema_version": "repair_packet_v0",
+  "run_id": "EXECUTABLE_LOOP_REPAIR_PACKET_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "DOCTOR_BLOCKED",
+  "continuation_entrypoint": "resume",
+  "repair_handoff": {
+    "schema_version": "repair_handoff_v0",
+    "run_id": "EXECUTABLE_LOOP_REPAIR_PACKET_RUN_001",
+    "task_class": "bounded_router_trigger_fix",
+    "from_state": "DOCTOR_BLOCKED",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "DOCTOR_NOT_GREEN",
+    "continuation_allowed": true,
+    "continuation_entrypoint": "resume",
+    "required_inputs": [
+      {
+        "input_id": "prompt_identity",
+        "kind": "string",
+        "cli_flag": "--prompt-identity",
+        "description": "restore the prompt identity used for continuation",
+        "required_value": ""
+      },
+      {
+        "input_id": "task_identity",
+        "kind": "string",
+        "cli_flag": "--task-identity",
+        "description": "restore the exact task identity used for continuation",
+        "required_value": ""
+      }
+    ],
+    "runtime_defaults": {
+      "refresh_event_type": "",
+      "refresh_use_bundle": false,
+      "refresh_use_closure": false
+    },
+    "next_safe_step": "restore the exact prompt and task identity artifacts"
+  },
+  "continuation_plan": {
+    "doctor_required": true,
+    "bundle_required": true,
+    "closure_required": true,
+    "refresh_required": false,
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false,
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "resume_context": {
+    "doctor_run_id": "REPAIR_PACKET_RUN_001",
+    "doctor_level": "EXACT_RETRY_DOCTOR",
+    "target_path": "fixtures/repair_packet_run_001",
+    "target_classification": "trusted_clean_target",
+    "baseline_identity": "compound-reentry-surface",
+    "intended_run_class": "exact_retry",
+    "execution_surface_identity": "compound-reentry-surface"
+  },
+  "repair_inputs": {
+    "prompt_identity": "",
+    "task_identity": "",
+    "prompt_identity_ok": false,
+    "target_identity_file": "",
+    "clean_surface": true,
+    "artifact_viable": true,
+    "helper_ok": true,
+    "credentials_ok": true,
+    "artifact_path": "",
+    "helper_path": "",
+    "credential_env": [],
+    "final_result": "",
+    "readback": "",
+    "scenario_proof": "",
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "output_defaults": {
+    "artifact_root": "fixtures/repair_packet_run_001",
+    "doctor_output": "fixtures/repair_packet_run_001/doctor.json",
+    "bundle_output": "fixtures/repair_packet_run_001/bundle.json",
+    "closure_output": "fixtures/repair_packet_run_001/closure.json",
+    "refresh_output": "fixtures/repair_packet_run_001/refresh.json",
+    "report_output": "fixtures/repair_packet_run_001/report.json",
+    "worked_artifact_output": "fixtures/repair_packet_run_001/orchestration.json",
+    "run_artifact_output": "fixtures/repair_packet_run_001/run.json"
+  },
+  "provided_inputs": [
+    "clean_surface_confirmation",
+    "credential_surface"
+  ],
+  "missing_inputs": [
+    "prompt_identity",
+    "task_identity"
+  ],
+  "ready_for_resume": false,
+  "next_safe_step": "restore the exact prompt and task identity artifacts"
+}

@@ -14,7 +14,7 @@ but also whether the kernel can return from a less-green contour after the block
 
 ## Current re-entry anchors
 
-The current re-entry lattice is anchored by four canonical repair families, three named runtime continuation contours, and one explicit repair-handoff layer:
+The current re-entry lattice is anchored by four canonical repair families, three named runtime continuation contours, one richer repair-packet layer, and one explicit repair-handoff layer:
 
 1. blocked readiness to accepted closure
 2. partial proof to accepted closure
@@ -24,6 +24,7 @@ The current re-entry lattice is anchored by four canonical repair families, thre
 6. one degraded-recovery runtime continuation back to accepted closure
 7. one doctor-blocked runtime continuation back to accepted closure
 8. one machine-readable repair handoff layer plus one ugly compound continuation family through named `resume`
+9. one richer repair-packet layer plus one second uglier compound continuation family through named `resume`
 
 That is still bounded, but it is already materially stronger than one or two repaired contours.
 
@@ -155,7 +156,38 @@ Why this matters:
 - it now also has one named runtime continuation counterpart:
   - `fixtures/executable_loop_compound_continuation_run_001/run.json`
 
-## 5. Doctor-blocked runtime continuation to accepted closure
+## 5. Packet-driven compound continuation to accepted closure
+
+Current readable path:
+
+- packet-blocked starting surface:
+  - `fixtures/repair_packet_run_001/run.json`
+- packet-driven compound surface:
+  - `fixtures/executable_loop_compound_continuation_run_002/run.json`
+
+Readable transition:
+
+- `DOCTOR_BLOCKED`
+- blocked packet at `repair_handoff`
+- repair prompt/task identity
+- `PROOF_BUNDLE_INVALID`
+- repair `final_result`, `readback`, and `scenario_proof`
+- `RECOVERY_PENDING`
+- complete recovery reverification
+- `CLOSURE_ACCEPTED`
+
+What this proves:
+
+- the richer repair packet now carries more than one raw continuation flag set
+- named `resume` can now move from a blocked packet, through invalid proof, through degraded recovery, into accepted closure
+- continuation planning for refresh now lives inside the packet rather than only in operator restatement
+
+Why this matters:
+
+- it reduces continuation fragility
+- it makes compound continuation more product-real and less like a one-off stitched replay
+
+## 6. Doctor-blocked runtime continuation to accepted closure
 
 Current readable path:
 
@@ -194,6 +226,7 @@ The current re-entry lattice supports a stronger kernel-level claim:
   - one explicit reverse edge from a partial proof state back to accepted closure
   - one explicit reverse edge from a degraded recovery state back to accepted closure
   - one explicit compound repair family that crosses blocked, partial, and degraded contours on the way back to accepted closure
+  - one packet-driven compound continuation family that crosses blocked, invalid, degraded, and accepted contours on the way back to honest closure
 
 That is stronger than saying only:
 
@@ -208,7 +241,7 @@ because it shows the kernel can sometimes recover honestly after a prior block.
 The re-entry lattice still has visible gaps:
 
 - the current canonical reverse edges now cover readiness repair, proof completion, one recovery repair, and one ugly mixed family, but not the full set of future compound families
-- named runtime `resume` now exists for partial-proof, degraded-recovery, and doctor-blocked continuation, and one explicit repair handoff layer now names missing continuation inputs, but runtime continuation is still much narrower than the full repaired surface family
+- named runtime `resume` now exists for partial-proof, degraded-recovery, and doctor-blocked continuation, and repair handoff plus repair packet now name the continuation contract more honestly, but packet synthesis is still narrower than a mature continuation surface should be
 - hybrid compound repair is still much weaker than it should be
 
 ## How this relates to other readings

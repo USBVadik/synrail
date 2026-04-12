@@ -1,0 +1,45 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_002",
+  "task_class": "bounded_router_trigger_fix",
+  "report": {
+    "result": "OK",
+    "stopping_stage": "refresh",
+    "reason": "RECOVERY_REVERIFICATION_INCOMPLETE",
+    "doctor_verdict": "ACCEPTABLE_FOR_EXACT_RETRY",
+    "resume_applied": true,
+    "resume_from_state": "PROOF_BUNDLE_INVALID",
+    "repair_handoff_applied": true,
+    "repair_handoff_from_state": "PROOF_BUNDLE_INVALID",
+    "repair_handoff_required_inputs": [
+      "final_result",
+      "readback",
+      "scenario_proof"
+    ],
+    "missing_continuation_inputs": [],
+    "selection_applied": false,
+    "selected_mode": "",
+    "selected_with_preparation": false,
+    "preparation_applied": false,
+    "preparation_ready_for_closure": false,
+    "bundle_status": "COMPLETE",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": true,
+    "comparison_applied": false,
+    "blockers": [],
+    "dominant_blocker": "",
+    "resulting_state": "RECOVERY_PENDING",
+    "next_safe_step": "run reverification against the attested target surface"
+  },
+  "resulting_state": {
+    "state": "RECOVERY_PENDING",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "RECOVERY_REVERIFICATION_INCOMPLETE",
+    "next_safe_step": "run reverification against the attested target surface"
+  },
+  "worked_envelope": {
+    "resulting_state": "RECOVERY_PENDING",
+    "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+    "next_safe_step": "run reverification against the attested target surface"
+  }
+}

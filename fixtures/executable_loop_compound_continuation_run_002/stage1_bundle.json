@@ -1,0 +1,43 @@
+{
+  "schema_version": "proof_bundle_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_002",
+  "task_class": "bounded_router_trigger_fix",
+  "status": "INVALID",
+  "final_result": {
+    "present": false,
+    "status": ""
+  },
+  "modified_files": {
+    "present": true,
+    "count": 0
+  },
+  "diff_provenance": {
+    "present": false,
+    "non_empty": false
+  },
+  "readback": {
+    "present": false,
+    "path": ""
+  },
+  "scenario_proof": {
+    "present": false,
+    "path": ""
+  },
+  "artifact_identity": {
+    "baseline_identity": "compound-reentry-surface",
+    "execution_surface_identity": "compound-reentry-surface",
+    "prompt_identity": "repaired-compound-prompt",
+    "task_identity": "repaired-compound-task"
+  },
+  "cleanup_status": {
+    "present": false,
+    "success": false
+  },
+  "missing_sections": [
+    "final_result",
+    "diff_provenance",
+    "readback",
+    "scenario_proof",
+    "cleanup_status"
+  ]
+}

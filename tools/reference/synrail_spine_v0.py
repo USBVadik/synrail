@@ -500,7 +500,7 @@ def apply_bundle(state: dict, bundle: dict) -> tuple[int, dict, dict | None]:
             next_allowed_transition="PROOF_BUNDLE_REPAIR",
             narrow_next_safe_step="repair the final result artifact and rebuild the proof bundle",
             missing_sections=list(bundle.get("missing_sections", [])),
-        )
+        ), None
     return 0, enter_blocked_state(
         state,
         target="PROOF_BUNDLE_PARTIAL",

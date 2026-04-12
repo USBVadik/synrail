@@ -72,6 +72,13 @@ It can now also carry one explicit runtime continuation marker from a non-green 
 
 It can now also emit and consume one repair handoff contract around that continuation path, which is the first move toward making continuation inputs machine-readable instead of leaving them mostly in operator memory.
 
+It can now also participate in one richer repair-packet continuation flow, where the CLI brings the spine:
+
+- one embedded handoff
+- one continuation plan
+- one repair-input bundle
+- one runtime output-default set
+
 That continuation marker is now proven on:
 
 - one partial-proof continuation family
@@ -82,6 +89,11 @@ That repair-handoff layer is now proven on:
 
 - one blocked continuation attempt that stops explicitly at `repair_handoff`
 - one ugly compound continuation that uses two staged handoffs plus named `resume`
+
+That repair-packet layer is now proven on:
+
+- one blocked continuation packet that no longer needs a fake `final_result`
+- one second uglier compound continuation that crosses blocked readiness, invalid proof, degraded recovery, and accepted closure
 
 It now also chooses the comparison harness by input schema version, so the same bounded contour can still read legacy comparison inputs while moving the active pressure-testing path toward economics-aware comparison records.
 

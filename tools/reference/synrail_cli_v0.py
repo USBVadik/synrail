@@ -7,6 +7,7 @@ import argparse
 import json
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -26,6 +27,7 @@ PROOF_PLAN = HERE / "synrail_proof_plan_v0.py"
 PREPARATION_RECEIPT = HERE / "synrail_preparation_receipt_v0.py"
 GOVERNED_COST = HERE / "synrail_governed_cost_delta_v0.py"
 REPAIR_HANDOFF = HERE / "synrail_repair_handoff_v0.py"
+REPAIR_PACKET = HERE / "synrail_repair_packet_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -286,6 +288,133 @@ def cmd_repair_handoff(args: argparse.Namespace) -> int:
     return run_python(REPAIR_HANDOFF, forwarded)
 
 
+def cmd_repair_packet(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--state-file", args.state_file,
+        "--artifact-root", args.artifact_root,
+        "--output", args.output,
+        "--doctor-run-id", args.doctor_run_id,
+        "--doctor-level", args.doctor_level,
+        "--target-path", args.target_path,
+        "--target-classification", args.target_classification,
+        "--baseline-identity", args.baseline_identity,
+        "--intended-run-class", args.intended_run_class,
+        "--execution-surface-identity", args.execution_surface_identity,
+        "--final-result", args.final_result,
+        "--prompt-identity", args.prompt_identity,
+        "--task-identity", args.task_identity,
+    ]
+    for flag, value in [
+        ("--repair-handoff-file", args.repair_handoff_file),
+        ("--readback", args.readback),
+        ("--scenario-proof", args.scenario_proof),
+        ("--target-identity-file", args.target_identity_file),
+        ("--artifact-path", args.artifact_path),
+        ("--helper-path", args.helper_path),
+        ("--refresh-output", args.refresh_output),
+        ("--refresh-event-type", args.refresh_event_type),
+        ("--refresh-recovery-status", args.refresh_recovery_status),
+    ]:
+        if value:
+            forwarded.extend([flag, value])
+    for enabled, flag in [
+        (args.prompt_identity_ok, "--prompt-identity-ok"),
+        (args.clean_surface, "--clean-surface"),
+        (args.artifact_viable, "--artifact-viable"),
+        (args.helper_ok, "--helper-ok"),
+        (args.credentials_ok, "--credentials-ok"),
+        (args.refresh_reverification_complete, "--refresh-reverification-complete"),
+        (args.refresh_use_bundle, "--refresh-use-bundle"),
+        (args.refresh_use_closure, "--refresh-use-closure"),
+    ]:
+        if enabled:
+            forwarded.append(flag)
+    for env_name in args.credential_env:
+        forwarded.extend(["--credential-env", env_name])
+    return run_python(REPAIR_PACKET, forwarded)
+
+
+def load_repair_packet(path: Path) -> dict:
+    packet = load_json(path)
+    if packet.get("schema_version") != "repair_packet_v0":
+        raise ValueError("repair packet must use repair_packet_v0")
+    return packet
+
+
+def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> str | None:
+    if not getattr(args, "repair_packet_file", None):
+        return None
+
+    packet = load_repair_packet(Path(args.repair_packet_file))
+    if packet["run_id"] != state["run_id"] or packet["from_state"] != state["state"]:
+        raise ValueError("repair packet does not match the requested state")
+
+    context = packet["resume_context"]
+    continuation_plan = packet.get("continuation_plan", {})
+    repair_inputs = packet["repair_inputs"]
+    output_defaults = packet["output_defaults"]
+
+    for attr, value in [
+        ("doctor_run_id", context["doctor_run_id"]),
+        ("doctor_level", context["doctor_level"]),
+        ("target_path", context["target_path"]),
+        ("target_classification", context["target_classification"]),
+        ("baseline_identity", context["baseline_identity"]),
+        ("intended_run_class", context["intended_run_class"]),
+        ("execution_surface_identity", context["execution_surface_identity"]),
+        ("task_class", packet["task_class"]),
+        ("final_result", repair_inputs["final_result"]),
+        ("prompt_identity", repair_inputs["prompt_identity"]),
+        ("task_identity", repair_inputs["task_identity"]),
+        ("readback", repair_inputs["readback"]),
+        ("scenario_proof", repair_inputs["scenario_proof"]),
+        ("artifact_path", repair_inputs["artifact_path"]),
+        ("helper_path", repair_inputs["helper_path"]),
+        ("prompt_identity_file", ""),
+        ("target_identity_file", repair_inputs["target_identity_file"]),
+        ("doctor_output", output_defaults["doctor_output"]),
+        ("bundle_output", output_defaults["bundle_output"]),
+        ("closure_output", output_defaults["closure_output"]),
+        ("refresh_output", output_defaults["refresh_output"]),
+        ("report_output", output_defaults["report_output"]),
+        ("worked_artifact_output", output_defaults["worked_artifact_output"]),
+        ("run_artifact_output", output_defaults["run_artifact_output"]),
+    ]:
+        current = getattr(args, attr, None)
+        if current in {None, ""} and value is not None:
+            setattr(args, attr, value)
+
+    if not getattr(args, "refresh_recovery_status", None):
+        args.refresh_recovery_status = repair_inputs["refresh_recovery_status"]
+    if not getattr(args, "refresh_event_type", None) and continuation_plan.get("refresh_event_type"):
+        args.refresh_event_type = continuation_plan["refresh_event_type"]
+    if repair_inputs["refresh_reverification_complete"]:
+        args.refresh_reverification_complete = True
+    if continuation_plan.get("refresh_use_bundle"):
+        args.refresh_use_bundle = True
+    if continuation_plan.get("refresh_use_closure"):
+        args.refresh_use_closure = True
+    if repair_inputs["clean_surface"]:
+        args.clean_surface = True
+    if repair_inputs["artifact_viable"]:
+        args.artifact_viable = True
+    if repair_inputs["helper_ok"]:
+        args.helper_ok = True
+    if repair_inputs["credentials_ok"]:
+        args.credentials_ok = True
+    if repair_inputs["prompt_identity_ok"]:
+        args.prompt_identity_ok = True
+    if not args.credential_env:
+        args.credential_env = list(repair_inputs["credential_env"])
+
+    temp_handoff = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+    json.dump(packet["repair_handoff"], temp_handoff, indent=2, ensure_ascii=True)
+    temp_handoff.write("\n")
+    temp_handoff.close()
+    args.repair_handoff_file = temp_handoff.name
+    return temp_handoff.name
+
+
 def cmd_orchestrate(args: argparse.Namespace) -> int:
     forwarded = [
         "--state-file", args.state_file,
@@ -355,31 +484,73 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
 def cmd_resume(args: argparse.Namespace) -> int:
     state = load_json(Path(args.state_file))
     args.resume_from_state = state["state"]
-    return cmd_orchestrate(args)
+    temp_handoff_path = None
+    try:
+        temp_handoff_path = maybe_apply_repair_packet(args, state)
+    except ValueError as exc:
+        print(json.dumps({"result": "ERROR", "reason": "INVALID_REPAIR_PACKET", "detail": str(exc)}, ensure_ascii=True))
+        return 2
+
+    for attr in [
+        "doctor_run_id",
+        "doctor_level",
+        "target_path",
+        "target_classification",
+        "baseline_identity",
+        "intended_run_class",
+        "doctor_output",
+        "task_class",
+        "bundle_output",
+        "closure_output",
+        "report_output",
+        "execution_surface_identity",
+    ]:
+        if not getattr(args, attr, None):
+            print(json.dumps({"result": "ERROR", "reason": "RESUME_CONTEXT_INCOMPLETE", "missing_field": attr}, ensure_ascii=True))
+            return 2
+
+    if getattr(args, "prompt_identity", None) is None:
+        args.prompt_identity = ""
+    if getattr(args, "task_identity", None) is None:
+        args.task_identity = ""
+    if getattr(args, "final_result", None) is None:
+        args.final_result = ""
+
+    try:
+        return cmd_orchestrate(args)
+    finally:
+        if temp_handoff_path:
+            Path(temp_handoff_path).unlink(missing_ok=True)
 
 
-def add_orchestration_args(parser: argparse.ArgumentParser, *, include_resume_from_state: bool) -> None:
+def add_orchestration_args(
+    parser: argparse.ArgumentParser,
+    *,
+    include_resume_from_state: bool,
+    relaxed_runtime: bool = False,
+) -> None:
     parser.add_argument("--state-file", required=True)
     if include_resume_from_state:
         parser.add_argument("--resume-from-state")
     parser.add_argument("--repair-handoff-file")
     parser.add_argument("--repair-handoff-output")
+    parser.add_argument("--repair-packet-file")
     parser.add_argument("--mode-selection-receipt")
-    parser.add_argument("--doctor-run-id", required=True)
-    parser.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
-    parser.add_argument("--target-path", required=True)
-    parser.add_argument("--target-classification", required=True)
-    parser.add_argument("--baseline-identity", required=True)
-    parser.add_argument("--intended-run-class", required=True, choices=["core_probe", "support_run", "exact_retry"])
-    parser.add_argument("--doctor-output", required=True)
-    parser.add_argument("--final-result", required=True)
-    parser.add_argument("--task-class", required=True)
-    parser.add_argument("--bundle-output", required=True)
-    parser.add_argument("--closure-output", required=True)
-    parser.add_argument("--report-output", required=True)
-    parser.add_argument("--execution-surface-identity", required=True)
-    parser.add_argument("--prompt-identity", required=True)
-    parser.add_argument("--task-identity", required=True)
+    parser.add_argument("--doctor-run-id", required=not relaxed_runtime)
+    parser.add_argument("--doctor-level", required=not relaxed_runtime, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
+    parser.add_argument("--target-path", required=not relaxed_runtime)
+    parser.add_argument("--target-classification", required=not relaxed_runtime)
+    parser.add_argument("--baseline-identity", required=not relaxed_runtime)
+    parser.add_argument("--intended-run-class", required=not relaxed_runtime, choices=["core_probe", "support_run", "exact_retry"])
+    parser.add_argument("--doctor-output", required=not relaxed_runtime)
+    parser.add_argument("--final-result", required=not relaxed_runtime)
+    parser.add_argument("--task-class", required=not relaxed_runtime)
+    parser.add_argument("--bundle-output", required=not relaxed_runtime)
+    parser.add_argument("--closure-output", required=not relaxed_runtime)
+    parser.add_argument("--report-output", required=not relaxed_runtime)
+    parser.add_argument("--execution-surface-identity", required=not relaxed_runtime)
+    parser.add_argument("--prompt-identity", required=not relaxed_runtime, default="")
+    parser.add_argument("--task-identity", required=not relaxed_runtime, default="")
     parser.add_argument("--readback")
     parser.add_argument("--scenario-proof")
     parser.add_argument("--plan-output")
@@ -555,12 +726,46 @@ def build_parser() -> argparse.ArgumentParser:
     p_repair_handoff.add_argument("--output", required=True)
     p_repair_handoff.set_defaults(func=cmd_repair_handoff)
 
+    p_repair_packet = sub.add_parser("repair-packet")
+    p_repair_packet.add_argument("--state-file", required=True)
+    p_repair_packet.add_argument("--artifact-root", required=True)
+    p_repair_packet.add_argument("--output", required=True)
+    p_repair_packet.add_argument("--repair-handoff-file")
+    p_repair_packet.add_argument("--doctor-run-id", required=True)
+    p_repair_packet.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
+    p_repair_packet.add_argument("--target-path", required=True)
+    p_repair_packet.add_argument("--target-classification", required=True)
+    p_repair_packet.add_argument("--baseline-identity", required=True)
+    p_repair_packet.add_argument("--intended-run-class", required=True, choices=["core_probe", "support_run", "exact_retry"])
+    p_repair_packet.add_argument("--execution-surface-identity", required=True)
+    p_repair_packet.add_argument("--final-result", default="")
+    p_repair_packet.add_argument("--prompt-identity", default="")
+    p_repair_packet.add_argument("--task-identity", default="")
+    p_repair_packet.add_argument("--prompt-identity-ok", action="store_true")
+    p_repair_packet.add_argument("--readback")
+    p_repair_packet.add_argument("--scenario-proof")
+    p_repair_packet.add_argument("--target-identity-file")
+    p_repair_packet.add_argument("--clean-surface", action="store_true")
+    p_repair_packet.add_argument("--artifact-viable", action="store_true")
+    p_repair_packet.add_argument("--helper-ok", action="store_true")
+    p_repair_packet.add_argument("--credentials-ok", action="store_true")
+    p_repair_packet.add_argument("--artifact-path")
+    p_repair_packet.add_argument("--helper-path")
+    p_repair_packet.add_argument("--credential-env", action="append", default=[])
+    p_repair_packet.add_argument("--refresh-output")
+    p_repair_packet.add_argument("--refresh-event-type")
+    p_repair_packet.add_argument("--refresh-recovery-status", choices=["NOT_REQUIRED", "PENDING", "COMPLETE"], default="NOT_REQUIRED")
+    p_repair_packet.add_argument("--refresh-reverification-complete", action="store_true")
+    p_repair_packet.add_argument("--refresh-use-bundle", action="store_true")
+    p_repair_packet.add_argument("--refresh-use-closure", action="store_true")
+    p_repair_packet.set_defaults(func=cmd_repair_packet)
+
     p_orchestrate = sub.add_parser("orchestrate")
     add_orchestration_args(p_orchestrate, include_resume_from_state=True)
     p_orchestrate.set_defaults(func=cmd_orchestrate)
 
     p_resume = sub.add_parser("resume")
-    add_orchestration_args(p_resume, include_resume_from_state=False)
+    add_orchestration_args(p_resume, include_resume_from_state=False, relaxed_runtime=True)
     p_resume.set_defaults(func=cmd_resume)
 
     return parser

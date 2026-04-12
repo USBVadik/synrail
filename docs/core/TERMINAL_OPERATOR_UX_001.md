@@ -40,26 +40,30 @@ The CLI v0 currently exposes:
 11. `resume`
    - run the same bounded runtime contour from an existing non-green state and record the starting state as runtime continuation truth
    - can now consume one repair handoff artifact and block at `repair_handoff` when the continuation contract is still incomplete
+   - can now consume one richer repair packet so the operator no longer has to replay the full runtime surface as raw flags on every continuation
    - now proven on:
      - `DOCTOR_BLOCKED`
      - `PROOF_BUNDLE_PARTIAL`
+     - `PROOF_BUNDLE_INVALID`
      - `RECOVERY_PENDING`
 12. `repair-handoff`
    - emit one machine-readable continuation contract naming the missing inputs and bounded runtime defaults for a non-green state
-13. `compare`
+13. `repair-packet`
+   - emit one richer machine-readable continuation packet carrying the handoff, continuation plan, repair inputs, and output defaults for a non-green state
+14. `compare`
    - emit one machine-readable baseline comparison record through the CLI layer
    - route to the legacy comparison harness for `v0` inputs and the economics harness for `v1` inputs
-14. `hybrid-status`
+15. `hybrid-status`
    - emit one machine-readable hybrid-mode status artifact from the current economics and hybrid evidence set
-15. `recommend-mode`
+16. `recommend-mode`
    - emit one machine-readable cost-aware mode recommendation before the operator enters a heavier contour
-16. `select-mode`
+17. `select-mode`
    - emit one machine-readable receipt that records whether the operator followed the recommendation and whether a heavier contour was skipped
-17. `plan-proof`
+18. `plan-proof`
    - emit one governed-path proof preparation plan before bundle assembly starts
-18. `preparation-receipt`
+19. `preparation-receipt`
    - emit one machine-readable receipt showing whether the planned proof surface reached a complete first bundle pass
-19. `governed-cost`
+20. `governed-cost`
    - emit one machine-readable cost delta between an unprepared and prepared governed path
 
 The selection layer can now also carry one preparation-aware strong-path recommendation when bounded governed-path cost evidence exists.
@@ -67,6 +71,15 @@ The selection layer can now also carry one preparation-aware strong-path recomme
 The orchestration layer can now also absorb that preparation-aware strong-path receipt directly, instead of forcing the operator to restate preparation outputs manually.
 
 The terminal layer now also exposes one named `resume` path plus one explicit `repair-handoff` path, so continuation from a doctor-blocked, partial, or degraded state no longer has to feel like a disguised replay of the base orchestration command.
+
+It now also exposes one `repair-packet` path, so the operator can group:
+
+- the continuation contract
+- the continuation plan
+- the repair inputs
+- the runtime output defaults
+
+before handing the run back into `resume`.
 
 ## Why this matters
 

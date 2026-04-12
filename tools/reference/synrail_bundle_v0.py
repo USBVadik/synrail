@@ -28,12 +28,12 @@ def file_present(path_str: str | None) -> tuple[bool, str]:
     if not path_str:
         return False, ""
     path = Path(path_str)
-    return path.exists(), str(path)
+    return path.is_file(), str(path)
 
 
 def build_bundle(args: argparse.Namespace) -> dict:
-    final_path = Path(args.final_result)
-    final_present = final_path.exists()
+    final_present, final_path_str = file_present(args.final_result)
+    final_path = Path(final_path_str) if final_path_str else None
     final = load_json(final_path) if final_present else {}
 
     modified_files = final.get("modified_files", [])

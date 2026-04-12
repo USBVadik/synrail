@@ -42,8 +42,10 @@ The `orchestrate` command currently runs one bounded path:
 When `resume` is used, that same contour can now also:
 
 - load one repair handoff contract
+- load one richer repair packet above that handoff
 - block explicitly at `repair_handoff` if the required continuation inputs are still missing
 - absorb bounded runtime defaults from the handoff when recovery repair requires refresh reconciliation
+- absorb one continuation plan from the repair packet when refresh intent should carry through continuation automatically
 
 The bounded orchestration contour now lives in:
 
@@ -112,6 +114,13 @@ That same continuation path can now also carry one explicit repair handoff artif
 - which inputs are still missing
 - which bounded refresh defaults should carry forward during recovery repair
 
+It can now also absorb one richer repair packet, which matters because the runtime can now continue with:
+
+- one embedded handoff
+- one embedded continuation plan
+- one embedded repair-input set
+- one embedded output-default set
+
 That continuation path is now proven on:
 
 - one partial-proof repair family
@@ -119,6 +128,7 @@ That continuation path is now proven on:
 - one doctor-blocked readiness repair family
 - one blocked repair-handoff attempt that now stops explicitly at `repair_handoff`
 - one ugly compound continuation that now crosses readiness repair, proof repair, and recovery repair through staged handoffs plus named `resume`
+- one second uglier packet-driven continuation that now crosses blocked readiness, invalid proof, degraded recovery, and accepted closure through named `resume`
 
 That matters because it keeps the canonical worked artifact aligned with the final runtime contour, including post-refresh closure state when refresh is part of the run.
 
@@ -187,6 +197,7 @@ And now, when explicitly requested:
 - one mode-selection receipt handoff into the governed runtime contour
 - one named runtime continuation contour from a non-green starting state
 - one machine-readable repair handoff layer around that continuation contour
+- one machine-readable repair packet layer above that continuation contour
 - one doctor-blocked runtime continuation contour from an early readiness-failure state
 - one governed-path proof plan plus one preparation receipt
 - refresh after a bounded event

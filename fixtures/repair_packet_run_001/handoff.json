@@ -1,0 +1,32 @@
+{
+  "schema_version": "repair_handoff_v0",
+  "run_id": "EXECUTABLE_LOOP_REPAIR_PACKET_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "DOCTOR_BLOCKED",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "DOCTOR_NOT_GREEN",
+  "continuation_allowed": true,
+  "continuation_entrypoint": "resume",
+  "required_inputs": [
+    {
+      "input_id": "prompt_identity",
+      "kind": "string",
+      "cli_flag": "--prompt-identity",
+      "description": "restore the prompt identity used for continuation",
+      "required_value": ""
+    },
+    {
+      "input_id": "task_identity",
+      "kind": "string",
+      "cli_flag": "--task-identity",
+      "description": "restore the exact task identity used for continuation",
+      "required_value": ""
+    }
+  ],
+  "runtime_defaults": {
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false
+  },
+  "next_safe_step": "restore the exact prompt and task identity artifacts"
+}
