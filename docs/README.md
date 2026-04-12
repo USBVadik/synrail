@@ -54,6 +54,7 @@ Start here when you want to understand the kernel itself:
 - `core/EXECUTABLE_LOOP_ACCEPTED_RUN_001.md`
 - `core/EXECUTABLE_LOOP_BLOCKED_RUN_001.md`
 - `core/EXECUTABLE_LOOP_REENTRY_RUN_001.md`
+- `core/EXECUTABLE_LOOP_PARTIAL_REENTRY_RUN_001.md`
 - `schemas/spine_block_report_v0.schema.json`
 - `schemas/canonical_run_artifact_v0.schema.json`
 - `schemas/worked_orchestration_artifact_v0.schema.json`
@@ -68,6 +69,7 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/executable_loop_accepted_run_001/run.json`
 - `../fixtures/executable_loop_blocked_run_001/run.json`
 - `../fixtures/executable_loop_reentry_run_001/run.json`
+- `../fixtures/executable_loop_partial_reentry_run_001/run.json`
 
 That same `run.json` shape is now the canonical starting point for:
 

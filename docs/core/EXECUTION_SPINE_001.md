@@ -81,6 +81,11 @@ It now also holds one canonical reverse edge from a blocked readiness contour ba
 - the missing exact-task identity is restored
 - proof inputs are complete enough for acceptance
 
+It now also holds one canonical reverse edge from a partial proof lane back to accepted closure when:
+
+- the missing proof sections are supplied
+- the resulting bundle becomes complete enough for acceptance
+
 The current machine-readable block artifact for denied transitions lives at:
 
 - `schemas/spine_block_report_v0.schema.json`

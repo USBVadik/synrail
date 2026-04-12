@@ -135,3 +135,7 @@ It only proves that the current executable comparison logic can now express both
 - baseline-good-enough
 
 without relying on prose-only judgment.
+
+For the first canonical repaired reverse edge from that partial-proof surface, see:
+
+- `EXECUTABLE_LOOP_PARTIAL_REENTRY_RUN_001.md`

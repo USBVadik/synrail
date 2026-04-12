@@ -14,11 +14,12 @@ but also whether the kernel can return from a less-green contour after the block
 
 ## Current re-entry anchors
 
-The current re-entry lattice is anchored by one canonical reverse edge:
+The current re-entry lattice is anchored by two canonical reverse edges:
 
 1. blocked readiness to accepted closure
+2. partial proof to accepted closure
 
-That is a narrow but important start.
+That is still narrow, but it is already materially stronger than a single repaired contour.
 
 It shows the kernel is not only a reject or downgrade engine.
 
@@ -53,11 +54,42 @@ Why this matters:
 - it strengthens `Synrail` as a closure-guidance system, not only a denial system
 - it gives the repo one explicit repaired contour, not only accepted, partial, degraded, and blocked end states
 
+## 2. Partial proof to accepted closure
+
+Current readable path:
+
+- partial starting surface:
+  - `fixtures/executable_loop_run_002/run.json`
+- repaired re-entry surface:
+  - `fixtures/executable_loop_partial_reentry_run_001/run.json`
+
+Readable transition:
+
+- `PROOF_BUNDLE_PARTIAL`
+- `CLAIMED_NOT_ACCEPTED`
+- complete `readback`
+- complete `scenario_proof`
+- `PROOF_BUNDLE_COMPLETE`
+- `CLOSURE_ACCEPTED`
+
+What this proves:
+
+- a partial proof lane is not automatically terminal
+- the kernel can accept a repaired run after the missing proof sections are actually supplied
+- proof completion now exists as a canonical machine-readable repo surface
+
+Why this matters:
+
+- it strengthens `Synrail` as a closure-completion system, not only a stop-or-degrade system
+- it gives the repo one explicit repaired proof contour, not only a recommendation to gather more evidence
+
 ## What the re-entry lattice now supports
 
 The current re-entry lattice supports a stronger kernel-level claim:
 
-- `Synrail` can now hold at least one explicit reverse edge from a blocked state back to accepted closure
+- `Synrail` can now hold:
+  - one explicit reverse edge from a blocked readiness state back to accepted closure
+  - one explicit reverse edge from a partial proof state back to accepted closure
 
 That is stronger than saying only:
 
@@ -71,9 +103,8 @@ because it shows the kernel can sometimes recover honestly after a prior block.
 
 The re-entry lattice still has visible gaps:
 
-- partial-to-accepted re-entry is not yet canonical
 - degraded-to-accepted re-entry is not yet canonical
-- the current canonical reverse edge is readiness-blocked recovery, not the full set of recovery families
+- the current canonical reverse edges cover readiness repair and proof completion, not the full set of recovery families
 - runtime support for doctor-blocked re-entry is ahead of canonical repo evidence
 
 ## How this relates to other readings
@@ -104,8 +135,8 @@ That is a healthier internal product surface than treating repair only as someth
 
 The next strongest kernel work should improve one of these:
 
-1. make one additional reverse edge canonical, especially `partial -> accepted`
+1. make `degraded -> accepted` canonical
 2. make one degraded-to-greener re-entry less manual and more spine-owned
-3. reduce ambiguity between “repairable blocked” and “still not re-enterable” states
+3. reduce ambiguity between “repairable blocked”, “repairable partial”, and “still not re-enterable” states
 
 If a change does not strengthen one of those, it is probably not the best next move for the executable kernel right now.

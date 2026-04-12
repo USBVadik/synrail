@@ -12,13 +12,14 @@ This document exists so the repo can summarize the kernel as a state machine, no
 
 ## Current transition anchors
 
-The current lattice is anchored by five transition families:
+The current lattice is anchored by six transition families:
 
 1. clean progression
 2. proof downgrade
 3. refresh degradation
 4. readiness block
 5. blocked re-entry
+6. partial re-entry
 
 These are the current most meaningful state edges visible in the canonical artifacts.
 
@@ -127,6 +128,26 @@ What this proves:
 - the kernel can carry one repaired reverse edge back into a green closure state
 - re-entry now exists on the same primary artifact surface as accepted, partial, degraded, and blocked runs
 
+## 6. Partial re-entry
+
+Current readable path:
+
+- `PROOF_BUNDLE_PARTIAL`
+- `CLAIMED_NOT_ACCEPTED`
+- repair missing proof sections
+- `PROOF_BUNDLE_COMPLETE`
+- `CLOSURE_ACCEPTED`
+
+Canonical anchor:
+
+- `fixtures/executable_loop_partial_reentry_run_001/run.json`
+
+What this proves:
+
+- a partial proof lane is not necessarily terminal
+- the kernel can carry one repaired proof-completion reverse edge back into a green closure state
+- proof completion now exists on the same primary artifact surface as the other canonical run families
+
 ## What the transition lattice now supports
 
 The current transition lattice supports a stronger kernel-level claim:
@@ -137,6 +158,7 @@ The current transition lattice supports a stronger kernel-level claim:
   - post-closure degradation
   - pre-execution blockage
   - one explicit blocked-to-accepted reverse edge
+  - one explicit partial-to-accepted reverse edge
 
 That is stronger than saying only:
 
@@ -148,7 +170,7 @@ because it shows the kernel can already hold meaningful edges between those stat
 
 The transition lattice still has visible gaps:
 
-- blocked-to-accepted re-entry now exists, but degraded-to-accepted and partial-to-accepted are still weaker than they should be
+- blocked-to-accepted and partial-to-accepted re-entry now exist, but degraded-to-accepted is still weaker than it should be
 - hybrid currently shares the partial lane, but its transition semantics are still not richer than that lane
 - blocked families are still narrower than a mature readiness graph
 - the current lattice is inferred from bounded runtime contours, not yet from a deeper general kernel runtime
