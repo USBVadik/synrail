@@ -205,6 +205,24 @@ Does not guarantee:
 - interactive UX
 - broad product shell behavior
 
+### `synrail_runtime_v0.py`
+
+Purpose:
+
+- hold the bounded runtime contour for `doctor -> bundle -> closure` plus optional `refresh`, `compare`, and worked-envelope emission
+
+Guarantees:
+
+- executes the current bounded runtime contour outside the CLI body
+- emits machine-readable orchestration reports
+- can emit canonical worked orchestration envelopes
+
+Does not guarantee:
+
+- broad orchestration coverage
+- multi-run scheduling
+- final product runtime architecture
+
 ### `synrail_baseline_harness_v0.py`
 
 Purpose:

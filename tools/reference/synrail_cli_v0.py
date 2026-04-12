@@ -18,6 +18,7 @@ REFRESH = HERE / "synrail_refresh_v0.py"
 VALIDATE = HERE / "synrail_validate_v0.py"
 DOCTOR = HERE / "synrail_doctor_v1.py"
 HARNESS = HERE / "synrail_baseline_harness_v0.py"
+RUNTIME = HERE / "synrail_runtime_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -25,63 +26,8 @@ def run_python(script: Path, args: list[str]) -> int:
     return subprocess.run(cmd, check=False).returncode
 
 
-def run_python_capture(script: Path, args: list[str], *, passthrough: bool = True) -> tuple[int, str]:
-    cmd = [sys.executable, str(script), *args]
-    completed = subprocess.run(cmd, check=False, capture_output=True, text=True)
-    if passthrough and completed.stdout:
-        print(completed.stdout, end="")
-    if passthrough and completed.stderr:
-        print(completed.stderr, end="", file=sys.stderr)
-    return completed.returncode, completed.stdout
-
-
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
-
-
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
-
-
-def build_worked_orchestration_artifact(
-    *,
-    state: dict,
-    doctor_record: dict,
-    bundle: dict,
-    closure: dict,
-    refresh_report: dict | None,
-    comparison: dict | None,
-) -> dict:
-    return {
-        "schema_version": "worked_orchestration_artifact_v0",
-        "run_id": state["run_id"],
-        "task_class": state["task_class"],
-        "doctor": {
-            "final_verdict": doctor_record["final_verdict"],
-            "blocking_failure_classes": list(doctor_record["blocking_failure_classes"]),
-        },
-        "bundle": {
-            "status": bundle["status"],
-            "missing_sections": list(bundle["missing_sections"]),
-        },
-        "closure": {
-            "closure_status": closure["closure_status"],
-            "blocking_reason": closure["blocking_reason"],
-        },
-        "refresh": {
-            "applied": refresh_report is not None,
-            "event_type": refresh_report["event_type"] if refresh_report else "",
-            "resulting_closure_status": refresh_report["resulting_closure_status"] if refresh_report else "",
-        },
-        "comparison": {
-            "applied": comparison is not None,
-            "verdict": comparison["verdict"] if comparison else "",
-            "reasons": list(comparison["reasons"]) if comparison else [],
-        },
-        "resulting_state": state["state"],
-        "current_closure_status": state["closure"]["status"],
-        "next_safe_step": state["next_safe_step"],
-    }
 
 
 def cmd_status(args: argparse.Namespace) -> int:
@@ -227,16 +173,45 @@ def cmd_compare(args: argparse.Namespace) -> int:
 
 
 def cmd_orchestrate(args: argparse.Namespace) -> int:
-    doctor_args = [
+    forwarded = [
+        "--state-file", args.state_file,
         "--doctor-run-id", args.doctor_run_id,
         "--doctor-level", args.doctor_level,
         "--target-path", args.target_path,
         "--target-classification", args.target_classification,
         "--baseline-identity", args.baseline_identity,
         "--intended-run-class", args.intended_run_class,
-        "--output", args.doctor_output,
+        "--doctor-output", args.doctor_output,
+        "--final-result", args.final_result,
+        "--task-class", args.task_class,
+        "--bundle-output", args.bundle_output,
+        "--closure-output", args.closure_output,
+        "--report-output", args.report_output,
+        "--execution-surface-identity", args.execution_surface_identity,
+        "--prompt-identity", args.prompt_identity,
+        "--task-identity", args.task_identity,
     ]
+    for flag, value in [
+        ("--readback", args.readback),
+        ("--scenario-proof", args.scenario_proof),
+        ("--refresh-output", args.refresh_output),
+        ("--refresh-event-type", args.refresh_event_type),
+        ("--refresh-doctor-status", args.refresh_doctor_status),
+        ("--refresh-recovery-status", args.refresh_recovery_status),
+        ("--baseline-file", args.baseline_file),
+        ("--synrail-file", args.synrail_file),
+        ("--comparison-output", args.comparison_output),
+        ("--worked-artifact-output", args.worked_artifact_output),
+        ("--artifact-path", args.artifact_path),
+        ("--helper-path", args.helper_path),
+        ("--prompt-identity-file", args.prompt_identity_file),
+    ]:
+        if value:
+            forwarded.extend([flag, value])
     for enabled, flag in [
+        (args.refresh_reverification_complete, "--refresh-reverification-complete"),
+        (args.refresh_use_bundle, "--refresh-use-bundle"),
+        (args.refresh_use_closure, "--refresh-use-closure"),
         (args.clean_surface, "--clean-surface"),
         (args.artifact_viable, "--artifact-viable"),
         (args.helper_ok, "--helper-ok"),
@@ -244,187 +219,10 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         (args.prompt_identity_ok, "--prompt-identity-ok"),
     ]:
         if enabled:
-            doctor_args.append(flag)
-    optional_doctor_pairs = [
-        ("--artifact-path", args.artifact_path),
-        ("--helper-path", args.helper_path),
-        ("--prompt-identity-file", args.prompt_identity_file),
-    ]
-    for flag, value in optional_doctor_pairs:
-        if value:
-            doctor_args.extend([flag, value])
+            forwarded.append(flag)
     for env_name in args.credential_env:
-        doctor_args.extend(["--credential-env", env_name])
-
-    code, _ = run_python_capture(DOCTOR, doctor_args, passthrough=False)
-    if code != 0:
-        report = {
-            "schema_version": "orchestration_report_v0",
-            "run_id": load_json(Path(args.state_file))["run_id"],
-            "task_class": load_json(Path(args.state_file))["task_class"],
-            "result": "ERROR",
-            "stopping_stage": "doctor",
-            "reason": "DOCTOR_EXECUTION_FAILED",
-            "doctor_verdict": "",
-            "bundle_status": "",
-            "closure_status": "",
-            "refresh_applied": False,
-            "refresh_resulting_closure_status": "",
-            "comparison_applied": False,
-            "comparison_verdict": "",
-            "resulting_state": load_json(Path(args.state_file))["state"],
-            "next_safe_step": load_json(Path(args.state_file))["next_safe_step"],
-        }
-        save_json(Path(args.report_output), report)
-        return code
-
-    code, _ = run_python_capture(SPINE, ["apply-doctor", args.state_file, args.doctor_output], passthrough=False)
-    if code != 0:
-        return code
-
-    doctor_record = load_json(Path(args.doctor_output))
-    state_after_doctor = load_json(Path(args.state_file))
-    if state_after_doctor["doctor"]["status"] != "PASS":
-        report = {
-            "schema_version": "orchestration_report_v0",
-            "run_id": state_after_doctor["run_id"],
-            "task_class": state_after_doctor["task_class"],
-            "result": "BLOCKED",
-            "stopping_stage": "doctor",
-            "reason": "DOCTOR_NOT_GREEN",
-            "doctor_verdict": doctor_record["final_verdict"],
-            "bundle_status": "",
-            "closure_status": state_after_doctor["closure"]["status"],
-            "refresh_applied": False,
-            "refresh_resulting_closure_status": "",
-            "comparison_applied": False,
-            "comparison_verdict": "",
-            "resulting_state": state_after_doctor["state"],
-            "next_safe_step": state_after_doctor["next_safe_step"],
-        }
-        save_json(Path(args.report_output), report)
-        print(json.dumps({"result": "BLOCKED", "stopping_stage": "doctor"}, ensure_ascii=True))
-        return 0
-
-    bundle_args = [
-        "--final-result", args.final_result,
-        "--task-class", args.task_class,
-        "--output", args.bundle_output,
-        "--run-id", state_after_doctor["run_id"],
-        "--baseline-identity", args.baseline_identity,
-        "--execution-surface-identity", args.execution_surface_identity,
-        "--prompt-identity", args.prompt_identity,
-        "--task-identity", args.task_identity,
-    ]
-    if args.readback:
-        bundle_args.extend(["--readback", args.readback])
-    if args.scenario_proof:
-        bundle_args.extend(["--scenario-proof", args.scenario_proof])
-    code, _ = run_python_capture(BUNDLE, bundle_args, passthrough=False)
-    if code != 0:
-        return code
-
-    code, _ = run_python_capture(SPINE, ["apply-bundle", args.state_file, args.bundle_output], passthrough=False)
-    if code != 0:
-        return code
-
-    code, _ = run_python_capture(CLOSURE, ["--state-file", args.state_file, "--bundle-file", args.bundle_output, "--output", args.closure_output], passthrough=False)
-    if code != 0:
-        return code
-
-    code, _ = run_python_capture(SPINE, ["apply-closure", args.state_file, args.closure_output], passthrough=False)
-    if code != 0:
-        return code
-
-    final_state = load_json(Path(args.state_file))
-    bundle = load_json(Path(args.bundle_output))
-    closure = load_json(Path(args.closure_output))
-    refresh_applied = False
-    refresh_resulting_closure_status = ""
-    comparison_applied = False
-    comparison_verdict = ""
-    refresh_report = None
-    comparison = None
-    stopping_stage = "closure" if closure["closure_status"] != "ACCEPTED" else "accepted"
-    reason = closure["blocking_reason"] or "NONE"
-
-    if args.refresh_output and args.refresh_event_type:
-        refresh_args = [
-            "--state-file", args.state_file,
-            "--event-type", args.refresh_event_type,
-            "--output", args.refresh_output,
-            "--update-state",
-        ]
-        optional_refresh_pairs = [
-            ("--doctor-status", args.refresh_doctor_status),
-            ("--bundle-file", args.bundle_output if args.refresh_use_bundle else ""),
-            ("--closure-file", args.closure_output if args.refresh_use_closure else ""),
-            ("--recovery-status", args.refresh_recovery_status),
-        ]
-        for flag, value in optional_refresh_pairs:
-            if value:
-                refresh_args.extend([flag, value])
-        if args.refresh_reverification_complete:
-            refresh_args.append("--reverification-complete")
-        code, _ = run_python_capture(REFRESH, refresh_args, passthrough=False)
-        if code != 0:
-            return code
-        final_state = load_json(Path(args.state_file))
-        refresh_report = load_json(Path(args.refresh_output))
-        refresh_applied = True
-        refresh_resulting_closure_status = refresh_report["resulting_closure_status"]
-        stopping_stage = "refresh"
-        reason = final_state["closure"]["blocking_reason"] or "NONE"
-
-    if args.comparison_output and args.baseline_file and args.synrail_file:
-        code, _ = run_python_capture(
-            HARNESS,
-            [
-                "--baseline-file", args.baseline_file,
-                "--synrail-file", args.synrail_file,
-                "--output", args.comparison_output,
-            ],
-            passthrough=False,
-        )
-        if code != 0:
-            return code
-        comparison = load_json(Path(args.comparison_output))
-        comparison_applied = True
-        comparison_verdict = comparison["verdict"]
-        stopping_stage = "comparison"
-
-    report = {
-        "schema_version": "orchestration_report_v0",
-        "run_id": final_state["run_id"],
-        "task_class": final_state["task_class"],
-        "result": "OK",
-        "stopping_stage": stopping_stage,
-        "reason": reason,
-        "doctor_verdict": doctor_record["final_verdict"],
-        "bundle_status": bundle["status"],
-        "closure_status": closure["closure_status"],
-        "refresh_applied": refresh_applied,
-        "refresh_resulting_closure_status": refresh_resulting_closure_status,
-        "comparison_applied": comparison_applied,
-        "comparison_verdict": comparison_verdict,
-        "resulting_state": final_state["state"],
-        "next_safe_step": final_state["next_safe_step"],
-    }
-    save_json(Path(args.report_output), report)
-
-    if args.worked_artifact_output:
-        worked = build_worked_orchestration_artifact(
-            state=final_state,
-            doctor_record=doctor_record,
-            bundle=bundle,
-            closure=closure,
-            refresh_report=refresh_report,
-            comparison=comparison,
-        )
-        save_json(Path(args.worked_artifact_output), worked)
-
-    print(json.dumps({"result": "OK", "closure_status": closure["closure_status"]}, ensure_ascii=True))
-    return 0
+        forwarded.extend(["--credential-env", env_name])
+    return run_python(RUNTIME, forwarded)
 
 
 def build_parser() -> argparse.ArgumentParser:
