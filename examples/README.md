@@ -57,6 +57,12 @@ They are here to show how `Synrail` artifacts fit together without importing raw
   - first canonical degraded re-entry contour for the executable stack
   - starts from a degraded recovery surface and returns to accepted closure
   - includes `run.json` as the repaired recovery primary run artifact
+- `../fixtures/executable_loop_selected_prepared_run_001/`
+  - first canonical contour where a preparation-aware strong selection receipt hands off directly into prepared governed execution
+  - includes `run.json` as the selection-to-runtime primary run artifact
+- `../fixtures/executable_loop_selection_blocked_run_001/`
+  - first canonical contour where a lighter selection receipt blocks governed orchestration at `selection`
+  - includes `run.json` as the selection-guard primary run artifact
 
 ## Rule
 

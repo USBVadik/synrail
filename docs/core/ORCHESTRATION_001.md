@@ -26,17 +26,18 @@ The `orchestrate` command currently runs one bounded path:
 3. write the doctor result back into state
 4. confirm exact-task integrity into state
 5. advance execution readiness for fresh runs
-6. optionally emit one governed-path proof plan
-7. assemble the proof bundle
-8. optionally emit one preparation receipt comparing the plan to the assembled bundle
-9. write the bundle result back into state
-10. compute closure
-11. write the closure verdict back into state
-12. optionally run refresh after a state-changing event
-13. optionally run baseline comparison
-14. emit one machine-readable orchestration report
-15. optionally emit one canonical worked orchestration artifact
-16. optionally emit one primary canonical run artifact
+6. optionally absorb one mode-selection receipt before runtime progression starts
+7. optionally emit one governed-path proof plan
+8. assemble the proof bundle
+9. optionally emit one preparation receipt comparing the plan to the assembled bundle
+10. write the bundle result back into state
+11. compute closure
+12. write the closure verdict back into state
+13. optionally run refresh after a state-changing event
+14. optionally run baseline comparison
+15. emit one machine-readable orchestration report
+16. optionally emit one canonical worked orchestration artifact
+17. optionally emit one primary canonical run artifact
 
 The bounded orchestration contour now lives in:
 
@@ -65,6 +66,29 @@ The first canonical worked orchestration envelope now lives at:
 
 The CLI can now emit that envelope directly through the orchestration path, instead of requiring a hand-assembled artifact after the fact.
 
+The same contour can now also absorb one preparation-aware strong-path selection receipt directly through:
+
+- `--mode-selection-receipt`
+
+When that receipt says:
+
+- `selected_mode = FULL_GOVERNED_PATH`
+- `selected_with_preparation = true`
+
+the runtime can now derive:
+
+- `plan.json`
+- `preparation_receipt.json`
+
+without separately restating those output paths on the CLI.
+
+When that receipt instead says:
+
+- `selected_mode = LIGHTWEIGHT_BASELINE`
+- or `selected_mode = HYBRID_EXCEPTION`
+
+the governed orchestration path now blocks at `selection` instead of silently ignoring the lighter policy choice.
+
 That matters because it keeps the canonical worked artifact aligned with the final runtime contour, including post-refresh closure state when refresh is part of the run.
 
 The spine can now also emit one primary canonical run artifact that compresses:
@@ -92,6 +116,10 @@ The first canonical partial-proof re-entry fixture for that surface now lives at
 The first canonical degraded re-entry fixture for that surface now lives at:
 
 - `fixtures/executable_loop_degraded_reentry_run_001/run.json`
+
+The first canonical selected-prepared governed fixture for that same surface now lives at:
+
+- `fixtures/executable_loop_selected_prepared_run_001/run.json`
 
 The spine-driven contour now also emits explicit blocked state lanes instead of leaving the main failures only in report fields:
 
@@ -125,6 +153,7 @@ It only tightens the most important productive contour:
 
 And now, when explicitly requested:
 
+- one mode-selection receipt handoff into the governed runtime contour
 - one governed-path proof plan plus one preparation receipt
 - refresh after a bounded event
 - baseline comparison after the run contour

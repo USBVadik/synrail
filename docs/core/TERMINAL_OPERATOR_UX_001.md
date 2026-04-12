@@ -36,6 +36,7 @@ The CLI v0 currently exposes:
    - emit one machine-readable doctor record and optionally write it back into the run state
 10. `orchestrate`
    - run one bounded `doctor -> optional preparation -> bundle -> closure` contour, optionally apply `refresh` and `compare`, and emit one machine-readable orchestration report plus an optional worked run envelope
+   - can now absorb one `mode-selection receipt` so a prepared strong-path selection can enter the runtime contour directly
 11. `compare`
    - emit one machine-readable baseline comparison record through the CLI layer
    - route to the legacy comparison harness for `v0` inputs and the economics harness for `v1` inputs
@@ -53,6 +54,8 @@ The CLI v0 currently exposes:
    - emit one machine-readable cost delta between an unprepared and prepared governed path
 
 The selection layer can now also carry one preparation-aware strong-path recommendation when bounded governed-path cost evidence exists.
+
+The orchestration layer can now also absorb that preparation-aware strong-path receipt directly, instead of forcing the operator to restate preparation outputs manually.
 
 ## Why this matters
 

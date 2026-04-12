@@ -296,6 +296,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         "--prompt-identity", args.prompt_identity,
         "--task-identity", args.task_identity,
     ]
+    if args.mode_selection_receipt:
+        forwarded.extend(["--mode-selection-receipt", args.mode_selection_receipt])
     for flag, value in [
         ("--readback", args.readback),
         ("--scenario-proof", args.scenario_proof),
@@ -479,6 +481,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_orchestrate = sub.add_parser("orchestrate")
     p_orchestrate.add_argument("--state-file", required=True)
+    p_orchestrate.add_argument("--mode-selection-receipt")
     p_orchestrate.add_argument("--doctor-run-id", required=True)
     p_orchestrate.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
     p_orchestrate.add_argument("--target-path", required=True)

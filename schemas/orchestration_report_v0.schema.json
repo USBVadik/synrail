@@ -48,6 +48,15 @@
     "doctor_verdict": {
       "type": "string"
     },
+    "selection_applied": {
+      "type": "boolean"
+    },
+    "selected_mode": {
+      "type": "string"
+    },
+    "selected_with_preparation": {
+      "type": "boolean"
+    },
     "preparation_applied": {
       "type": "boolean"
     },

@@ -128,6 +128,7 @@ Guarantees:
 - can apply doctor records back into the state machine
 - can apply bundle and closure artifacts back into the state machine
 - can run one bounded `doctor -> optional preparation -> bundle -> closure` contour with optional `refresh`, `compare`, and worked-envelope emission
+- can now absorb one `mode_selection_receipt_v0` so a preparation-aware strong-path choice can enter that bounded contour directly
 - can carry one blocked-readiness contour back into accepted closure when the missing identity and proof inputs are repaired
 - can carry one partial-proof contour back into accepted closure when the missing proof sections are supplied
 - can carry one degraded recovery contour back into accepted closure through refresh reconciliation

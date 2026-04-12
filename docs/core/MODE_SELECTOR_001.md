@@ -113,3 +113,19 @@ The shortest honest reading is:
 - it reduces unnecessary kernel use where the measured signal already says the extra control is not paying off
 - it also records when the measured signal still says the heavier kernel path is worth entering
 - it now also nudges the strong path toward the cheaper prepared governed variant when that bounded signal exists
+- it can now also hand that prepared strong-path decision directly into the runtime contour instead of stopping at a receipt
+
+The first canonical proof of that handoff now lives at:
+
+- `fixtures/executable_loop_selected_prepared_run_001/run.json`
+
+The governed runtime path now also blocks at `selection` if a receipt says:
+
+- `LIGHTWEIGHT_BASELINE`
+- or `HYBRID_EXCEPTION`
+
+instead of silently entering the heavier contour anyway.
+
+The first canonical proof of that selection-side block now lives at:
+
+- `fixtures/executable_loop_selection_blocked_run_001/run.json`

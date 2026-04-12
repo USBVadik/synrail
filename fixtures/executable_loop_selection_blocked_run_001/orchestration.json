@@ -1,0 +1,39 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_SELECTION_BLOCKED_RUN_001",
+  "task_class": "honesty_restoration_guard",
+  "doctor": {
+    "final_verdict": "NOT_RUN",
+    "blocking_failure_classes": []
+  },
+  "selection": {
+    "applied": true,
+    "selected_mode": "LIGHTWEIGHT_BASELINE",
+    "selected_with_preparation": false
+  },
+  "preparation": {
+    "applied": false,
+    "ready_for_closure": false
+  },
+  "bundle": {
+    "status": "MISSING",
+    "missing_sections": []
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "MODE_SELECTION_NOT_GOVERNED"
+  },
+  "refresh": {
+    "applied": false,
+    "event_type": "",
+    "resulting_closure_status": ""
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "INITIALIZED",
+  "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "follow the selected lighter mode instead of entering governed orchestration"
+}

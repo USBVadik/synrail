@@ -46,6 +46,26 @@
         }
       }
     },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "selected_mode",
+        "selected_with_preparation"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "selected_mode": {
+          "type": "string"
+        },
+        "selected_with_preparation": {
+          "type": "boolean"
+        }
+      }
+    },
     "preparation": {
       "type": "object",
       "additionalProperties": false,

@@ -100,6 +100,13 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
+def load_mode_selection_receipt(path: Path) -> dict:
+    receipt = load_json(path)
+    if receipt.get("schema_version") != "mode_selection_receipt_v0":
+        raise ValueError("mode selection receipt must use mode_selection_receipt_v0")
+    return receipt
+
+
 def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path:
     baseline = load_json(Path(baseline_file))
     synrail = load_json(Path(synrail_file))
@@ -527,6 +534,7 @@ def build_worked_orchestration_artifact(
     *,
     state: dict,
     doctor_record: dict | None,
+    selection_receipt: dict | None,
     preparation_receipt: dict | None,
     bundle: dict | None,
     closure: dict | None,
@@ -552,6 +560,11 @@ def build_worked_orchestration_artifact(
         "doctor": {
             "final_verdict": doctor_record["final_verdict"],
             "blocking_failure_classes": list(doctor_record["blocking_failure_classes"]),
+        },
+        "selection": {
+            "applied": selection_receipt is not None,
+            "selected_mode": selection_receipt["selected_mode"] if selection_receipt else "",
+            "selected_with_preparation": selection_receipt["selected_with_preparation"] if selection_receipt else False,
         },
         "preparation": {
             "applied": preparation_receipt is not None,
@@ -590,6 +603,9 @@ def build_error_report(state: dict, *, reason: str, stopping_stage: str = "docto
         "stopping_stage": stopping_stage,
         "reason": reason,
         "doctor_verdict": "",
+        "selection_applied": False,
+        "selected_mode": "",
+        "selected_with_preparation": False,
         "preparation_applied": False,
         "preparation_ready_for_closure": False,
         "bundle_status": "",
@@ -614,6 +630,9 @@ def build_blocked_report(state: dict, doctor_record: dict) -> dict:
         "stopping_stage": "doctor",
         "reason": "DOCTOR_NOT_GREEN",
         "doctor_verdict": doctor_record["final_verdict"],
+        "selection_applied": False,
+        "selected_mode": "",
+        "selected_with_preparation": False,
         "preparation_applied": False,
         "preparation_ready_for_closure": False,
         "bundle_status": "",
@@ -634,6 +653,9 @@ def build_transition_blocked_report(
     *,
     stopping_stage: str,
     doctor_verdict: str,
+    selection_applied: bool,
+    selected_mode: str,
+    selected_with_preparation: bool,
     preparation_applied: bool,
     preparation_ready_for_closure: bool,
     block_report: dict,
@@ -646,6 +668,9 @@ def build_transition_blocked_report(
         "stopping_stage": stopping_stage,
         "reason": block_report["dominant_blocker"],
         "doctor_verdict": doctor_verdict,
+        "selection_applied": selection_applied,
+        "selected_mode": selected_mode,
+        "selected_with_preparation": selected_with_preparation,
         "preparation_applied": preparation_applied,
         "preparation_ready_for_closure": preparation_ready_for_closure,
         "bundle_status": state["proof_bundle"]["status"],
@@ -671,6 +696,9 @@ def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict) -> 
             "stopping_stage": report["stopping_stage"],
             "reason": report["reason"],
             "doctor_verdict": report["doctor_verdict"],
+            "selection_applied": report["selection_applied"],
+            "selected_mode": report["selected_mode"],
+            "selected_with_preparation": report["selected_with_preparation"],
             "preparation_applied": report["preparation_applied"],
             "preparation_ready_for_closure": report["preparation_ready_for_closure"],
             "bundle_status": report["bundle_status"],
@@ -702,6 +730,7 @@ def emit_requested_artifacts(
     state: dict,
     report: dict,
     doctor_record: dict | None = None,
+    selection_receipt: dict | None = None,
     preparation_receipt: dict | None = None,
     bundle: dict | None = None,
     closure: dict | None = None,
@@ -714,6 +743,7 @@ def emit_requested_artifacts(
     worked = build_worked_orchestration_artifact(
         state=state,
         doctor_record=doctor_record,
+        selection_receipt=selection_receipt,
         preparation_receipt=preparation_receipt,
         bundle=bundle,
         closure=closure,
@@ -794,9 +824,65 @@ def cmd_apply_closure(args: argparse.Namespace) -> int:
 def cmd_orchestrate(args: argparse.Namespace) -> int:
     state_path = Path(args.state_file)
     state = load_state(state_path)
+    selection_receipt = None
+    selection_applied = False
+    selected_mode = ""
+    selected_with_preparation = False
     preparation_receipt = None
     preparation_applied = False
     preparation_ready_for_closure = False
+
+    if args.mode_selection_receipt:
+        try:
+            selection_receipt = load_mode_selection_receipt(Path(args.mode_selection_receipt))
+        except ValueError:
+            save_json(Path(args.report_output), build_error_report(state, reason="INVALID_MODE_SELECTION_RECEIPT", stopping_stage="selection"))
+            return 2
+        selection_applied = True
+        selected_mode = selection_receipt["selected_mode"]
+        selected_with_preparation = bool(selection_receipt.get("selected_with_preparation", False))
+        if selected_mode != "FULL_GOVERNED_PATH":
+            state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+            state["closure"]["blocking_reason"] = "MODE_SELECTION_NOT_GOVERNED"
+            state["closure"]["next_allowed_transition"] = "FOLLOW_SELECTED_MODE"
+            state["closure"]["narrow_next_safe_step"] = "follow the selected lighter mode instead of entering governed orchestration"
+            state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+            report = {
+                "schema_version": "orchestration_report_v0",
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "result": "BLOCKED",
+                "stopping_stage": "selection",
+                "reason": "MODE_SELECTION_NOT_GOVERNED",
+                "doctor_verdict": "",
+                "selection_applied": True,
+                "selected_mode": selected_mode,
+                "selected_with_preparation": selected_with_preparation,
+                "preparation_applied": False,
+                "preparation_ready_for_closure": False,
+                "bundle_status": "",
+                "closure_status": state["closure"]["status"],
+                "refresh_applied": False,
+                "refresh_resulting_closure_status": "",
+                "comparison_applied": False,
+                "comparison_verdict": "",
+                "blockers": ["MODE_SELECTION_NOT_GOVERNED"],
+                "dominant_blocker": "MODE_SELECTION_NOT_GOVERNED",
+                "resulting_state": state["state"],
+                "next_safe_step": state["next_safe_step"],
+            }
+            save_state(state_path, state)
+            save_json(Path(args.report_output), report)
+            emit_requested_artifacts(args, state=state, report=report, selection_receipt=selection_receipt)
+            print(json.dumps({"result": "BLOCKED", "stopping_stage": "selection", "reason": "MODE_SELECTION_NOT_GOVERNED"}, ensure_ascii=True))
+            return 0
+        if selected_with_preparation:
+            if not args.plan_output:
+                args.plan_output = str(Path(args.report_output).with_name("plan.json"))
+            if not args.preparation_receipt_output:
+                args.preparation_receipt_output = str(Path(args.report_output).with_name("preparation_receipt.json"))
+            if not args.preparation_artifact_root:
+                args.preparation_artifact_root = str(Path(args.report_output).parent)
 
     state = apply_target_surface(
         state,
@@ -809,13 +895,16 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             state,
             stopping_stage="target_surface_transition",
             doctor_verdict="",
+            selection_applied=selection_applied,
+            selected_mode=selected_mode,
+            selected_with_preparation=selected_with_preparation,
             preparation_applied=preparation_applied,
             preparation_ready_for_closure=preparation_ready_for_closure,
             block_report=block_report,
         )
         save_state(state_path, state)
         save_json(Path(args.report_output), report)
-        emit_requested_artifacts(args, state=state, report=report)
+        emit_requested_artifacts(args, state=state, report=report, selection_receipt=selection_receipt)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "target_surface_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -861,8 +950,11 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     if code != 0:
         save_state(state_path, state)
         report = build_error_report(state, reason=block_report["dominant_blocker"], stopping_stage="doctor_apply")
+        report["selection_applied"] = selection_applied
+        report["selected_mode"] = selected_mode
+        report["selected_with_preparation"] = selected_with_preparation
         save_json(Path(args.report_output), report)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, selection_receipt=selection_receipt)
         print(json.dumps({"result": "ERROR", "stopping_stage": "doctor_apply", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     state = apply_integrity(
@@ -877,19 +969,25 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             state,
             stopping_stage="ready_transition",
             doctor_verdict=doctor_record["final_verdict"],
+            selection_applied=selection_applied,
+            selected_mode=selected_mode,
+            selected_with_preparation=selected_with_preparation,
             preparation_applied=preparation_applied,
             preparation_ready_for_closure=preparation_ready_for_closure,
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, selection_receipt=selection_receipt)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "ready_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
     if state["doctor"]["status"] != "PASS":
         report = build_blocked_report(state, doctor_record)
+        report["selection_applied"] = selection_applied
+        report["selected_mode"] = selected_mode
+        report["selected_with_preparation"] = selected_with_preparation
         save_json(Path(args.report_output), report)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, selection_receipt=selection_receipt)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "doctor"}, ensure_ascii=True))
         return 0
 
@@ -900,12 +998,15 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             state,
             stopping_stage="execution_transition",
             doctor_verdict=doctor_record["final_verdict"],
+            selection_applied=selection_applied,
+            selected_mode=selected_mode,
+            selected_with_preparation=selected_with_preparation,
             preparation_applied=preparation_applied,
             preparation_ready_for_closure=preparation_ready_for_closure,
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, selection_receipt=selection_receipt)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "execution_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -924,7 +1025,11 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ]
         code, _ = run_python_capture(PROOF_PLAN, plan_args)
         if code != 0:
-            save_json(Path(args.report_output), build_error_report(state, reason="PROOF_PLAN_EXECUTION_FAILED", stopping_stage="preparation"))
+            report = build_error_report(state, reason="PROOF_PLAN_EXECUTION_FAILED", stopping_stage="preparation")
+            report["selection_applied"] = selection_applied
+            report["selected_mode"] = selected_mode
+            report["selected_with_preparation"] = selected_with_preparation
+            save_json(Path(args.report_output), report)
             return code
         preparation_applied = True
 
@@ -957,7 +1062,11 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             ],
         )
         if code != 0:
-            save_json(Path(args.report_output), build_error_report(state, reason="PREPARATION_RECEIPT_EXECUTION_FAILED", stopping_stage="preparation"))
+            report = build_error_report(state, reason="PREPARATION_RECEIPT_EXECUTION_FAILED", stopping_stage="preparation")
+            report["selection_applied"] = selection_applied
+            report["selected_mode"] = selected_mode
+            report["selected_with_preparation"] = selected_with_preparation
+            save_json(Path(args.report_output), report)
             return code
         preparation_receipt = load_json(Path(args.preparation_receipt_output))
         preparation_ready_for_closure = preparation_receipt["ready_for_closure"]
@@ -969,12 +1078,15 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             state,
             stopping_stage="proof_bundle_transition",
             doctor_verdict=doctor_record["final_verdict"],
+            selection_applied=selection_applied,
+            selected_mode=selected_mode,
+            selected_with_preparation=selected_with_preparation,
             preparation_applied=preparation_applied,
             preparation_ready_for_closure=preparation_ready_for_closure,
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, preparation_receipt=preparation_receipt, bundle=bundle)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, selection_receipt=selection_receipt, preparation_receipt=preparation_receipt, bundle=bundle)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "proof_bundle_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -991,12 +1103,15 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             state,
             stopping_stage="closure_transition",
             doctor_verdict=doctor_record["final_verdict"],
+            selection_applied=selection_applied,
+            selected_mode=selected_mode,
+            selected_with_preparation=selected_with_preparation,
             preparation_applied=preparation_applied,
             preparation_ready_for_closure=preparation_ready_for_closure,
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, preparation_receipt=preparation_receipt, bundle=bundle, closure=closure)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, selection_receipt=selection_receipt, preparation_receipt=preparation_receipt, bundle=bundle, closure=closure)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "closure_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -1059,6 +1174,9 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         "stopping_stage": stopping_stage,
         "reason": reason,
         "doctor_verdict": doctor_record["final_verdict"],
+        "selection_applied": selection_applied,
+        "selected_mode": selected_mode,
+        "selected_with_preparation": selected_with_preparation,
         "preparation_applied": preparation_applied,
         "preparation_ready_for_closure": preparation_ready_for_closure,
         "bundle_status": bundle["status"],
@@ -1078,6 +1196,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         state=state,
         report=report,
         doctor_record=doctor_record,
+        selection_receipt=selection_receipt,
         preparation_receipt=preparation_receipt,
         bundle=bundle,
         closure=closure,
@@ -1125,6 +1244,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_orchestrate = sub.add_parser("orchestrate")
     p_orchestrate.add_argument("--state-file", required=True)
+    p_orchestrate.add_argument("--mode-selection-receipt")
     p_orchestrate.add_argument("--doctor-run-id", required=True)
     p_orchestrate.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
     p_orchestrate.add_argument("--target-path", required=True)
