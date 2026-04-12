@@ -285,6 +285,9 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     for flag, value in [
         ("--readback", args.readback),
         ("--scenario-proof", args.scenario_proof),
+        ("--plan-output", args.plan_output),
+        ("--preparation-receipt-output", args.preparation_receipt_output),
+        ("--preparation-artifact-root", args.preparation_artifact_root),
         ("--refresh-output", args.refresh_output),
         ("--refresh-event-type", args.refresh_event_type),
         ("--refresh-doctor-status", args.refresh_doctor_status),
@@ -471,6 +474,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--task-identity", required=True)
     p_orchestrate.add_argument("--readback")
     p_orchestrate.add_argument("--scenario-proof")
+    p_orchestrate.add_argument("--plan-output")
+    p_orchestrate.add_argument("--preparation-receipt-output")
+    p_orchestrate.add_argument("--preparation-artifact-root")
     p_orchestrate.add_argument("--refresh-output")
     p_orchestrate.add_argument("--refresh-event-type")
     p_orchestrate.add_argument("--refresh-doctor-status", choices=["PASS", "FAIL"])

@@ -46,6 +46,22 @@
         }
       }
     },
+    "preparation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "ready_for_closure"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "ready_for_closure": {
+          "type": "boolean"
+        }
+      }
+    },
     "bundle": {
       "type": "object",
       "additionalProperties": false,

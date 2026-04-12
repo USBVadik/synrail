@@ -35,7 +35,7 @@ The CLI v0 currently exposes:
 9. `doctor`
    - emit one machine-readable doctor record and optionally write it back into the run state
 10. `orchestrate`
-   - run one bounded `doctor -> bundle -> closure` contour, optionally apply `refresh` and `compare`, and emit one machine-readable orchestration report plus an optional worked run envelope
+   - run one bounded `doctor -> optional preparation -> bundle -> closure` contour, optionally apply `refresh` and `compare`, and emit one machine-readable orchestration report plus an optional worked run envelope
 11. `compare`
    - emit one machine-readable baseline comparison record through the CLI layer
    - route to the legacy comparison harness for `v0` inputs and the economics harness for `v1` inputs
@@ -67,6 +67,8 @@ The bounded orchestration command is the first move from:
 to:
 
 - one smaller runtime contour
+
+That contour can now also carry one optional governed-path preparation step instead of leaving preparation entirely outside the runtime path.
 
 ## v0 limitations
 

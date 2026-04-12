@@ -22,6 +22,7 @@ The current executable stack can already provide:
 10. one cost-aware mode selector that can keep obvious non-winning paths out of heavier contours
 11. three operator-facing selection receipts that prove a heavier contour can now be deliberately skipped or deliberately entered before the runtime path begins
 12. one governed-path preparation plan and receipt that prove the planned proof surface can reach a complete first bundle pass before closure starts
+13. one canonical prepared governed-path run that proves preparation can now live inside the spine-owned contour
 
 That is enough to say:
 
@@ -76,6 +77,7 @@ Current strongest value carriers are:
 - targeted doctor reduction of one wrong-target-surface readiness lie
 - cost-aware steering back to baseline on weak and demoted-hybrid paths
 - one governed-path preparation slice that predeclares the proof surface and records complete first-pass bundle assembly
+- one preparation-aware prepared governed run that reaches accepted closure inside the same bounded orchestration path
 - proof-bundle completeness reading
 - closure acceptance vs claimed-not-accepted separation
 - explicit blocked state lanes for main failure branches
@@ -111,6 +113,7 @@ The shortest current output reading is:
 
 - the spine can now emit one primary canonical run artifact
 - accepted contours now have a stable canonical repo fixture
+- prepared governed contours now also have a stable canonical repo fixture
 - blocked contours now emit the same primary run artifact shape
 - one repaired blocked contour now also has a stable canonical repo fixture
 - one repaired partial-proof contour now also has a stable canonical repo fixture
@@ -122,6 +125,10 @@ The shortest current output reading is:
 The first canonical accepted reference surface for that output now lives at:
 
 - `fixtures/executable_loop_accepted_run_001/run.json`
+
+The first canonical prepared governed reference surface for that output now lives at:
+
+- `fixtures/executable_loop_prepared_run_001/run.json`
 
 The first canonical blocked reference surface for that output now lives at:
 

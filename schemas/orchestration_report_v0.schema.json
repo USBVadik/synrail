@@ -48,6 +48,12 @@
     "doctor_verdict": {
       "type": "string"
     },
+    "preparation_applied": {
+      "type": "boolean"
+    },
+    "preparation_ready_for_closure": {
+      "type": "boolean"
+    },
     "bundle_status": {
       "type": "string"
     },

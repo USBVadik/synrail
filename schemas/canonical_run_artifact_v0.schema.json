@@ -43,6 +43,8 @@
         "stopping_stage": {"type": "string", "minLength": 1},
         "reason": {"type": "string"},
         "doctor_verdict": {"type": "string"},
+        "preparation_applied": {"type": "boolean"},
+        "preparation_ready_for_closure": {"type": "boolean"},
         "bundle_status": {"type": "string"},
         "closure_status": {"type": "string"},
         "refresh_applied": {"type": "boolean"},

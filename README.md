@@ -112,6 +112,7 @@ The current proof reading is:
 - the repo now also has a second operator-facing selection receipt showing that a weak low-risk path stayed on baseline and skipped the heavier contour
 - the repo now also has a third operator-facing selection receipt showing that the strong expensive-wrong-closure path explicitly entered the governed contour
 - the repo now also has one governed-path preparation plan and receipt showing that the planned proof surface can reach a complete first bundle pass before closure starts
+- the repo now also has one canonical prepared governed-path run showing that preparation now lives inside the runtime contour, not only beside it
 
 The current wedge reading is:
 
@@ -123,6 +124,7 @@ The current executable output reading is:
 
 - the spine can now emit one primary canonical run artifact
 - the repo now carries canonical accepted, blocked, blocked-reentry, partial-reentry, and degraded-reentry fixtures on that same artifact surface
+- the repo now also carries one canonical prepared governed-path fixture on that same artifact surface
 - the repo now also carries one canonical ugly compound repair fixture on that same artifact surface
 - the repo now also carries one canonical hybrid pressure fixture on that same artifact surface
 - the repo now also has one explicit outcome lattice across accepted, partial, degraded, and blocked contours

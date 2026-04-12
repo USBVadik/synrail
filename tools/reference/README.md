@@ -127,7 +127,7 @@ Guarantees:
 - can emit one structured blocked-transition report with explicit blocker precedence
 - can apply doctor records back into the state machine
 - can apply bundle and closure artifacts back into the state machine
-- can run one bounded `doctor -> bundle -> closure` contour with optional `refresh`, `compare`, and worked-envelope emission
+- can run one bounded `doctor -> optional preparation -> bundle -> closure` contour with optional `refresh`, `compare`, and worked-envelope emission
 - can carry one blocked-readiness contour back into accepted closure when the missing identity and proof inputs are repaired
 - can carry one partial-proof contour back into accepted closure when the missing proof sections are supplied
 - can carry one degraded recovery contour back into accepted closure through refresh reconciliation
@@ -189,6 +189,8 @@ Does not guarantee:
 - closure acceptance on its own
 - deep semantic proof validation
 
+It can now also be called from the bounded orchestration path when preparation outputs are requested.
+
 ### `synrail_closure_v0.py`
 
 Purpose:
@@ -236,7 +238,7 @@ Guarantees:
 
 - exposes compact state reading
 - exposes bundle, closure, and refresh commands through one CLI
-- exposes one bounded orchestration path for `doctor -> bundle -> closure`
+- exposes one bounded orchestration path for `doctor -> optional preparation -> bundle -> closure`
 - exposes baseline comparison through the same CLI layer
 
 Does not guarantee:

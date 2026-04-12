@@ -21,6 +21,10 @@ The first canonical governed-path preparation fixture now lives at:
 - `fixtures/governed_path_plan_run_001/bundle.json`
 - `fixtures/governed_path_plan_run_001/preparation_receipt.json`
 
+The first canonical runtime-integrated prepared contour now lives at:
+
+- `fixtures/executable_loop_prepared_run_001/run.json`
+
 ## Scenario
 
 - run id: `GOVERNED_PATH_PLAN_RUN_001`
@@ -76,5 +80,6 @@ The shortest honest reading is:
 
 - `Synrail` can now predeclare the governed-path proof surface before bundle assembly
 - it can now emit one receipt showing that a planned governed-path bundle reached `COMPLETE` on the first pass
+- it can now also carry that preparation slice through the bounded `orchestrate` path
 - this does not yet prove a broad cost reduction inside every strong path
 - it does prove one bounded executable move away from post-run proof scrambling

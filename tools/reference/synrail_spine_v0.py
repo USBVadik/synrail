@@ -18,6 +18,8 @@ CLOSURE = HERE / "synrail_closure_v0.py"
 REFRESH = HERE / "synrail_refresh_v0.py"
 HARNESS_V0 = HERE / "synrail_baseline_harness_v0.py"
 HARNESS_V1 = HERE / "synrail_baseline_harness_v1.py"
+PROOF_PLAN = HERE / "synrail_proof_plan_v0.py"
+PREPARATION_RECEIPT = HERE / "synrail_preparation_receipt_v0.py"
 
 TRANSITION_PRECEDENCE = {
     "TARGET_SURFACE_ATTESTED": [
@@ -525,6 +527,7 @@ def build_worked_orchestration_artifact(
     *,
     state: dict,
     doctor_record: dict | None,
+    preparation_receipt: dict | None,
     bundle: dict | None,
     closure: dict | None,
     refresh_report: dict | None,
@@ -549,6 +552,10 @@ def build_worked_orchestration_artifact(
         "doctor": {
             "final_verdict": doctor_record["final_verdict"],
             "blocking_failure_classes": list(doctor_record["blocking_failure_classes"]),
+        },
+        "preparation": {
+            "applied": preparation_receipt is not None,
+            "ready_for_closure": preparation_receipt["ready_for_closure"] if preparation_receipt else False,
         },
         "bundle": {
             "status": bundle["status"],
@@ -583,6 +590,8 @@ def build_error_report(state: dict, *, reason: str, stopping_stage: str = "docto
         "stopping_stage": stopping_stage,
         "reason": reason,
         "doctor_verdict": "",
+        "preparation_applied": False,
+        "preparation_ready_for_closure": False,
         "bundle_status": "",
         "closure_status": "",
         "refresh_applied": False,
@@ -605,6 +614,8 @@ def build_blocked_report(state: dict, doctor_record: dict) -> dict:
         "stopping_stage": "doctor",
         "reason": "DOCTOR_NOT_GREEN",
         "doctor_verdict": doctor_record["final_verdict"],
+        "preparation_applied": False,
+        "preparation_ready_for_closure": False,
         "bundle_status": "",
         "closure_status": state["closure"]["status"],
         "refresh_applied": False,
@@ -623,6 +634,8 @@ def build_transition_blocked_report(
     *,
     stopping_stage: str,
     doctor_verdict: str,
+    preparation_applied: bool,
+    preparation_ready_for_closure: bool,
     block_report: dict,
 ) -> dict:
     return {
@@ -633,6 +646,8 @@ def build_transition_blocked_report(
         "stopping_stage": stopping_stage,
         "reason": block_report["dominant_blocker"],
         "doctor_verdict": doctor_verdict,
+        "preparation_applied": preparation_applied,
+        "preparation_ready_for_closure": preparation_ready_for_closure,
         "bundle_status": state["proof_bundle"]["status"],
         "closure_status": state["closure"]["status"],
         "refresh_applied": False,
@@ -656,6 +671,8 @@ def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict) -> 
             "stopping_stage": report["stopping_stage"],
             "reason": report["reason"],
             "doctor_verdict": report["doctor_verdict"],
+            "preparation_applied": report["preparation_applied"],
+            "preparation_ready_for_closure": report["preparation_ready_for_closure"],
             "bundle_status": report["bundle_status"],
             "closure_status": report["closure_status"],
             "refresh_applied": report["refresh_applied"],
@@ -685,6 +702,7 @@ def emit_requested_artifacts(
     state: dict,
     report: dict,
     doctor_record: dict | None = None,
+    preparation_receipt: dict | None = None,
     bundle: dict | None = None,
     closure: dict | None = None,
     refresh_report: dict | None = None,
@@ -696,6 +714,7 @@ def emit_requested_artifacts(
     worked = build_worked_orchestration_artifact(
         state=state,
         doctor_record=doctor_record,
+        preparation_receipt=preparation_receipt,
         bundle=bundle,
         closure=closure,
         refresh_report=refresh_report,
@@ -775,6 +794,9 @@ def cmd_apply_closure(args: argparse.Namespace) -> int:
 def cmd_orchestrate(args: argparse.Namespace) -> int:
     state_path = Path(args.state_file)
     state = load_state(state_path)
+    preparation_receipt = None
+    preparation_applied = False
+    preparation_ready_for_closure = False
 
     state = apply_target_surface(
         state,
@@ -787,6 +809,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             state,
             stopping_stage="target_surface_transition",
             doctor_verdict="",
+            preparation_applied=preparation_applied,
+            preparation_ready_for_closure=preparation_ready_for_closure,
             block_report=block_report,
         )
         save_state(state_path, state)
@@ -853,6 +877,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             state,
             stopping_stage="ready_transition",
             doctor_verdict=doctor_record["final_verdict"],
+            preparation_applied=preparation_applied,
+            preparation_ready_for_closure=preparation_ready_for_closure,
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
@@ -874,6 +900,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             state,
             stopping_stage="execution_transition",
             doctor_verdict=doctor_record["final_verdict"],
+            preparation_applied=preparation_applied,
+            preparation_ready_for_closure=preparation_ready_for_closure,
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
@@ -881,6 +909,24 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "execution_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
+
+    if args.plan_output:
+        artifact_root = args.preparation_artifact_root or str(Path(args.plan_output).parent)
+        plan_args = [
+            "--run-id", state["run_id"],
+            "--task-class", args.task_class,
+            "--artifact-root", artifact_root,
+            "--baseline-identity", args.baseline_identity,
+            "--execution-surface-identity", args.execution_surface_identity,
+            "--prompt-identity", args.prompt_identity,
+            "--task-identity", args.task_identity,
+            "--output", args.plan_output,
+        ]
+        code, _ = run_python_capture(PROOF_PLAN, plan_args)
+        if code != 0:
+            save_json(Path(args.report_output), build_error_report(state, reason="PROOF_PLAN_EXECUTION_FAILED", stopping_stage="preparation"))
+            return code
+        preparation_applied = True
 
     bundle_args = [
         "--final-result", args.final_result,
@@ -901,6 +947,21 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         return code
 
     bundle = load_json(Path(args.bundle_output))
+    if args.plan_output and args.preparation_receipt_output:
+        code, _ = run_python_capture(
+            PREPARATION_RECEIPT,
+            [
+                "--plan-file", args.plan_output,
+                "--bundle-file", args.bundle_output,
+                "--output", args.preparation_receipt_output,
+            ],
+        )
+        if code != 0:
+            save_json(Path(args.report_output), build_error_report(state, reason="PREPARATION_RECEIPT_EXECUTION_FAILED", stopping_stage="preparation"))
+            return code
+        preparation_receipt = load_json(Path(args.preparation_receipt_output))
+        preparation_ready_for_closure = preparation_receipt["ready_for_closure"]
+
     code, state, block_report = apply_bundle(load_state(state_path), bundle)
     if code != 0:
         save_state(state_path, state)
@@ -908,10 +969,12 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             state,
             stopping_stage="proof_bundle_transition",
             doctor_verdict=doctor_record["final_verdict"],
+            preparation_applied=preparation_applied,
+            preparation_ready_for_closure=preparation_ready_for_closure,
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, bundle=bundle)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, preparation_receipt=preparation_receipt, bundle=bundle)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "proof_bundle_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -928,10 +991,12 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             state,
             stopping_stage="closure_transition",
             doctor_verdict=doctor_record["final_verdict"],
+            preparation_applied=preparation_applied,
+            preparation_ready_for_closure=preparation_ready_for_closure,
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
-        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, bundle=bundle, closure=closure)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, preparation_receipt=preparation_receipt, bundle=bundle, closure=closure)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "closure_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -994,6 +1059,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         "stopping_stage": stopping_stage,
         "reason": reason,
         "doctor_verdict": doctor_record["final_verdict"],
+        "preparation_applied": preparation_applied,
+        "preparation_ready_for_closure": preparation_ready_for_closure,
         "bundle_status": bundle["status"],
         "closure_status": state["closure"]["status"],
         "refresh_applied": refresh_applied,
@@ -1011,6 +1078,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         state=state,
         report=report,
         doctor_record=doctor_record,
+        preparation_receipt=preparation_receipt,
         bundle=bundle,
         closure=closure,
         refresh_report=refresh_report,
@@ -1074,6 +1142,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--task-identity", required=True)
     p_orchestrate.add_argument("--readback")
     p_orchestrate.add_argument("--scenario-proof")
+    p_orchestrate.add_argument("--plan-output")
+    p_orchestrate.add_argument("--preparation-receipt-output")
+    p_orchestrate.add_argument("--preparation-artifact-root")
     p_orchestrate.add_argument("--refresh-output")
     p_orchestrate.add_argument("--refresh-event-type")
     p_orchestrate.add_argument("--refresh-doctor-status", choices=["PASS", "FAIL"])

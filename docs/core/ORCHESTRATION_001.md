@@ -26,15 +26,17 @@ The `orchestrate` command currently runs one bounded path:
 3. write the doctor result back into state
 4. confirm exact-task integrity into state
 5. advance execution readiness for fresh runs
-6. assemble the proof bundle
-7. write the bundle result back into state
-8. compute closure
-9. write the closure verdict back into state
-10. optionally run refresh after a state-changing event
-11. optionally run baseline comparison
-12. emit one machine-readable orchestration report
-13. optionally emit one canonical worked orchestration artifact
-14. optionally emit one primary canonical run artifact
+6. optionally emit one governed-path proof plan
+7. assemble the proof bundle
+8. optionally emit one preparation receipt comparing the plan to the assembled bundle
+9. write the bundle result back into state
+10. compute closure
+11. write the closure verdict back into state
+12. optionally run refresh after a state-changing event
+13. optionally run baseline comparison
+14. emit one machine-readable orchestration report
+15. optionally emit one canonical worked orchestration artifact
+16. optionally emit one primary canonical run artifact
 
 The bounded orchestration contour now lives in:
 
@@ -117,11 +119,13 @@ It does not yet try to:
 It only tightens the most important productive contour:
 
 - doctor
+- optional preparation
 - proof bundle
 - closure
 
 And now, when explicitly requested:
 
+- one governed-path proof plan plus one preparation receipt
 - refresh after a bounded event
 - baseline comparison after the run contour
 - economics-aware comparison when the supplied inputs use the `v1` comparison schema
