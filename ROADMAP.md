@@ -112,19 +112,13 @@ it is likely on-roadmap.
 
 If it mostly adds breadth, downstream behavior, battlefield history, or polish-without-proof, it is probably off-roadmap for this phase.
 
-## Review anchor
+## Active review anchor
 
-The current product-review anchor for this phase is:
+The smallest current anchor set is:
 
-- `docs/boundary/FIRST_PRODUCT_REVIEW_PASS.md`
-- `docs/boundary/PRIVATE_STABLE_TARGET.md`
-- `docs/boundary/REPEATABILITY_PLAN.md`
 - `docs/boundary/KILLER_PATH_001.md`
-- `docs/boundary/BASELINE_COMPARISON_PLAN_001.md`
-- `docs/boundary/BASELINE_RUNBOOK_001.md`
-- `docs/boundary/BASELINE_COMPARISON_CANDIDATE_001.md`
 - `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
-- `docs/boundary/BASELINE_COMPARISON_RECORD_001_TEMPLATE.md`
 - `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
-- `docs/boundary/OVERHEAD_VS_VALUE_MAP_001.md`
 - `docs/boundary/CORE_COMPRESSION_PASS_001.md`
+
+Everything else should support this set rather than compete with it for attention.

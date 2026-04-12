@@ -62,12 +62,20 @@ For a quick document map, start with:
 
 ## Reading Order
 
-1. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
-2. `docs/core/SYNRAIL_EVIDENCE_PRECEDENCE.md`
-3. `docs/core/SYNRAIL_DOCTOR.md`
-4. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
-5. `docs/boundary/SYNRAIL_PRODUCT_BOUNDARY.md`
-6. `docs/boundary/SYNRAIL_KERNEL_SEPARATION_STATUS.md`
+Read these first:
+
+1. `docs/boundary/KILLER_PATH_001.md`
+2. `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
+3. `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
+4. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
+5. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
+6. `docs/boundary/SYNRAIL_PRODUCT_BOUNDARY.md`
+
+Read these next only if you need them:
+
+- `docs/boundary/BASELINE_RUNBOOK_001.md`
+- `docs/boundary/OVERHEAD_VS_VALUE_MAP_001.md`
+- `docs/boundary/CORE_COMPRESSION_PASS_001.md`
 
 ## Current State
 
@@ -87,17 +95,12 @@ The current proof reading is:
 
 ## Contributing
 
-For small repo hygiene and change-shape expectations, see:
+For active contribution shape, start here:
 
 - `CONTRIBUTING.md`
 - `ROADMAP.md`
-- `docs/boundary/POST_CRITIQUE_HARDENING.md`
-- `docs/boundary/FIRST_PRODUCT_REVIEW_PASS.md`
-- `docs/boundary/PRIVATE_STABLE_TARGET.md`
 - `docs/boundary/KILLER_PATH_001.md`
-- `docs/boundary/BASELINE_COMPARISON_PLAN_001.md`
-- `docs/boundary/BASELINE_RUNBOOK_001.md`
 - `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
-- `docs/boundary/OVERHEAD_VS_VALUE_MAP_001.md`
-- `docs/boundary/CORE_COMPRESSION_PASS_001.md`
+
+Secondary repo-history and hardening context remains available in `docs/boundary/`, but it is not the first route through the project anymore.

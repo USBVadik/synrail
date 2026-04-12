@@ -4,7 +4,21 @@ This repository is intentionally small and wedge-first.
 
 Use this map when you want the fastest way to orient yourself without reading every document in order.
 
-## 1. Core
+## 1. Active path
+
+Start here when you want the current product wedge rather than the full repo history:
+
+- `boundary/KILLER_PATH_001.md`
+- `boundary/BASELINE_COMPARISON_RECORD_001.md`
+- `boundary/MINIMUM_UNDENIABLE_CORE_001.md`
+
+These are the shortest current path to:
+
+- what Synrail is trying to win
+- why it currently looks better than a simpler baseline on that path
+- what should remain in the core
+
+## 2. Core
 
 Start here when you want to understand the kernel itself:
 
@@ -16,7 +30,7 @@ Start here when you want to understand the kernel itself:
 
 These documents describe how Synrail decides what is trustworthy, what is blocked, and what can be accepted.
 
-## 2. Boundary
+## 3. Boundary
 
 Read these when you want to understand what belongs in Synrail and what stays outside:
 
@@ -32,7 +46,7 @@ These define the product line between:
 - proving-ground evidence
 - downstream capability layers
 
-## 3. Extraction
+## 4. Extraction
 
 Read these when you want to understand how the separate repo move is staged:
 
@@ -42,7 +56,7 @@ Read these when you want to understand how the separate repo move is staged:
 - `boundary/EXTRACTION_EXECUTION_PLAN.md`
 - `boundary/FIRST_EXTRACTION_COMMIT_PLAN.md`
 
-## 4. Reference Behaviors
+## 5. Reference Behaviors
 
 Read these when you want the small operational slices that shaped the proving-ground discipline:
 
@@ -51,7 +65,7 @@ Read these when you want the small operational slices that shaped the proving-gr
 - `reference/DIRECT_LOOP_SPEC.md`
 - `reference/INCIDENT_FLOW_EVALUATION_TEMPLATE.md`
 
-## 5. Reference Helpers
+## 6. Reference Helpers
 
 The scripts under `../tools/reference/` are small reference helpers, not a full orchestration product:
 
@@ -65,6 +79,6 @@ The scripts under `../tools/reference/` are small reference helpers, not a full 
 
 If you only read three things first, use:
 
-1. `core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
-2. `boundary/SYNRAIL_PRODUCT_BOUNDARY.md`
-3. `core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
+1. `boundary/KILLER_PATH_001.md`
+2. `boundary/BASELINE_COMPARISON_RECORD_001.md`
+3. `boundary/MINIMUM_UNDENIABLE_CORE_001.md`
