@@ -42,6 +42,7 @@ Examples:
 - compare blocker-to-closure cycle count
 - compare false-success rate
 - compare recovery cost after misleading agent output
+- run one compact head-to-head comparison before claiming product advantage
 
 ### 3. Shrink toward the minimum undeniable core
 
@@ -120,4 +121,5 @@ The current product-review anchor for this phase is:
 - `docs/boundary/REPEATABILITY_PLAN.md`
 - `docs/boundary/KILLER_PATH_001.md`
 - `docs/boundary/BASELINE_COMPARISON_PLAN_001.md`
+- `docs/boundary/BASELINE_RUNBOOK_001.md`
 - `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
