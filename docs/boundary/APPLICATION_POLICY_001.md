@@ -1,0 +1,136 @@
+# Application Policy 001
+
+## Purpose
+
+Define when to use the full `Synrail` governed path, when to use a lighter baseline, and when to use a hybrid subset.
+
+This document exists so the wedge becomes operational policy rather than staying only a descriptive insight.
+
+## Three modes
+
+Current application policy uses three modes:
+
+1. full governed path
+2. lightweight baseline
+3. hybrid subset
+
+## 1. Full governed path
+
+Use the full governed path when the work has one or more of these properties:
+
+- high false-success risk
+- meaningful closure cost if accepted wrongly
+- remote or ambiguous execution surface
+- nontrivial artifact/proof ambiguity
+- meaningful recovery cost after misleading output
+
+Typical fit:
+
+- narrow exact-task bugfixes
+- controlled patch tasks
+- messy execution paths where narrative confidence is not safe enough
+
+Expected cost:
+
+- highest coordination overhead
+
+Expected value:
+
+- highest truth discipline
+- strongest reviewable closure
+
+## 2. Lightweight baseline
+
+Use the lightweight baseline when the work looks like this:
+
+- small local repair
+- low false-success risk
+- cheap operator validation
+- low consequence if the first answer is wrong
+- little or no execution-surface ambiguity
+
+Typical fit:
+
+- small honesty-restoration incidents
+- simple bounded fixes
+- cases where one disciplined operator loop is already adequate
+
+Expected cost:
+
+- lowest coordination overhead
+
+Expected value:
+
+- fast and usually good enough
+
+## 3. Hybrid subset
+
+Use a hybrid subset when the full governed path is too expensive, but a pure lightweight baseline feels too loose.
+
+Suggested hybrid elements:
+
+- clearer task identity
+- one explicit artifact sanity check
+- explicit stop instead of bluffing when confidence is weak
+
+Typical fit:
+
+- medium-risk incidents
+- small fixes with some ambiguity
+- cases where you want some truth discipline without paying full kernel cost
+
+Expected cost:
+
+- middle
+
+Expected value:
+
+- better than the lightweight baseline on ambiguity
+- cheaper than the full governed path
+
+## Quick decision rule
+
+Ask these questions in order:
+
+1. would a wrong “done” be expensive?
+2. is the execution surface ambiguous?
+3. is artifact truth nontrivial to inspect?
+4. would recovery from misleading output be costly?
+
+If the answer is “yes” to one or more of those in a meaningful way:
+
+- prefer the full governed path
+
+If the answers are mostly “no”:
+
+- prefer the lightweight baseline
+
+If the answers are mixed:
+
+- use a hybrid subset
+
+## Anti-misuse rule
+
+Do not use the full governed path just because `Synrail` exists.
+
+Do not avoid it just because it is heavier.
+
+Choose the path whose truth economics match the scenario.
+
+## Current policy reading
+
+Current evidence suggests:
+
+- full governed path is justified on the killer path
+- lightweight baseline is often good enough on small honesty-restoration incidents
+- hybrid subset is the most underdeveloped but likely valuable middle mode
+
+## Decision rule
+
+Future product work should improve one of these:
+
+- the effectiveness of the full governed path on its real wedge
+- the clarity of when to stay lightweight
+- the usefulness of the hybrid subset
+
+If a change does not improve one of those, it is probably not current-priority policy work.

@@ -18,6 +18,10 @@ These are the shortest current path to:
 - why it currently looks better than a simpler baseline on that path
 - what should remain in the core
 
+Then, if you want the practical “when should we actually use this?” rule, read:
+
+- `boundary/APPLICATION_POLICY_001.md`
+
 ## 2. Core
 
 Start here when you want to understand the kernel itself:

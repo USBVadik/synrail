@@ -122,3 +122,7 @@ The smallest current anchor set is:
 - `docs/boundary/CORE_COMPRESSION_PASS_001.md`
 
 Everything else should support this set rather than compete with it for attention.
+
+The next practical operating layer around that anchor is:
+
+- `docs/boundary/APPLICATION_POLICY_001.md`

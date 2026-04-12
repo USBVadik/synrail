@@ -74,6 +74,7 @@ Read these first:
 Read these next only if you need them:
 
 - `docs/boundary/BASELINE_RUNBOOK_001.md`
+- `docs/boundary/APPLICATION_POLICY_001.md`
 - `docs/boundary/OVERHEAD_VS_VALUE_MAP_001.md`
 - `docs/boundary/CORE_COMPRESSION_PASS_001.md`
 
@@ -107,6 +108,7 @@ For active contribution shape, start here:
 - `ROADMAP.md`
 - `docs/boundary/KILLER_PATH_001.md`
 - `docs/boundary/WEDGE_STATEMENT_001.md`
+- `docs/boundary/APPLICATION_POLICY_001.md`
 - `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `docs/boundary/BASELINE_COMPARISON_RECORD_002.md`
 - `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
