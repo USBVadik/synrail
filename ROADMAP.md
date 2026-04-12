@@ -116,6 +116,7 @@ If it mostly adds breadth, downstream behavior, battlefield history, or polish-w
 
 The smallest current anchor set is:
 
+- `docs/boundary/EXECUTABLE_STACK_READING_001.md`
 - `docs/boundary/KILLER_PATH_001.md`
 - `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`

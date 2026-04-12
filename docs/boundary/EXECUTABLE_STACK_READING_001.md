@@ -1,0 +1,102 @@
+# Executable Stack Reading 001
+
+## Purpose
+
+State the shortest honest current reading of what the executable `Synrail` stack has actually proven so far.
+
+This document exists so the repo can summarize product reality without forcing a reader to reconstruct it from many slice-level artifacts.
+
+## What the stack now demonstrably does
+
+The current executable stack can already provide:
+
+1. machine-readable run state
+2. hard gating on unsafe progression
+3. machine-readable proof-bundle assembly
+4. machine-readable closure verdicts
+5. refresh-driven invalidation after lower-level degradation
+6. terminal-first operator commands
+7. machine-readable baseline comparison records
+
+That is enough to say:
+
+- `Synrail` is no longer only an architecture doctrine or a repo of strong control prose
+- it is now a small executable control system
+
+## What current evidence says about value
+
+Current executable evidence supports a narrow product claim:
+
+- `Synrail` looks most justified on proof-sensitive closure paths where false completion is expensive
+
+The current stack does **not** support the broader claim:
+
+- `Synrail` should be the default full path for every small incident
+
+## Why that reading is credible
+
+Because the repo now contains two internal executable comparison readings:
+
+1. strong path:
+   - `docs/core/EXECUTABLE_LOOP_RUN_001.md`
+   - verdict: `SYNRAIL_BETTER`
+2. weaker path:
+   - `docs/core/EXECUTABLE_LOOP_RUN_002.md`
+   - verdict: `BASELINE_GOOD_ENOUGH`
+
+This pair is stronger than either result alone.
+
+It shows that the stack can express:
+
+- where `Synrail` currently earns its cost
+- where a simpler baseline may already be enough
+
+## What is currently strongest in the stack
+
+Current strongest value carriers are:
+
+- target-surface truth discipline
+- explicit exact-task integrity
+- proof-bundle completeness reading
+- closure acceptance vs claimed-not-accepted separation
+- anti-drift refresh after state degradation
+
+## What is still weaker than it should be
+
+Current weaker areas are:
+
+- doctor remains less executable than the rest of the loop
+- the stack is still assembled from small cooperating slices rather than one deeper orchestrating runtime
+- comparison harness is still narrow and heuristic
+- production-grade runtime readiness is not yet proven
+
+## Current wedge reading
+
+The shortest current product reading is:
+
+- use `Synrail` when getting the truth wrong is expensive
+- do not assume the full governed path is justified for lower-risk honesty-restoration work
+
+## What this changes for product direction
+
+The next phase should optimize for:
+
+- stronger executable superiority on the real wedge
+- tighter integration of current slices into one control contour
+- better evidence for where the stack is worth its overhead
+
+Not for:
+
+- broader surface area
+- public packaging pressure
+- generic orchestration expansion
+
+## Decision rule
+
+Any next-step build work should now answer one of these questions:
+
+1. does it make the executable stack more integrated?
+2. does it strengthen the wedge where `Synrail` is already winning?
+3. does it reduce the gap between current slices and a true executable kernel loop?
+
+If not, it is likely not the best next move for the project right now.

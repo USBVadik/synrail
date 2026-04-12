@@ -8,6 +8,7 @@ Use this map when you want the fastest way to orient yourself without reading ev
 
 Start here when you want the current product wedge rather than the full repo history:
 
+- `boundary/EXECUTABLE_STACK_READING_001.md`
 - `boundary/KILLER_PATH_001.md`
 - `boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `boundary/MINIMUM_UNDENIABLE_CORE_001.md`
@@ -96,5 +97,5 @@ The scripts under `../tools/reference/` are small reference helpers, not a full 
 If you only read three things first, use:
 
 1. `boundary/KILLER_PATH_001.md`
-2. `boundary/BASELINE_COMPARISON_RECORD_001.md`
-3. `boundary/MINIMUM_UNDENIABLE_CORE_001.md`
+2. `boundary/EXECUTABLE_STACK_READING_001.md`
+3. `boundary/BASELINE_COMPARISON_RECORD_001.md`
