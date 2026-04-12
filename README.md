@@ -71,13 +71,18 @@ For a quick document map, start with:
 
 ## Current State
 
-This is the first bounded extraction move.
+This is the first bounded extraction move, now hardened into a private-stable review surface.
 
 It is meant to establish identity and boundary clearly before any broader packaging, repo publishing, or integration work.
 
 The current working mode is:
 
 - private review-first hardening before any public release pressure
+
+The current proof reading is:
+
+- one closure-grade exact-task proof floor exists
+- one initial repeatability signal now exists on the same narrow task class
 
 ## Contributing
 

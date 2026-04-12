@@ -23,13 +23,19 @@ Current verdict:
 
 ## Findings
 
-### 1. Repeatability is still weaker than structure
+### 1. Repeatability was weaker than structure
 
-The project has one strong closure-grade exact-task success, but repeatability is still weaker than the surrounding documentation strength.
+The project initially had one strong closure-grade exact-task success, but repeatability was still weaker than the surrounding documentation strength.
 
 Why this matters:
 
 - otherwise the repo can look more mature than the proving evidence behind it
+
+Current follow-up reading:
+
+- this finding has now improved materially
+- a second governed closure-grade success has since appeared on the same narrow task class
+- repeatability confidence is still not “done,” but it is no longer only a missing plan item
 
 ### 2. Examples and fixtures are still empty
 
@@ -66,7 +72,7 @@ The next bounded backlog should focus on:
 1. add one compact helper usage matrix
 2. add one or two sanitized examples or fixtures
 3. define a minimal `Synrail` private-stable target
-4. improve repeatability confidence for closure-grade exact-task runs
+4. continue improving repeatability confidence for closure-grade exact-task runs without widening scope
 
 ## Out of scope for this pass
 

@@ -81,7 +81,7 @@ These are important, but they do not block the first private-stable state.
 
 Current reading:
 
-- `Synrail` is close to the first private-stable target
+- `Synrail` has now reached the first private-stable target
 
 What now appears satisfied:
 
@@ -90,6 +90,7 @@ What now appears satisfied:
 - helper framing
 - closure-grade proof floor
 - bounded hardening backlog
+- initial repeatability signal
 
 What still deserves strengthening even after private-stable is reached:
 

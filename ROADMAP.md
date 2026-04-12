@@ -79,6 +79,12 @@ Examples:
 - add one or two sanitized examples or fixtures
 - define a minimal private-stable target for the repo
 
+Current reading:
+
+- the private-stable target is now defined and reached
+- a first repeatability signal now exists for closure-grade exact-task runs
+- the next proof-oriented work should therefore stay narrow and avoid turning repeatability into an open-ended proving-ground project
+
 ## Explicitly not current priorities
 
 These may matter later, but they are not the current focus:

@@ -40,6 +40,25 @@ toward:
 
 - `initial repeatability confidence`
 
+## Current reading
+
+Current reading:
+
+- the minimum target has now been reached once
+- a second governed closure-grade exact-task success now exists on the same narrow task class
+- repeatability is therefore no longer only a plan; it now has an initial signal
+
+What this does **not** mean yet:
+
+- repeatability is fully mature
+- the exact path can be treated as effortless
+- the proving ground can be ignored
+
+What it **does** mean:
+
+- the first exact-task success no longer looks like a one-off artifact only
+- the governed path has now produced a second closure-grade success without changing the kernel acceptance bar
+
 ## Constraints
 
 Repeatability work should stay narrow:
@@ -82,7 +101,7 @@ These do not count as repeatability proof:
 
 ## Suggested next move
 
-The next safe repeatability move is:
+The next safe repeatability move was:
 
 1. choose one bounded closure-grade candidate
 2. restate its task identity and proof expectations explicitly
@@ -90,6 +109,14 @@ The next safe repeatability move is:
 4. record the result as:
    - accepted repeatability signal
    - or bounded blocker, without widening scope
+
+That move has now produced the first accepted repeatability signal.
+
+The next safe move after that is:
+
+1. preserve the second success artifact cleanly
+2. update product-facing readings so they stop speaking as if repeatability were only hypothetical
+3. decide later whether a third run is worth the proving-ground cost
 
 ## Decision rule
 
