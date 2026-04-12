@@ -22,6 +22,7 @@ The first three machine-readable recommendation artifacts now live at:
 The first operator-facing selection receipt now lives at:
 
 - `fixtures/mode_selection_run_001/receipt.json`
+- `fixtures/mode_selection_run_002/receipt.json`
 
 ## What it does
 
@@ -92,5 +93,6 @@ The shortest honest reading is:
 
 - `Synrail` now has one small executable policy surface that can steer obvious non-winning paths back to baseline
 - it now also has one operator-facing receipt that proves a heavier contour was deliberately skipped
+- it now has that receipt on both a demoted-hybrid path and a clearly weak low-risk path
 - the selector does not replace the kernel
 - it reduces unnecessary kernel use where the measured signal already says the extra control is not paying off

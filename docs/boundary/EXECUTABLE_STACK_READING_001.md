@@ -163,6 +163,7 @@ The next phase should optimize for:
 - better evidence for where the stack is worth its overhead
 - faster prove-or-demote pressure on the hybrid mode
 - cheaper pre-contour selection on paths that current evidence already says are non-winners
+- repeated operator-facing receipts proving that some heavier contours are now skipped deliberately instead of entered by habit
 
 Not for:
 

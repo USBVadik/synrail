@@ -109,6 +109,7 @@ The current proof reading is:
 - doctor now also has one targeted wrong-target-surface pressure-test slice
 - the repo now also has one cost-aware mode selector that can steer weak and demoted-hybrid paths back to baseline before entering a heavier contour
 - the repo now also has one operator-facing selection receipt showing that a demoted-hybrid path stayed on baseline and skipped the heavier contour
+- the repo now also has a second operator-facing selection receipt showing that a weak low-risk path stayed on baseline and skipped the heavier contour
 
 The current wedge reading is:
 
