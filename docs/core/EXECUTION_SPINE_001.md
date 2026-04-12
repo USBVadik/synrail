@@ -76,6 +76,11 @@ It now also gives explicit state shape to the main failure branches instead of l
 
 It now also gives explicit precedence to competing blockers inside the spine itself, instead of letting the first checked gate silently dominate.
 
+It now also holds one canonical reverse edge from a blocked readiness contour back to accepted closure when:
+
+- the missing exact-task identity is restored
+- proof inputs are complete enough for acceptance
+
 The current machine-readable block artifact for denied transitions lives at:
 
 - `schemas/spine_block_report_v0.schema.json`

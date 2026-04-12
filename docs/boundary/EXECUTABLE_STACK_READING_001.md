@@ -67,6 +67,7 @@ Current strongest value carriers are:
 - closure acceptance vs claimed-not-accepted separation
 - explicit blocked state lanes for main failure branches
 - explicit degradation lanes after refresh-driven invalidation
+- one canonical blocked-to-accepted re-entry contour
 - explicit precedence for competing spine-side blockers
 - explicit precedence for competing degradations
 - anti-drift refresh after state degradation
@@ -77,6 +78,7 @@ Current weaker areas are:
 
 - doctor is now stronger than v0 and includes bounded filesystem/env probes, but it is still narrower than a mature readiness layer
 - the stack now has one bounded spine-driven runtime contour, but not yet a deeper end-to-end runtime
+- blocked-to-accepted re-entry is now canonical, but degraded-to-accepted and partial-to-accepted are still much weaker than they should be
 - comparison harness is still narrow and heuristic
 - production-grade runtime readiness is not yet proven
 
@@ -93,6 +95,7 @@ The shortest current output reading is:
 - the spine can now emit one primary canonical run artifact
 - accepted contours now have a stable canonical repo fixture
 - blocked contours now emit the same primary run artifact shape
+- one repaired blocked contour now also has a stable canonical repo fixture
 - that artifact is a better single entrypoint than reconstructing a run from report, state, and worked envelope separately
 
 The first canonical accepted reference surface for that output now lives at:
@@ -103,6 +106,10 @@ The first canonical blocked reference surface for that output now lives at:
 
 - `fixtures/executable_loop_blocked_run_001/run.json`
 
+The first canonical re-entry reference surface for that output now lives at:
+
+- `fixtures/executable_loop_reentry_run_001/run.json`
+
 The shortest current outcome-class reading for those surfaces now lives at:
 
 - `OUTCOME_LATTICE_001.md`
@@ -110,6 +117,10 @@ The shortest current outcome-class reading for those surfaces now lives at:
 The shortest current transition reading for those surfaces now lives at:
 
 - `TRANSITION_LATTICE_001.md`
+
+The shortest current re-entry reading for those surfaces now lives at:
+
+- `REENTRY_LATTICE_001.md`
 
 ## What this changes for product direction
 

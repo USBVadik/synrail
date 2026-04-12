@@ -123,3 +123,7 @@ It does not prove:
 - that the current readiness layer is production-complete
 
 It only proves that the current stack can now emit one canonical blocked run reading without dropping onto a second-class output path.
+
+For the first canonical repaired reverse edge from that blocked surface, see:
+
+- `EXECUTABLE_LOOP_REENTRY_RUN_001.md`

@@ -79,6 +79,10 @@ The first canonical blocked fixture for that surface now lives at:
 
 - `fixtures/executable_loop_blocked_run_001/run.json`
 
+The first canonical re-entry fixture for that surface now lives at:
+
+- `fixtures/executable_loop_reentry_run_001/run.json`
+
 The spine-driven contour now also emits explicit blocked state lanes instead of leaving the main failures only in report fields:
 
 - `DOCTOR_BLOCKED`

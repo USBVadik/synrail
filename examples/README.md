@@ -45,6 +45,10 @@ They are here to show how `Synrail` artifacts fit together without importing raw
   - first canonical blocked contour for the executable stack
   - includes `run.json` as the blocked-path primary run artifact
   - includes `report.json` as the direct blocked orchestration reading
+- `../fixtures/executable_loop_reentry_run_001/`
+  - first canonical re-entry contour for the executable stack
+  - starts from a blocked readiness surface and returns to accepted closure
+  - includes `run.json` as the repaired reverse-edge primary run artifact
 
 ## Rule
 

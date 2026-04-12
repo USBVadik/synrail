@@ -423,6 +423,8 @@ def apply_doctor(state: dict, record: dict) -> tuple[int, dict, dict | None]:
     state["doctor"]["blocking_failure_classes"] = list(record.get("blocking_failure_classes", []))
 
     if acceptable:
+        if state["state"] == "DOCTOR_BLOCKED":
+            state["state"] = "TARGET_SURFACE_ATTESTED" if state["target_surface"]["status"] == "ATTESTED" else "INITIALIZED"
         state["closure"]["status"] = "OPEN"
         state["closure"]["blocking_reason"] = ""
         state["closure"]["next_allowed_transition"] = "READY"

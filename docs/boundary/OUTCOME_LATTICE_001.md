@@ -10,6 +10,10 @@ For the current transition-focused reading across those outcome classes, see:
 
 - `TRANSITION_LATTICE_001.md`
 
+For current reverse edges back toward greener states, see:
+
+- `REENTRY_LATTICE_001.md`
+
 ## Canonical outcome surfaces
 
 The current lattice is anchored by four canonical surfaces:

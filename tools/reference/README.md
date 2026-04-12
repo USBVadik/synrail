@@ -128,6 +128,7 @@ Guarantees:
 - can apply doctor records back into the state machine
 - can apply bundle and closure artifacts back into the state machine
 - can run one bounded `doctor -> bundle -> closure` contour with optional `refresh`, `compare`, and worked-envelope emission
+- can carry one blocked-readiness contour back into accepted closure when the missing identity and proof inputs are repaired
 - can emit one primary canonical run artifact from the spine-owned contour
 - can emit machine-readable state
 
