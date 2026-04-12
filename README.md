@@ -92,6 +92,7 @@ The current proof reading is:
 - one closure-grade exact-task proof floor exists
 - one initial repeatability signal now exists on the same narrow task class
 - the next priority is proving one killer path against a simpler baseline, not widening the shell
+- a second comparison on a less favorable scenario now says the simpler baseline may already be good enough there
 
 ## Contributing
 
