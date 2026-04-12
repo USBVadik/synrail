@@ -66,11 +66,12 @@ For a quick document map, start with:
 Read these first:
 
 1. `docs/boundary/EXECUTABLE_STACK_READING_001.md`
-2. `docs/boundary/KILLER_PATH_001.md`
-3. `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
-4. `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
-5. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
-6. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
+2. `docs/boundary/TRIO_READING_001.md`
+3. `docs/boundary/KILLER_PATH_001.md`
+4. `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
+5. `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
+6. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
+7. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
 
 Read these next only if you need them:
 
