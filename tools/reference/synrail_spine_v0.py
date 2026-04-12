@@ -233,6 +233,39 @@ def apply_doctor(state: dict, record: dict) -> tuple[int, dict | None]:
     return 0, state
 
 
+def apply_target_surface(state: dict, *, identity: str, baseline_relation: str) -> dict:
+    state["target_surface"]["status"] = "ATTESTED"
+    state["target_surface"]["identity"] = identity
+    state["target_surface"]["baseline_relation"] = baseline_relation
+    return state
+
+
+def apply_integrity(state: dict, *, prompt_identity: str, task_identity: str) -> dict:
+    exact_ok = bool(prompt_identity.strip() and task_identity.strip())
+    state["integrity"]["status"] = "PASS" if exact_ok else "FAIL"
+    state["integrity"]["exact_task_identity_ok"] = exact_ok
+    return state
+
+
+def maybe_advance_to_target_surface_attested(state: dict) -> tuple[int, dict | None]:
+    if state["state"] == "INITIALIZED":
+        return transition(state, "TARGET_SURFACE_ATTESTED")
+    return 0, state
+
+
+def maybe_advance_to_ready(state: dict) -> tuple[int, dict | None]:
+    if state["state"] in {"INITIALIZED", "TARGET_SURFACE_ATTESTED"}:
+        return transition(state, "READY")
+    return 0, state
+
+
+def maybe_advance_to_execution_completed(state: dict) -> tuple[int, dict | None]:
+    if state["state"] == "READY":
+        state["execution"]["status"] = "COMPLETED"
+        return transition(state, "EXECUTION_COMPLETED")
+    return 0, state
+
+
 def apply_closure(state: dict, verdict: dict) -> tuple[int, dict | None]:
     state["closure"]["status"] = verdict["closure_status"]
     state["closure"]["blocking_reason"] = verdict["blocking_reason"]
@@ -399,6 +432,16 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     state_path = Path(args.state_file)
     state = load_state(state_path)
 
+    state = apply_target_surface(
+        state,
+        identity=args.execution_surface_identity,
+        baseline_relation=args.baseline_identity,
+    )
+    code, state = maybe_advance_to_target_surface_attested(state)
+    if code != 0:
+        return code
+    save_state(state_path, state)
+
     doctor_args = [
         "--doctor-run-id", args.doctor_run_id,
         "--doctor-level", args.doctor_level,
@@ -436,11 +479,24 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     code, state = apply_doctor(load_state(state_path), doctor_record)
     if code != 0:
         return code
+    state = apply_integrity(
+        state,
+        prompt_identity=args.prompt_identity,
+        task_identity=args.task_identity,
+    )
+    code, state = maybe_advance_to_ready(state)
+    if code != 0:
+        return code
     save_state(state_path, state)
     if state["doctor"]["status"] != "PASS":
         save_json(Path(args.report_output), build_blocked_report(state, doctor_record))
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "doctor"}, ensure_ascii=True))
         return 0
+
+    code, state = maybe_advance_to_execution_completed(load_state(state_path))
+    if code != 0:
+        return code
+    save_state(state_path, state)
 
     bundle_args = [
         "--final-result", args.final_result,

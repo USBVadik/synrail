@@ -20,16 +20,19 @@ The first bounded orchestration slice now lives at:
 
 The `orchestrate` command currently runs one bounded path:
 
-1. run doctor
-2. write the doctor result back into state
-3. assemble the proof bundle
-4. write the bundle result back into state
-5. compute closure
-6. write the closure verdict back into state
-7. optionally run refresh after a state-changing event
-8. optionally run baseline comparison
-9. emit one machine-readable orchestration report
-10. optionally emit one canonical worked orchestration artifact
+1. attest the target surface into state
+2. run doctor
+3. write the doctor result back into state
+4. confirm exact-task integrity into state
+5. advance execution readiness for fresh runs
+6. assemble the proof bundle
+7. write the bundle result back into state
+8. compute closure
+9. write the closure verdict back into state
+10. optionally run refresh after a state-changing event
+11. optionally run baseline comparison
+12. emit one machine-readable orchestration report
+13. optionally emit one canonical worked orchestration artifact
 
 The bounded orchestration contour now lives in:
 
