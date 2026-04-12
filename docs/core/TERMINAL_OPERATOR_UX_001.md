@@ -39,31 +39,34 @@ The CLI v0 currently exposes:
    - can now absorb one `mode-selection receipt` so a prepared strong-path selection can enter the runtime contour directly
 11. `resume`
    - run the same bounded runtime contour from an existing non-green state and record the starting state as runtime continuation truth
+   - can now consume one repair handoff artifact and block at `repair_handoff` when the continuation contract is still incomplete
    - now proven on:
      - `DOCTOR_BLOCKED`
      - `PROOF_BUNDLE_PARTIAL`
      - `RECOVERY_PENDING`
-12. `compare`
+12. `repair-handoff`
+   - emit one machine-readable continuation contract naming the missing inputs and bounded runtime defaults for a non-green state
+13. `compare`
    - emit one machine-readable baseline comparison record through the CLI layer
    - route to the legacy comparison harness for `v0` inputs and the economics harness for `v1` inputs
-13. `hybrid-status`
+14. `hybrid-status`
    - emit one machine-readable hybrid-mode status artifact from the current economics and hybrid evidence set
-14. `recommend-mode`
+15. `recommend-mode`
    - emit one machine-readable cost-aware mode recommendation before the operator enters a heavier contour
-15. `select-mode`
+16. `select-mode`
    - emit one machine-readable receipt that records whether the operator followed the recommendation and whether a heavier contour was skipped
-16. `plan-proof`
+17. `plan-proof`
    - emit one governed-path proof preparation plan before bundle assembly starts
-17. `preparation-receipt`
+18. `preparation-receipt`
    - emit one machine-readable receipt showing whether the planned proof surface reached a complete first bundle pass
-18. `governed-cost`
+19. `governed-cost`
    - emit one machine-readable cost delta between an unprepared and prepared governed path
 
 The selection layer can now also carry one preparation-aware strong-path recommendation when bounded governed-path cost evidence exists.
 
 The orchestration layer can now also absorb that preparation-aware strong-path receipt directly, instead of forcing the operator to restate preparation outputs manually.
 
-The terminal layer now also exposes one named `resume` path, so continuation from a doctor-blocked, partial, or degraded state no longer has to feel like a disguised replay of the base orchestration command.
+The terminal layer now also exposes one named `resume` path plus one explicit `repair-handoff` path, so continuation from a doctor-blocked, partial, or degraded state no longer has to feel like a disguised replay of the base orchestration command.
 
 ## Why this matters
 

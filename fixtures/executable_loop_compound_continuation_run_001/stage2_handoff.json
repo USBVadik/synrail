@@ -1,0 +1,46 @@
+{
+  "schema_version": "repair_handoff_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "PROOF_BUNDLE_PARTIAL",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "MISSING_PROOF_SECTIONS",
+  "continuation_allowed": true,
+  "continuation_entrypoint": "resume",
+  "required_inputs": [
+    {
+      "input_id": "readback",
+      "kind": "file",
+      "cli_flag": "--readback",
+      "description": "supply readback from the changed sections on the attested surface",
+      "required_value": ""
+    },
+    {
+      "input_id": "scenario_proof",
+      "kind": "file",
+      "cli_flag": "--scenario-proof",
+      "description": "supply scenario proof for the continuation bundle",
+      "required_value": ""
+    },
+    {
+      "input_id": "refresh_recovery_complete",
+      "kind": "enum",
+      "cli_flag": "--refresh-recovery-status",
+      "description": "mark recovery as complete before resuming closure acceptance",
+      "required_value": "COMPLETE"
+    },
+    {
+      "input_id": "refresh_reverification_complete",
+      "kind": "flag",
+      "cli_flag": "--refresh-reverification-complete",
+      "description": "confirm recovery reverification is complete before refresh reconciliation",
+      "required_value": "true"
+    }
+  ],
+  "runtime_defaults": {
+    "refresh_event_type": "RECOVERY_EVENT",
+    "refresh_use_bundle": true,
+    "refresh_use_closure": true
+  },
+  "next_safe_step": "complete the missing proof sections"
+}

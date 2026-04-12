@@ -54,6 +54,24 @@
     "resume_from_state": {
       "type": "string"
     },
+    "repair_handoff_applied": {
+      "type": "boolean"
+    },
+    "repair_handoff_from_state": {
+      "type": "string"
+    },
+    "repair_handoff_required_inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missing_continuation_inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "selection_applied": {
       "type": "boolean"
     },

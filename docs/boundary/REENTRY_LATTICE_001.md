@@ -14,7 +14,7 @@ but also whether the kernel can return from a less-green contour after the block
 
 ## Current re-entry anchors
 
-The current re-entry lattice is anchored by four canonical repair families plus three named runtime continuation contours:
+The current re-entry lattice is anchored by four canonical repair families, three named runtime continuation contours, and one explicit repair-handoff layer:
 
 1. blocked readiness to accepted closure
 2. partial proof to accepted closure
@@ -23,6 +23,7 @@ The current re-entry lattice is anchored by four canonical repair families plus 
 5. one partial-proof runtime continuation back to accepted closure
 6. one degraded-recovery runtime continuation back to accepted closure
 7. one doctor-blocked runtime continuation back to accepted closure
+8. one machine-readable repair handoff layer plus one ugly compound continuation family through named `resume`
 
 That is still bounded, but it is already materially stronger than one or two repaired contours.
 
@@ -151,6 +152,8 @@ Why this matters:
 
 - it reduces the gap between clean repair families and messier real execution
 - it makes the re-entry lattice less ceremonial and more pressure-tested
+- it now also has one named runtime continuation counterpart:
+  - `fixtures/executable_loop_compound_continuation_run_001/run.json`
 
 ## 5. Doctor-blocked runtime continuation to accepted closure
 
@@ -205,7 +208,7 @@ because it shows the kernel can sometimes recover honestly after a prior block.
 The re-entry lattice still has visible gaps:
 
 - the current canonical reverse edges now cover readiness repair, proof completion, one recovery repair, and one ugly mixed family, but not the full set of future compound families
-- named runtime `resume` now exists for partial-proof, degraded-recovery, and doctor-blocked continuation, but runtime continuation is still much narrower than the full repaired surface family
+- named runtime `resume` now exists for partial-proof, degraded-recovery, and doctor-blocked continuation, and one explicit repair handoff layer now names missing continuation inputs, but runtime continuation is still much narrower than the full repaired surface family
 - hybrid compound repair is still much weaker than it should be
 
 ## How this relates to other readings

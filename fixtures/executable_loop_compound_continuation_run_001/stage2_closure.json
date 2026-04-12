@@ -1,0 +1,13 @@
+{
+  "schema_version": "closure_verdict_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "MISSING_PROOF_SECTIONS",
+  "next_allowed_transition": "PROOF_BUNDLE_COMPLETION",
+  "narrow_next_safe_step": "collect readback from changed sections on the attested surface",
+  "missing_sections": [
+    "readback",
+    "scenario_proof"
+  ]
+}

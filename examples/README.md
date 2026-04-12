@@ -72,6 +72,14 @@ They are here to show how `Synrail` artifacts fit together without importing raw
 - `../fixtures/executable_loop_runtime_resume_run_003/`
   - third canonical contour where a true `DOCTOR_BLOCKED` state continues through the named `resume` runtime path
   - includes `run.json` as the doctor-blocked runtime-continuation primary run artifact
+- `../fixtures/repair_handoff_run_001/`
+  - first canonical contour where `resume` is blocked explicitly at `repair_handoff` because the continuation contract is still incomplete
+  - includes `repair_handoff.json` as the machine-readable continuation contract
+  - includes `run.json` as the blocked continuation primary run artifact
+- `../fixtures/executable_loop_compound_continuation_run_001/`
+  - first canonical ugly continuation contour using staged repair handoffs plus named `resume`
+  - crosses doctor-blocked readiness, partial proof, and degraded recovery pressure on the same runtime surface
+  - includes `run.json` as the compound runtime-continuation primary run artifact
 
 ## Rule
 

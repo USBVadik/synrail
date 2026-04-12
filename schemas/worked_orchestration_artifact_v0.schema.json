@@ -62,6 +62,36 @@
         }
       }
     },
+    "repair_handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "from_state",
+        "required_inputs",
+        "missing_inputs"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "from_state": {
+          "type": "string"
+        },
+        "required_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "missing_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "selection": {
       "type": "object",
       "additionalProperties": false,

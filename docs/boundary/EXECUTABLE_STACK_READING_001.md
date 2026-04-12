@@ -27,7 +27,10 @@ The current executable stack can already provide:
 15. one named runtime resume path that can continue a partial-proof state back toward accepted closure through the same artifact surface
 16. one second named runtime resume path that can continue a degraded recovery state back toward accepted closure through that same artifact surface
 17. one third named runtime resume path that can continue a true `DOCTOR_BLOCKED` state back toward accepted closure through that same artifact surface
-18. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
+18. one first-class repair handoff layer that names missing continuation inputs and bounded runtime defaults in machine-readable form
+19. one canonical blocked repair-handoff contour that proves `resume` now stops at `repair_handoff` instead of relying on operator memory
+20. one canonical ugly compound continuation contour that crosses readiness repair, proof repair, and recovery repair through staged handoffs plus named `resume`
+21. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
 
 That is enough to say:
 
@@ -84,6 +87,7 @@ Current strongest value carriers are:
 - one preparation-aware strong-path steering slice that now points the wedge toward the prepared governed contour instead of the unprepared one
 - one direct selection-to-runtime handoff where a preparation-aware strong-path receipt now enters the prepared governed contour without separately restating preparation outputs
 - one named runtime resume path that starts turning repaired re-entry from repo evidence into explicit operator behavior across partial-proof, degraded-recovery, and doctor-blocked families
+- one repair handoff layer that now tells the runtime and the operator exactly which continuation inputs are still missing before a non-green contour can resume honestly
 - one governed-path preparation slice that predeclares the proof surface and records complete first-pass bundle assembly
 - one preparation-aware prepared governed run that reaches accepted closure inside the same bounded orchestration path
 - one measured governed-path cost-reduction slice that treats preparation as a bounded economic improvement rather than only a cleaner ritual
@@ -107,6 +111,7 @@ Current weaker areas are:
 - doctor is now stronger than v0, includes bounded filesystem/env probes, and now catches one credential-path false-green, one exact-task-identity mismatch, and one wrong-target-surface mismatch, but it is still narrower than a mature readiness layer
 - the stack now has one bounded spine-driven runtime contour, but not yet a deeper end-to-end runtime
 - blocked-to-accepted, partial-to-accepted, and degraded-to-accepted re-entry are now canonical, and one ugly mixed repair family is now canonical too, but compound reality is still much weaker than it should be
+- repair handoff now exists and one ugly compound continuation family is now runtime-real, but continuation inputs are still carried as raw flags rather than one richer repair packet
 - comparison harness now has a six-scenario economics slice, but it is still too narrow to count as product-grade economics
 - production-grade runtime readiness is not yet proven
 
@@ -126,6 +131,7 @@ The shortest current output reading is:
 - selected-prepared governed contours now also have a stable canonical repo fixture
 - runtime-resume contours now also have a stable canonical repo fixture
 - doctor-blocked runtime-resume contours now also have a stable canonical repo fixture
+- repair-handoff blocked contours now also have a stable canonical repo fixture
 - selection-blocked contours now also have a stable canonical repo fixture
 - blocked contours now emit the same primary run artifact shape
 - one repaired blocked contour now also has a stable canonical repo fixture
@@ -158,6 +164,14 @@ The second canonical runtime-resume reference surface for that output now lives 
 The third canonical runtime-resume reference surface for that output now lives at:
 
 - `fixtures/executable_loop_runtime_resume_run_003/run.json`
+
+The first canonical repair-handoff blocked reference surface for that output now lives at:
+
+- `fixtures/repair_handoff_run_001/run.json`
+
+The first canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_001/run.json`
 
 The first canonical selection-blocked reference surface for that output now lives at:
 

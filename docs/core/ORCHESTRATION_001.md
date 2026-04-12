@@ -39,6 +39,12 @@ The `orchestrate` command currently runs one bounded path:
 16. optionally emit one canonical worked orchestration artifact
 17. optionally emit one primary canonical run artifact
 
+When `resume` is used, that same contour can now also:
+
+- load one repair handoff contract
+- block explicitly at `repair_handoff` if the required continuation inputs are still missing
+- absorb bounded runtime defaults from the handoff when recovery repair requires refresh reconciliation
+
 The bounded orchestration contour now lives in:
 
 - `tools/reference/synrail_spine_v0.py`
@@ -100,11 +106,19 @@ which records:
 
 on the resulting runtime artifacts.
 
+That same continuation path can now also carry one explicit repair handoff artifact, which matters because the runtime can now say:
+
+- which state continuation is resuming from
+- which inputs are still missing
+- which bounded refresh defaults should carry forward during recovery repair
+
 That continuation path is now proven on:
 
 - one partial-proof repair family
 - one degraded recovery repair family
 - one doctor-blocked readiness repair family
+- one blocked repair-handoff attempt that now stops explicitly at `repair_handoff`
+- one ugly compound continuation that now crosses readiness repair, proof repair, and recovery repair through staged handoffs plus named `resume`
 
 That matters because it keeps the canonical worked artifact aligned with the final runtime contour, including post-refresh closure state when refresh is part of the run.
 
@@ -172,6 +186,7 @@ And now, when explicitly requested:
 
 - one mode-selection receipt handoff into the governed runtime contour
 - one named runtime continuation contour from a non-green starting state
+- one machine-readable repair handoff layer around that continuation contour
 - one doctor-blocked runtime continuation contour from an early readiness-failure state
 - one governed-path proof plan plus one preparation receipt
 - refresh after a bounded event

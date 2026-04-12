@@ -129,7 +129,9 @@ Guarantees:
 - can apply bundle and closure artifacts back into the state machine
 - can run one bounded `doctor -> optional preparation -> bundle -> closure` contour with optional `refresh`, `compare`, and worked-envelope emission
 - can now absorb one `mode_selection_receipt_v0` so a preparation-aware strong-path choice can enter that bounded contour directly
+- can now emit one machine-readable repair handoff naming the missing continuation inputs and bounded runtime defaults for a non-green state
 - can now record one explicit runtime-resume origin so continuation from a non-green state is machine-readable on the same artifact surface
+- can now block continuation explicitly at `repair_handoff` when the supplied continuation inputs are still incomplete
 - can carry one blocked-readiness contour back into accepted closure when the missing identity and proof inputs are repaired
 - can carry one partial-proof contour back into accepted closure when the missing proof sections are supplied
 - can carry one degraded recovery contour back into accepted closure through refresh reconciliation
@@ -264,6 +266,25 @@ Does not guarantee:
 - full orchestration coverage
 - interactive UX
 - broad product shell behavior
+
+### `synrail_repair_handoff_v0.py`
+
+Purpose:
+
+- emit one machine-readable continuation contract for a non-green state before runtime resume starts
+
+Guarantees:
+
+- names the current `from_state`
+- names the current `blocking_reason`
+- lists the required continuation inputs
+- emits bounded runtime defaults for recovery-driven continuation when refresh reconciliation is still required
+
+Does not guarantee:
+
+- automatic repair of the missing inputs
+- broad repair-packet synthesis
+- continuation correctness on its own
 
 ### `synrail_mode_selector_v0.py`
 

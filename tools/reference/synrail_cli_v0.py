@@ -25,6 +25,7 @@ MODE_RECEIPT = HERE / "synrail_mode_receipt_v0.py"
 PROOF_PLAN = HERE / "synrail_proof_plan_v0.py"
 PREPARATION_RECEIPT = HERE / "synrail_preparation_receipt_v0.py"
 GOVERNED_COST = HERE / "synrail_governed_cost_delta_v0.py"
+REPAIR_HANDOFF = HERE / "synrail_repair_handoff_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -277,6 +278,14 @@ def cmd_governed_cost(args: argparse.Namespace) -> int:
     return run_python(GOVERNED_COST, forwarded)
 
 
+def cmd_repair_handoff(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--state-file", args.state_file,
+        "--output", args.output,
+    ]
+    return run_python(REPAIR_HANDOFF, forwarded)
+
+
 def cmd_orchestrate(args: argparse.Namespace) -> int:
     forwarded = [
         "--state-file", args.state_file,
@@ -298,9 +307,12 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     ]
     if getattr(args, "resume_from_state", None):
         forwarded.extend(["--resume-from-state", args.resume_from_state])
+    if args.repair_handoff_file:
+        forwarded.extend(["--repair-handoff-file", args.repair_handoff_file])
     if args.mode_selection_receipt:
         forwarded.extend(["--mode-selection-receipt", args.mode_selection_receipt])
     for flag, value in [
+        ("--repair-handoff-output", args.repair_handoff_output),
         ("--readback", args.readback),
         ("--scenario-proof", args.scenario_proof),
         ("--plan-output", args.plan_output),
@@ -350,6 +362,8 @@ def add_orchestration_args(parser: argparse.ArgumentParser, *, include_resume_fr
     parser.add_argument("--state-file", required=True)
     if include_resume_from_state:
         parser.add_argument("--resume-from-state")
+    parser.add_argument("--repair-handoff-file")
+    parser.add_argument("--repair-handoff-output")
     parser.add_argument("--mode-selection-receipt")
     parser.add_argument("--doctor-run-id", required=True)
     parser.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
@@ -535,6 +549,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_governed_cost.add_argument("--prepared-file", required=True)
     p_governed_cost.add_argument("--output", required=True)
     p_governed_cost.set_defaults(func=cmd_governed_cost)
+
+    p_repair_handoff = sub.add_parser("repair-handoff")
+    p_repair_handoff.add_argument("--state-file", required=True)
+    p_repair_handoff.add_argument("--output", required=True)
+    p_repair_handoff.set_defaults(func=cmd_repair_handoff)
 
     p_orchestrate = sub.add_parser("orchestrate")
     add_orchestration_args(p_orchestrate, include_resume_from_state=True)

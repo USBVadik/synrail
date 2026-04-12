@@ -24,10 +24,11 @@ The v0 spine can:
 6. apply a closure verdict back into the state machine
 7. run one bounded orchestration contour across doctor, optional preparation, bundle, closure, optional refresh, and optional comparison
 8. absorb one mode-selection receipt into that bounded orchestration contour
-9. record one explicit runtime-resume origin for continuation from a non-green state
-10. deny disallowed transitions through hard gate checks
-11. emit one primary canonical run artifact for the bounded contour
-12. emit the current machine-readable state
+9. emit one machine-readable repair handoff from the current non-green state
+10. record one explicit runtime-resume origin for continuation from a non-green state
+11. deny disallowed transitions through hard gate checks
+12. emit one primary canonical run artifact for the bounded contour
+13. emit the current machine-readable state
 
 ## Current transition contour
 
@@ -69,11 +70,18 @@ It can now also absorb one preparation-aware strong-path selection receipt into 
 
 It can now also carry one explicit runtime continuation marker from a non-green starting state, which is the first move toward making re-entry a first-class runtime behavior instead of leaving it only as a family of canonical repaired fixtures.
 
+It can now also emit and consume one repair handoff contract around that continuation path, which is the first move toward making continuation inputs machine-readable instead of leaving them mostly in operator memory.
+
 That continuation marker is now proven on:
 
 - one partial-proof continuation family
 - one degraded recovery continuation family
 - one doctor-blocked readiness continuation family
+
+That repair-handoff layer is now proven on:
+
+- one blocked continuation attempt that stops explicitly at `repair_handoff`
+- one ugly compound continuation that uses two staged handoffs plus named `resume`
 
 It now also chooses the comparison harness by input schema version, so the same bounded contour can still read legacy comparison inputs while moving the active pressure-testing path toward economics-aware comparison records.
 

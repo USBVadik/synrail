@@ -119,7 +119,10 @@ The current proof reading is:
 - the repo now also has one canonical runtime-resume run showing that a partial-proof state can now continue through a named `resume` path instead of only through a generic re-entry fixture
 - the repo now also has one second canonical runtime-resume run showing that a degraded recovery state can now continue through that same named `resume` path
 - the repo now also has one third canonical runtime-resume run showing that a true `DOCTOR_BLOCKED` readiness contour can now continue through that same named `resume` path
+- the repo now also has one first-class repair-handoff slice that tells the operator and the runtime which continuation inputs are still missing before resume can proceed honestly
+- the repo now also has one canonical blocked repair-handoff run showing that `resume` now stops explicitly at `repair_handoff` when the continuation contract is still incomplete
 - the repo now also has one bounded governed-path cost delta showing that preparation can reduce operator tax inside the winning contour without weakening closure safety
+- the repo now also has one canonical ugly compound continuation run showing that two staged repair handoffs plus named `resume` can cross doctor-blocked, partial-proof, and degraded-recovery pressure on the same runtime surface
 
 The current wedge reading is:
 
@@ -137,7 +140,9 @@ The current executable output reading is:
 - the repo now also carries one canonical runtime-resume fixture on that same artifact surface
 - the repo now also carries one second canonical runtime-resume fixture on that same artifact surface
 - the repo now also carries one third canonical runtime-resume fixture on that same artifact surface
+- the repo now also carries one canonical repair-handoff blocked fixture on that same artifact surface
 - the repo now also carries one canonical ugly compound repair fixture on that same artifact surface
+- the repo now also carries one canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one canonical hybrid pressure fixture on that same artifact surface
 - the repo now also has one explicit outcome lattice across accepted, partial, degraded, and blocked contours
 - the repo now also has one explicit re-entry reading for blocked-to-accepted, partial-to-accepted, and degraded-to-accepted repair

@@ -1,0 +1,15 @@
+{
+  "schema_version": "refresh_report_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_RUN_001",
+  "event_type": "RECOVERY_EVENT",
+  "steps_applied": [
+    "proof_bundle_refreshed",
+    "closure_verdict_refreshed",
+    "recovery_status_refreshed"
+  ],
+  "invalidations": [],
+  "dominant_invalidation": "",
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "resulting_closure_status": "ACCEPTED",
+  "next_safe_step": "NONE"
+}
