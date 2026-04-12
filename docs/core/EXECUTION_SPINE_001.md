@@ -86,6 +86,11 @@ It now also holds one canonical reverse edge from a partial proof lane back to a
 - the missing proof sections are supplied
 - the resulting bundle becomes complete enough for acceptance
 
+It now also holds one canonical reverse edge from a degraded recovery lane back to accepted closure when:
+
+- recovery reverification is completed
+- no stronger invalidation remains after refresh reconciliation
+
 The current machine-readable block artifact for denied transitions lives at:
 
 - `schemas/spine_block_report_v0.schema.json`

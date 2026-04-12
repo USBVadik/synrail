@@ -135,7 +135,23 @@ def apply_event(args: argparse.Namespace, state: dict) -> tuple[dict, dict]:
     if dominant:
         apply_dominant_invalidation(state, dominant)
 
-    if state["closure"]["status"] == "ACCEPTED":
+    if (
+        not invalidations
+        and state["closure"]["status"] == "CLAIMED_NOT_ACCEPTED"
+        and state["closure"]["blocking_reason"] == "RECOVERY_REVERIFICATION_INCOMPLETE"
+        and state["proof_bundle"]["status"] == "COMPLETE"
+        and state["doctor"]["status"] != "FAIL"
+        and state["recovery"]["status"] == "COMPLETE"
+        and state["recovery"]["reverification_complete"]
+    ):
+        state["closure"]["status"] = "ACCEPTED"
+        state["closure"]["blocking_reason"] = ""
+        state["closure"]["next_allowed_transition"] = "NONE"
+        state["closure"]["narrow_next_safe_step"] = "NONE"
+        state["closure"]["missing_sections"] = []
+        state["state"] = "CLOSURE_ACCEPTED"
+        state["next_safe_step"] = "NONE"
+    elif state["closure"]["status"] == "ACCEPTED":
         state["state"] = "CLOSURE_ACCEPTED"
         state["next_safe_step"] = "NONE"
     elif state["proof_bundle"]["status"] == "COMPLETE" and state["recovery"]["status"] != "PENDING" and state["doctor"]["status"] != "FAIL":

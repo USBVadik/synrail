@@ -152,3 +152,7 @@ It does not prove:
 - production-grade orchestration
 
 It only proves that the current small kernel stack can already execute one coherent internal loop.
+
+For the first canonical repaired reverse edge from that degraded recovery surface, see:
+
+- `EXECUTABLE_LOOP_DEGRADED_REENTRY_RUN_001.md`

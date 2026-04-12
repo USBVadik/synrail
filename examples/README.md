@@ -53,6 +53,10 @@ They are here to show how `Synrail` artifacts fit together without importing raw
   - first canonical partial-proof re-entry contour for the executable stack
   - starts from a partial proof surface and returns to accepted closure
   - includes `run.json` as the repaired proof-completion primary run artifact
+- `../fixtures/executable_loop_degraded_reentry_run_001/`
+  - first canonical degraded re-entry contour for the executable stack
+  - starts from a degraded recovery surface and returns to accepted closure
+  - includes `run.json` as the repaired recovery primary run artifact
 
 ## Rule
 

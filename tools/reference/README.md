@@ -130,6 +130,7 @@ Guarantees:
 - can run one bounded `doctor -> bundle -> closure` contour with optional `refresh`, `compare`, and worked-envelope emission
 - can carry one blocked-readiness contour back into accepted closure when the missing identity and proof inputs are repaired
 - can carry one partial-proof contour back into accepted closure when the missing proof sections are supplied
+- can carry one degraded recovery contour back into accepted closure through refresh reconciliation
 - can emit one primary canonical run artifact from the spine-owned contour
 - can emit machine-readable state
 
@@ -185,6 +186,7 @@ Guarantees:
 - updates machine-readable state
 - emits a machine-readable refresh report
 - invalidates over-green closure state when lower-level evidence worsens
+- can reconcile one repaired recovery contour back into accepted closure after completed reverification
 
 Does not guarantee:
 

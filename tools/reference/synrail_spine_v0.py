@@ -972,7 +972,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         "reason": reason,
         "doctor_verdict": doctor_record["final_verdict"],
         "bundle_status": bundle["status"],
-        "closure_status": closure["closure_status"],
+        "closure_status": state["closure"]["status"],
         "refresh_applied": refresh_applied,
         "refresh_resulting_closure_status": refresh_resulting_closure_status,
         "comparison_applied": comparison_applied,
@@ -994,7 +994,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         comparison=comparison,
     )
 
-    print(json.dumps({"result": "OK", "closure_status": closure["closure_status"]}, ensure_ascii=True))
+    print(json.dumps({"result": "OK", "closure_status": state["closure"]["status"]}, ensure_ascii=True))
     return 0
 
 

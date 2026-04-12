@@ -21,8 +21,9 @@ The refresh automation v0 can:
 2. apply one explicit event type
 3. refresh doctor, proof-bundle, closure, and recovery surfaces in deterministic order
 4. invalidate over-green closure state when lower-level evidence worsens
-5. emit one machine-readable refresh report with explicit dominant invalidation
-6. optionally write the refreshed state back to disk
+5. reconcile one repaired recovery contour back into accepted closure when reverification is completed and no stronger invalidation remains
+6. emit one machine-readable refresh report with explicit dominant invalidation
+7. optionally write the refreshed state back to disk
 
 ## Why this matters
 
@@ -61,6 +62,22 @@ So when multiple degradations apply at once, the refresh report names:
 
 - all applicable invalidations
 - one `dominant_invalidation`
+
+## v0 recovery reconciliation rule
+
+The refresh automation can now also reconcile one degraded contour back into accepted closure when:
+
+- the current closure block is `RECOVERY_REVERIFICATION_INCOMPLETE`
+- the proof bundle is still `COMPLETE`
+- doctor is still green enough
+- recovery becomes `COMPLETE`
+- reverification is explicitly complete
+
+That matters because the refresh layer is no longer only:
+
+- a downgrade engine
+
+It can now also hold one narrow repaired reverse edge after lower-level recovery truth is restored.
 
 ## v0 limitations
 
