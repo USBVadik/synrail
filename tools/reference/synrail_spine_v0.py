@@ -42,6 +42,9 @@ def default_state(run_id: str, task_class: str) -> dict:
         "closure": {
             "status": "OPEN",
             "blocking_reason": "",
+            "next_allowed_transition": "TARGET_SURFACE_ATTESTED",
+            "narrow_next_safe_step": "attest target surface",
+            "missing_sections": [],
         },
         "recovery": {
             "status": "NOT_REQUIRED",
@@ -149,10 +152,15 @@ def transition(state: dict, target: str) -> tuple[int, dict | None]:
                 return deny(reason), None
         state["closure"]["status"] = "ACCEPTED"
         state["closure"]["blocking_reason"] = ""
+        state["closure"]["next_allowed_transition"] = "NONE"
+        state["closure"]["narrow_next_safe_step"] = "NONE"
+        state["closure"]["missing_sections"] = []
         return 0, allow(state, target, "NONE")
 
     if target == "CLOSURE_REJECTED":
         state["closure"]["status"] = "REJECTED"
+        state["closure"]["next_allowed_transition"] = "emit narrow next safe step"
+        state["closure"]["narrow_next_safe_step"] = "emit narrow next safe step"
         return 0, allow(state, target, "emit narrow next safe step")
 
     return deny(f"UNKNOWN_TARGET_STATE:{target}"), None

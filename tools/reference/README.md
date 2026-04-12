@@ -148,6 +148,24 @@ Does not guarantee:
 - deep scenario validation
 - full closure-engine behavior
 
+### `synrail_closure_v0.py`
+
+Purpose:
+
+- emit a machine-readable closure verdict from run state plus proof bundle
+
+Guarantees:
+
+- identifies accepted vs claimed-not-accepted state
+- emits a blocking reason when closure is not accepted
+- emits one narrow next safe step
+
+Does not guarantee:
+
+- deep semantic scenario validation
+- full refresh-chain automation
+- full orchestration behavior
+
 ## Operating rule
 
 If a helper starts accumulating broad product logic, large orchestration behavior, or environment-specific sprawl, it should probably stop living under `tools/reference/` in this repo shape.

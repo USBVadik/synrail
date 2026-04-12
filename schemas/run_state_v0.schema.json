@@ -164,7 +164,10 @@
       "additionalProperties": false,
       "required": [
         "status",
-        "blocking_reason"
+        "blocking_reason",
+        "next_allowed_transition",
+        "narrow_next_safe_step",
+        "missing_sections"
       ],
       "properties": {
         "status": {
@@ -178,6 +181,18 @@
         },
         "blocking_reason": {
           "type": "string"
+        },
+        "next_allowed_transition": {
+          "type": "string"
+        },
+        "narrow_next_safe_step": {
+          "type": "string"
+        },
+        "missing_sections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
