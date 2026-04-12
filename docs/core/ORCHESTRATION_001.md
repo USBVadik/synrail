@@ -10,6 +10,7 @@ This document exists so the kernel loop stops looking only like a set of coopera
 
 The first bounded orchestration slice now lives at:
 
+- `tools/reference/synrail_spine_v0.py`
 - `tools/reference/synrail_cli_v0.py`
 - `tools/reference/synrail_runtime_v0.py`
 - `schemas/orchestration_report_v0.schema.json`
@@ -30,9 +31,16 @@ The `orchestrate` command currently runs one bounded path:
 9. emit one machine-readable orchestration report
 10. optionally emit one canonical worked orchestration artifact
 
-The CLI now acts as the terminal entry layer, while the bounded orchestration contour itself lives in:
+The bounded orchestration contour now lives in:
 
+- `tools/reference/synrail_spine_v0.py`
+
+The surrounding layers now act as:
+
+- `tools/reference/synrail_cli_v0.py`
+  as the terminal entry layer
 - `tools/reference/synrail_runtime_v0.py`
+  as a compatibility wrapper for the same spine-driven contour
 
 ## Why this matters
 

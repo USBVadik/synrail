@@ -18,7 +18,6 @@ REFRESH = HERE / "synrail_refresh_v0.py"
 VALIDATE = HERE / "synrail_validate_v0.py"
 DOCTOR = HERE / "synrail_doctor_v1.py"
 HARNESS = HERE / "synrail_baseline_harness_v0.py"
-RUNTIME = HERE / "synrail_runtime_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -222,7 +221,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             forwarded.append(flag)
     for env_name in args.credential_env:
         forwarded.extend(["--credential-env", env_name])
-    return run_python(RUNTIME, forwarded)
+    return run_python(SPINE, ["orchestrate", *forwarded])
 
 
 def build_parser() -> argparse.ArgumentParser:

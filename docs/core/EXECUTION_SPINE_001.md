@@ -21,8 +21,9 @@ The v0 spine can:
 3. apply a doctor record back into the state machine
 4. apply a proof-bundle artifact back into the state machine
 5. apply a closure verdict back into the state machine
-6. deny disallowed transitions through hard gate checks
-7. emit the current machine-readable state
+6. run one bounded orchestration contour across doctor, bundle, closure, optional refresh, and optional comparison
+7. deny disallowed transitions through hard gate checks
+8. emit the current machine-readable state
 
 ## Current transition contour
 
@@ -53,6 +54,8 @@ It now also absorbs doctor records back into state, which tightens the contour f
 - readiness
 - proof assembly
 - closure
+
+It now also owns the current bounded orchestration contour directly, instead of leaving that contour primarily in a higher wrapper layer.
 
 It is still small, but it is no longer only descriptive.
 

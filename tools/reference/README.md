@@ -118,6 +118,7 @@ Does not guarantee:
 Purpose:
 
 - provide a minimal executable spine prototype with machine-readable state and hard transition gates
+- hold the current bounded orchestration contour directly
 
 Guarantees:
 
@@ -125,6 +126,7 @@ Guarantees:
 - can deny disallowed transitions
 - can apply doctor records back into the state machine
 - can apply bundle and closure artifacts back into the state machine
+- can run one bounded `doctor -> bundle -> closure` contour with optional `refresh`, `compare`, and worked-envelope emission
 - can emit machine-readable state
 
 Does not guarantee:
@@ -209,19 +211,18 @@ Does not guarantee:
 
 Purpose:
 
-- hold the bounded runtime contour for `doctor -> bundle -> closure` plus optional `refresh`, `compare`, and worked-envelope emission
+- preserve compatibility for the bounded runtime contour while the contour itself moves closer to the spine
 
 Guarantees:
 
-- executes the current bounded runtime contour outside the CLI body
-- emits machine-readable orchestration reports
-- can emit canonical worked orchestration envelopes
+- forwards to the spine-owned orchestration contour
+- keeps older runtime-shaped entry usage compatible
 
 Does not guarantee:
 
+- ownership of the orchestration loop itself
 - broad orchestration coverage
 - multi-run scheduling
-- final product runtime architecture
 
 ### `synrail_baseline_harness_v0.py`
 
