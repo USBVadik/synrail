@@ -2,7 +2,7 @@
 
 ## Purpose
 
-State the shortest honest current reading of the three canonical worked run envelopes.
+State the shortest honest current reading of the three canonical run artifacts.
 
 This document exists so the repo can summarize the current product wedge from actual machine-readable run artifacts rather than from scattered prose or single-case interpretation.
 
@@ -11,13 +11,13 @@ This document exists so the repo can summarize the current product wedge from ac
 The current trio is:
 
 1. strong path
-   - `fixtures/executable_loop_run_001/orchestration.json`
+   - `fixtures/executable_loop_run_001/run.json`
 2. weak path
-   - `fixtures/executable_loop_run_002/orchestration.json`
+   - `fixtures/executable_loop_run_002/run.json`
 3. hybrid path
-   - `fixtures/executable_loop_run_003/orchestration.json`
+   - `fixtures/executable_loop_run_003/run.json`
 
-These are the current canonical worked envelopes for:
+These are the current canonical run artifacts for:
 
 - where `Synrail` clearly earns its cost
 - where a lighter baseline may already be enough
@@ -40,8 +40,8 @@ Why:
 
 Important nuance:
 
-- the final worked envelope reflects the post-refresh reality
-- so the canonical artifact ends in `CLAIMED_NOT_ACCEPTED`, not a frozen pre-refresh accepted snapshot
+- the strong-path canonical artifact reflects the post-refresh reality
+- so it ends in `CLAIMED_NOT_ACCEPTED`, not a frozen pre-refresh accepted snapshot
 
 ### 2. Weak path
 

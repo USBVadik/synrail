@@ -29,14 +29,14 @@ They are here to show how `Synrail` artifacts fit together without importing raw
 
 - `../fixtures/executable_loop_run_001/`
   - first internal end-to-end artifact set for the current executable stack
-  - includes `orchestration.json` as the first canonical worked run envelope
-  - that envelope now matches a direct `orchestrate` output shape
+  - includes `run.json` as the first canonical run artifact
+  - includes `orchestration.json` as the worked-envelope layer inside that run
 - `../fixtures/executable_loop_run_002/`
   - second internal end-to-end artifact set on a weaker scenario
-  - includes `orchestration.json` as the weak-path worked envelope
+  - includes `run.json` as the weak-path canonical run artifact
 - `../fixtures/executable_loop_run_003/`
   - third internal end-to-end artifact set on a hybrid middle-mode scenario
-  - includes `orchestration.json` as the hybrid-path worked envelope
+  - includes `run.json` as the hybrid-path canonical run artifact
 
 ## Rule
 

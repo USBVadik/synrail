@@ -21,6 +21,7 @@ The run artifacts now live under:
 
 Included artifacts:
 
+- `run.json`
 - `state.json`
 - `doctor.json`
 - `bundle.json`
@@ -115,11 +116,21 @@ It is still sanitized and narrow.
 
 But it is materially stronger than saying the kernel slices only work independently.
 
-This run now also has one canonical worked orchestration envelope:
+This run now also has one canonical primary run artifact:
+
+- `fixtures/executable_loop_run_001/run.json`
+
+And one worked orchestration envelope:
 
 - `fixtures/executable_loop_run_001/orchestration.json`
 
-That gives one compact machine-readable entrypoint for the full internal reading:
+The canonical run artifact is now the best single machine-readable entrypoint for the full internal reading:
+
+- report reading
+- resulting state reading
+- worked-envelope reading
+
+And the worked envelope still gives a compact lower-layer view of:
 
 - doctor verdict
 - bundle status

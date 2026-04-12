@@ -2,7 +2,7 @@
   "schema_version": "run_state_v0",
   "run_id": "EXECUTABLE_LOOP_RUN_003",
   "task_class": "medium_risk_ambiguous_fix",
-  "state": "EXECUTION_COMPLETED",
+  "state": "PROOF_BUNDLE_PARTIAL",
   "target_surface": {
     "status": "ATTESTED",
     "identity": "medium_risk_path",

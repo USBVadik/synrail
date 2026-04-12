@@ -30,7 +30,7 @@
       "synrail_adds_coordination_overhead"
     ]
   },
-  "resulting_state": "EXECUTION_COMPLETED",
+  "resulting_state": "PROOF_BUNDLE_PARTIAL",
   "current_closure_status": "CLAIMED_NOT_ACCEPTED",
   "next_safe_step": "collect readback from changed sections on the attested surface"
 }

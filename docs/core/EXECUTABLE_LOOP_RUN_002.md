@@ -23,6 +23,7 @@ The run artifacts now live under:
 
 Included artifacts:
 
+- `run.json`
 - `state.json`
 - `doctor.json`
 - `bundle.json`
@@ -77,6 +78,7 @@ The closure engine emitted:
 - closure status = `CLAIMED_NOT_ACCEPTED`
 - blocking reason = `MISSING_PROOF_SECTIONS`
 - next safe step = `collect readback from changed sections on the attested surface`
+- resulting state = `PROOF_BUNDLE_PARTIAL`
 
 This confirms that the current stack still behaves honestly on a weaker scenario:
 
@@ -88,7 +90,11 @@ Using the weak comparison fixtures, the harness emitted:
 
 - verdict = `BASELINE_GOOD_ENOUGH`
 
-This run now also has a canonical worked orchestration envelope:
+This run now also has a canonical primary run artifact:
+
+- `fixtures/executable_loop_run_002/run.json`
+
+And a worked orchestration envelope:
 
 - `fixtures/executable_loop_run_002/orchestration.json`
 

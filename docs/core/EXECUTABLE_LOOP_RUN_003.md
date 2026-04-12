@@ -29,6 +29,7 @@ The run artifacts now live under:
 
 Included artifacts:
 
+- `run.json`
 - `state.json`
 - `doctor.json`
 - `bundle.json`
@@ -95,6 +96,7 @@ The closure engine emitted:
 - closure status = `CLAIMED_NOT_ACCEPTED`
 - blocking reason = `MISSING_PROOF_SECTIONS`
 - next safe step = `rerun the scenario check against the attested target surface`
+- resulting state = `PROOF_BUNDLE_PARTIAL`
 
 This is the most important behavior in the run.
 
@@ -121,7 +123,11 @@ The current comparison reading is therefore:
 - `Synrail` adds some truth discipline
 - but the current evidence is not decisive enough to claim a clear win
 
-This run now also has a canonical worked orchestration envelope:
+This run now also has a canonical primary run artifact:
+
+- `fixtures/executable_loop_run_003/run.json`
+
+And a worked orchestration envelope:
 
 - `fixtures/executable_loop_run_003/orchestration.json`
 
