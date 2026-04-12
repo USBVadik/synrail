@@ -1,0 +1,13 @@
+{
+  "schema_version": "comparison_input_v0",
+  "system": "synrail",
+  "scenario_id": "SCENARIO_STRONG_001",
+  "task_class": "bounded_router_trigger_fix",
+  "closure_result": "ACCEPTED",
+  "blocker_to_closure_cycles": 5,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "HIGH",
+  "notes": "Synrail pays more overhead but materially lowers false-success risk and improves proof at decision time."
+}

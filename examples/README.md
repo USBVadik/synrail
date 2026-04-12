@@ -17,6 +17,13 @@ They are here to show how `Synrail` artifacts fit together without importing raw
     - full governed path
     - lightweight baseline
     - hybrid subset
+- `sanitized_end_to_end_kernel_loop.md`
+  - one compact worked example showing:
+    - machine-readable state
+    - proof bundle assembly
+    - closure decision
+    - refresh after degradation
+    - baseline comparison
 
 ## Rule
 
