@@ -124,6 +124,7 @@ And now, when explicitly requested:
 
 - refresh after a bounded event
 - baseline comparison after the run contour
+- economics-aware comparison when the supplied inputs use the `v1` comparison schema
 
 ## Decision rule
 

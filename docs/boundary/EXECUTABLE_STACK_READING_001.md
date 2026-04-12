@@ -81,7 +81,7 @@ Current weaker areas are:
 - doctor is now stronger than v0 and includes bounded filesystem/env probes, but it is still narrower than a mature readiness layer
 - the stack now has one bounded spine-driven runtime contour, but not yet a deeper end-to-end runtime
 - blocked-to-accepted, partial-to-accepted, and degraded-to-accepted re-entry are now canonical, but mixed repair families are still much weaker than they should be
-- comparison harness is still narrow and heuristic
+- comparison harness now has a first economics slice, but it is still too narrow to count as product-grade economics
 - production-grade runtime readiness is not yet proven
 
 ## Current wedge reading
@@ -139,21 +139,25 @@ The shortest current re-entry reading for those surfaces now lives at:
 The next phase should optimize for:
 
 - stronger executable superiority on the real wedge
-- tighter integration of current slices into one control contour
+- comparator economics rather than comparison prose
+- one ugly compound scenario instead of only clean single-family repair
 - better evidence for where the stack is worth its overhead
+- faster prove-or-demote pressure on the hybrid mode
 
 Not for:
 
 - broader surface area
 - public packaging pressure
 - generic orchestration expansion
+- new explanatory layers without runtime or economic payload
 
 ## Decision rule
 
 Any next-step build work should now answer one of these questions:
 
-1. does it make the executable stack more integrated?
+1. does it make comparison more economic and less descriptive?
 2. does it strengthen the wedge where `Synrail` is already winning?
-3. does it reduce the gap between current slices and a true executable kernel loop?
+3. does it prove the stack under uglier compound reality?
+4. does it reduce the gap between current slices and a true executable kernel loop?
 
 If not, it is likely not the best next move for the project right now.

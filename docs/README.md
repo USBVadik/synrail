@@ -22,6 +22,7 @@ These are the shortest current path to:
 - what Synrail is trying to win
 - why it currently looks better than a simpler baseline on that path
 - what should remain in the core
+- what the next pressure-testing tranche should now measure rather than merely describe
 
 Then, if you want the practical “when should we actually use this?” rule, read:
 
@@ -59,6 +60,8 @@ Start here when you want to understand the kernel itself:
 - `schemas/spine_block_report_v0.schema.json`
 - `schemas/canonical_run_artifact_v0.schema.json`
 - `schemas/worked_orchestration_artifact_v0.schema.json`
+- `schemas/comparison_input_v1.schema.json`
+- `schemas/baseline_comparison_record_v1.schema.json`
 
 These documents describe how Synrail decides what is trustworthy, what is blocked, and what can be accepted.
 

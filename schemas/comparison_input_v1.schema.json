@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/comparison_input_v1.schema.json",
+  "title": "Synrail Comparison Input v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "system",
+    "scenario_id",
+    "scenario_class",
+    "task_class",
+    "path_id",
+    "closure_result",
+    "blocker_to_closure_cycles",
+    "false_success_risk",
+    "proof_completeness",
+    "recovery_cost",
+    "coordination_overhead",
+    "operator_minutes",
+    "intervention_count",
+    "repair_cycles",
+    "invalidation_count",
+    "closure_latency_minutes",
+    "false_green_exposure",
+    "artifact_completeness_percent"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "comparison_input_v1"
+    },
+    "system": {
+      "type": "string",
+      "enum": ["baseline", "synrail"]
+    },
+    "scenario_id": {
+      "type": "string"
+    },
+    "scenario_class": {
+      "type": "string"
+    },
+    "task_class": {
+      "type": "string"
+    },
+    "path_id": {
+      "type": "string"
+    },
+    "closure_result": {
+      "type": "string",
+      "enum": ["ACCEPTED", "CLAIMED_NOT_ACCEPTED", "REJECTED", "BLOCKED"]
+    },
+    "blocker_to_closure_cycles": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "false_success_risk": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH"]
+    },
+    "proof_completeness": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH"]
+    },
+    "recovery_cost": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH"]
+    },
+    "coordination_overhead": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH"]
+    },
+    "operator_minutes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "intervention_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "repair_cycles": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "invalidation_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "closure_latency_minutes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "false_green_exposure": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "artifact_completeness_percent": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

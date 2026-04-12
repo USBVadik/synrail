@@ -2,125 +2,142 @@
 
 This roadmap is intentionally short-horizon.
 
-`Synrail` has only recently been extracted into its own repository, so the next moves should strengthen identity and usability before expanding scope.
+`Synrail` has now crossed the line from extraction shell into a small executable control system. That changes the next job.
+
+The repo no longer needs another growth tranche. It needs a pressure-testing tranche.
 
 ## Current phase
 
 Current phase:
 
-- prove one killer path clearly enough that the extracted repo earns its weight
+- pressure-test whether the current kernel is actually worth its extra control cost
 
-That means the near-term work is mostly about:
+That means the near-term work is now mostly about:
 
-- one narrow adoption loop
-- measurable advantage over a simpler baseline
-- shrinking toward the minimum undeniable core
-- keeping structure in service of proof rather than polish
+- comparator economics instead of comparison prose
+- ugly compound reality instead of only clean family examples
+- proving or demoting the hybrid mode quickly
+- measuring the cost of `Synrail` itself
+- sharpening doctor only where it reduces expensive false-readiness decisions
 
 ## Near-term priorities
 
-### 1. Prove the killer path
+### 1. Make comparator economics central
 
 Goal:
 
-- make one `Synrail` path compelling enough to justify the kernel
+- stop treating comparison as a descriptive sidecar and turn it into a product discipline
 
 Examples:
 
-- keep focus on closure-grade exact-task work
-- optimize for truthful closure, not broad feature breadth
-- reject work that does not strengthen the main adoption loop
+- add machine-readable economics fields to comparison records
+- compare operator minutes, interventions, repair cycles, invalidations, and closure latency
+- keep verdicts tied to both proof value and control cost
 
-### 2. Compare against a simpler baseline
+### 2. Run one ugly compound scenario end-to-end
 
 Goal:
 
-- test whether `Synrail` really beats a disciplined lightweight operator loop
+- test the kernel under messy reality rather than only bounded clean examples
 
 Examples:
 
-- compare blocker-to-closure cycle count
-- compare false-success rate
-- compare recovery cost after misleading agent output
-- run one compact head-to-head comparison before claiming product advantage
+- start from blocked readiness
+- repair readiness honestly
+- hit partial proof or degraded confidence
+- repair again and return to accepted closure only if the proof basis really supports it
 
-### 3. Shrink toward the minimum undeniable core
+### 3. Prove or demote the hybrid mode quickly
 
 Goal:
 
-- keep only the pieces that truly carry the killer path
+- avoid letting the middle mode become policy soup
 
 Examples:
 
-- preserve attestation
-- preserve exact-task identity
-- preserve artifact/proof-bundle truth
-- demote anything that is only explanatory polish
+- run two or three stronger hybrid cases soon
+- if the signal remains weak, keep hybrid explicitly provisional rather than expanding its semantics
 
-### 4. Keep the boundary clean
+### 4. Instrument the cost of Synrail itself
 
 Goal:
 
-- prevent downstream capability work from slipping into the kernel repo
+- see where the kernel earns its weight and where it may be too expensive
 
 Examples:
 
-- reject changes that mainly belong to one downstream bot
-- reject changes that mainly describe one proving-ground environment
-- keep adapter references generic where possible
+- record where invalidations happen most often
+- record where operator thought tax is highest
+- record how costly repaired re-entry is in human steps or minutes
 
-### 5. Keep repo polish subordinate to proof
+### 5. Sharpen doctor on expensive false-readiness modes
 
 Goal:
 
-- avoid mistaking clean structure for product proof
+- make doctor smaller-but-truer rather than broader-but-ceremonial
 
 Examples:
 
-- do small repo-native improvements only when they support reviewability
-- do not use docs growth as substitute for value proof
-- keep shell cleanliness in service of the killer path
+- reduce wrong-target assumptions
+- reduce false clean-surface confidence
+- reduce exact prompt or task identity mismatch on exact runs
 
-Current reading:
+## Current reading
 
-- the private-stable target is now defined and reached
-- a first repeatability signal now exists for closure-grade exact-task runs
-- the next proof/value work should now be organized around the killer path, the simpler baseline, and the minimum undeniable core
+The repo has already earned several things:
+
+- a narrow wedge for expensive-to-be-wrong closure work
+- a bounded executable kernel with machine-readable state, gates, closure, refresh, and re-entry
+- canonical accepted, blocked, degraded, and repaired surfaces
+
+The next pressure now belongs on:
+
+- value proof
+- cost truth
+- compound repair truth
+
+not on:
+
+- new explanatory layers
+- broad orchestration growth
+- public packaging
 
 ## Explicitly not current priorities
 
 These may matter later, but they are not the current focus:
 
-- building a full UI or dashboard
-- adding downstream agent capability logic
-- importing historical incident archives
-- broad packaging or automation layers
-- turning reference helpers into a large orchestration product
+- new lattice or meta readings without runtime or economic payload
+- broader CLI surface as a substitute for uglier runtime proof
+- richer family expansion for completeness alone
+- expanding hybrid semantics before evidence improves
+- full UI or dashboard work
+- downstream agent capability logic
 - broad repo polish for its own sake
-- new semantic layers that do not improve closure economics
 
 ## Decision rule
 
 If a proposed change makes the repo:
 
-- stronger on the killer path
-- easier to compare against baseline
-- smaller at the undeniable core
-- more faithful to the kernel boundary
+- better at measuring whether extra control is worth it
+- stronger under ugly compound reality
+- more honest about hybrid-mode confidence
+- clearer about the cost of the kernel itself
+- stricter on expensive false-readiness decisions
 
 it is likely on-roadmap.
 
-If it mostly adds breadth, downstream behavior, battlefield history, or polish-without-proof, it is probably off-roadmap for this phase.
+If it mostly adds breadth, explanation, or polish without new runtime or economic truth, it is probably off-roadmap for this phase.
 
 ## Active review anchor
 
-The smallest current anchor set is:
+The smallest current anchor set is now:
 
 - `docs/boundary/EXECUTABLE_STACK_READING_001.md`
-- `docs/boundary/KILLER_PATH_001.md`
-- `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
-- `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
-- `docs/boundary/CORE_COMPRESSION_PASS_001.md`
+- `docs/boundary/TRIO_READING_001.md`
+- `docs/boundary/OUTCOME_LATTICE_001.md`
+- `docs/boundary/TRANSITION_LATTICE_001.md`
+- `docs/boundary/REENTRY_LATTICE_001.md`
+- `docs/core/BASELINE_HARNESS_001.md`
 
 Everything else should support this set rather than compete with it for attention.
 

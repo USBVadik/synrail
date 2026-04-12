@@ -230,16 +230,18 @@ Does not guarantee:
 - broad orchestration coverage
 - multi-run scheduling
 
-### `synrail_baseline_harness_v0.py`
+### `synrail_baseline_harness_v0.py` and `synrail_baseline_harness_v1.py`
 
 Purpose:
 
 - compare one baseline artifact against one Synrail artifact and emit a machine-readable verdict
+- add a second comparison path that includes simple economics rather than only qualitative comparison
 
 Guarantees:
 
 - produces one repeatable comparison record
 - avoids purely prose-based comparison outcomes
+- `v1` also emits operator-cost and false-green-exposure deltas in machine-readable form
 
 Does not guarantee:
 

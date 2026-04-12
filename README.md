@@ -92,7 +92,7 @@ It is meant to establish identity and boundary clearly before any broader packag
 
 The current working mode is:
 
-- private review-first hardening before any public release pressure
+- private executable pressure-testing before any public release pressure
 
 The current proof reading is:
 
@@ -100,6 +100,7 @@ The current proof reading is:
 - one initial repeatability signal now exists on the same narrow task class
 - the next priority is proving one killer path against a simpler baseline, not widening the shell
 - a second comparison on a less favorable scenario now says the simpler baseline may already be good enough there
+- the next pressure-testing tranche is now centered on comparator economics, one ugly compound run, hybrid prove-or-demote pressure, and explicit cost-of-control truth
 
 The current wedge reading is:
 
@@ -114,6 +115,7 @@ The current executable output reading is:
 - the repo now also has one explicit outcome lattice across accepted, partial, degraded, and blocked contours
 - the repo now also has one explicit re-entry reading for blocked-to-accepted, partial-to-accepted, and degraded-to-accepted repair
 - that artifact is now the best single machine-readable entrypoint into a bounded internal run
+- the trio now also has first `comparison_economics` records with simple operator-cost and false-green metrics
 
 ## Contributing
 

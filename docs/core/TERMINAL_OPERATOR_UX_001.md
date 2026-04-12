@@ -38,6 +38,7 @@ The CLI v0 currently exposes:
    - run one bounded `doctor -> bundle -> closure` contour, optionally apply `refresh` and `compare`, and emit one machine-readable orchestration report plus an optional worked run envelope
 11. `compare`
    - emit one machine-readable baseline comparison record through the CLI layer
+   - route to the legacy comparison harness for `v0` inputs and the economics harness for `v1` inputs
 
 ## Why this matters
 

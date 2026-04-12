@@ -61,6 +61,8 @@ It now also absorbs doctor records back into state, which tightens the contour f
 
 It now also owns the current bounded orchestration contour directly, instead of leaving that contour primarily in a higher wrapper layer.
 
+It now also chooses the comparison harness by input schema version, so the same bounded contour can still read legacy comparison inputs while moving the active pressure-testing path toward economics-aware comparison records.
+
 It can now also advance a fresh initialized run through the early readiness contour by absorbing:
 
 - target-surface attestation

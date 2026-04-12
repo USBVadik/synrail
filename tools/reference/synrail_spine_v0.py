@@ -16,7 +16,8 @@ DOCTOR = HERE / "synrail_doctor_v1.py"
 BUNDLE = HERE / "synrail_bundle_v0.py"
 CLOSURE = HERE / "synrail_closure_v0.py"
 REFRESH = HERE / "synrail_refresh_v0.py"
-HARNESS = HERE / "synrail_baseline_harness_v0.py"
+HARNESS_V0 = HERE / "synrail_baseline_harness_v0.py"
+HARNESS_V1 = HERE / "synrail_baseline_harness_v1.py"
 
 TRANSITION_PRECEDENCE = {
     "TARGET_SURFACE_ATTESTED": [
@@ -95,6 +96,21 @@ def load_state(path: Path) -> dict:
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
+
+
+def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path:
+    baseline = load_json(Path(baseline_file))
+    synrail = load_json(Path(synrail_file))
+    baseline_version = baseline.get("schema_version", "")
+    synrail_version = synrail.get("schema_version", "")
+
+    if baseline_version != synrail_version:
+        raise ValueError("comparison input schema versions do not match")
+
+    if baseline_version == "comparison_input_v1":
+        return HARNESS_V1
+
+    return HARNESS_V0
 
 
 def save_state(path: Path, state: dict) -> None:
@@ -955,7 +971,11 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         reason = state["closure"]["blocking_reason"] or "NONE"
 
     if args.comparison_output and args.baseline_file and args.synrail_file:
-        code, _ = run_python_capture(HARNESS, ["--baseline-file", args.baseline_file, "--synrail-file", args.synrail_file, "--output", args.comparison_output])
+        try:
+            harness = comparison_harness_for_inputs(args.baseline_file, args.synrail_file)
+        except ValueError:
+            return 2
+        code, _ = run_python_capture(harness, ["--baseline-file", args.baseline_file, "--synrail-file", args.synrail_file, "--output", args.comparison_output])
         if code != 0:
             return code
         comparison = load_json(Path(args.comparison_output))

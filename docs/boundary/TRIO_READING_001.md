@@ -112,12 +112,19 @@ This trio is stronger than any single run because it gives the repo:
 
 That is a healthier product reading than trying to compress everything into a universal success story.
 
+The next useful pressure on this trio is now:
+
+- economic comparison records for all three paths
+- stronger hybrid evidence or an explicit hybrid demotion
+- one ugly compound case that tests whether the trio still holds outside curated clean flows
+
 ## Decision rule
 
 The next strongest build work should improve one of these:
 
 1. strong-path superiority
 2. hybrid-mode evidence quality
-3. integration depth between the current runtime slices
+3. comparator economics quality
+4. integration depth between the current runtime slices
 
 If a change does not help one of those, it is probably not the best next move right now.

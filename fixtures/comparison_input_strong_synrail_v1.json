@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v1",
+  "system": "synrail",
+  "scenario_id": "SCENARIO_STRONG_001",
+  "scenario_class": "expensive_wrong_closure",
+  "task_class": "bounded_router_trigger_fix",
+  "path_id": "full_governed_path",
+  "closure_result": "ACCEPTED",
+  "blocker_to_closure_cycles": 5,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "HIGH",
+  "operator_minutes": 42,
+  "intervention_count": 5,
+  "repair_cycles": 2,
+  "invalidation_count": 1,
+  "closure_latency_minutes": 58,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 95,
+  "notes": "Synrail costs more, but materially lowers false-green exposure and improves proof completeness."
+}
