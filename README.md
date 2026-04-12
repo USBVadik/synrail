@@ -83,6 +83,7 @@ The current proof reading is:
 
 - one closure-grade exact-task proof floor exists
 - one initial repeatability signal now exists on the same narrow task class
+- the next priority is proving one killer path against a simpler baseline, not widening the shell
 
 ## Contributing
 
@@ -93,3 +94,6 @@ For small repo hygiene and change-shape expectations, see:
 - `docs/boundary/POST_CRITIQUE_HARDENING.md`
 - `docs/boundary/FIRST_PRODUCT_REVIEW_PASS.md`
 - `docs/boundary/PRIVATE_STABLE_TARGET.md`
+- `docs/boundary/KILLER_PATH_001.md`
+- `docs/boundary/BASELINE_COMPARISON_PLAN_001.md`
+- `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
