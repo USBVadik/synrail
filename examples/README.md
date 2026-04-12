@@ -29,6 +29,8 @@ They are here to show how `Synrail` artifacts fit together without importing raw
 
 - `../fixtures/executable_loop_run_001/`
   - first internal end-to-end artifact set for the current executable stack
+- `../fixtures/executable_loop_run_002/`
+  - second internal end-to-end artifact set on a weaker scenario
 
 ## Rule
 

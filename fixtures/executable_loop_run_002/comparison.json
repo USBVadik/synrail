@@ -1,0 +1,36 @@
+{
+  "schema_version": "baseline_comparison_record_v0",
+  "scenario_id": "SCENARIO_WEAK_001",
+  "task_class": "honesty_restoration_guard",
+  "baseline": {
+    "schema_version": "comparison_input_v0",
+    "system": "baseline",
+    "scenario_id": "SCENARIO_WEAK_001",
+    "task_class": "honesty_restoration_guard",
+    "closure_result": "ACCEPTED",
+    "blocker_to_closure_cycles": 1,
+    "false_success_risk": "LOW",
+    "proof_completeness": "MEDIUM",
+    "recovery_cost": "LOW",
+    "coordination_overhead": "LOW",
+    "notes": "A disciplined lightweight baseline is probably enough for this small honesty-restoration class."
+  },
+  "synrail": {
+    "schema_version": "comparison_input_v0",
+    "system": "synrail",
+    "scenario_id": "SCENARIO_WEAK_001",
+    "task_class": "honesty_restoration_guard",
+    "closure_result": "CLAIMED_NOT_ACCEPTED",
+    "blocker_to_closure_cycles": 3,
+    "false_success_risk": "LOW",
+    "proof_completeness": "HIGH",
+    "recovery_cost": "LOW",
+    "coordination_overhead": "HIGH",
+    "notes": "Synrail keeps stronger proof semantics here, but the overhead is harder to justify."
+  },
+  "verdict": "BASELINE_GOOD_ENOUGH",
+  "reasons": [
+    "synrail_improves_proof_completeness",
+    "synrail_adds_coordination_overhead"
+  ]
+}

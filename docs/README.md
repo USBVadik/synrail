@@ -42,6 +42,7 @@ Start here when you want to understand the kernel itself:
 - `core/BASELINE_HARNESS_001.md`
 - `core/SCHEMA_VALIDATION_001.md`
 - `core/EXECUTABLE_LOOP_RUN_001.md`
+- `core/EXECUTABLE_LOOP_RUN_002.md`
 
 These documents describe how Synrail decides what is trustworthy, what is blocked, and what can be accepted.
 
