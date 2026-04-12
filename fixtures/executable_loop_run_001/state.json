@@ -2,7 +2,7 @@
   "schema_version": "run_state_v0",
   "run_id": "EXECUTABLE_LOOP_RUN_001",
   "task_class": "bounded_router_trigger_fix",
-  "state": "PROOF_BUNDLE_COMPLETE",
+  "state": "RECOVERY_PENDING",
   "target_surface": {
     "status": "ATTESTED",
     "identity": "node2_attested_surface",

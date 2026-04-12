@@ -33,6 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def downgrade_for_doctor(state: dict, invalidations: list[str]) -> None:
     if state["doctor"]["status"] == "FAIL":
+        state["state"] = "DOCTOR_BLOCKED"
         state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
         state["closure"]["blocking_reason"] = "DOCTOR_NOT_GREEN"
         state["closure"]["next_allowed_transition"] = "DOCTOR_READINESS"
@@ -44,10 +45,17 @@ def downgrade_for_doctor(state: dict, invalidations: list[str]) -> None:
 
 def downgrade_for_partial_bundle(state: dict, invalidations: list[str]) -> None:
     if state["proof_bundle"]["status"] != "COMPLETE":
+        if state["proof_bundle"]["status"] == "INVALID":
+            state["state"] = "PROOF_BUNDLE_INVALID"
+            state["closure"]["blocking_reason"] = "INVALID_PROOF_BUNDLE"
+            state["closure"]["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
+            state["closure"]["narrow_next_safe_step"] = "repair the final result artifact and rebuild the proof bundle"
+        else:
+            state["state"] = "PROOF_BUNDLE_PARTIAL"
+            state["closure"]["blocking_reason"] = "MISSING_PROOF_SECTIONS"
+            state["closure"]["next_allowed_transition"] = "PROOF_BUNDLE_COMPLETION"
+            state["closure"]["narrow_next_safe_step"] = "complete the missing proof sections"
         state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
-        state["closure"]["blocking_reason"] = "MISSING_PROOF_SECTIONS"
-        state["closure"]["next_allowed_transition"] = "PROOF_BUNDLE_COMPLETION"
-        state["closure"]["narrow_next_safe_step"] = "complete the missing proof sections"
         state["closure"]["missing_sections"] = list(state["proof_bundle"]["missing_sections"])
         state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
         invalidations.append("closure_invalidated_by_partial_bundle")
@@ -55,6 +63,7 @@ def downgrade_for_partial_bundle(state: dict, invalidations: list[str]) -> None:
 
 def downgrade_for_recovery(state: dict, invalidations: list[str]) -> None:
     if state["recovery"]["status"] == "PENDING" and not state["recovery"]["reverification_complete"]:
+        state["state"] = "RECOVERY_PENDING"
         state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
         state["closure"]["blocking_reason"] = "RECOVERY_REVERIFICATION_INCOMPLETE"
         state["closure"]["next_allowed_transition"] = "RECOVERY_REVERIFICATION"
@@ -101,7 +110,7 @@ def apply_event(args: argparse.Namespace, state: dict) -> tuple[dict, dict]:
     if state["closure"]["status"] == "ACCEPTED":
         state["state"] = "CLOSURE_ACCEPTED"
         state["next_safe_step"] = "NONE"
-    elif state["proof_bundle"]["status"] == "COMPLETE":
+    elif state["proof_bundle"]["status"] == "COMPLETE" and state["recovery"]["status"] != "PENDING" and state["doctor"]["status"] != "FAIL":
         state["state"] = "PROOF_BUNDLE_COMPLETE"
 
     report = {

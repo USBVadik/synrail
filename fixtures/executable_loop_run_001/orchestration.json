@@ -29,7 +29,7 @@
       "synrail_adds_coordination_overhead"
     ]
   },
-  "resulting_state": "PROOF_BUNDLE_COMPLETE",
+  "resulting_state": "RECOVERY_PENDING",
   "current_closure_status": "CLAIMED_NOT_ACCEPTED",
   "next_safe_step": "run reverification against the attested target surface"
 }

@@ -43,6 +43,13 @@ The refresh automation currently downgrades closure when:
 - proof bundle becomes non-`COMPLETE`
 - recovery becomes `PENDING` without reverification
 
+Those downgrades now also land in explicit degradation states instead of only changing closure fields:
+
+- `DOCTOR_BLOCKED`
+- `PROOF_BUNDLE_PARTIAL`
+- `PROOF_BUNDLE_INVALID`
+- `RECOVERY_PENDING`
+
 ## v0 limitations
 
 The refresh automation currently does not perform:

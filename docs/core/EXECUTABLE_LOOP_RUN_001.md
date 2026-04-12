@@ -81,6 +81,7 @@ After a simulated recovery-affecting event:
 
 the refresh layer downgraded the run to:
 
+- resulting state = `RECOVERY_PENDING`
 - closure status = `CLAIMED_NOT_ACCEPTED`
 - blocking reason = `RECOVERY_REVERIFICATION_INCOMPLETE`
 - next safe step = `run reverification against the attested target surface`

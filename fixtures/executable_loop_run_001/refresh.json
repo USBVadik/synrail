@@ -8,7 +8,7 @@
   "invalidations": [
     "closure_invalidated_by_recovery"
   ],
-  "resulting_state": "PROOF_BUNDLE_COMPLETE",
+  "resulting_state": "RECOVERY_PENDING",
   "resulting_closure_status": "CLAIMED_NOT_ACCEPTED",
   "next_safe_step": "run reverification against the attested target surface"
 }
