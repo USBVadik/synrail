@@ -11,6 +11,7 @@ This document exists so comparison with a simpler stack can move from hand-writt
 The first baseline-harness slice now lives at:
 
 - `tools/reference/synrail_baseline_harness_v0.py`
+- `tools/reference/synrail_cli_v0.py`
 - `schemas/comparison_input_v0.schema.json`
 - `schemas/baseline_comparison_record_v0.schema.json`
 

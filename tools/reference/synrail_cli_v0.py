@@ -17,6 +17,7 @@ CLOSURE = HERE / "synrail_closure_v0.py"
 REFRESH = HERE / "synrail_refresh_v0.py"
 VALIDATE = HERE / "synrail_validate_v0.py"
 DOCTOR = HERE / "synrail_doctor_v0.py"
+HARNESS = HERE / "synrail_baseline_harness_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -165,6 +166,15 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     return run_python(DOCTOR, forwarded)
 
 
+def cmd_compare(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--baseline-file", args.baseline_file,
+        "--synrail-file", args.synrail_file,
+        "--output", args.output,
+    ]
+    return run_python(HARNESS, forwarded)
+
+
 def cmd_orchestrate(args: argparse.Namespace) -> int:
     doctor_args = [
         "--doctor-run-id", args.doctor_run_id,
@@ -199,6 +209,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             "closure_status": "",
             "refresh_applied": False,
             "refresh_resulting_closure_status": "",
+            "comparison_applied": False,
+            "comparison_verdict": "",
             "resulting_state": load_json(Path(args.state_file))["state"],
             "next_safe_step": load_json(Path(args.state_file))["next_safe_step"],
         }
@@ -224,6 +236,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             "closure_status": state_after_doctor["closure"]["status"],
             "refresh_applied": False,
             "refresh_resulting_closure_status": "",
+            "comparison_applied": False,
+            "comparison_verdict": "",
             "resulting_state": state_after_doctor["state"],
             "next_safe_step": state_after_doctor["next_safe_step"],
         }
@@ -266,6 +280,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     closure = load_json(Path(args.closure_output))
     refresh_applied = False
     refresh_resulting_closure_status = ""
+    comparison_applied = False
+    comparison_verdict = ""
     stopping_stage = "closure" if closure["closure_status"] != "ACCEPTED" else "accepted"
     reason = closure["blocking_reason"] or "NONE"
 
@@ -297,6 +313,23 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         stopping_stage = "refresh"
         reason = final_state["closure"]["blocking_reason"] or "NONE"
 
+    if args.comparison_output and args.baseline_file and args.synrail_file:
+        code, _ = run_python_capture(
+            HARNESS,
+            [
+                "--baseline-file", args.baseline_file,
+                "--synrail-file", args.synrail_file,
+                "--output", args.comparison_output,
+            ],
+            passthrough=False,
+        )
+        if code != 0:
+            return code
+        comparison = load_json(Path(args.comparison_output))
+        comparison_applied = True
+        comparison_verdict = comparison["verdict"]
+        stopping_stage = "comparison"
+
     report = {
         "schema_version": "orchestration_report_v0",
         "run_id": final_state["run_id"],
@@ -309,6 +342,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         "closure_status": closure["closure_status"],
         "refresh_applied": refresh_applied,
         "refresh_resulting_closure_status": refresh_resulting_closure_status,
+        "comparison_applied": comparison_applied,
+        "comparison_verdict": comparison_verdict,
         "resulting_state": final_state["state"],
         "next_safe_step": final_state["next_safe_step"],
     }
@@ -395,6 +430,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_doctor.add_argument("--prompt-identity-ok", action="store_true")
     p_doctor.set_defaults(func=cmd_doctor)
 
+    p_compare = sub.add_parser("compare")
+    p_compare.add_argument("--baseline-file", required=True)
+    p_compare.add_argument("--synrail-file", required=True)
+    p_compare.add_argument("--output", required=True)
+    p_compare.set_defaults(func=cmd_compare)
+
     p_orchestrate = sub.add_parser("orchestrate")
     p_orchestrate.add_argument("--state-file", required=True)
     p_orchestrate.add_argument("--doctor-run-id", required=True)
@@ -421,6 +462,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--refresh-reverification-complete", action="store_true")
     p_orchestrate.add_argument("--refresh-use-bundle", action="store_true")
     p_orchestrate.add_argument("--refresh-use-closure", action="store_true")
+    p_orchestrate.add_argument("--baseline-file")
+    p_orchestrate.add_argument("--synrail-file")
+    p_orchestrate.add_argument("--comparison-output")
     p_orchestrate.add_argument("--clean-surface", action="store_true")
     p_orchestrate.add_argument("--artifact-viable", action="store_true")
     p_orchestrate.add_argument("--helper-ok", action="store_true")

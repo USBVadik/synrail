@@ -17,7 +17,7 @@ The current executable stack can already provide:
 5. refresh-driven invalidation after lower-level degradation
 6. terminal-first operator commands
 7. machine-readable baseline comparison records
-8. one bounded orchestration path across doctor, bundle, closure, and optional refresh
+8. one bounded orchestration path across doctor, bundle, closure, optional refresh, and optional comparison
 
 That is enough to say:
 

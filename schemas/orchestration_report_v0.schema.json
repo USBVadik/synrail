@@ -13,6 +13,8 @@
     "closure_status",
     "refresh_applied",
     "refresh_resulting_closure_status",
+    "comparison_applied",
+    "comparison_verdict",
     "resulting_state",
     "next_safe_step"
   ],
@@ -56,6 +58,12 @@
       "type": "boolean"
     },
     "refresh_resulting_closure_status": {
+      "type": "string"
+    },
+    "comparison_applied": {
+      "type": "boolean"
+    },
+    "comparison_verdict": {
       "type": "string"
     },
     "resulting_state": {

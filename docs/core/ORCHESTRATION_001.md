@@ -24,7 +24,8 @@ The `orchestrate` command currently runs one bounded path:
 5. compute closure
 6. write the closure verdict back into state
 7. optionally run refresh after a state-changing event
-8. emit one machine-readable orchestration report
+8. optionally run baseline comparison
+9. emit one machine-readable orchestration report
 
 ## Why this matters
 
@@ -43,8 +44,8 @@ The v0 orchestration slice is intentionally narrow.
 It does not yet try to:
 
 - replace every slice-specific command
-- own refresh behavior
-- own baseline comparison
+- replace all refresh behavior
+- replace all comparison behavior
 - become a broad orchestration shell
 
 It only tightens the most important productive contour:
@@ -56,6 +57,7 @@ It only tightens the most important productive contour:
 And now, when explicitly requested:
 
 - refresh after a bounded event
+- baseline comparison after the run contour
 
 ## Decision rule
 

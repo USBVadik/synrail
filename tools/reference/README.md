@@ -197,6 +197,7 @@ Guarantees:
 - exposes compact state reading
 - exposes bundle, closure, and refresh commands through one CLI
 - exposes one bounded orchestration path for `doctor -> bundle -> closure`
+- exposes baseline comparison through the same CLI layer
 
 Does not guarantee:
 

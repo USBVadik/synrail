@@ -35,7 +35,9 @@ The CLI v0 currently exposes:
 9. `doctor`
    - emit one machine-readable doctor record and optionally write it back into the run state
 10. `orchestrate`
-   - run one bounded `doctor -> bundle -> closure` contour, optionally apply `refresh`, and emit one machine-readable orchestration report
+   - run one bounded `doctor -> bundle -> closure` contour, optionally apply `refresh` and `compare`, and emit one machine-readable orchestration report
+11. `compare`
+   - emit one machine-readable baseline comparison record through the CLI layer
 
 ## Why this matters
 
