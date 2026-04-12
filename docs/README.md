@@ -60,6 +60,7 @@ Start here when you want to understand the kernel itself:
 - `core/MODE_SELECTION_RUN_001.md`
 - `core/MODE_SELECTION_RUN_002.md`
 - `core/MODE_SELECTION_RUN_003.md`
+- `core/MODE_SELECTION_RUN_004.md`
 - `core/EXECUTABLE_LOOP_PREPARED_RUN_001.md`
 - `core/SCHEMA_VALIDATION_001.md`
 - `core/EXECUTABLE_LOOP_RUN_001.md`
@@ -99,6 +100,7 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/mode_selection_run_001/receipt.json`
 - `../fixtures/mode_selection_run_002/receipt.json`
 - `../fixtures/mode_selection_run_003/receipt.json`
+- `../fixtures/mode_selection_run_004/receipt.json`
 - `../fixtures/governed_path_plan_run_001/preparation_receipt.json`
 - `../fixtures/executable_loop_prepared_run_001/run.json`
 - `../fixtures/governed_path_cost_delta_001.json`

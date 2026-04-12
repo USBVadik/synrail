@@ -24,6 +24,7 @@ The first operator-facing selection receipt now lives at:
 - `fixtures/mode_selection_run_001/receipt.json`
 - `fixtures/mode_selection_run_002/receipt.json`
 - `fixtures/mode_selection_run_003/receipt.json`
+- `fixtures/mode_selection_run_004/receipt.json`
 
 ## What it does
 
@@ -60,6 +61,12 @@ Observed selection receipt:
 
 - `selected_mode = FULL_GOVERNED_PATH`
 - `heavier_contour_entered = true`
+
+Observed prepared-strong receipt:
+
+- `governed_preparation_recommended = true`
+- `selected_with_preparation = true`
+- next safe step = `run the full governed path with preparation`
 
 ### 2. Weak path
 
@@ -101,6 +108,8 @@ The shortest honest reading is:
 - it now also has operator-facing receipts that prove:
   - a heavier contour was deliberately skipped on demoted-hybrid and weak paths
   - a heavier contour was deliberately entered on the strong path
+  - a prepared governed contour can now be deliberately entered on the strong path when bounded governed-path cost evidence supports it
 - the selector does not replace the kernel
 - it reduces unnecessary kernel use where the measured signal already says the extra control is not paying off
 - it also records when the measured signal still says the heavier kernel path is worth entering
+- it now also nudges the strong path toward the cheaper prepared governed variant when that bounded signal exists

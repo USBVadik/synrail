@@ -273,6 +273,7 @@ Guarantees:
 
 - can recommend `FULL_GOVERNED_PATH`, `LIGHTWEIGHT_BASELINE`, or `HYBRID_EXCEPTION`
 - can expose one short measured reason and one narrow next safe step
+- can optionally steer the strong path toward a prepared governed contour when bounded governed-path cost evidence supports it
 
 Does not guarantee:
 
@@ -291,6 +292,7 @@ Guarantees:
 - records the recommended mode
 - records the selected mode
 - records whether the heavier contour was entered or skipped
+- can record whether the selected governed path was explicitly taken with preparation
 
 Does not guarantee:
 

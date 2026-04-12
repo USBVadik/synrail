@@ -108,6 +108,24 @@ def choose_mode(
     )
 
 
+def governed_preparation_reading(path: str | None) -> tuple[bool, str]:
+    if not path:
+        return False, ""
+    record = load_json(Path(path))
+    if record.get("schema_version") != "governed_path_cost_delta_v0":
+        raise ValueError("governed cost delta must use governed_path_cost_delta_v0")
+    if record["verdict"] != "PREPARATION_REDUCES_GOVERNED_PATH_COST":
+        return False, ""
+    summary = record["economics_summary"]
+    reason = (
+        f"bounded governed-path evidence also says preparation likely saves about "
+        f"{summary['operator_minutes_reduced']} operator {unit(summary['operator_minutes_reduced'], 'minute', 'minutes')}, "
+        f"{summary['intervention_count_reduced']} {unit(summary['intervention_count_reduced'], 'intervention', 'interventions')}, "
+        f"and {summary['closure_latency_minutes_reduced']} closure-latency minutes without weakening the final safety surface"
+    )
+    return True, reason
+
+
 def build_record(args: argparse.Namespace) -> dict:
     cost_record = load_json(Path(args.cost_record))
     if cost_record.get("schema_version") != "cost_of_control_record_v0":
@@ -141,8 +159,17 @@ def build_record(args: argparse.Namespace) -> dict:
         avg_false_green_exposure_reduced=avg_false_green_exposure_reduced,
     )
 
+    governed_preparation_recommended, governed_preparation_why = governed_preparation_reading(args.governed_cost_delta)
+    if recommended_mode != "FULL_GOVERNED_PATH":
+        governed_preparation_recommended = False
+        governed_preparation_why = ""
+
     if recommended_mode == "FULL_GOVERNED_PATH":
-        next_safe_step = "run the full governed path"
+        if governed_preparation_recommended:
+            why = f"{why}; {governed_preparation_why}"
+            next_safe_step = "run the full governed path with preparation"
+        else:
+            next_safe_step = "run the full governed path"
     elif secondary_exception_mode == "HYBRID_EXCEPTION":
         next_safe_step = "stay baseline by default and only use a bounded hybrid exception if the named ambiguity survives cheap validation"
     elif recommended_mode == "HYBRID_EXCEPTION":
@@ -172,6 +199,8 @@ def build_record(args: argparse.Namespace) -> dict:
         },
         "recommended_mode": recommended_mode,
         "secondary_exception_mode": secondary_exception_mode,
+        "governed_preparation_recommended": governed_preparation_recommended,
+        "governed_preparation_why": governed_preparation_why,
         "why": why,
         "next_safe_step": next_safe_step,
     }
@@ -188,6 +217,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--execution-surface-ambiguous", action="store_true")
     parser.add_argument("--artifact-truth-nontrivial", action="store_true")
     parser.add_argument("--explicit-hybrid-ambiguity")
+    parser.add_argument("--governed-cost-delta")
     parser.add_argument("--output", required=True)
     return parser
 

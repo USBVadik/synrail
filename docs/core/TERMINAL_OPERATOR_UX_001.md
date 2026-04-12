@@ -52,6 +52,8 @@ The CLI v0 currently exposes:
 17. `governed-cost`
    - emit one machine-readable cost delta between an unprepared and prepared governed path
 
+The selection layer can now also carry one preparation-aware strong-path recommendation when bounded governed-path cost evidence exists.
+
 ## Why this matters
 
 Without a small operator-facing entrypoint, the kernel still feels more like a collection of internal prototypes than a usable tool.

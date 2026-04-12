@@ -20,7 +20,7 @@ def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
-def build_receipt(recommendation_path: Path, selected_mode: str | None) -> dict:
+def build_receipt(recommendation_path: Path, selected_mode: str | None, selected_with_preparation: bool) -> dict:
     recommendation = load_json(recommendation_path)
     if recommendation.get("schema_version") != "mode_recommendation_v0":
         raise ValueError("recommendation must use mode_recommendation_v0")
@@ -29,6 +29,8 @@ def build_receipt(recommendation_path: Path, selected_mode: str | None) -> dict:
     chosen_mode = selected_mode or recommended_mode
     if chosen_mode not in MODES:
         raise ValueError("selected mode is not recognized")
+    if selected_with_preparation and chosen_mode != "FULL_GOVERNED_PATH":
+        raise ValueError("selected_with_preparation only makes sense for FULL_GOVERNED_PATH")
 
     followed_recommendation = chosen_mode == recommended_mode
     heavier_contour_entered = chosen_mode != "LIGHTWEIGHT_BASELINE"
@@ -51,6 +53,8 @@ def build_receipt(recommendation_path: Path, selected_mode: str | None) -> dict:
         "recommended_mode": recommended_mode,
         "selected_mode": chosen_mode,
         "secondary_exception_mode": recommendation["secondary_exception_mode"],
+        "governed_preparation_recommended": bool(recommendation.get("governed_preparation_recommended", False)),
+        "selected_with_preparation": bool(selected_with_preparation),
         "followed_recommendation": followed_recommendation,
         "heavier_contour_entered": heavier_contour_entered,
         "estimated_avoided_operator_minutes": avoided_operator_minutes,
@@ -65,6 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="synrail-mode-receipt-v0")
     parser.add_argument("--recommendation-file", required=True)
     parser.add_argument("--selected-mode", choices=sorted(MODES))
+    parser.add_argument("--selected-with-preparation", action="store_true")
     parser.add_argument("--output", required=True)
     return parser
 
@@ -73,7 +78,7 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     try:
-        receipt = build_receipt(Path(args.recommendation_file), args.selected_mode)
+        receipt = build_receipt(Path(args.recommendation_file), args.selected_mode, args.selected_with_preparation)
     except ValueError as exc:
         print(json.dumps({"result": "ERROR", "reason": str(exc)}, ensure_ascii=True))
         return 2

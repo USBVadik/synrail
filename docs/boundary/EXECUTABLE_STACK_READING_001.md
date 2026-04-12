@@ -20,7 +20,7 @@ The current executable stack can already provide:
 8. one bounded orchestration path across attestation, doctor, integrity, bundle, closure, optional refresh, and optional comparison
 9. one primary spine-produced canonical run artifact
 10. one cost-aware mode selector that can keep obvious non-winning paths out of heavier contours
-11. three operator-facing selection receipts that prove a heavier contour can now be deliberately skipped or deliberately entered before the runtime path begins
+11. four operator-facing selection receipts that prove a heavier contour can now be deliberately skipped or deliberately entered before the runtime path begins, including one preparation-aware strong-path receipt
 12. one governed-path preparation plan and receipt that prove the planned proof surface can reach a complete first bundle pass before closure starts
 13. one canonical prepared governed-path run that proves preparation can now live inside the spine-owned contour
 14. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
@@ -77,6 +77,7 @@ Current strongest value carriers are:
 - targeted doctor reduction of two false-readiness shapes: broken credential paths and exact task identity mismatch
 - targeted doctor reduction of one wrong-target-surface readiness lie
 - cost-aware steering back to baseline on weak and demoted-hybrid paths
+- one preparation-aware strong-path steering slice that now points the wedge toward the prepared governed contour instead of the unprepared one
 - one governed-path preparation slice that predeclares the proof surface and records complete first-pass bundle assembly
 - one preparation-aware prepared governed run that reaches accepted closure inside the same bounded orchestration path
 - one measured governed-path cost-reduction slice that treats preparation as a bounded economic improvement rather than only a cleaner ritual

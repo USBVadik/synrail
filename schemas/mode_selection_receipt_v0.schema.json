@@ -46,6 +46,12 @@
       "type": "string",
       "enum": ["", "HYBRID_EXCEPTION"]
     },
+    "governed_preparation_recommended": {
+      "type": "boolean"
+    },
+    "selected_with_preparation": {
+      "type": "boolean"
+    },
     "followed_recommendation": {
       "type": "boolean"
     },

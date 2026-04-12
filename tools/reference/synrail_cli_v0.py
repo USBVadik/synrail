@@ -222,6 +222,8 @@ def cmd_recommend_mode(args: argparse.Namespace) -> int:
     ]
     if args.hybrid_status:
         forwarded.extend(["--hybrid-status", args.hybrid_status])
+    if args.governed_cost_delta:
+        forwarded.extend(["--governed-cost-delta", args.governed_cost_delta])
     if args.execution_surface_ambiguous:
         forwarded.append("--execution-surface-ambiguous")
     if args.artifact_truth_nontrivial:
@@ -238,6 +240,8 @@ def cmd_select_mode(args: argparse.Namespace) -> int:
     ]
     if args.selected_mode:
         forwarded.extend(["--selected-mode", args.selected_mode])
+    if args.selected_with_preparation:
+        forwarded.append("--selected-with-preparation")
     return run_python(MODE_RECEIPT, forwarded)
 
 
@@ -439,12 +443,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_mode.add_argument("--execution-surface-ambiguous", action="store_true")
     p_mode.add_argument("--artifact-truth-nontrivial", action="store_true")
     p_mode.add_argument("--explicit-hybrid-ambiguity")
+    p_mode.add_argument("--governed-cost-delta")
     p_mode.add_argument("--output", required=True)
     p_mode.set_defaults(func=cmd_recommend_mode)
 
     p_select = sub.add_parser("select-mode")
     p_select.add_argument("--recommendation-file", required=True)
     p_select.add_argument("--selected-mode", choices=["FULL_GOVERNED_PATH", "LIGHTWEIGHT_BASELINE", "HYBRID_EXCEPTION"])
+    p_select.add_argument("--selected-with-preparation", action="store_true")
     p_select.add_argument("--output", required=True)
     p_select.set_defaults(func=cmd_select_mode)
 

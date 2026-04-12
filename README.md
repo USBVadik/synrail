@@ -111,6 +111,7 @@ The current proof reading is:
 - the repo now also has one operator-facing selection receipt showing that a demoted-hybrid path stayed on baseline and skipped the heavier contour
 - the repo now also has a second operator-facing selection receipt showing that a weak low-risk path stayed on baseline and skipped the heavier contour
 - the repo now also has a third operator-facing selection receipt showing that the strong expensive-wrong-closure path explicitly entered the governed contour
+- the repo now also has a fourth operator-facing selection receipt showing that the strong path now explicitly enters the prepared governed contour when bounded cost evidence supports it
 - the repo now also has one governed-path preparation plan and receipt showing that the planned proof surface can reach a complete first bundle pass before closure starts
 - the repo now also has one canonical prepared governed-path run showing that preparation now lives inside the runtime contour, not only beside it
 - the repo now also has one bounded governed-path cost delta showing that preparation can reduce operator tax inside the winning contour without weakening closure safety
