@@ -107,3 +107,4 @@ If it mostly adds breadth, downstream behavior, or battlefield history, it is pr
 The current product-review anchor for this phase is:
 
 - `docs/boundary/FIRST_PRODUCT_REVIEW_PASS.md`
+- `docs/boundary/PRIVATE_STABLE_TARGET.md`

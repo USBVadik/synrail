@@ -87,3 +87,4 @@ For small repo hygiene and change-shape expectations, see:
 - `ROADMAP.md`
 - `docs/boundary/POST_CRITIQUE_HARDENING.md`
 - `docs/boundary/FIRST_PRODUCT_REVIEW_PASS.md`
+- `docs/boundary/PRIVATE_STABLE_TARGET.md`
