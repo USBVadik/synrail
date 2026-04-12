@@ -20,6 +20,7 @@ The current executable stack can already provide:
 8. one bounded orchestration path across attestation, doctor, integrity, bundle, closure, optional refresh, and optional comparison
 9. one primary spine-produced canonical run artifact
 10. one cost-aware mode selector that can keep obvious non-winning paths out of heavier contours
+11. one operator-facing selection receipt that proves a heavier contour was deliberately skipped
 
 That is enough to say:
 

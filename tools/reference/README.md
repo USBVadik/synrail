@@ -346,6 +346,23 @@ Does not guarantee:
 - replacement of human judgment on novel scenarios
 - automatic enforcement by itself
 
+### `synrail_mode_receipt_v0.py`
+
+Purpose:
+
+- record one machine-readable receipt showing whether the operator followed a mode recommendation
+
+Guarantees:
+
+- records selected mode
+- records whether a heavier contour was entered
+- records estimated avoided operator cost when baseline is selected
+
+Does not guarantee:
+
+- that the recommendation itself was correct
+- that the baseline path was executed well
+
 ## Operating rule
 
 If a helper starts accumulating broad product logic, large orchestration behavior, or environment-specific sprawl, it should probably stop living under `tools/reference/` in this repo shape.

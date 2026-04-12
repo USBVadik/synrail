@@ -21,6 +21,7 @@ HARNESS_V0 = HERE / "synrail_baseline_harness_v0.py"
 HARNESS_V1 = HERE / "synrail_baseline_harness_v1.py"
 HYBRID_STATUS = HERE / "synrail_hybrid_status_v0.py"
 MODE_SELECTOR = HERE / "synrail_mode_selector_v0.py"
+MODE_RECEIPT = HERE / "synrail_mode_receipt_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -227,6 +228,16 @@ def cmd_recommend_mode(args: argparse.Namespace) -> int:
     return run_python(MODE_SELECTOR, forwarded)
 
 
+def cmd_select_mode(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--recommendation-file", args.recommendation_file,
+        "--output", args.output,
+    ]
+    if args.selected_mode:
+        forwarded.extend(["--selected-mode", args.selected_mode])
+    return run_python(MODE_RECEIPT, forwarded)
+
+
 def cmd_orchestrate(args: argparse.Namespace) -> int:
     forwarded = [
         "--state-file", args.state_file,
@@ -392,6 +403,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_mode.add_argument("--explicit-hybrid-ambiguity")
     p_mode.add_argument("--output", required=True)
     p_mode.set_defaults(func=cmd_recommend_mode)
+
+    p_select = sub.add_parser("select-mode")
+    p_select.add_argument("--recommendation-file", required=True)
+    p_select.add_argument("--selected-mode", choices=["FULL_GOVERNED_PATH", "LIGHTWEIGHT_BASELINE", "HYBRID_EXCEPTION"])
+    p_select.add_argument("--output", required=True)
+    p_select.set_defaults(func=cmd_select_mode)
 
     p_orchestrate = sub.add_parser("orchestrate")
     p_orchestrate.add_argument("--state-file", required=True)

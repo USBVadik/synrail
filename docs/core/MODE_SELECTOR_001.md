@@ -19,6 +19,10 @@ The first three machine-readable recommendation artifacts now live at:
 - `fixtures/mode_recommendation_weak_001.json`
 - `fixtures/mode_recommendation_hybrid_001.json`
 
+The first operator-facing selection receipt now lives at:
+
+- `fixtures/mode_selection_run_001/receipt.json`
+
 ## What it does
 
 The selector takes:
@@ -35,6 +39,7 @@ and returns:
 - class-level measured evidence summary
 - one short reason
 - one narrow next safe step
+- one separate selection receipt when the operator follows or overrides the recommendation
 
 ## Current behavior
 
@@ -86,5 +91,6 @@ That means the selector now helps reduce cost before the operator drifts into a 
 The shortest honest reading is:
 
 - `Synrail` now has one small executable policy surface that can steer obvious non-winning paths back to baseline
+- it now also has one operator-facing receipt that proves a heavier contour was deliberately skipped
 - the selector does not replace the kernel
 - it reduces unnecessary kernel use where the measured signal already says the extra control is not paying off

@@ -43,6 +43,8 @@ The CLI v0 currently exposes:
    - emit one machine-readable hybrid-mode status artifact from the current economics and hybrid evidence set
 13. `recommend-mode`
    - emit one machine-readable cost-aware mode recommendation before the operator enters a heavier contour
+14. `select-mode`
+   - emit one machine-readable receipt that records whether the operator followed the recommendation and whether a heavier contour was skipped
 
 ## Why this matters
 
