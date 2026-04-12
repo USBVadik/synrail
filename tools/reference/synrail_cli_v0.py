@@ -24,8 +24,22 @@ def run_python(script: Path, args: list[str]) -> int:
     return subprocess.run(cmd, check=False).returncode
 
 
+def run_python_capture(script: Path, args: list[str], *, passthrough: bool = True) -> tuple[int, str]:
+    cmd = [sys.executable, str(script), *args]
+    completed = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    if passthrough and completed.stdout:
+        print(completed.stdout, end="")
+    if passthrough and completed.stderr:
+        print(completed.stderr, end="", file=sys.stderr)
+    return completed.returncode, completed.stdout
+
+
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
+
+
+def save_json(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
 def cmd_status(args: argparse.Namespace) -> int:
@@ -151,6 +165,119 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     return run_python(DOCTOR, forwarded)
 
 
+def cmd_orchestrate(args: argparse.Namespace) -> int:
+    doctor_args = [
+        "--doctor-run-id", args.doctor_run_id,
+        "--doctor-level", args.doctor_level,
+        "--target-path", args.target_path,
+        "--target-classification", args.target_classification,
+        "--baseline-identity", args.baseline_identity,
+        "--intended-run-class", args.intended_run_class,
+        "--output", args.doctor_output,
+    ]
+    for enabled, flag in [
+        (args.clean_surface, "--clean-surface"),
+        (args.artifact_viable, "--artifact-viable"),
+        (args.helper_ok, "--helper-ok"),
+        (args.credentials_ok, "--credentials-ok"),
+        (args.prompt_identity_ok, "--prompt-identity-ok"),
+    ]:
+        if enabled:
+            doctor_args.append(flag)
+
+    code, _ = run_python_capture(DOCTOR, doctor_args, passthrough=False)
+    if code != 0:
+        report = {
+            "schema_version": "orchestration_report_v0",
+            "run_id": load_json(Path(args.state_file))["run_id"],
+            "task_class": load_json(Path(args.state_file))["task_class"],
+            "result": "ERROR",
+            "stopping_stage": "doctor",
+            "reason": "DOCTOR_EXECUTION_FAILED",
+            "doctor_verdict": "",
+            "bundle_status": "",
+            "closure_status": "",
+            "resulting_state": load_json(Path(args.state_file))["state"],
+            "next_safe_step": load_json(Path(args.state_file))["next_safe_step"],
+        }
+        save_json(Path(args.report_output), report)
+        return code
+
+    code, _ = run_python_capture(SPINE, ["apply-doctor", args.state_file, args.doctor_output], passthrough=False)
+    if code != 0:
+        return code
+
+    doctor_record = load_json(Path(args.doctor_output))
+    state_after_doctor = load_json(Path(args.state_file))
+    if state_after_doctor["doctor"]["status"] != "PASS":
+        report = {
+            "schema_version": "orchestration_report_v0",
+            "run_id": state_after_doctor["run_id"],
+            "task_class": state_after_doctor["task_class"],
+            "result": "BLOCKED",
+            "stopping_stage": "doctor",
+            "reason": "DOCTOR_NOT_GREEN",
+            "doctor_verdict": doctor_record["final_verdict"],
+            "bundle_status": "",
+            "closure_status": state_after_doctor["closure"]["status"],
+            "resulting_state": state_after_doctor["state"],
+            "next_safe_step": state_after_doctor["next_safe_step"],
+        }
+        save_json(Path(args.report_output), report)
+        print(json.dumps({"result": "BLOCKED", "stopping_stage": "doctor"}, ensure_ascii=True))
+        return 0
+
+    bundle_args = [
+        "--final-result", args.final_result,
+        "--task-class", args.task_class,
+        "--output", args.bundle_output,
+        "--run-id", state_after_doctor["run_id"],
+        "--baseline-identity", args.baseline_identity,
+        "--execution-surface-identity", args.execution_surface_identity,
+        "--prompt-identity", args.prompt_identity,
+        "--task-identity", args.task_identity,
+    ]
+    if args.readback:
+        bundle_args.extend(["--readback", args.readback])
+    if args.scenario_proof:
+        bundle_args.extend(["--scenario-proof", args.scenario_proof])
+    code, _ = run_python_capture(BUNDLE, bundle_args, passthrough=False)
+    if code != 0:
+        return code
+
+    code, _ = run_python_capture(SPINE, ["apply-bundle", args.state_file, args.bundle_output], passthrough=False)
+    if code != 0:
+        return code
+
+    code, _ = run_python_capture(CLOSURE, ["--state-file", args.state_file, "--bundle-file", args.bundle_output, "--output", args.closure_output], passthrough=False)
+    if code != 0:
+        return code
+
+    code, _ = run_python_capture(SPINE, ["apply-closure", args.state_file, args.closure_output], passthrough=False)
+    if code != 0:
+        return code
+
+    final_state = load_json(Path(args.state_file))
+    bundle = load_json(Path(args.bundle_output))
+    closure = load_json(Path(args.closure_output))
+    report = {
+        "schema_version": "orchestration_report_v0",
+        "run_id": final_state["run_id"],
+        "task_class": final_state["task_class"],
+        "result": "OK",
+        "stopping_stage": "closure" if closure["closure_status"] != "ACCEPTED" else "accepted",
+        "reason": closure["blocking_reason"] or "NONE",
+        "doctor_verdict": doctor_record["final_verdict"],
+        "bundle_status": bundle["status"],
+        "closure_status": closure["closure_status"],
+        "resulting_state": final_state["state"],
+        "next_safe_step": final_state["next_safe_step"],
+    }
+    save_json(Path(args.report_output), report)
+    print(json.dumps({"result": "OK", "closure_status": closure["closure_status"]}, ensure_ascii=True))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="synrail")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -228,6 +355,32 @@ def build_parser() -> argparse.ArgumentParser:
     p_doctor.add_argument("--credentials-ok", action="store_true")
     p_doctor.add_argument("--prompt-identity-ok", action="store_true")
     p_doctor.set_defaults(func=cmd_doctor)
+
+    p_orchestrate = sub.add_parser("orchestrate")
+    p_orchestrate.add_argument("--state-file", required=True)
+    p_orchestrate.add_argument("--doctor-run-id", required=True)
+    p_orchestrate.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
+    p_orchestrate.add_argument("--target-path", required=True)
+    p_orchestrate.add_argument("--target-classification", required=True)
+    p_orchestrate.add_argument("--baseline-identity", required=True)
+    p_orchestrate.add_argument("--intended-run-class", required=True, choices=["core_probe", "support_run", "exact_retry"])
+    p_orchestrate.add_argument("--doctor-output", required=True)
+    p_orchestrate.add_argument("--final-result", required=True)
+    p_orchestrate.add_argument("--task-class", required=True)
+    p_orchestrate.add_argument("--bundle-output", required=True)
+    p_orchestrate.add_argument("--closure-output", required=True)
+    p_orchestrate.add_argument("--report-output", required=True)
+    p_orchestrate.add_argument("--execution-surface-identity", required=True)
+    p_orchestrate.add_argument("--prompt-identity", required=True)
+    p_orchestrate.add_argument("--task-identity", required=True)
+    p_orchestrate.add_argument("--readback")
+    p_orchestrate.add_argument("--scenario-proof")
+    p_orchestrate.add_argument("--clean-surface", action="store_true")
+    p_orchestrate.add_argument("--artifact-viable", action="store_true")
+    p_orchestrate.add_argument("--helper-ok", action="store_true")
+    p_orchestrate.add_argument("--credentials-ok", action="store_true")
+    p_orchestrate.add_argument("--prompt-identity-ok", action="store_true")
+    p_orchestrate.set_defaults(func=cmd_orchestrate)
 
     return parser
 

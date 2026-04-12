@@ -193,6 +193,29 @@ def apply_bundle(state: dict, bundle: dict) -> tuple[int, dict | None]:
     return 0, state
 
 
+def apply_doctor(state: dict, record: dict) -> tuple[int, dict | None]:
+    acceptable = record.get("final_verdict", "").startswith("ACCEPTABLE_")
+    state["doctor"]["status"] = "PASS" if acceptable else "FAIL"
+    state["doctor"]["blocking_failure_classes"] = list(record.get("blocking_failure_classes", []))
+
+    if acceptable:
+        state["closure"]["status"] = "OPEN"
+        state["closure"]["blocking_reason"] = ""
+        state["closure"]["next_allowed_transition"] = "READY"
+        state["closure"]["narrow_next_safe_step"] = "confirm exact task identity"
+        state["closure"]["missing_sections"] = []
+        state["next_safe_step"] = "confirm exact task identity"
+        return 0, state
+
+    state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+    state["closure"]["blocking_reason"] = "DOCTOR_NOT_GREEN"
+    state["closure"]["next_allowed_transition"] = "DOCTOR_READINESS"
+    state["closure"]["narrow_next_safe_step"] = record.get("recommended_next_safe_step", "run doctor readiness")
+    state["closure"]["missing_sections"] = []
+    state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+    return 0, state
+
+
 def apply_closure(state: dict, verdict: dict) -> tuple[int, dict | None]:
     state["closure"]["status"] = verdict["closure_status"]
     state["closure"]["blocking_reason"] = verdict["blocking_reason"]
@@ -250,6 +273,18 @@ def cmd_apply_bundle(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_apply_doctor(args: argparse.Namespace) -> int:
+    state_path = Path(args.state_file)
+    state = load_state(state_path)
+    record = load_json(Path(args.doctor_file))
+    code, next_state = apply_doctor(state, record)
+    if code != 0:
+        return code
+    save_state(state_path, next_state)
+    print(json.dumps({"result": "OK", "doctor": next_state["doctor"]["status"], "next_safe_step": next_state["next_safe_step"]}, ensure_ascii=True))
+    return 0
+
+
 def cmd_apply_closure(args: argparse.Namespace) -> int:
     state_path = Path(args.state_file)
     state = load_state(state_path)
@@ -285,6 +320,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_apply_bundle.add_argument("state_file")
     p_apply_bundle.add_argument("bundle_file")
     p_apply_bundle.set_defaults(func=cmd_apply_bundle)
+
+    p_apply_doctor = sub.add_parser("apply-doctor")
+    p_apply_doctor.add_argument("state_file")
+    p_apply_doctor.add_argument("doctor_file")
+    p_apply_doctor.set_defaults(func=cmd_apply_doctor)
 
     p_apply_closure = sub.add_parser("apply-closure")
     p_apply_closure.add_argument("state_file")

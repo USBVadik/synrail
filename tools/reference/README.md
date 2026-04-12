@@ -123,6 +123,7 @@ Guarantees:
 
 - can initialize a run state
 - can deny disallowed transitions
+- can apply doctor records back into the state machine
 - can apply bundle and closure artifacts back into the state machine
 - can emit machine-readable state
 
@@ -195,10 +196,11 @@ Guarantees:
 
 - exposes compact state reading
 - exposes bundle, closure, and refresh commands through one CLI
+- exposes one bounded orchestration path for `doctor -> bundle -> closure`
 
 Does not guarantee:
 
-- full end-to-end orchestration
+- full orchestration coverage
 - interactive UX
 - broad product shell behavior
 

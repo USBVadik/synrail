@@ -18,10 +18,11 @@ The v0 spine can:
 
 1. initialize a machine-readable run state
 2. attempt a state transition
-3. apply a proof-bundle artifact back into the state machine
-4. apply a closure verdict back into the state machine
-5. deny disallowed transitions through hard gate checks
-6. emit the current machine-readable state
+3. apply a doctor record back into the state machine
+4. apply a proof-bundle artifact back into the state machine
+5. apply a closure verdict back into the state machine
+6. deny disallowed transitions through hard gate checks
+7. emit the current machine-readable state
 
 ## Current transition contour
 
@@ -46,6 +47,12 @@ This is the first step toward a real product loop:
 - closure decided
 
 The spine now also begins to act as the control contour that absorbs bundle/closure artifacts back into state instead of leaving that linkage entirely manual.
+
+It now also absorbs doctor records back into state, which tightens the contour further around:
+
+- readiness
+- proof assembly
+- closure
 
 It is still small, but it is no longer only descriptive.
 

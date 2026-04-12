@@ -34,6 +34,8 @@ The CLI v0 currently exposes:
    - validate one machine-readable artifact against one schema
 9. `doctor`
    - emit one machine-readable doctor record and optionally write it back into the run state
+10. `orchestrate`
+   - run one bounded `doctor -> bundle -> closure` contour and emit one machine-readable orchestration report
 
 ## Why this matters
 
@@ -45,14 +47,23 @@ The terminal UX is the first move toward:
 - lower operator friction
 - clearer current-state reading
 
+The bounded orchestration command is the first move from:
+
+- many cooperating commands
+
+to:
+
+- one smaller runtime contour
+
 ## v0 limitations
 
 The CLI currently does not provide:
 
-- one-command end-to-end orchestration
 - rich status rendering
 - interactive flows
 - multi-run coordination
+
+It now provides one bounded orchestration path, but not a broad runtime shell.
 
 It is a small facade, not the final UX.
 
