@@ -39,6 +39,9 @@ The CLI v0 currently exposes:
    - can now absorb one `mode-selection receipt` so a prepared strong-path selection can enter the runtime contour directly
 11. `resume`
    - run the same bounded runtime contour from an existing non-green state and record the starting state as runtime continuation truth
+   - now proven on both:
+     - `PROOF_BUNDLE_PARTIAL`
+     - `RECOVERY_PENDING`
 12. `compare`
    - emit one machine-readable baseline comparison record through the CLI layer
    - route to the legacy comparison harness for `v0` inputs and the economics harness for `v1` inputs
@@ -59,7 +62,7 @@ The selection layer can now also carry one preparation-aware strong-path recomme
 
 The orchestration layer can now also absorb that preparation-aware strong-path receipt directly, instead of forcing the operator to restate preparation outputs manually.
 
-The terminal layer now also exposes one named `resume` path, so continuation from a blocked or partial state no longer has to feel like a disguised replay of the base orchestration command.
+The terminal layer now also exposes one named `resume` path, so continuation from a blocked, partial, or degraded state no longer has to feel like a disguised replay of the base orchestration command.
 
 ## Why this matters
 

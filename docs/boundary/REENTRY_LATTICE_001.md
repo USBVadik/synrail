@@ -14,12 +14,14 @@ but also whether the kernel can return from a less-green contour after the block
 
 ## Current re-entry anchors
 
-The current re-entry lattice is anchored by four canonical repair families:
+The current re-entry lattice is anchored by four canonical repair families plus two named runtime continuation contours:
 
 1. blocked readiness to accepted closure
 2. partial proof to accepted closure
 3. degraded recovery to accepted closure
 4. one ugly compound blocked-plus-partial-plus-degraded contour back to accepted closure
+5. one partial-proof runtime continuation back to accepted closure
+6. one degraded-recovery runtime continuation back to accepted closure
 
 That is still bounded, but it is already materially stronger than one or two repaired contours.
 
@@ -84,6 +86,8 @@ Why this matters:
 
 - it strengthens `Synrail` as a closure-completion system, not only a stop-or-degrade system
 - it gives the repo one explicit repaired proof contour, not only a recommendation to gather more evidence
+- it now also has one named runtime continuation counterpart:
+  - `fixtures/executable_loop_runtime_resume_run_001/run.json`
 
 ## 3. Degraded recovery to accepted closure
 
@@ -112,6 +116,8 @@ Why this matters:
 
 - it strengthens `Synrail` as a recovery-completion system, not only an invalidation system
 - it gives the repo one explicit repaired degraded contour, not only a warning that reverification is still missing
+- it now also has one named runtime continuation counterpart:
+  - `fixtures/executable_loop_runtime_resume_run_002/run.json`
 
 ## 4. Compound repair to accepted closure
 
@@ -168,7 +174,7 @@ because it shows the kernel can sometimes recover honestly after a prior block.
 The re-entry lattice still has visible gaps:
 
 - the current canonical reverse edges now cover readiness repair, proof completion, one recovery repair, and one ugly mixed family, but not the full set of future compound families
-- one named runtime `resume` path now exists for partial-proof continuation, but runtime continuation is still much narrower than the full repaired surface family
+- named runtime `resume` now exists for both partial-proof and degraded-recovery continuation, but runtime continuation is still much narrower than the full repaired surface family
 - standalone doctor-blocked re-entry is still less explicit than the new compound family
 - hybrid compound repair is still much weaker than it should be
 

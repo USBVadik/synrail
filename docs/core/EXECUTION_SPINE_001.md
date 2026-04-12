@@ -69,6 +69,11 @@ It can now also absorb one preparation-aware strong-path selection receipt into 
 
 It can now also carry one explicit runtime continuation marker from a non-green starting state, which is the first move toward making re-entry a first-class runtime behavior instead of leaving it only as a family of canonical repaired fixtures.
 
+That continuation marker is now proven on:
+
+- one partial-proof continuation family
+- one degraded recovery continuation family
+
 It now also chooses the comparison harness by input schema version, so the same bounded contour can still read legacy comparison inputs while moving the active pressure-testing path toward economics-aware comparison records.
 
 It can now also advance a fresh initialized run through the early readiness contour by absorbing:

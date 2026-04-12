@@ -100,6 +100,11 @@ which records:
 
 on the resulting runtime artifacts.
 
+That continuation path is now proven on:
+
+- one partial-proof repair family
+- one degraded recovery repair family
+
 That matters because it keeps the canonical worked artifact aligned with the final runtime contour, including post-refresh closure state when refresh is part of the run.
 
 The spine can now also emit one primary canonical run artifact that compresses:
