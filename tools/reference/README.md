@@ -314,7 +314,9 @@ Guarantees:
 - can probe artifact-path parent existence
 - can probe helper entrypoint presence
 - can probe credential env presence
+- can probe whether a path-based credential env points at something real
 - can probe exact prompt identity file presence
+- can probe expected exact task identity mismatch
 - emits a doctor record with blocking failure classes
 - can write doctor status back into the run state
 

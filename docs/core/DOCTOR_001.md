@@ -22,6 +22,7 @@ The current doctor can:
 3. classify the run as acceptable or not acceptable
 4. emit one recommended next safe step
 5. optionally write the doctor result back into the run state
+6. catch two more expensive false-readiness shapes through targeted pressure-tests
 
 ## Current gate set
 
@@ -40,7 +41,13 @@ And it can now probe several of those from real local conditions instead of only
 - artifact path parent existence
 - helper entrypoint existence
 - credential env presence
+- credential path validity when env points at a file or directory
 - exact prompt identity file presence
+- exact task identity match when an expected exact task is supplied
+
+The first targeted doctor pressure-test slice for those stronger probes now lives at:
+
+- `docs/core/DOCTOR_PRESSURE_TEST_001.md`
 
 ## Why this matters
 
@@ -62,6 +69,10 @@ The doctor still does not perform:
 - richer multi-step readiness diagnosis
 
 It is intentionally a small executable readiness layer, not the final doctor runtime.
+
+The point of current doctor work is not breadth.
+
+It is to reduce a few expensive false-readiness decisions more honestly.
 
 ## Decision rule
 

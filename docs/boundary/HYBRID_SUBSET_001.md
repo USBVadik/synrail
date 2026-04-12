@@ -20,8 +20,8 @@ But the measured evidence does **not** yet justify treating hybrid as a default 
 
 Current status is:
 
-- `PROVISIONAL`
-- `KEEP_HYBRID_SECONDARY`
+- `DEMOTED`
+- `DEMOTE_HYBRID_FROM_DEFAULT_POLICY`
 
 ## What the hybrid subset must preserve
 
@@ -76,25 +76,19 @@ The hybrid subset is still less proven than the other two modes.
 
 It is currently:
 
-- productively plausible
-- policy-relevant
-- but not yet strong enough to stand as a default policy tier
+- still useful as a bounded exception pattern
+- no longer strong enough to stand as a default policy tier
+- not a standing third lane in the current default application policy
 
 The current measured status artifact for this now lives at:
 
-- `fixtures/hybrid_status_002.json`
+- `fixtures/hybrid_status_003.json`
 
 That artifact currently says:
 
-- keep hybrid secondary and explicit
-- do not expand hybrid semantics yet
-- do not let “mixed answers” alone auto-select hybrid
-
-There is now one stronger hybrid pressure-test in the repo.
-
-That helps justify keeping hybrid alive.
-
-It still does not justify promoting hybrid to a default middle lane.
+- do not treat hybrid as a default middle mode
+- reach for baseline unless one explicit hybrid pressure-test justifies the extra control
+- keep hybrid only as an explicit exception pattern
 
 ## Decision rule
 
@@ -108,6 +102,10 @@ And only use it when you can name the specific ambiguity the lightweight baselin
 If you cannot name that ambiguity clearly:
 
 - stay lightweight by default
+
+If you can name that ambiguity clearly, but the measured class still looks inconsistent:
+
+- treat hybrid as an explicit exception, not as the default middle answer
 
 If you keep adding steps to the hybrid subset, stop and reconsider.
 

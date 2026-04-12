@@ -48,9 +48,12 @@ Because the repo now contains three canonical comparison readings plus one uglie
 3. hybrid path:
    - `docs/core/EXECUTABLE_LOOP_RUN_003.md`
    - verdict: `UNCLEAR`
-4. hybrid pressure path:
+4. hybrid pressure win path:
    - `docs/core/EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_002.md`
    - verdict: `SYNRAIL_BETTER`
+5. hybrid pressure demotion path:
+   - `docs/core/EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_003.md`
+   - verdict: `BASELINE_GOOD_ENOUGH`
 
 This set is stronger than any single result alone.
 
@@ -58,7 +61,7 @@ It shows that the stack can express:
 
 - where `Synrail` currently earns its cost
 - where a simpler baseline may already be enough
-- where a middle mode still looks mixed at the class level even after one stronger win
+- where a middle mode now looks inconsistent enough to lose default policy status
 
 ## What is currently strongest in the stack
 
@@ -66,6 +69,7 @@ Current strongest value carriers are:
 
 - target-surface truth discipline
 - explicit exact-task integrity
+- targeted doctor reduction of two false-readiness shapes: broken credential paths and exact task identity mismatch
 - proof-bundle completeness reading
 - closure acceptance vs claimed-not-accepted separation
 - explicit blocked state lanes for main failure branches
@@ -83,10 +87,10 @@ Current strongest value carriers are:
 
 Current weaker areas are:
 
-- doctor is now stronger than v0 and includes bounded filesystem/env probes, but it is still narrower than a mature readiness layer
+- doctor is now stronger than v0, includes bounded filesystem/env probes, and now catches one credential-path false-green plus one exact-task-identity mismatch, but it is still narrower than a mature readiness layer
 - the stack now has one bounded spine-driven runtime contour, but not yet a deeper end-to-end runtime
 - blocked-to-accepted, partial-to-accepted, and degraded-to-accepted re-entry are now canonical, and one ugly mixed repair family is now canonical too, but compound reality is still much weaker than it should be
-- comparison harness now has a five-scenario economics slice, but it is still too narrow to count as product-grade economics
+- comparison harness now has a six-scenario economics slice, but it is still too narrow to count as product-grade economics
 - production-grade runtime readiness is not yet proven
 
 ## Current wedge reading
@@ -95,7 +99,7 @@ The shortest current product reading is:
 
 - use `Synrail` when getting the truth wrong is expensive
 - do not assume the full governed path is justified for lower-risk honesty-restoration work
-- treat the hybrid subset as now having one stronger measured win, but keep it secondary until the class-level signal stops being mixed
+- treat the hybrid subset as a demoted exception pattern now that the class-level evidence includes `BASELINE_GOOD_ENOUGH`
 
 The shortest current output reading is:
 

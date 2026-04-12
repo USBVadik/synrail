@@ -1,0 +1,4 @@
+PROMPT_IDENTITY_ARTIFACT
+run_class=exact_retry
+expected_repair_surface=attested_target_surface
+exact_task_identity=EXACT_TASK_BETA

@@ -8,11 +8,10 @@ This document exists so the wedge becomes operational policy rather than staying
 
 ## Three modes
 
-Current application policy uses three modes:
+Current application policy now has:
 
-1. full governed path
-2. lightweight baseline
-3. hybrid subset, kept secondary while evidence is still thin
+1. two active default modes
+2. one demoted exception pattern
 
 ## 1. Full governed path
 
@@ -69,8 +68,8 @@ Use a hybrid subset when the full governed path is too expensive, but a pure lig
 
 Current status:
 
-- `PROVISIONAL`
-- `secondary rather than default`
+- `DEMOTED`
+- `exception rather than default`
 
 Suggested hybrid elements:
 
@@ -97,6 +96,7 @@ Current policy constraint:
 
 - do not auto-select hybrid just because the answers feel mixed
 - keep baseline as the default unless one explicit ambiguity justifies extra control
+- do not describe hybrid as a standing third policy lane
 
 ## Quick decision rule
 
@@ -136,7 +136,7 @@ Current evidence suggests:
 
 - full governed path is justified on the killer path
 - lightweight baseline is often good enough on small honesty-restoration incidents
-- hybrid subset now has one stronger measured win, but it is still under-proven overall and should remain secondary until the class-level signal improves
+- hybrid subset now has one stronger measured win and one `BASELINE_GOOD_ENOUGH` medium-risk case, so it should be treated as a demoted exception pattern rather than a default mode
 
 ## Decision rule
 

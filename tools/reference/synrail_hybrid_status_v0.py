@@ -17,12 +17,13 @@ def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
-def derive_status(verdicts: list[str]) -> tuple[str, str, str]:
+def derive_status(verdicts: list[str]) -> tuple[str, str, str, str]:
     if any(verdict == "BASELINE_GOOD_ENOUGH" for verdict in verdicts):
         return (
             "DEMOTED",
             "DEMOTE_HYBRID_FROM_DEFAULT_POLICY",
             "do not treat hybrid as a default middle mode; reach for baseline unless one explicit hybrid pressure-test justifies the extra control",
+            "keep baseline as the default middle-path choice and only revisit hybrid when a named ambiguity produces a decisive measured win",
         )
 
     better_count = sum(1 for verdict in verdicts if verdict == "SYNRAIL_BETTER")
@@ -33,12 +34,14 @@ def derive_status(verdicts: list[str]) -> tuple[str, str, str]:
             "JUSTIFIED",
             "KEEP_HYBRID_ACTIVE",
             "hybrid now looks justified as a bounded middle mode on its measured scenario set",
+            "keep gathering hybrid evidence, but the mode no longer needs provisional handling on its current measured class",
         )
 
     return (
         "PROVISIONAL",
         "KEEP_HYBRID_SECONDARY",
         "keep hybrid secondary and explicit; do not expand its semantics until the class-level measured signal stops being mixed",
+        "either gather one more measured hybrid pressure-test soon or keep hybrid explicitly provisional while the class-level signal stays mixed",
     )
 
 
@@ -53,7 +56,7 @@ def build_record(cost_record_path: Path, hybrid_record_paths: list[Path]) -> dic
             raise ValueError("hybrid records must use the hybrid scenario class")
 
     verdicts = [record["verdict"] for record in hybrid_records]
-    status, decision, default_policy = derive_status(verdicts)
+    status, decision, default_policy, next_action = derive_status(verdicts)
 
     return {
         "schema_version": "hybrid_status_v0",
@@ -69,7 +72,7 @@ def build_record(cost_record_path: Path, hybrid_record_paths: list[Path]) -> dic
             "add one uglier hybrid pressure-test instead of another clean policy example",
             "only promote hybrid if the class-level measured signal stops staying unclear",
         ],
-        "next_action": "either gather one more measured hybrid pressure-test soon or keep hybrid explicitly provisional while the class-level signal stays mixed",
+        "next_action": next_action,
     }
 
 

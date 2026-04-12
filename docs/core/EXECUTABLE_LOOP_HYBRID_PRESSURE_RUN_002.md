@@ -142,4 +142,6 @@ It only proves that hybrid now has:
 
 That is enough to keep hybrid alive.
 
-It is not enough to promote it yet.
+It is not enough to promote it on its own.
+
+And it is no longer the latest class-level reading after the next hybrid pressure-test was added.

@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v1",
+  "system": "baseline",
+  "scenario_id": "SCENARIO_HYBRID_003",
+  "scenario_class": "medium_risk_ambiguous_closure",
+  "task_class": "medium_risk_reversible_artifact_fix",
+  "path_id": "lightweight_operator_loop",
+  "closure_result": "ACCEPTED",
+  "blocker_to_closure_cycles": 1,
+  "false_success_risk": "LOW",
+  "proof_completeness": "MEDIUM",
+  "recovery_cost": "MEDIUM",
+  "coordination_overhead": "LOW",
+  "operator_minutes": 17,
+  "intervention_count": 2,
+  "repair_cycles": 1,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 19,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 68,
+  "notes": "The baseline can validate cheaply on this reversible ambiguity, so extra hybrid control may be too expensive here."
+}

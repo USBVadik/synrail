@@ -60,9 +60,9 @@ Examples:
 
 Current measured status:
 
-- hybrid is now `PROVISIONAL`
-- hybrid now has one `SYNRAIL_BETTER` pressure-test and one `UNCLEAR` case
-- hybrid should stay `secondary` until the class-level measured signal stops being mixed
+- hybrid is now `DEMOTED`
+- hybrid now has one `SYNRAIL_BETTER`, one `UNCLEAR`, and one `BASELINE_GOOD_ENOUGH` case
+- hybrid should now be treated as an explicit exception pattern rather than a default middle lane
 
 ### 4. Instrument the cost of Synrail itself
 
@@ -87,6 +87,11 @@ Examples:
 - reduce wrong-target assumptions
 - reduce false clean-surface confidence
 - reduce exact prompt or task identity mismatch on exact runs
+
+Current pressure-tested slice:
+
+- doctor now catches one path-validity false-green on credential envs
+- doctor now catches one exact artifact mismatch case, not only missing exact artifacts
 
 ## Current reading
 

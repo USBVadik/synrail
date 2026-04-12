@@ -1,0 +1,19 @@
+{
+  "schema_version": "orchestration_report_v0",
+  "run_id": "EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_003",
+  "task_class": "medium_risk_reversible_artifact_fix",
+  "result": "OK",
+  "stopping_stage": "comparison",
+  "reason": "NONE",
+  "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+  "bundle_status": "COMPLETE",
+  "closure_status": "ACCEPTED",
+  "refresh_applied": false,
+  "refresh_resulting_closure_status": "",
+  "comparison_applied": true,
+  "comparison_verdict": "BASELINE_GOOD_ENOUGH",
+  "blockers": [],
+  "dominant_blocker": "",
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "next_safe_step": "NONE"
+}

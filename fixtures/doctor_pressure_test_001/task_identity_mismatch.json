@@ -1,0 +1,44 @@
+{
+  "schema_version": "doctor_record_v0",
+  "doctor_run_id": "DOCTOR_PRESSURE_001_TASK_IDENTITY_MISMATCH",
+  "doctor_level": "EXACT_RETRY_DOCTOR",
+  "target_execution_surface": {
+    "path": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_pressure_test_001/target_surface",
+    "classification": "exact_retry_surface"
+  },
+  "trusted_baseline": {
+    "identity": "TRUSTED_CLEAN_BASELINE_001"
+  },
+  "intended_run_class": "exact_retry",
+  "gate_results": {
+    "baseline_identity": {
+      "status": "PASS",
+      "note": "trusted baseline identity is present"
+    },
+    "clean_execution_surface": {
+      "status": "PASS",
+      "note": "non-git execution surface exists and is explicitly observed"
+    },
+    "artifact_viability": {
+      "status": "PASS",
+      "note": "artifact path parent exists and is writable by convention"
+    },
+    "helper_integrity": {
+      "status": "PASS",
+      "note": "helper surface is trusted or safely bypassed"
+    },
+    "credential_surface": {
+      "status": "PASS",
+      "note": "credential surface is present"
+    },
+    "prompt_task_identity": {
+      "status": "FAIL",
+      "note": "exact prompt identity artifact does not match the expected task identity"
+    }
+  },
+  "blocking_failure_classes": [
+    "exact-prompt-artifact-missing"
+  ],
+  "final_verdict": "NOT_ACCEPTABLE_EXACT_PROMPT_MISSING",
+  "recommended_next_safe_step": "restore the exact prompt and task identity artifacts"
+}

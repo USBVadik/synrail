@@ -818,6 +818,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ("--artifact-path", args.artifact_path),
         ("--helper-path", args.helper_path),
         ("--prompt-identity-file", args.prompt_identity_file),
+        ("--expected-task-identity", args.task_identity),
     ]:
         if value:
             doctor_args.extend([flag, value])

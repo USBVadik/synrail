@@ -1,0 +1,12 @@
+{
+  "schema_version": "closure_verdict_v0",
+  "run_id": "EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_003",
+  "task_class": "medium_risk_reversible_artifact_fix",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "MISSING_PROOF_SECTIONS",
+  "next_allowed_transition": "PROOF_BUNDLE_COMPLETION",
+  "narrow_next_safe_step": "rerun the scenario check against the attested target surface",
+  "missing_sections": [
+    "scenario_proof"
+  ]
+}

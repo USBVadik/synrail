@@ -20,30 +20,31 @@ but also about:
 
 The current aggregate cost-of-control artifact now lives at:
 
-- `fixtures/cost_of_control_002.json`
+- `fixtures/cost_of_control_003.json`
 
-It is built from these five economics-aware comparison records:
+It is built from these six economics-aware comparison records:
 
 - `fixtures/executable_loop_run_001/comparison_economics.json`
 - `fixtures/executable_loop_run_002/comparison_economics.json`
 - `fixtures/executable_loop_run_003/comparison_economics.json`
 - `fixtures/executable_loop_compound_run_001/comparison_economics.json`
 - `fixtures/executable_loop_hybrid_pressure_run_002/comparison_economics.json`
+- `fixtures/executable_loop_hybrid_pressure_run_003/comparison_economics.json`
 
 ## Current measured reading
 
-Across the current five-scenario set, `Synrail` currently adds on average:
+Across the current six-scenario set, `Synrail` currently adds on average:
 
-- `19` operator minutes
+- `18` operator minutes
 - `2` extra interventions
 - `1` extra repair cycle
 - `1` extra invalidation
-- `23` extra minutes of closure latency
+- `21` extra minutes of closure latency
 
 Across that same set, `Synrail` currently gains on average:
 
-- `2` units of false-green exposure reduction
-- `44` points of artifact completeness
+- `1` unit of false-green exposure reduction
+- `39` points of artifact completeness
 
 This is the shortest honest current cost reading in the repo.
 
@@ -52,7 +53,7 @@ This is the shortest honest current cost reading in the repo.
 The current verdict mix is:
 
 - `3` scenarios: `SYNRAIL_BETTER`
-- `1` scenario: `BASELINE_GOOD_ENOUGH`
+- `2` scenarios: `BASELINE_GOOD_ENOUGH`
 - `1` scenario: `UNCLEAR`
 
 That matters because the cost artifact is not telling a universal success story.
@@ -69,6 +70,7 @@ The current buckets are:
   - `SCENARIO_HYBRID_002`
 - baseline-sufficient path:
   - `SCENARIO_WEAK_001`
+  - `SCENARIO_HYBRID_003`
 - under-proven path:
   - `SCENARIO_HYBRID_001`
 
@@ -104,7 +106,7 @@ The current shortest strategic reading is:
 
 - `Synrail` already earns its cost on the strong, compound, and one uglier hybrid pressure path
 - the weak low-risk path still looks too expensive for the gain
-- the hybrid class is no longer empty, but it is still mixed at the class level and should remain secondary for now
+- the hybrid class now also contains a `BASELINE_GOOD_ENOUGH` case, so hybrid should no longer remain a default middle lane
 
 This is exactly the kind of reading the repo needed.
 

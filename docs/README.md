@@ -41,6 +41,7 @@ Start here when you want to understand the kernel itself:
 - `core/SYNRAIL_EVIDENCE_PRECEDENCE.md`
 - `core/SYNRAIL_DOCTOR.md`
 - `core/DOCTOR_001.md`
+- `core/DOCTOR_PRESSURE_TEST_001.md`
 - `core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
 - `core/SYNRAIL_KERNEL_STATUS_CONTRACT.md`
 - `core/RUN_STATE_SCHEMA_001.md`
@@ -63,6 +64,7 @@ Start here when you want to understand the kernel itself:
 - `core/EXECUTABLE_LOOP_DEGRADED_REENTRY_RUN_001.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_RUN_001.md`
 - `core/EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_002.md`
+- `core/EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_003.md`
 - `schemas/spine_block_report_v0.schema.json`
 - `schemas/canonical_run_artifact_v0.schema.json`
 - `schemas/worked_orchestration_artifact_v0.schema.json`
@@ -83,6 +85,7 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/executable_loop_degraded_reentry_run_001/run.json`
 - `../fixtures/executable_loop_compound_run_001/run.json`
 - `../fixtures/executable_loop_hybrid_pressure_run_002/run.json`
+- `../fixtures/executable_loop_hybrid_pressure_run_003/run.json`
 
 That same `run.json` shape is now the canonical starting point for:
 

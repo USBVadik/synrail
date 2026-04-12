@@ -83,6 +83,7 @@ Important nuance:
 - it is a useful signal that the hybrid mode is plausible but still under-proven
 - current policy should therefore keep hybrid secondary, not treat it as a default middle lane
 - the repo now also has a second uglier hybrid pressure-test outside the trio, and that newer case says `SYNRAIL_BETTER`
+- the repo now also has a third hybrid pressure-test outside the trio, and that newest case says `BASELINE_GOOD_ENOUGH`
 
 ## What the trio now supports
 
@@ -123,13 +124,14 @@ It is now:
 while the newer hybrid pressure-test adds:
 
 - one stronger measured hybrid win
+- one measured hybrid demotion signal
 
 The next useful pressure on this trio is now:
 
-- one more measured hybrid pressure-test or an even firmer secondary status
-- additional cost-of-control readings beyond the current five-scenario set
+- cost reduction on winning paths if possible
+- additional cost-of-control readings beyond the current six-scenario set
 - more ugly compound paths that test whether the trio still holds outside curated clean flows
-- cost reduction on paths that still do not justify the extra control
+- sharper exception rules for where a demoted hybrid pattern is still worth reaching for
 
 ## Decision rule
 

@@ -1,0 +1,1 @@
+scenario replay confirms the reversible ambiguity is harmless after the bounded fallback

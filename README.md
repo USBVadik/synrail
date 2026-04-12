@@ -102,14 +102,16 @@ The current proof reading is:
 - one economics-aware weak-path comparison now says `BASELINE_GOOD_ENOUGH`
 - one economics-aware hybrid comparison still says `UNCLEAR`
 - one uglier hybrid pressure-test now also says `SYNRAIL_BETTER`
+- one further hybrid pressure-test now says `BASELINE_GOOD_ENOUGH`
 - one ugly compound run now also says `SYNRAIL_BETTER`
 - the current pressure-testing tranche now has one aggregate cost-of-control surface and one explicit hybrid-secondary status
+- doctor now also has one targeted false-readiness pressure-test slice for broken credential paths and exact task identity mismatch
 
 The current wedge reading is:
 
 - `Synrail` is strongest on proof-sensitive closure paths where false completion is expensive
 - it is not yet justified as a full governed path for every small incident
-- the hybrid subset now has one stronger measured pressure-test, but the class-level reading is still mixed so it remains provisional and secondary
+- the hybrid subset now has both a stronger win and a baseline-sufficient medium-risk case, so it is demoted from default policy status
 
 The current executable output reading is:
 
@@ -121,7 +123,8 @@ The current executable output reading is:
 - the repo now also has one explicit re-entry reading for blocked-to-accepted, partial-to-accepted, and degraded-to-accepted repair
 - the repo now also has one first compound economics comparison record on a proof-sensitive ugly path
 - the repo now also has one second hybrid pressure-test with a `SYNRAIL_BETTER` economics verdict
-- the repo now also has one aggregate machine-readable cost-of-control record across strong, weak, hybrid, compound, and hybrid-pressure paths
+- the repo now also has one third hybrid pressure-test with a `BASELINE_GOOD_ENOUGH` economics verdict
+- the repo now also has one aggregate machine-readable cost-of-control record across strong, weak, hybrid, compound, and two hybrid-pressure paths
 - that artifact is now the best single machine-readable entrypoint into a bounded internal run
 - the trio now also has first `comparison_economics` records with simple operator-cost and false-green metrics
 

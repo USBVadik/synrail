@@ -61,6 +61,21 @@ def non_empty_identity(value: str) -> bool:
     return bool(value and value.strip() and value.strip().upper() != "UNKNOWN")
 
 
+def env_value_looks_path_like(name: str, value: str) -> bool:
+    upper_name = name.upper()
+    if upper_name in {"GOOGLE_APPLICATION_CREDENTIALS", "AWS_SHARED_CREDENTIALS_FILE", "AWS_CONFIG_FILE", "AZURE_CONFIG_DIR"}:
+        return True
+    if upper_name.endswith("_FILE") or upper_name.endswith("_PATH") or upper_name.endswith("_DIR"):
+        return True
+    if not value:
+        return False
+    if value.startswith(("~", "/", "./", "../")):
+        return True
+    if os.sep in value or (os.altsep and os.altsep in value):
+        return True
+    return value.endswith(".json")
+
+
 def probe_clean_execution_surface(args: argparse.Namespace) -> dict:
     if args.clean_surface:
         return gate("PASS", "execution surface is acceptable")
@@ -131,6 +146,18 @@ def probe_credential_surface(args: argparse.Namespace) -> dict:
     missing = [name for name in args.credential_env if not os.environ.get(name)]
     if missing:
         return gate("FAIL", f"missing credential env: {', '.join(missing)}")
+
+    invalid_paths = []
+    for name in args.credential_env:
+        value = os.environ.get(name, "")
+        if not env_value_looks_path_like(name, value):
+            continue
+        candidate = Path(value).expanduser()
+        if not candidate.exists():
+            invalid_paths.append(f"{name} -> {candidate}")
+    if invalid_paths:
+        return gate("FAIL", f"credential env points to a missing path: {', '.join(invalid_paths)}")
+
     return gate("PASS", "required credential env is present")
 
 
@@ -145,7 +172,12 @@ def probe_prompt_task_identity(args: argparse.Namespace) -> dict:
         return gate("FAIL", "exact prompt identity file is not specified")
 
     prompt_file = Path(args.prompt_identity_file)
-    if prompt_file.exists() and prompt_file.read_text().strip():
+    if prompt_file.exists():
+        contents = prompt_file.read_text().strip()
+        if not contents:
+            return gate("FAIL", "exact prompt or task identity artifact is empty")
+        if args.expected_task_identity and args.expected_task_identity not in contents:
+            return gate("FAIL", "exact prompt identity artifact does not match the expected task identity")
         return gate("PASS", "exact prompt and task identity artifact is present")
     return gate("FAIL", "exact prompt or task identity artifact is missing")
 
@@ -227,6 +259,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--helper-path")
     parser.add_argument("--credential-env", action="append", default=[])
     parser.add_argument("--prompt-identity-file")
+    parser.add_argument("--expected-task-identity")
     return parser
 
 
