@@ -89,6 +89,9 @@ Current canonical packet surfaces are:
   - `fixtures/executable_loop_compound_continuation_run_005/stage0_repair_packet.json`
   - `fixtures/executable_loop_compound_continuation_run_005/stage1_repair_packet.json`
   - `fixtures/executable_loop_compound_continuation_run_005/stage2_repair_packet.json`
+- lower-replay packet-first runtime continuation:
+  - `fixtures/executable_loop_runtime_resume_run_004/repair_packet.json`
+  - `fixtures/executable_loop_runtime_resume_run_004/run.json`
 
 These prove:
 
@@ -100,6 +103,8 @@ These prove:
   - and terminal accepted states that should start a new run instead
 - runtime-owned packets can now narrow `required_inputs` to the current repair step instead of flattening the whole future repair debt into one giant input list
 - runtime-owned packets can now emit artifact-quality hints that say which existing artifact surface is still stale during continuation
+- runtime-owned packets can now emit narrower stale sub-surface ids inside those artifacts
+- packet-first `resume` can now auto-discover sibling continuation artifacts strongly enough to reach accepted closure with almost no raw flag replay
 
 ## Current boundary
 

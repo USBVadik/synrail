@@ -310,7 +310,41 @@ Why this matters:
 - it reduces one more ambiguity between repairable governed failures and legitimate lighter-mode exits
 - it makes the continuation lattice more honest around policy-selected non-governed paths
 
-## 10. Ordered multi-step continuation with stale-artifact hints
+## 10. Truly not-resumable accepted and rejected terminal continuation
+
+Current readable paths:
+
+- accepted-terminal surface:
+  - `fixtures/executable_loop_runtime_non_resumable_run_002/run.json`
+- rejected-terminal surface:
+  - `fixtures/executable_loop_runtime_non_resumable_run_003/run.json`
+
+Readable transitions:
+
+- accepted terminal run is resumed anyway
+- runtime returns:
+  - `BLOCKED`
+  - `resume`
+  - `TERMINAL_STATE_NOT_RESUMABLE`
+  - `NOT_RESUMABLE_TERMINAL_ACCEPTED`
+- rejected terminal run is resumed anyway
+- runtime returns:
+  - `BLOCKED`
+  - `resume`
+  - `TERMINAL_STATE_NOT_RESUMABLE`
+  - `NOT_RESUMABLE_TERMINAL_REJECTED`
+
+What this proves:
+
+- continuation truth now has two explicit terminal non-resumable families beyond the lighter-mode selection block
+- packet-first runtime now distinguishes accepted terminal finish from rejected terminal finish instead of flattening both into one generic fallback
+
+Why this matters:
+
+- it reduces another ambiguity between repairable non-green states and truly finished runs
+- it makes continuation boundaries more explainable when operators ask why `resume` should stop
+
+## 11. Ordered multi-step continuation with stale-artifact hints
 
 Current readable path:
 
@@ -332,13 +366,44 @@ Readable transition:
 What this proves:
 
 - packet-first continuation now has one clearer multi-step repair policy order
-- the runtime can point to which artifact surface is still stale at each repair step
+- the runtime can point to which exact stale sub-surface is still stale at each repair step
 - continuation can still survive one newly surfaced readiness failure in the middle of a longer repair chain
 
 Why this matters:
 
 - it makes continuation more product-real under messy repair order
 - it reduces the gap between “missing input” truth and “existing artifact still stale” truth
+
+## 12. Low-replay packet-first runtime resume
+
+Current readable path:
+
+- starting surface:
+  - `fixtures/executable_loop_runtime_resume_run_004/starting_state.json`
+- final surface:
+  - `fixtures/executable_loop_runtime_resume_run_004/run.json`
+
+Readable transition:
+
+- runtime starts from `DOCTOR_BLOCKED`
+- sibling prompt, task, proof, and final-result artifacts are auto-discovered
+- packet-first `resume` auto-synthesizes the continuation packet from that sibling runtime truth
+- continuation reaches:
+  - `OK`
+  - `accepted`
+  - `NONE`
+  - `CLOSURE_ACCEPTED`
+  - `ACCEPTED`
+
+What this proves:
+
+- packet-first `resume` is now materially less dependent on raw flag replay
+- continuation can now start from doctor-blocked truth and reach accepted closure while using sibling runtime artifacts as the default operator path
+
+Why this matters:
+
+- it makes named continuation look less like a smart expert trick and more like a real runtime surface
+- it reduces one more place where operator memory could drift away from runtime truth
 
 ## What the re-entry lattice now supports
 
@@ -351,9 +416,12 @@ The current re-entry lattice supports a stronger kernel-level claim:
   - one explicit compound repair family that crosses blocked, partial, and degraded contours on the way back to accepted closure
   - one richer packet-first continuation family that now distinguishes repairable compound truth from terminal accepted truth on the same runtime surface
   - one explicit non-resumable selection-blocked continuation family
+  - one explicit non-resumable accepted-terminal continuation family
+  - one explicit non-resumable rejected-terminal continuation family
   - one packet-driven compound continuation family that crosses blocked, invalid, degraded, and accepted contours on the way back to honest closure
   - one packet-first continuation family that carries selection/preparation handoff through invalid-proof and degraded-recovery repair back to accepted closure
   - one stricter packet-first continuation family that now carries repair order and stale-artifact hints through invalid-proof, readiness repair, and recovery repair back to accepted closure
+  - one lower-replay packet-first continuation family that now reaches accepted closure from doctor-blocked truth through sibling auto-discovery
 
 That is stronger than saying only:
 
@@ -368,7 +436,7 @@ because it shows the kernel can sometimes recover honestly after a prior block.
 The re-entry lattice still has visible gaps:
 
 - the current canonical reverse edges now cover readiness repair, proof completion, one recovery repair, and one ugly mixed family, but not the full set of future compound families
-- named runtime `resume` now exists for partial-proof, degraded-recovery, doctor-blocked continuation, and one explicit non-resumable selection-blocked family, and repair handoff plus repair packet now name the continuation contract much more honestly, but the packet is still narrower than a mature continuation surface should be
+- named runtime `resume` now exists for partial-proof, degraded-recovery, doctor-blocked continuation, one explicit non-resumable selection-blocked family, and two explicit terminal non-resumable families, and repair handoff plus repair packet now name the continuation contract much more honestly, but the packet is still narrower than a mature continuation surface should be
 - hybrid compound repair is still much weaker than it should be
 
 ## How this relates to other readings
@@ -400,7 +468,7 @@ That is a healthier internal product surface than treating repair only as someth
 The next strongest kernel work should improve one of these:
 
 1. make artifact-quality hints even sharper where the runtime already knows more than the current bounded fields express
-2. pressure-test more truly not-resumable families beyond selection-blocked and terminal accepted
+2. pressure-test more truly not-resumable families beyond selection-blocked and terminal accepted or rejected
 3. strengthen the economics reading around compound re-entry rather than only its state semantics
 4. keep packet-first continuation the default operator path instead of letting raw flag replay creep back in
 

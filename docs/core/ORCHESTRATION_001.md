@@ -43,6 +43,7 @@ When `resume` is used, that same contour can now also:
 
 - load one repair handoff contract
 - auto-discover one sibling `repair_packet.json` by default
+- auto-discover sibling prompt, task, proof, and final-result inputs when they already live beside the state file
 - load one richer repair packet above that handoff
 - block explicitly at `repair_handoff` if the required continuation inputs are still missing
 - absorb bounded runtime defaults from the handoff when recovery repair requires refresh reconciliation

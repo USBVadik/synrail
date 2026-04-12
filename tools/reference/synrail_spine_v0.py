@@ -122,6 +122,14 @@ def report_resumability_fields(state: dict, handoff: dict | None = None) -> dict
     resumability = current_handoff.get("resumability", build_resumability(state))
     repair_policy = current_handoff.get("repair_policy", {})
     artifact_quality_hints = current_handoff.get("artifact_quality_hints", [])
+    stale_subsurface_ids: list[str] = []
+    for hint in artifact_quality_hints:
+        if hint.get("quality") != "STALE":
+            continue
+        for subsurface in hint.get("stale_subsurfaces", []):
+            subsurface_id = subsurface.get("subsurface_id", "")
+            if subsurface_id and subsurface_id not in stale_subsurface_ids:
+                stale_subsurface_ids.append(subsurface_id)
     return {
         "resumability_status": resumability["status"],
         "resumability_family": resumability["family"],
@@ -134,6 +142,7 @@ def report_resumability_fields(state: dict, handoff: dict | None = None) -> dict
         "resumability_stale_artifact_ids": [
             hint["artifact_id"] for hint in artifact_quality_hints if hint.get("quality") == "STALE"
         ],
+        "resumability_stale_subsurface_ids": stale_subsurface_ids,
     }
 
 
@@ -144,6 +153,20 @@ def repair_packet_summary(packet: dict | None, state: dict) -> dict:
     artifact_quality_summary = packet.get("artifact_quality_summary", {}) if packet else {
         "stale_artifact_ids": [hint["artifact_id"] for hint in handoff.get("artifact_quality_hints", []) if hint.get("quality") == "STALE"],
         "non_resumable_artifact_ids": [hint["artifact_id"] for hint in handoff.get("artifact_quality_hints", []) if hint.get("quality") == "NON_RESUMABLE"],
+        "stale_subsurface_ids": [
+            subsurface.get("subsurface_id", "")
+            for hint in handoff.get("artifact_quality_hints", [])
+            if hint.get("quality") == "STALE"
+            for subsurface in hint.get("stale_subsurfaces", [])
+            if subsurface.get("subsurface_id", "")
+        ],
+        "non_resumable_subsurface_ids": [
+            subsurface.get("subsurface_id", "")
+            for hint in handoff.get("artifact_quality_hints", [])
+            if hint.get("quality") == "NON_RESUMABLE"
+            for subsurface in hint.get("stale_subsurfaces", [])
+            if subsurface.get("subsurface_id", "")
+        ],
     }
     return {
         "emitted": packet is not None,
@@ -160,6 +183,8 @@ def repair_packet_summary(packet: dict | None, state: dict) -> dict:
         "policy_ready_steps": list(repair_policy.get("ready_now_step_ids", [])),
         "stale_artifact_ids": list(artifact_quality_summary.get("stale_artifact_ids", [])),
         "non_resumable_artifact_ids": list(artifact_quality_summary.get("non_resumable_artifact_ids", [])),
+        "stale_subsurface_ids": list(artifact_quality_summary.get("stale_subsurface_ids", [])),
+        "non_resumable_subsurface_ids": list(artifact_quality_summary.get("non_resumable_subsurface_ids", [])),
     }
 
 
@@ -1053,6 +1078,7 @@ def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict, rep
             "resumability_policy_next_step": report.get("resumability_policy_next_step", ""),
             "resumability_ready_now_steps": list(report.get("resumability_ready_now_steps", [])),
             "resumability_stale_artifact_ids": list(report.get("resumability_stale_artifact_ids", [])),
+            "resumability_stale_subsurface_ids": list(report.get("resumability_stale_subsurface_ids", [])),
             "resulting_state": report["resulting_state"],
             "next_safe_step": report["next_safe_step"],
         },
@@ -1078,6 +1104,7 @@ def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict, rep
             "policy_next_step": report.get("resumability_policy_next_step", ""),
             "ready_now_steps": list(report.get("resumability_ready_now_steps", [])),
             "stale_artifact_ids": list(report.get("resumability_stale_artifact_ids", [])),
+            "stale_subsurface_ids": list(report.get("resumability_stale_subsurface_ids", [])),
         },
     }
 

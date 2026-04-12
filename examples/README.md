@@ -103,6 +103,18 @@ They are here to show how `Synrail` artifacts fit together without importing raw
   - fifth uglier packet-first continuation contour using selection/preparation handoff plus stale-artifact hints and explicit multi-step repair order
   - crosses out-of-order repair blocking, doctor-blocked readiness, degraded recovery, and accepted closure on the same runtime surface
   - includes `run.json` as the ordered packet-first compound runtime-continuation primary run artifact
+- `../fixtures/executable_loop_runtime_non_resumable_run_002/`
+  - explicit accepted-terminal non-resumable continuation contour
+  - shows that `resume` stops honestly after accepted closure and points to `start_new_run`
+  - includes `run.json` as the accepted-terminal non-resumable primary run artifact
+- `../fixtures/executable_loop_runtime_non_resumable_run_003/`
+  - explicit rejected-terminal non-resumable continuation contour
+  - shows that `resume` also stops honestly after rejected terminal closure and points to `start_new_run`
+  - includes `run.json` as the rejected-terminal non-resumable primary run artifact
+- `../fixtures/executable_loop_runtime_resume_run_004/`
+  - fourth runtime-resume contour using packet-first sibling auto-discovery
+  - reaches accepted closure from `DOCTOR_BLOCKED` with much less raw flag replay
+  - includes `run.json` as the low-replay runtime-resume primary run artifact
 
 ## Rule
 

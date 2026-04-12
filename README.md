@@ -124,8 +124,12 @@ The current proof reading is:
 - the repo now also auto-synthesizes that richer repair packet from current runtime truth, so the operator no longer has to assemble most continuation context by hand
 - the repo now also lets that richer repair packet carry explicit resumability family, active repair pressures, and repair order so runtime continuation can distinguish repairable contours from terminal ones more honestly
 - the repo now also lets that richer repair packet point to which existing artifact surface is still stale, not only which next input is missing
+- the repo now also lets that richer repair packet point to narrower stale sub-surfaces inside those artifacts, so continuation can name exactly what is stale instead of only naming a broader artifact shell
 - the repo now also has one canonical blocked repair-handoff run showing that `resume` now stops explicitly at `repair_handoff` when the continuation contract is still incomplete
 - the repo now also has one canonical runtime non-resumable run showing that a lighter-mode selection block now stops governed continuation at `resume` with `STATE_NOT_RESUMABLE`
+- the repo now also has one second canonical runtime non-resumable run showing that accepted terminal closure is now its own explicit non-resumable continuation family
+- the repo now also has one third canonical runtime non-resumable run showing that rejected terminal closure is now its own explicit non-resumable continuation family
+- the repo now also has one fourth canonical runtime-resume run showing that sibling artifact auto-discovery now lets packet-first `resume` reach accepted closure with much less manual replay
 - the repo now also has one bounded governed-path cost delta showing that preparation can reduce operator tax inside the winning contour without weakening closure safety
 - the repo now also has one canonical ugly compound continuation run showing that two staged repair handoffs plus named `resume` can cross doctor-blocked, partial-proof, and degraded-recovery pressure on the same runtime surface
 - the repo now also has one second uglier compound continuation run showing that richer repair packets plus named `resume` can cross blocked readiness, invalid proof, degraded recovery, and accepted closure on the same runtime surface
@@ -149,9 +153,12 @@ The current executable output reading is:
 - the repo now also carries one canonical runtime-resume fixture on that same artifact surface
 - the repo now also carries one second canonical runtime-resume fixture on that same artifact surface
 - the repo now also carries one third canonical runtime-resume fixture on that same artifact surface
+- the repo now also carries one fourth canonical runtime-resume fixture on that same artifact surface
 - the repo now also carries one canonical repair-packet blocked fixture on that same artifact surface
 - the repo now also carries one canonical repair-handoff blocked fixture on that same artifact surface
 - the repo now also carries one canonical runtime non-resumable fixture on that same artifact surface
+- the repo now also carries one second canonical runtime non-resumable fixture on that same artifact surface
+- the repo now also carries one third canonical runtime non-resumable fixture on that same artifact surface
 - the repo now also carries one canonical ugly compound repair fixture on that same artifact surface
 - the repo now also carries one canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one second canonical ugly compound continuation fixture on that same artifact surface

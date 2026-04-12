@@ -162,6 +162,18 @@
           "items": {
             "type": "string"
           }
+        },
+        "stale_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "non_resumable_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -176,26 +188,50 @@
         "resumability_requires_new_run"
       ],
       "properties": {
-        "resumability_status": {"type": "string"},
-        "resumability_family": {"type": "string"},
+        "resumability_status": {
+          "type": "string"
+        },
+        "resumability_family": {
+          "type": "string"
+        },
         "resumability_active_pressures": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
         "resumability_repair_order": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
-        "resumability_requires_new_run": {"type": "boolean"},
-        "resumability_policy_type": {"type": "string"},
-        "resumability_policy_next_step": {"type": "string"},
+        "resumability_requires_new_run": {
+          "type": "boolean"
+        },
+        "resumability_policy_type": {
+          "type": "string"
+        },
+        "resumability_policy_next_step": {
+          "type": "string"
+        },
         "resumability_ready_now_steps": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
         "resumability_stale_artifact_ids": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
+        },
+        "resumability_stale_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

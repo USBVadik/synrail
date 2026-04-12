@@ -10,6 +10,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from synrail_repair_packet_v0 import build_packet_from_runtime_truth
+
 
 HERE = Path(__file__).resolve().parent
 SPINE = HERE / "synrail_spine_v0.py"
@@ -359,6 +361,114 @@ def discover_repair_packet_file(args: argparse.Namespace) -> Path | None:
     return None
 
 
+def discover_resume_sibling_inputs(args: argparse.Namespace, state: dict) -> None:
+    root = Path(args.state_file).parent
+
+    def existing(name: str) -> Path | None:
+        candidate = root / name
+        return candidate if candidate.exists() else None
+
+    if not getattr(args, "mode_selection_receipt", None):
+        candidate = existing("selection_receipt.json")
+        if candidate:
+            args.mode_selection_receipt = str(candidate)
+
+    if not getattr(args, "final_result", None):
+        candidate = existing("final_result.json")
+        if candidate:
+            args.final_result = str(candidate)
+
+    if not getattr(args, "readback", None):
+        candidate = existing("readback.txt")
+        if candidate:
+            args.readback = str(candidate)
+
+    if not getattr(args, "scenario_proof", None):
+        candidate = existing("scenario.txt")
+        if candidate:
+            args.scenario_proof = str(candidate)
+
+    if not getattr(args, "target_identity_file", None):
+        for name in ["target_identity.txt", "target_identity.json"]:
+            candidate = existing(name)
+            if candidate:
+                args.target_identity_file = str(candidate)
+                break
+
+    if not getattr(args, "artifact_path", None) and getattr(args, "final_result", None):
+        args.artifact_path = args.final_result
+
+    if not getattr(args, "prompt_identity_file", None):
+        candidate = existing("prompt_identity.txt")
+        if candidate:
+            args.prompt_identity_file = str(candidate)
+
+    if not getattr(args, "prompt_identity", None):
+        candidate = existing("prompt_identity.txt")
+        if candidate:
+            args.prompt_identity = candidate.read_text().strip()
+
+    if not getattr(args, "task_identity", None):
+        candidate = existing("task_identity.txt")
+        if candidate:
+            args.task_identity = candidate.read_text().strip()
+
+
+def synthesize_repair_packet(args: argparse.Namespace, state: dict) -> Path:
+    discover_resume_sibling_inputs(args, state)
+    root = Path(args.state_file).parent
+    packet_output = Path(args.repair_packet_output)
+    selection_receipt = load_json(Path(args.mode_selection_receipt)) if getattr(args, "mode_selection_receipt", None) else None
+
+    preparation_receipt = None
+    preparation_candidate = root / "preparation_receipt.json"
+    if preparation_candidate.exists():
+        preparation_receipt = load_json(preparation_candidate)
+
+    report = None
+    report_candidate = root / "report.json"
+    if report_candidate.exists():
+        report = load_json(report_candidate)
+
+    packet = build_packet_from_runtime_truth(
+        state=state,
+        artifact_root=root,
+        doctor_run_id=args.doctor_run_id,
+        doctor_level=args.doctor_level,
+        target_path=args.target_path,
+        target_classification=args.target_classification,
+        baseline_identity=args.baseline_identity,
+        intended_run_class=args.intended_run_class,
+        execution_surface_identity=args.execution_surface_identity,
+        final_result=args.final_result or "",
+        prompt_identity=args.prompt_identity or "",
+        task_identity=args.task_identity or "",
+        prompt_identity_ok=getattr(args, "prompt_identity_ok", False),
+        readback=args.readback or "",
+        scenario_proof=args.scenario_proof or "",
+        target_identity_file=args.target_identity_file or "",
+        clean_surface=getattr(args, "clean_surface", False),
+        artifact_viable=getattr(args, "artifact_viable", False),
+        helper_ok=getattr(args, "helper_ok", False),
+        credentials_ok=getattr(args, "credentials_ok", False),
+        artifact_path=args.artifact_path or "",
+        helper_path=args.helper_path or "",
+        credential_env=list(getattr(args, "credential_env", [])),
+        refresh_output=args.refresh_output or "",
+        refresh_event_type=args.refresh_event_type or "",
+        refresh_recovery_status=args.refresh_recovery_status or "NOT_REQUIRED",
+        refresh_reverification_complete=getattr(args, "refresh_reverification_complete", False),
+        refresh_use_bundle=getattr(args, "refresh_use_bundle", False),
+        refresh_use_closure=getattr(args, "refresh_use_closure", False),
+        selection_receipt=selection_receipt,
+        preparation_receipt=preparation_receipt,
+        report=report,
+    )
+    packet_output.write_text(json.dumps(packet, indent=2, ensure_ascii=True) + "\n")
+    args.repair_packet_file = str(packet_output)
+    return packet_output
+
+
 def apply_resume_output_defaults(args: argparse.Namespace, state: dict) -> None:
     state_path = Path(args.state_file)
     root = state_path.parent
@@ -404,16 +514,24 @@ def apply_resume_output_defaults(args: argparse.Namespace, state: dict) -> None:
 
 
 def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> list[str]:
+    discover_resume_sibling_inputs(args, state)
     packet_path = discover_repair_packet_file(args)
-    if not packet_path:
-        return []
+    packet = None
+    if packet_path:
+        args.repair_packet_file = str(packet_path)
+        try:
+            packet = load_repair_packet(packet_path)
+            if packet["run_id"] != state["run_id"] or packet["from_state"] != state["state"]:
+                raise ValueError("repair packet does not match the requested state")
+        except ValueError:
+            packet = None
 
-    args.repair_packet_file = str(packet_path)
-    packet = load_repair_packet(packet_path)
-    if packet["run_id"] != state["run_id"] or packet["from_state"] != state["state"]:
-        raise ValueError("repair packet does not match the requested state")
+    if packet is None:
+        packet_path = synthesize_repair_packet(args, state)
+        packet = load_repair_packet(packet_path)
+
     if packet.get("resumability", {}).get("status", "REPAIRABLE") != "REPAIRABLE":
-        raise ValueError("repair packet does not describe a resumable continuation state")
+        return []
 
     context = packet["resume_context"]
     continuation_plan = packet.get("continuation_plan", {})

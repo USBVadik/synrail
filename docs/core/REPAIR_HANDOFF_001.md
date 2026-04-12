@@ -103,6 +103,20 @@ That handoff records:
 - artifact-quality hint:
   - `mode_selection_receipt`
 
+The current handoff layer now also proves two explicit terminal non-resumable families:
+
+- `fixtures/executable_loop_runtime_non_resumable_run_002/repair_handoff.json`
+- `fixtures/executable_loop_runtime_non_resumable_run_003/repair_handoff.json`
+
+Those handoffs record:
+
+- `resumability.family = NOT_RESUMABLE_TERMINAL_ACCEPTED`
+- `resumability.family = NOT_RESUMABLE_TERMINAL_REJECTED`
+- `repair_policy.next_step_id = start_new_run`
+- artifact-quality stale sub-surfaces:
+  - `accepted_terminal_state`
+  - `rejected_terminal_state`
+
 The current handoff layer also now supports one stricter multi-step compound family:
 
 - `fixtures/executable_loop_compound_continuation_run_005/stage0_repair_handoff.json`
@@ -113,7 +127,7 @@ Those prove:
 
 - required inputs now narrow to the current repair step
 - the repair order is explicit
-- the handoff can point to the stale artifact surface that still needs repair
+- the handoff can point to the stale artifact surface and the narrower stale sub-surface that still need repair
 
 ## Why this matters
 
@@ -137,5 +151,5 @@ The shortest honest reading is:
 - `Synrail` now has one first-class repair handoff layer
 - the runtime can now block continuation at `repair_handoff` when required inputs are still missing
 - the same handoff layer can now also say when a continuation family is truly not resumable
-- and it can now point to which artifact surface is still stale while multi-step repair is unfolding
+- and it can now point to which artifact surface and which narrower stale sub-surface are still stale while multi-step repair is unfolding
 - named continuation is starting to look like a real product contour instead of only a repaired evidence pattern

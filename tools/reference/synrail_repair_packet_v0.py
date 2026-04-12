@@ -190,10 +190,24 @@ def build_runtime_truth(state: dict, report: dict | None) -> dict:
 
 def build_artifact_quality_summary(handoff: dict) -> dict:
     hints = handoff.get("artifact_quality_hints", [])
+    stale_subsurface_ids: list[str] = []
+    non_resumable_subsurface_ids: list[str] = []
+    for hint in hints:
+        quality = hint.get("quality")
+        for subsurface in hint.get("stale_subsurfaces", []):
+            subsurface_id = subsurface.get("subsurface_id", "")
+            if not subsurface_id:
+                continue
+            if quality == "STALE" and subsurface_id not in stale_subsurface_ids:
+                stale_subsurface_ids.append(subsurface_id)
+            if quality == "NON_RESUMABLE" and subsurface_id not in non_resumable_subsurface_ids:
+                non_resumable_subsurface_ids.append(subsurface_id)
     return {
         "artifact_ids": [hint["artifact_id"] for hint in hints],
         "stale_artifact_ids": [hint["artifact_id"] for hint in hints if hint.get("quality") == "STALE"],
         "non_resumable_artifact_ids": [hint["artifact_id"] for hint in hints if hint.get("quality") == "NON_RESUMABLE"],
+        "stale_subsurface_ids": stale_subsurface_ids,
+        "non_resumable_subsurface_ids": non_resumable_subsurface_ids,
     }
 
 

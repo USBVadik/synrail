@@ -1,0 +1,70 @@
+{
+  "schema_version": "repair_handoff_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_003",
+  "task_class": "proof_sensitive_reject_case",
+  "from_state": "CLOSURE_REJECTED",
+  "closure_status": "REJECTED",
+  "blocking_reason": "TERMINAL_STATE_NOT_RESUMABLE",
+  "continuation_allowed": false,
+  "continuation_entrypoint": "",
+  "resumability": {
+    "status": "NOT_RESUMABLE",
+    "family": "NOT_RESUMABLE_TERMINAL_REJECTED",
+    "active_pressures": [
+      "TERMINAL_REJECTED",
+      "TERMINAL_STATE"
+    ],
+    "recommended_repair_order": [
+      "start_new_run"
+    ],
+    "requires_new_run": true,
+    "explanation": "the run is already rejected, so continuation should stop and a new run should start instead"
+  },
+  "repair_policy": {
+    "policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "next_step_id": "start_new_run",
+    "ready_now_step_ids": [],
+    "ordered_steps": [
+      {
+        "step_id": "start_new_run",
+        "status": "TERMINAL_NEXT_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "terminal_run_state"
+        ],
+        "resolves_pressures": [
+          "TERMINAL_STATE",
+          "TERMINAL_REJECTED"
+        ],
+        "why": "terminal state should yield to a new run rather than another resume attempt"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "terminal_run_state",
+      "quality": "NON_RESUMABLE",
+      "still_stale_parts": [
+        "rejected_terminal_state"
+      ],
+      "mapped_inputs": [],
+      "repair_step": "start_new_run",
+      "why": "the current run is already rejected and continuation should yield to a new run",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "rejected_terminal_state",
+          "status": "NON_RESUMABLE",
+          "mapped_inputs": [],
+          "why": "the rejected closure state is terminal and should not be resumed"
+        }
+      ]
+    }
+  ],
+  "required_inputs": [],
+  "runtime_defaults": {
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false
+  },
+  "next_safe_step": "start a new run instead of resuming a terminal state"
+}

@@ -1,0 +1,93 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_004",
+  "task_class": "bounded_router_trigger_fix",
+  "doctor": {
+    "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "blocking_failure_classes": []
+  },
+  "resume": {
+    "applied": true,
+    "from_state": "DOCTOR_BLOCKED"
+  },
+  "repair_handoff": {
+    "applied": true,
+    "from_state": "CLOSURE_ACCEPTED",
+    "required_inputs": [],
+    "missing_inputs": []
+  },
+  "repair_packet": {
+    "emitted": false,
+    "from_state": "",
+    "ready_for_resume": false,
+    "missing_inputs": [],
+    "selected_with_preparation": false,
+    "resumability_status": "NOT_RESUMABLE",
+    "resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+    "active_pressures": [
+      "TERMINAL_ACCEPTED",
+      "TERMINAL_STATE"
+    ],
+    "repair_order": [
+      "start_new_run"
+    ],
+    "policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "policy_next_step": "start_new_run",
+    "policy_ready_steps": [],
+    "stale_artifact_ids": [],
+    "non_resumable_artifact_ids": [
+      "terminal_run_state"
+    ],
+    "stale_subsurface_ids": [],
+    "non_resumable_subsurface_ids": [
+      "accepted_terminal_state"
+    ]
+  },
+  "resumability": {
+    "resumability_status": "NOT_RESUMABLE",
+    "resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+    "resumability_active_pressures": [
+      "TERMINAL_ACCEPTED",
+      "TERMINAL_STATE"
+    ],
+    "resumability_repair_order": [
+      "start_new_run"
+    ],
+    "resumability_requires_new_run": true,
+    "resumability_policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "resumability_policy_next_step": "start_new_run",
+    "resumability_ready_now_steps": [],
+    "resumability_stale_artifact_ids": [],
+    "resumability_stale_subsurface_ids": []
+  },
+  "selection": {
+    "applied": false,
+    "selected_mode": "",
+    "selected_with_preparation": false
+  },
+  "preparation": {
+    "applied": true,
+    "ready_for_closure": true
+  },
+  "bundle": {
+    "status": "COMPLETE",
+    "missing_sections": []
+  },
+  "closure": {
+    "closure_status": "ACCEPTED",
+    "blocking_reason": ""
+  },
+  "refresh": {
+    "applied": false,
+    "event_type": "",
+    "resulting_closure_status": ""
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "current_closure_status": "ACCEPTED",
+  "next_safe_step": "NONE"
+}

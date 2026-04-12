@@ -121,13 +121,18 @@ Goal:
 Current pressure-tested slice:
 
 - repair packets now carry explicit artifact-quality hints in addition to missing-input truth
-- one truly not-resumable selection-blocked continuation family now exists beside repairable and terminal families
+- repair packets now carry narrower stale sub-surface hints inside those artifacts
+- three truly not-resumable continuation families now exist:
+  - selection-blocked
+  - terminal accepted
+  - terminal rejected
+- one lower-replay packet-first continuation run now proves that sibling auto-discovery can drive `resume` back to accepted closure with much less raw flag replay
 - one uglier packet-first continuation run now proves explicit repair order, stale-artifact hints, mid-continuation doctor failure, and return to accepted closure
 
 Next likely strengthening moves:
 
-- sharpen artifact-quality hints so they name narrower stale sub-surfaces inside larger artifacts
-- pressure-test more non-resumable families beyond lighter-mode selection and terminal acceptance
+- sharpen artifact-quality hints so they name even more precise stale sub-surfaces inside larger artifacts
+- pressure-test more non-resumable families beyond lighter-mode selection and terminal acceptance or rejection
 - keep reducing manual flag replay around packet-first `resume`
 
 ### 6. Sharpen doctor on expensive false-readiness modes

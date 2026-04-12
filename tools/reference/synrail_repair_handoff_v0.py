@@ -121,7 +121,7 @@ STEP_PRESSURES = {
     "run_refresh_reconciliation": ["RECOVERY_PENDING"],
     "rerun_closure": ["DOCTOR_BLOCKED", "INVALID_PROOF", "PARTIAL_PROOF", "RECOVERY_PENDING"],
     "switch_to_lighter_mode": ["SELECTION_BLOCKED"],
-    "start_new_run": ["TERMINAL_STATE"],
+    "start_new_run": ["TERMINAL_STATE", "TERMINAL_ACCEPTED", "TERMINAL_REJECTED"],
     "inspect_runtime_state": [],
 }
 
@@ -144,6 +144,36 @@ def save_json(path: Path, payload: dict) -> None:
 def add_unique(target: list[str], value: str) -> None:
     if value not in target:
         target.append(value)
+
+
+def make_subsurface(subsurface_id: str, *, status: str, mapped_inputs: list[str], why: str) -> dict:
+    return {
+        "subsurface_id": subsurface_id,
+        "status": status,
+        "mapped_inputs": list(mapped_inputs),
+        "why": why,
+    }
+
+
+def make_hint(
+    artifact_id: str,
+    *,
+    quality: str,
+    still_stale_parts: list[str],
+    mapped_inputs: list[str],
+    repair_step: str,
+    why: str,
+    stale_subsurfaces: list[dict] | None = None,
+) -> dict:
+    return {
+        "artifact_id": artifact_id,
+        "quality": quality,
+        "still_stale_parts": list(still_stale_parts),
+        "mapped_inputs": list(mapped_inputs),
+        "repair_step": repair_step,
+        "why": why,
+        "stale_subsurfaces": list(stale_subsurfaces or []),
+    }
 
 
 def merged_missing_sections(state: dict) -> list[str]:
@@ -180,7 +210,11 @@ def build_runtime_defaults(state: dict, required_inputs: list[str]) -> dict:
 
 def collect_active_pressures(state: dict) -> list[str]:
     pressures: list[str] = []
-    if state.get("state") in {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"} or state.get("closure", {}).get("status") in {"ACCEPTED", "REJECTED"}:
+    if state.get("state") == "CLOSURE_ACCEPTED" or state.get("closure", {}).get("status") == "ACCEPTED":
+        add_unique(pressures, "TERMINAL_ACCEPTED")
+        add_unique(pressures, "TERMINAL_STATE")
+    elif state.get("state") == "CLOSURE_REJECTED" or state.get("closure", {}).get("status") == "REJECTED":
+        add_unique(pressures, "TERMINAL_REJECTED")
         add_unique(pressures, "TERMINAL_STATE")
     if state.get("closure", {}).get("blocking_reason") == "MODE_SELECTION_NOT_GOVERNED":
         add_unique(pressures, "SELECTION_BLOCKED")
@@ -218,7 +252,11 @@ def continuation_allowed(state: dict) -> bool:
     return True
 
 
-def resumability_family(active_pressures: list[str], allowed: bool) -> str:
+def resumability_family(state: dict, active_pressures: list[str], allowed: bool) -> str:
+    if state.get("state") == "CLOSURE_ACCEPTED" or state.get("closure", {}).get("status") == "ACCEPTED":
+        return "NOT_RESUMABLE_TERMINAL_ACCEPTED"
+    if state.get("state") == "CLOSURE_REJECTED" or state.get("closure", {}).get("status") == "REJECTED":
+        return "NOT_RESUMABLE_TERMINAL_REJECTED"
     if "TERMINAL_STATE" in active_pressures:
         return "NOT_RESUMABLE_TERMINAL"
     if "SELECTION_BLOCKED" in active_pressures:
@@ -243,7 +281,7 @@ def resumability_family(active_pressures: list[str], allowed: bool) -> str:
 def recommended_repair_order(active_pressures: list[str], family: str) -> list[str]:
     if family == "NOT_RESUMABLE_SELECTION_BLOCKED":
         return ["switch_to_lighter_mode"]
-    if family == "NOT_RESUMABLE_TERMINAL":
+    if family in {"NOT_RESUMABLE_TERMINAL_ACCEPTED", "NOT_RESUMABLE_TERMINAL_REJECTED", "NOT_RESUMABLE_TERMINAL"}:
         return ["start_new_run"]
     if family == "NOT_RESUMABLE_UNKNOWN":
         return ["inspect_runtime_state"]
@@ -270,116 +308,287 @@ def build_artifact_quality_hints(state: dict) -> list[dict]:
     readiness_parts: list[str] = []
     readiness_inputs: list[str] = []
     readiness_why: list[str] = []
+    readiness_subsurfaces: list[dict] = []
     for failure_class in state.get("doctor", {}).get("blocking_failure_classes", []):
         mapped_inputs = DOCTOR_FAILURE_INPUTS.get(failure_class, [])
         for input_id in mapped_inputs:
             add_unique(readiness_inputs, input_id)
         if failure_class == "baseline-identity ambiguous":
-            add_unique(readiness_parts, "target_identity")
+            add_unique(readiness_parts, "target_identity_record")
+            readiness_subsurfaces.append(
+                make_subsurface(
+                    "target_identity_record",
+                    status="STALE",
+                    mapped_inputs=["target_identity_file"],
+                    why="target identity evidence is missing or does not match the expected target surface",
+                )
+            )
         elif failure_class == "dirty-surface unsafe":
-            add_unique(readiness_parts, "clean_execution_surface")
+            add_unique(readiness_parts, "clean_execution_surface_record")
+            readiness_subsurfaces.append(
+                make_subsurface(
+                    "clean_execution_surface_record",
+                    status="STALE",
+                    mapped_inputs=["clean_surface_confirmation"],
+                    why="the execution surface still looks dirty or not explicitly safe for continuation",
+                )
+            )
         elif failure_class == "helper-integrity unknown":
-            add_unique(readiness_parts, "helper_entrypoint")
+            add_unique(readiness_parts, "helper_entrypoint_record")
+            readiness_subsurfaces.append(
+                make_subsurface(
+                    "helper_entrypoint_record",
+                    status="STALE",
+                    mapped_inputs=["helper_path"],
+                    why="the helper entrypoint required for readiness is still unresolved",
+                )
+            )
         elif failure_class == "credential-surface missing":
-            add_unique(readiness_parts, "credential_surface")
+            add_unique(readiness_parts, "credential_surface_record")
+            readiness_subsurfaces.append(
+                make_subsurface(
+                    "credential_surface_record",
+                    status="STALE",
+                    mapped_inputs=["credential_surface"],
+                    why="the credential surface is still missing or points at an invalid path",
+                )
+            )
         elif failure_class == "artifact-viability missing":
-            add_unique(readiness_parts, "artifact_path")
+            add_unique(readiness_parts, "artifact_path_record")
+            readiness_subsurfaces.append(
+                make_subsurface(
+                    "artifact_path_record",
+                    status="STALE",
+                    mapped_inputs=["artifact_path"],
+                    why="the artifact viability surface still lacks a trusted machine-readable path",
+                )
+            )
         elif failure_class == "exact-prompt-artifact-missing":
-            add_unique(readiness_parts, "prompt_identity")
-            add_unique(readiness_parts, "task_identity")
+            add_unique(readiness_parts, "prompt_identity_record")
+            add_unique(readiness_parts, "task_identity_record")
+            readiness_subsurfaces.append(
+                make_subsurface(
+                    "prompt_identity_record",
+                    status="STALE",
+                    mapped_inputs=["prompt_identity"],
+                    why="the continuation prompt identity is still missing or unresolved",
+                )
+            )
+            readiness_subsurfaces.append(
+                make_subsurface(
+                    "task_identity_record",
+                    status="STALE",
+                    mapped_inputs=["task_identity"],
+                    why="the continuation task identity is still missing or unresolved",
+                )
+            )
         add_unique(readiness_why, failure_class)
     if readiness_parts:
         hints.append(
-            {
-                "artifact_id": "readiness_surface",
-                "quality": "STALE",
-                "still_stale_parts": readiness_parts,
-                "mapped_inputs": readiness_inputs,
-                "repair_step": "restore_readiness_truth",
-                "why": "doctor still sees stale readiness evidence: " + ", ".join(readiness_why),
-            }
+            make_hint(
+                "readiness_surface",
+                quality="STALE",
+                still_stale_parts=readiness_parts,
+                mapped_inputs=readiness_inputs,
+                repair_step="restore_readiness_truth",
+                why="doctor still sees stale readiness evidence: " + ", ".join(readiness_why),
+                stale_subsurfaces=readiness_subsurfaces,
+            )
         )
 
     missing_sections = merged_missing_sections(state)
-    final_result_parts = [part for part in ["final_result", "diff_provenance", "cleanup_status"] if part in missing_sections]
-    if state.get("closure", {}).get("blocking_reason") in {"ARTIFACT_BUNDLE_MISSING", "INVALID_PROOF_BUNDLE"} and "final_result" not in final_result_parts:
-        final_result_parts.insert(0, "final_result")
+    final_result_parts = [part for part in ["final_result_payload", "diff_provenance_record", "cleanup_status_record"] if False]
+    final_result_subsurfaces: list[dict] = []
+    if "final_result" in missing_sections or state.get("closure", {}).get("blocking_reason") in {"ARTIFACT_BUNDLE_MISSING", "INVALID_PROOF_BUNDLE"}:
+        add_unique(final_result_parts, "final_result_payload")
+        final_result_subsurfaces.append(
+            make_subsurface(
+                "final_result_payload",
+                status="STALE",
+                mapped_inputs=["final_result"],
+                why="the final result artifact is missing, empty, or not yet trusted for bundle repair",
+            )
+        )
+    if "diff_provenance" in missing_sections:
+        add_unique(final_result_parts, "diff_provenance_record")
+        final_result_subsurfaces.append(
+            make_subsurface(
+                "diff_provenance_record",
+                status="STALE",
+                mapped_inputs=["final_result"],
+                why="diff provenance still cannot be reconstructed from the current final result artifact",
+            )
+        )
+    if "cleanup_status" in missing_sections:
+        add_unique(final_result_parts, "cleanup_status_record")
+        final_result_subsurfaces.append(
+            make_subsurface(
+                "cleanup_status_record",
+                status="STALE",
+                mapped_inputs=["final_result"],
+                why="cleanup status still cannot be trusted from the current final result artifact",
+            )
+        )
     if final_result_parts:
         hints.append(
-            {
-                "artifact_id": "final_result_artifact",
-                "quality": "STALE",
-                "still_stale_parts": final_result_parts,
-                "mapped_inputs": ["final_result"],
-                "repair_step": "repair_final_result_artifact",
-                "why": "the final-result truth surface is still stale or incomplete",
-            }
+            make_hint(
+                "final_result_artifact",
+                quality="STALE",
+                still_stale_parts=final_result_parts,
+                mapped_inputs=["final_result"],
+                repair_step="repair_final_result_artifact",
+                why="the final-result truth surface is still stale or incomplete",
+                stale_subsurfaces=final_result_subsurfaces,
+            )
         )
 
-    supporting_parts = [part for part in ["readback", "scenario_proof"] if part in missing_sections]
-    supporting_inputs = [PROOF_SECTION_INPUTS[part] for part in supporting_parts if part in PROOF_SECTION_INPUTS]
+    supporting_parts: list[str] = []
+    supporting_subsurfaces: list[dict] = []
+    if "readback" in missing_sections:
+        add_unique(supporting_parts, "readback_record")
+        supporting_subsurfaces.append(
+            make_subsurface(
+                "readback_record",
+                status="STALE",
+                mapped_inputs=["readback"],
+                why="the readback surface from changed sections is still missing",
+            )
+        )
+    if "scenario_proof" in missing_sections:
+        add_unique(supporting_parts, "scenario_proof_record")
+        supporting_subsurfaces.append(
+            make_subsurface(
+                "scenario_proof_record",
+                status="STALE",
+                mapped_inputs=["scenario_proof"],
+                why="the scenario proof artifact is still missing",
+            )
+        )
+    supporting_inputs = []
+    if "readback_record" in supporting_parts:
+        supporting_inputs.append("readback")
+    if "scenario_proof_record" in supporting_parts:
+        supporting_inputs.append("scenario_proof")
     if supporting_parts:
         hints.append(
-            {
-                "artifact_id": "supporting_proof_artifacts",
-                "quality": "STALE",
-                "still_stale_parts": supporting_parts,
-                "mapped_inputs": supporting_inputs,
-                "repair_step": "complete_missing_proof_sections",
-                "why": "supporting proof sections are still missing from the current bundle",
-            }
+            make_hint(
+                "supporting_proof_artifacts",
+                quality="STALE",
+                still_stale_parts=supporting_parts,
+                mapped_inputs=supporting_inputs,
+                repair_step="complete_missing_proof_sections",
+                why="supporting proof sections are still missing from the current bundle",
+                stale_subsurfaces=supporting_subsurfaces,
+            )
         )
 
     recovery = state.get("recovery", {})
     if recovery.get("status") == "PENDING":
         hints.append(
-            {
-                "artifact_id": "recovery_reverification_surface",
-                "quality": "STALE",
-                "still_stale_parts": [
-                    "recovery_status",
-                    "reverification_complete",
+            make_hint(
+                "recovery_reverification_surface",
+                quality="STALE",
+                still_stale_parts=[
+                    "recovery_status_record",
+                    "reverification_completion_record",
                 ],
-                "mapped_inputs": ["refresh_recovery_complete", "refresh_reverification_complete"],
-                "repair_step": "complete_recovery_reverification",
-                "why": "recovery was started but reverification has not been completed yet",
-            }
+                mapped_inputs=["refresh_recovery_complete", "refresh_reverification_complete"],
+                repair_step="complete_recovery_reverification",
+                why="recovery was started but reverification has not been completed yet",
+                stale_subsurfaces=[
+                    make_subsurface(
+                        "recovery_status_record",
+                        status="STALE",
+                        mapped_inputs=["refresh_recovery_complete"],
+                        why="the recovery status is still pending rather than complete",
+                    ),
+                    make_subsurface(
+                        "reverification_completion_record",
+                        status="STALE",
+                        mapped_inputs=["refresh_reverification_complete"],
+                        why="the recovery reverification completion flag is still missing",
+                    ),
+                ],
+            )
         )
 
     if state.get("closure", {}).get("blocking_reason") == "MODE_SELECTION_NOT_GOVERNED":
         hints.append(
-            {
-                "artifact_id": "mode_selection_receipt",
-                "quality": "NON_RESUMABLE",
-                "still_stale_parts": ["selected_mode_policy"],
-                "mapped_inputs": [],
-                "repair_step": "switch_to_lighter_mode",
-                "why": "the current selected mode explicitly keeps this run out of the governed continuation contour",
-            }
+            make_hint(
+                "mode_selection_receipt",
+                quality="NON_RESUMABLE",
+                still_stale_parts=["selected_mode_policy_gate"],
+                mapped_inputs=[],
+                repair_step="switch_to_lighter_mode",
+                why="the current selected mode explicitly keeps this run out of the governed continuation contour",
+                stale_subsurfaces=[
+                    make_subsurface(
+                        "selected_mode_policy_gate",
+                        status="NON_RESUMABLE",
+                        mapped_inputs=[],
+                        why="the recorded selection receipt routes this scenario away from governed continuation",
+                    )
+                ],
+            )
         )
 
-    if state.get("state") in {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"} or state.get("closure", {}).get("status") in {"ACCEPTED", "REJECTED"}:
+    if state.get("state") == "CLOSURE_ACCEPTED" or state.get("closure", {}).get("status") == "ACCEPTED":
         hints.append(
-            {
-                "artifact_id": "terminal_run_state",
-                "quality": "NON_RESUMABLE",
-                "still_stale_parts": ["terminal_closure_status"],
-                "mapped_inputs": [],
-                "repair_step": "start_new_run",
-                "why": "the current run is already terminal and continuation should yield to a new run",
-            }
+            make_hint(
+                "terminal_run_state",
+                quality="NON_RESUMABLE",
+                still_stale_parts=["accepted_terminal_state"],
+                mapped_inputs=[],
+                repair_step="start_new_run",
+                why="the current run is already accepted and continuation should yield to a new run",
+                stale_subsurfaces=[
+                    make_subsurface(
+                        "accepted_terminal_state",
+                        status="NON_RESUMABLE",
+                        mapped_inputs=[],
+                        why="the accepted closure state is terminal and should not be resumed",
+                    )
+                ],
+            )
+        )
+    elif state.get("state") == "CLOSURE_REJECTED" or state.get("closure", {}).get("status") == "REJECTED":
+        hints.append(
+            make_hint(
+                "terminal_run_state",
+                quality="NON_RESUMABLE",
+                still_stale_parts=["rejected_terminal_state"],
+                mapped_inputs=[],
+                repair_step="start_new_run",
+                why="the current run is already rejected and continuation should yield to a new run",
+                stale_subsurfaces=[
+                    make_subsurface(
+                        "rejected_terminal_state",
+                        status="NON_RESUMABLE",
+                        mapped_inputs=[],
+                        why="the rejected closure state is terminal and should not be resumed",
+                    )
+                ],
+            )
         )
 
     if not hints:
         hints.append(
-            {
-                "artifact_id": "runtime_state",
-                "quality": "STALE",
-                "still_stale_parts": ["runtime_state"],
-                "mapped_inputs": [],
-                "repair_step": "inspect_runtime_state",
-                "why": "the bounded runtime sees a resumable contour but does not have a narrower artifact-quality hint yet",
-            }
+            make_hint(
+                "runtime_state",
+                quality="STALE",
+                still_stale_parts=["runtime_state_surface"],
+                mapped_inputs=[],
+                repair_step="inspect_runtime_state",
+                why="the bounded runtime sees a resumable contour but does not have a narrower artifact-quality hint yet",
+                stale_subsurfaces=[
+                    make_subsurface(
+                        "runtime_state_surface",
+                        status="STALE",
+                        mapped_inputs=[],
+                        why="the runtime contour still needs inspection before a narrower stale artifact surface can be named",
+                    )
+                ],
+            )
         )
     return hints
 
@@ -442,6 +651,8 @@ def resumability_explanation(family: str) -> str:
         "REPAIRABLE_COMPOUND": "more than one repairable pressure is active, so continuation should follow the ordered repair sequence before closure is rechecked",
         "REPAIRABLE_OTHER": "the bounded runtime still treats this contour as repairable through the named resume path",
         "NOT_RESUMABLE_SELECTION_BLOCKED": "the governed contour should not resume because the current policy choice points to a lighter mode instead",
+        "NOT_RESUMABLE_TERMINAL_ACCEPTED": "the run is already accepted, so continuation should stop and a new run should start instead",
+        "NOT_RESUMABLE_TERMINAL_REJECTED": "the run is already rejected, so continuation should stop and a new run should start instead",
         "NOT_RESUMABLE_TERMINAL": "accepted or rejected terminal state should start a new run instead of resuming",
         "NOT_RESUMABLE_UNKNOWN": "the bounded runtime does not currently classify this state as resumable",
     }[family]
@@ -450,13 +661,13 @@ def resumability_explanation(family: str) -> str:
 def build_resumability(state: dict) -> dict:
     allowed = continuation_allowed(state)
     active_pressures = collect_active_pressures(state)
-    family = resumability_family(active_pressures, allowed)
+    family = resumability_family(state, active_pressures, allowed)
     return {
         "status": "REPAIRABLE" if allowed else "NOT_RESUMABLE",
         "family": family,
         "active_pressures": active_pressures,
         "recommended_repair_order": recommended_repair_order(active_pressures, family),
-        "requires_new_run": family == "NOT_RESUMABLE_TERMINAL",
+        "requires_new_run": family in {"NOT_RESUMABLE_TERMINAL_ACCEPTED", "NOT_RESUMABLE_TERMINAL_REJECTED", "NOT_RESUMABLE_TERMINAL"},
         "explanation": resumability_explanation(family),
     }
 

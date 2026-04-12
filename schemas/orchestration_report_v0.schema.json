@@ -159,6 +159,12 @@
     },
     "next_safe_step": {
       "type": "string"
+    },
+    "resumability_stale_subsurface_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   }
 }

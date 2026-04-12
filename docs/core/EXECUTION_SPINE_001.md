@@ -27,9 +27,10 @@ The v0 spine can:
 9. emit one machine-readable repair handoff from the current non-green state
 10. auto-synthesize one machine-readable repair packet from the current non-green truth surface
 11. record one explicit runtime-resume origin for continuation from a non-green state
-12. deny disallowed transitions through hard gate checks
-13. emit one primary canonical run artifact for the bounded contour
-14. emit the current machine-readable state
+12. auto-discover sibling continuation artifacts before packet-first resume proceeds
+13. deny disallowed transitions through hard gate checks
+14. emit one primary canonical run artifact for the bounded contour
+15. emit the current machine-readable state
 
 ## Current transition contour
 

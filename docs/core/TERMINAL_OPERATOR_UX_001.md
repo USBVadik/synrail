@@ -125,9 +125,10 @@ It now provides one bounded orchestration path, but not a broad runtime shell.
 Its continuation surface is now stricter too:
 
 - packet-first `resume` can auto-discover a sibling repair packet
+- packet-first `resume` can now also auto-discover sibling prompt, task, proof, and final-result artifacts
 - that packet can now carry current-step repair order plus artifact-quality hints
 - the runtime now blocks explicitly when the operator tries to jump ahead of the current repair step
-- and it can now say that a contour is not resumable at all and should follow the lighter selected mode instead
+- and it can now say that a contour is not resumable at all and should follow either the lighter selected mode or a fresh new run instead
 
 It is a small facade, not the final UX.
 

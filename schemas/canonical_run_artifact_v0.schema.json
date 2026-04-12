@@ -39,14 +39,32 @@
         "next_safe_step"
       ],
       "properties": {
-        "result": {"type": "string", "minLength": 1},
-        "stopping_stage": {"type": "string", "minLength": 1},
-        "reason": {"type": "string"},
-        "doctor_verdict": {"type": "string"},
-        "resume_applied": {"type": "boolean"},
-        "resume_from_state": {"type": "string"},
-        "repair_handoff_applied": {"type": "boolean"},
-        "repair_handoff_from_state": {"type": "string"},
+        "result": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stopping_stage": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string"
+        },
+        "doctor_verdict": {
+          "type": "string"
+        },
+        "resume_applied": {
+          "type": "boolean"
+        },
+        "resume_from_state": {
+          "type": "string"
+        },
+        "repair_handoff_applied": {
+          "type": "boolean"
+        },
+        "repair_handoff_from_state": {
+          "type": "string"
+        },
         "repair_handoff_required_inputs": {
           "type": "array",
           "items": {
@@ -59,45 +77,94 @@
             "type": "string"
           }
         },
-        "selection_applied": {"type": "boolean"},
-        "selected_mode": {"type": "string"},
-        "selected_with_preparation": {"type": "boolean"},
-        "preparation_applied": {"type": "boolean"},
-        "preparation_ready_for_closure": {"type": "boolean"},
-        "bundle_status": {"type": "string"},
-        "closure_status": {"type": "string"},
-        "refresh_applied": {"type": "boolean"},
-        "comparison_applied": {"type": "boolean"},
+        "selection_applied": {
+          "type": "boolean"
+        },
+        "selected_mode": {
+          "type": "string"
+        },
+        "selected_with_preparation": {
+          "type": "boolean"
+        },
+        "preparation_applied": {
+          "type": "boolean"
+        },
+        "preparation_ready_for_closure": {
+          "type": "boolean"
+        },
+        "bundle_status": {
+          "type": "string"
+        },
+        "closure_status": {
+          "type": "string"
+        },
+        "refresh_applied": {
+          "type": "boolean"
+        },
+        "comparison_applied": {
+          "type": "boolean"
+        },
         "blockers": {
           "type": "array",
           "items": {
             "type": "string"
           }
         },
-        "dominant_blocker": {"type": "string"},
-        "resumability_status": {"type": "string"},
-        "resumability_family": {"type": "string"},
+        "dominant_blocker": {
+          "type": "string"
+        },
+        "resumability_status": {
+          "type": "string"
+        },
+        "resumability_family": {
+          "type": "string"
+        },
         "resumability_active_pressures": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
         "resumability_repair_order": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
-        "resumability_requires_new_run": {"type": "boolean"},
-        "resumability_policy_type": {"type": "string"},
-        "resumability_policy_next_step": {"type": "string"},
+        "resumability_requires_new_run": {
+          "type": "boolean"
+        },
+        "resumability_policy_type": {
+          "type": "string"
+        },
+        "resumability_policy_next_step": {
+          "type": "string"
+        },
         "resumability_ready_now_steps": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
         "resumability_stale_artifact_ids": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
-        "resulting_state": {"type": "string", "minLength": 1},
-        "next_safe_step": {"type": "string"}
+        "resulting_state": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_safe_step": {
+          "type": "string"
+        },
+        "resumability_stale_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "resulting_state": {
@@ -110,10 +177,20 @@
         "next_safe_step"
       ],
       "properties": {
-        "state": {"type": "string", "minLength": 1},
-        "closure_status": {"type": "string", "minLength": 1},
-        "blocking_reason": {"type": "string"},
-        "next_safe_step": {"type": "string"}
+        "state": {
+          "type": "string",
+          "minLength": 1
+        },
+        "closure_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocking_reason": {
+          "type": "string"
+        },
+        "next_safe_step": {
+          "type": "string"
+        }
       }
     },
     "worked_envelope": {
@@ -125,9 +202,17 @@
         "next_safe_step"
       ],
       "properties": {
-        "resulting_state": {"type": "string", "minLength": 1},
-        "current_closure_status": {"type": "string", "minLength": 1},
-        "next_safe_step": {"type": "string"}
+        "resulting_state": {
+          "type": "string",
+          "minLength": 1
+        },
+        "current_closure_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_safe_step": {
+          "type": "string"
+        }
       }
     },
     "repair_packet": {
@@ -140,39 +225,77 @@
         "missing_inputs"
       ],
       "properties": {
-        "emitted": {"type": "boolean"},
-        "from_state": {"type": "string"},
-        "ready_for_resume": {"type": "boolean"},
+        "emitted": {
+          "type": "boolean"
+        },
+        "from_state": {
+          "type": "string"
+        },
+        "ready_for_resume": {
+          "type": "boolean"
+        },
         "missing_inputs": {
           "type": "array",
           "items": {
             "type": "string"
           }
         },
-        "selected_with_preparation": {"type": "boolean"},
-        "resumability_status": {"type": "string"},
-        "resumability_family": {"type": "string"},
+        "selected_with_preparation": {
+          "type": "boolean"
+        },
+        "resumability_status": {
+          "type": "string"
+        },
+        "resumability_family": {
+          "type": "string"
+        },
         "active_pressures": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
         "repair_order": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
-        "policy_type": {"type": "string"},
-        "policy_next_step": {"type": "string"},
+        "policy_type": {
+          "type": "string"
+        },
+        "policy_next_step": {
+          "type": "string"
+        },
         "policy_ready_steps": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
         "stale_artifact_ids": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
         "non_resumable_artifact_ids": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
+        },
+        "stale_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "non_resumable_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -187,26 +310,50 @@
         "requires_new_run"
       ],
       "properties": {
-        "status": {"type": "string"},
-        "family": {"type": "string"},
+        "status": {
+          "type": "string"
+        },
+        "family": {
+          "type": "string"
+        },
         "active_pressures": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
         "repair_order": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
-        "requires_new_run": {"type": "boolean"},
-        "policy_type": {"type": "string"},
-        "policy_next_step": {"type": "string"},
+        "requires_new_run": {
+          "type": "boolean"
+        },
+        "policy_type": {
+          "type": "string"
+        },
+        "policy_next_step": {
+          "type": "string"
+        },
         "ready_now_steps": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
         "stale_artifact_ids": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
+        },
+        "stale_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     }
