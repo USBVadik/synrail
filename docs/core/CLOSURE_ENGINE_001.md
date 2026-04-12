@@ -39,6 +39,12 @@ The closure engine is the first step toward making closure guidance:
 - enforceable
 - reviewable
 
+When applied back into the spine, the current loop can now also land in explicit blocked states such as:
+
+- `PROOF_BUNDLE_PARTIAL`
+- `PROOF_BUNDLE_INVALID`
+- `DOCTOR_BLOCKED`
+
 ## v0 limitations
 
 The closure engine currently evaluates:

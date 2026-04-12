@@ -94,6 +94,26 @@ def allow(state: dict, target: str, next_safe_step: str) -> dict:
     return state
 
 
+def enter_blocked_state(
+    state: dict,
+    *,
+    target: str,
+    closure_status: str,
+    blocking_reason: str,
+    next_allowed_transition: str,
+    narrow_next_safe_step: str,
+    missing_sections: list[str] | None = None,
+) -> dict:
+    state["state"] = target
+    state["closure"]["status"] = closure_status
+    state["closure"]["blocking_reason"] = blocking_reason
+    state["closure"]["next_allowed_transition"] = next_allowed_transition
+    state["closure"]["narrow_next_safe_step"] = narrow_next_safe_step
+    state["closure"]["missing_sections"] = list(missing_sections or [])
+    state["next_safe_step"] = narrow_next_safe_step
+    return state
+
+
 def gate_target_surface(state: dict) -> tuple[bool, str]:
     if state["target_surface"]["status"] != "ATTESTED":
         return False, "TARGET_SURFACE_NOT_ATTESTED"
@@ -195,19 +215,25 @@ def apply_bundle(state: dict, bundle: dict) -> tuple[int, dict | None]:
     if bundle.get("status") == "COMPLETE":
         return transition(state, "PROOF_BUNDLE_COMPLETE")
 
-    state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
     if bundle.get("status") == "INVALID":
-        state["closure"]["blocking_reason"] = "INVALID_PROOF_BUNDLE"
-        state["closure"]["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
-        state["closure"]["narrow_next_safe_step"] = "repair the final result artifact and rebuild the proof bundle"
-    else:
-        state["closure"]["blocking_reason"] = "MISSING_PROOF_SECTIONS"
-        state["closure"]["next_allowed_transition"] = "PROOF_BUNDLE_COMPLETION"
-        state["closure"]["narrow_next_safe_step"] = "complete the missing proof sections"
-    state["closure"]["missing_sections"] = list(bundle.get("missing_sections", []))
-    state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
-    state["state"] = "EXECUTION_COMPLETED"
-    return 0, state
+        return 0, enter_blocked_state(
+            state,
+            target="PROOF_BUNDLE_INVALID",
+            closure_status="CLAIMED_NOT_ACCEPTED",
+            blocking_reason="INVALID_PROOF_BUNDLE",
+            next_allowed_transition="PROOF_BUNDLE_REPAIR",
+            narrow_next_safe_step="repair the final result artifact and rebuild the proof bundle",
+            missing_sections=list(bundle.get("missing_sections", [])),
+        )
+    return 0, enter_blocked_state(
+        state,
+        target="PROOF_BUNDLE_PARTIAL",
+        closure_status="CLAIMED_NOT_ACCEPTED",
+        blocking_reason="MISSING_PROOF_SECTIONS",
+        next_allowed_transition="PROOF_BUNDLE_COMPLETION",
+        narrow_next_safe_step="complete the missing proof sections",
+        missing_sections=list(bundle.get("missing_sections", [])),
+    )
 
 
 def apply_doctor(state: dict, record: dict) -> tuple[int, dict | None]:
@@ -224,13 +250,14 @@ def apply_doctor(state: dict, record: dict) -> tuple[int, dict | None]:
         state["next_safe_step"] = "confirm exact task identity"
         return 0, state
 
-    state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
-    state["closure"]["blocking_reason"] = "DOCTOR_NOT_GREEN"
-    state["closure"]["next_allowed_transition"] = "DOCTOR_READINESS"
-    state["closure"]["narrow_next_safe_step"] = record.get("recommended_next_safe_step", "run doctor readiness")
-    state["closure"]["missing_sections"] = []
-    state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
-    return 0, state
+    return 0, enter_blocked_state(
+        state,
+        target="DOCTOR_BLOCKED",
+        closure_status="CLAIMED_NOT_ACCEPTED",
+        blocking_reason="DOCTOR_NOT_GREEN",
+        next_allowed_transition="DOCTOR_READINESS",
+        narrow_next_safe_step=record.get("recommended_next_safe_step", "run doctor readiness"),
+    )
 
 
 def apply_target_surface(state: dict, *, identity: str, baseline_relation: str) -> dict:
@@ -279,6 +306,14 @@ def apply_closure(state: dict, verdict: dict) -> tuple[int, dict | None]:
 
     if verdict["closure_status"] == "REJECTED":
         return transition(state, "CLOSURE_REJECTED")
+
+    if verdict["blocking_reason"] == "INVALID_PROOF_BUNDLE":
+        state["state"] = "PROOF_BUNDLE_INVALID"
+        return 0, state
+
+    if verdict["blocking_reason"] == "MISSING_PROOF_SECTIONS":
+        state["state"] = "PROOF_BUNDLE_PARTIAL"
+        return 0, state
 
     if state["proof_bundle"]["status"] == "COMPLETE":
         state["state"] = "PROOF_BUNDLE_COMPLETE"

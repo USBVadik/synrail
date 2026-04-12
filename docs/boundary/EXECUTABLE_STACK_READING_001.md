@@ -64,6 +64,7 @@ Current strongest value carriers are:
 - explicit exact-task integrity
 - proof-bundle completeness reading
 - closure acceptance vs claimed-not-accepted separation
+- explicit blocked state lanes for main failure branches
 - anti-drift refresh after state degradation
 
 ## What is still weaker than it should be

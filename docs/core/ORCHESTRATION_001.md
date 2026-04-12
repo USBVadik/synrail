@@ -63,6 +63,12 @@ The CLI can now emit that envelope directly through the orchestration path, inst
 
 That matters because it keeps the canonical worked artifact aligned with the final runtime contour, including post-refresh closure state when refresh is part of the run.
 
+The spine-driven contour now also emits explicit blocked state lanes instead of leaving the main failures only in report fields:
+
+- `DOCTOR_BLOCKED`
+- `PROOF_BUNDLE_PARTIAL`
+- `PROOF_BUNDLE_INVALID`
+
 ## Current boundaries
 
 The v0 orchestration slice is intentionally narrow.

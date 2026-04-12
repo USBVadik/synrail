@@ -34,7 +34,9 @@ The current intended contour is:
 3. `READY`
 4. `EXECUTION_COMPLETED`
 5. `PROOF_BUNDLE_COMPLETE`
-6. `CLOSURE_ACCEPTED` or `CLOSURE_REJECTED`
+6. `PROOF_BUNDLE_PARTIAL` or `PROOF_BUNDLE_INVALID` when proof is not closure-ready
+7. `DOCTOR_BLOCKED` when readiness fails early
+8. `CLOSURE_ACCEPTED` or `CLOSURE_REJECTED`
 
 ## Why this matters
 
@@ -63,6 +65,12 @@ It can now also advance a fresh initialized run through the early readiness cont
 - doctor readiness
 - exact-task integrity
 - execution completion
+
+It now also gives explicit state shape to the main failure branches instead of leaving them only in closure fields:
+
+- `DOCTOR_BLOCKED`
+- `PROOF_BUNDLE_PARTIAL`
+- `PROOF_BUNDLE_INVALID`
 
 It is still small, but it is no longer only descriptive.
 
