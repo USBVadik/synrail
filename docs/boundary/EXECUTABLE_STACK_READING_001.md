@@ -94,6 +94,10 @@ The shortest current output reading is:
 - blocked contours now emit the same primary run artifact shape
 - that artifact is a better single entrypoint than reconstructing a run from report, state, and worked envelope separately
 
+The first canonical blocked reference surface for that output now lives at:
+
+- `fixtures/executable_loop_blocked_run_001/run.json`
+
 ## What this changes for product direction
 
 The next phase should optimize for:

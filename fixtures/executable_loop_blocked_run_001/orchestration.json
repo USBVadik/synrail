@@ -1,0 +1,30 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_BLOCKED_RUN_001",
+  "task_class": "proof_sensitive_fix",
+  "doctor": {
+    "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "blocking_failure_classes": []
+  },
+  "bundle": {
+    "status": "MISSING",
+    "missing_sections": []
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED"
+  },
+  "refresh": {
+    "applied": false,
+    "event_type": "",
+    "resulting_closure_status": ""
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "TARGET_SURFACE_ATTESTED",
+  "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "restore exact prompt and task identity"
+}
