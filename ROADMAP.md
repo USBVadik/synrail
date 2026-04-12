@@ -122,4 +122,6 @@ The current product-review anchor for this phase is:
 - `docs/boundary/KILLER_PATH_001.md`
 - `docs/boundary/BASELINE_COMPARISON_PLAN_001.md`
 - `docs/boundary/BASELINE_RUNBOOK_001.md`
+- `docs/boundary/BASELINE_COMPARISON_CANDIDATE_001.md`
+- `docs/boundary/BASELINE_COMPARISON_RECORD_001_TEMPLATE.md`
 - `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
