@@ -218,6 +218,23 @@ Does not guarantee:
 - deep scenario normalization
 - broad benchmarking behavior
 
+### `synrail_validate_v0.py`
+
+Purpose:
+
+- validate one Synrail JSON artifact against one local schema
+
+Guarantees:
+
+- catches basic structural mismatches
+- emits an explicit valid or invalid result
+
+Does not guarantee:
+
+- full JSON Schema coverage
+- semantic correctness
+- broad enforcement by itself
+
 ## Operating rule
 
 If a helper starts accumulating broad product logic, large orchestration behavior, or environment-specific sprawl, it should probably stop living under `tools/reference/` in this repo shape.

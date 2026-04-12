@@ -15,6 +15,7 @@ SPINE = HERE / "synrail_spine_v0.py"
 BUNDLE = HERE / "synrail_bundle_v0.py"
 CLOSURE = HERE / "synrail_closure_v0.py"
 REFRESH = HERE / "synrail_refresh_v0.py"
+VALIDATE = HERE / "synrail_validate_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -96,6 +97,14 @@ def cmd_refresh(args: argparse.Namespace) -> int:
     return run_python(REFRESH, forwarded)
 
 
+def cmd_validate(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--schema", args.schema,
+        "--document", args.document,
+    ]
+    return run_python(VALIDATE, forwarded)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="synrail")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -135,6 +144,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_refresh.add_argument("--reverification-complete", action="store_true")
     p_refresh.add_argument("--update-state", action="store_true")
     p_refresh.set_defaults(func=cmd_refresh)
+
+    p_validate = sub.add_parser("validate")
+    p_validate.add_argument("--schema", required=True)
+    p_validate.add_argument("--document", required=True)
+    p_validate.set_defaults(func=cmd_validate)
 
     return parser
 

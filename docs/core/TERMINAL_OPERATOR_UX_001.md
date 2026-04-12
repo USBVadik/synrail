@@ -24,6 +24,8 @@ The CLI v0 currently exposes:
    - compute the closure verdict
 4. `refresh`
    - refresh state after a doctor, bundle, closure, or recovery event
+5. `validate`
+   - validate one machine-readable artifact against one schema
 
 ## Why this matters
 
