@@ -12,6 +12,11 @@ They are here to show how `Synrail` artifacts fit together without importing raw
     - target-surface attestation
     - production confirmation
     - post-incident evaluation
+- `sanitized_application_policy_examples.md`
+  - three compact examples showing when to choose:
+    - full governed path
+    - lightweight baseline
+    - hybrid subset
 
 ## Rule
 
