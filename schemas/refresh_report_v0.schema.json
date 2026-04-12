@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/refresh_report_v0.schema.json",
+  "title": "Synrail Refresh Report v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "event_type",
+    "steps_applied",
+    "invalidations",
+    "resulting_state",
+    "resulting_closure_status",
+    "next_safe_step"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "refresh_report_v0"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "event_type": {
+      "type": "string"
+    },
+    "steps_applied": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "invalidations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "resulting_state": {
+      "type": "string"
+    },
+    "resulting_closure_status": {
+      "type": "string"
+    },
+    "next_safe_step": {
+      "type": "string"
+    }
+  }
+}

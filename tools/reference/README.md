@@ -166,6 +166,24 @@ Does not guarantee:
 - full refresh-chain automation
 - full orchestration behavior
 
+### `synrail_refresh_v0.py`
+
+Purpose:
+
+- refresh state after doctor, proof, closure, or recovery changes in deterministic order
+
+Guarantees:
+
+- updates machine-readable state
+- emits a machine-readable refresh report
+- invalidates over-green closure state when lower-level evidence worsens
+
+Does not guarantee:
+
+- full dependency discovery
+- broad orchestration behavior
+- rich multi-run coordination
+
 ## Operating rule
 
 If a helper starts accumulating broad product logic, large orchestration behavior, or environment-specific sprawl, it should probably stop living under `tools/reference/` in this repo shape.
