@@ -1,0 +1,1 @@
+scenario proof: the bounded router trigger fix now follows the intended route under the governed path proof surface

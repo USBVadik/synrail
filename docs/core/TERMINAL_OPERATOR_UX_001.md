@@ -45,6 +45,10 @@ The CLI v0 currently exposes:
    - emit one machine-readable cost-aware mode recommendation before the operator enters a heavier contour
 14. `select-mode`
    - emit one machine-readable receipt that records whether the operator followed the recommendation and whether a heavier contour was skipped
+15. `plan-proof`
+   - emit one governed-path proof preparation plan before bundle assembly starts
+16. `preparation-receipt`
+   - emit one machine-readable receipt showing whether the planned proof surface reached a complete first bundle pass
 
 ## Why this matters
 

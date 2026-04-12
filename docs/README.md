@@ -49,6 +49,7 @@ Start here when you want to understand the kernel itself:
 - `core/EXECUTION_SPINE_001.md`
 - `core/GATE_SET_001.md`
 - `core/PROOF_BUNDLE_ASSEMBLER_001.md`
+- `core/GOVERNED_PATH_PREPARATION_001.md`
 - `core/CLOSURE_ENGINE_001.md`
 - `core/REFRESH_CHAIN_AUTOMATION_001.md`
 - `core/TERMINAL_OPERATOR_UX_001.md`
@@ -96,6 +97,7 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/mode_selection_run_001/receipt.json`
 - `../fixtures/mode_selection_run_002/receipt.json`
 - `../fixtures/mode_selection_run_003/receipt.json`
+- `../fixtures/governed_path_plan_run_001/preparation_receipt.json`
 - `../fixtures/executable_loop_hybrid_pressure_run_003/run.json`
 
 That same `run.json` shape is now the canonical starting point for:

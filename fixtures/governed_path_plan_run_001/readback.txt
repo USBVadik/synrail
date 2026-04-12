@@ -1,0 +1,1 @@
+read back the governed-path change in core/router.py and confirm the planned branch is present

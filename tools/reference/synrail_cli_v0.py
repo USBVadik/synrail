@@ -22,6 +22,8 @@ HARNESS_V1 = HERE / "synrail_baseline_harness_v1.py"
 HYBRID_STATUS = HERE / "synrail_hybrid_status_v0.py"
 MODE_SELECTOR = HERE / "synrail_mode_selector_v0.py"
 MODE_RECEIPT = HERE / "synrail_mode_receipt_v0.py"
+PROOF_PLAN = HERE / "synrail_proof_plan_v0.py"
+PREPARATION_RECEIPT = HERE / "synrail_preparation_receipt_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -238,6 +240,29 @@ def cmd_select_mode(args: argparse.Namespace) -> int:
     return run_python(MODE_RECEIPT, forwarded)
 
 
+def cmd_plan_proof(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--run-id", args.run_id,
+        "--task-class", args.task_class,
+        "--artifact-root", args.artifact_root,
+        "--baseline-identity", args.baseline_identity,
+        "--execution-surface-identity", args.execution_surface_identity,
+        "--prompt-identity", args.prompt_identity,
+        "--task-identity", args.task_identity,
+        "--output", args.output,
+    ]
+    return run_python(PROOF_PLAN, forwarded)
+
+
+def cmd_preparation_receipt(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--plan-file", args.plan_file,
+        "--bundle-file", args.bundle_file,
+        "--output", args.output,
+    ]
+    return run_python(PREPARATION_RECEIPT, forwarded)
+
+
 def cmd_orchestrate(args: argparse.Namespace) -> int:
     forwarded = [
         "--state-file", args.state_file,
@@ -409,6 +434,23 @@ def build_parser() -> argparse.ArgumentParser:
     p_select.add_argument("--selected-mode", choices=["FULL_GOVERNED_PATH", "LIGHTWEIGHT_BASELINE", "HYBRID_EXCEPTION"])
     p_select.add_argument("--output", required=True)
     p_select.set_defaults(func=cmd_select_mode)
+
+    p_plan = sub.add_parser("plan-proof")
+    p_plan.add_argument("--run-id", required=True)
+    p_plan.add_argument("--task-class", required=True)
+    p_plan.add_argument("--artifact-root", required=True)
+    p_plan.add_argument("--baseline-identity", required=True)
+    p_plan.add_argument("--execution-surface-identity", required=True)
+    p_plan.add_argument("--prompt-identity", required=True)
+    p_plan.add_argument("--task-identity", required=True)
+    p_plan.add_argument("--output", required=True)
+    p_plan.set_defaults(func=cmd_plan_proof)
+
+    p_prep = sub.add_parser("preparation-receipt")
+    p_prep.add_argument("--plan-file", required=True)
+    p_prep.add_argument("--bundle-file", required=True)
+    p_prep.add_argument("--output", required=True)
+    p_prep.set_defaults(func=cmd_preparation_receipt)
 
     p_orchestrate = sub.add_parser("orchestrate")
     p_orchestrate.add_argument("--state-file", required=True)

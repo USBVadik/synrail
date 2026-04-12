@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/governed_path_preparation_receipt_v0.schema.json",
+  "title": "Synrail Governed Path Preparation Receipt v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_file",
+    "bundle_file",
+    "run_id",
+    "task_class",
+    "bundle_run_matches_plan",
+    "bundle_task_class_matches_plan",
+    "planned_required_sections_count",
+    "planned_required_sections_present_count",
+    "bundle_status",
+    "missing_required_sections",
+    "complete_on_first_bundle_pass",
+    "ready_for_closure",
+    "next_safe_step"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "governed_path_preparation_receipt_v0"
+    },
+    "plan_file": {
+      "type": "string"
+    },
+    "bundle_file": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "task_class": {
+      "type": "string"
+    },
+    "bundle_run_matches_plan": {
+      "type": "boolean"
+    },
+    "bundle_task_class_matches_plan": {
+      "type": "boolean"
+    },
+    "planned_required_sections_count": {
+      "type": "integer"
+    },
+    "planned_required_sections_present_count": {
+      "type": "integer"
+    },
+    "bundle_status": {
+      "type": "string",
+      "enum": ["COMPLETE", "PARTIAL", "INVALID"]
+    },
+    "missing_required_sections": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "final_result",
+          "modified_files",
+          "diff_provenance",
+          "readback",
+          "scenario_proof",
+          "artifact_identity",
+          "cleanup_status"
+        ]
+      }
+    },
+    "complete_on_first_bundle_pass": {
+      "type": "boolean"
+    },
+    "ready_for_closure": {
+      "type": "boolean"
+    },
+    "next_safe_step": {
+      "type": "string"
+    }
+  }
+}

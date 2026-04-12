@@ -13,6 +13,13 @@ The first assembler slice now lives at:
 - `tools/reference/synrail_bundle_v0.py`
 - `schemas/proof_bundle_v0.schema.json`
 
+The first upstream preparation slice around that assembler now lives at:
+
+- `tools/reference/synrail_proof_plan_v0.py`
+- `tools/reference/synrail_preparation_receipt_v0.py`
+- `schemas/proof_bundle_plan_v0.schema.json`
+- `schemas/governed_path_preparation_receipt_v0.schema.json`
+
 ## What it does
 
 The assembler v0 can:
@@ -37,6 +44,11 @@ Without automatic bundle assembly, proof-first discipline risks becoming:
 - easy to skip under pressure
 
 The assembler is the first move toward making proof bundle construction a product capability rather than a ritual.
+
+The new preparation plan and preparation receipt make that slice slightly stronger:
+
+- the required proof surface can now be named before bundle assembly
+- the repo can now record whether the planned governed-path proof surface reached `COMPLETE` on the first bundle pass
 
 ## v0 limitations
 

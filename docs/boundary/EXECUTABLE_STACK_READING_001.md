@@ -21,6 +21,7 @@ The current executable stack can already provide:
 9. one primary spine-produced canonical run artifact
 10. one cost-aware mode selector that can keep obvious non-winning paths out of heavier contours
 11. three operator-facing selection receipts that prove a heavier contour can now be deliberately skipped or deliberately entered before the runtime path begins
+12. one governed-path preparation plan and receipt that prove the planned proof surface can reach a complete first bundle pass before closure starts
 
 That is enough to say:
 
@@ -74,6 +75,7 @@ Current strongest value carriers are:
 - targeted doctor reduction of two false-readiness shapes: broken credential paths and exact task identity mismatch
 - targeted doctor reduction of one wrong-target-surface readiness lie
 - cost-aware steering back to baseline on weak and demoted-hybrid paths
+- one governed-path preparation slice that predeclares the proof surface and records complete first-pass bundle assembly
 - proof-bundle completeness reading
 - closure acceptance vs claimed-not-accepted separation
 - explicit blocked state lanes for main failure branches

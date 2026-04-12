@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/proof_bundle_plan_v0.schema.json",
+  "title": "Synrail Proof Bundle Plan v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "governed_mode",
+    "required_sections",
+    "recommended_artifacts",
+    "artifact_identity",
+    "planning_status",
+    "next_safe_step"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "proof_bundle_plan_v0"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "task_class": {
+      "type": "string"
+    },
+    "governed_mode": {
+      "type": "string",
+      "const": "FULL_GOVERNED_PATH"
+    },
+    "required_sections": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "final_result",
+          "modified_files",
+          "diff_provenance",
+          "readback",
+          "scenario_proof",
+          "artifact_identity",
+          "cleanup_status"
+        ]
+      }
+    },
+    "recommended_artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "final_result",
+        "readback",
+        "scenario_proof",
+        "bundle_output",
+        "closure_output",
+        "preparation_receipt_output"
+      ],
+      "properties": {
+        "final_result": {
+          "type": "string"
+        },
+        "readback": {
+          "type": "string"
+        },
+        "scenario_proof": {
+          "type": "string"
+        },
+        "bundle_output": {
+          "type": "string"
+        },
+        "closure_output": {
+          "type": "string"
+        },
+        "preparation_receipt_output": {
+          "type": "string"
+        }
+      }
+    },
+    "artifact_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_identity",
+        "execution_surface_identity",
+        "prompt_identity",
+        "task_identity"
+      ],
+      "properties": {
+        "baseline_identity": {
+          "type": "string"
+        },
+        "execution_surface_identity": {
+          "type": "string"
+        },
+        "prompt_identity": {
+          "type": "string"
+        },
+        "task_identity": {
+          "type": "string"
+        }
+      }
+    },
+    "planning_status": {
+      "type": "string",
+      "const": "READY"
+    },
+    "next_safe_step": {
+      "type": "string"
+    }
+  }
+}

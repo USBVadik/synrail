@@ -157,6 +157,38 @@ Does not guarantee:
 - deep scenario validation
 - full closure-engine behavior
 
+### `synrail_proof_plan_v0.py`
+
+Purpose:
+
+- name the governed-path proof surface before bundle assembly starts
+
+Guarantees:
+
+- emits the seven required proof sections
+- emits one named artifact path set for bundle-related outputs
+
+Does not guarantee:
+
+- that the planned artifacts are semantically correct
+- closure acceptance on its own
+
+### `synrail_preparation_receipt_v0.py`
+
+Purpose:
+
+- record whether the planned governed-path proof surface reached a complete first bundle pass
+
+Guarantees:
+
+- compares one proof plan to one assembled bundle
+- records whether the bundle is closure-ready on the first pass
+
+Does not guarantee:
+
+- closure acceptance on its own
+- deep semantic proof validation
+
 ### `synrail_closure_v0.py`
 
 Purpose:
