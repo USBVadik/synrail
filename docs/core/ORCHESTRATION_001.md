@@ -73,6 +73,8 @@ The spine can now also emit one primary canonical run artifact that compresses:
 
 That artifact is now the best single machine-readable starting point for an internal run reading.
 
+Blocked contours can now emit the same primary run artifact shape too, which matters because it keeps blocked runs on the same truth surface as accepted or partial runs.
+
 The spine-driven contour now also emits explicit blocked state lanes instead of leaving the main failures only in report fields:
 
 - `DOCTOR_BLOCKED`

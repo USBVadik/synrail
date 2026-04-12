@@ -60,6 +60,8 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/executable_loop_run_002/run.json`
 - `../fixtures/executable_loop_run_003/run.json`
 
+That same `run.json` shape is now also the canonical starting point for blocked contours, not only successful or partial ones.
+
 ## 3. Boundary
 
 Read these when you want to understand what belongs in Synrail and what stays outside:

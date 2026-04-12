@@ -506,12 +506,24 @@ def apply_closure(state: dict, verdict: dict) -> tuple[int, dict, dict | None]:
 def build_worked_orchestration_artifact(
     *,
     state: dict,
-    doctor_record: dict,
-    bundle: dict,
-    closure: dict,
+    doctor_record: dict | None,
+    bundle: dict | None,
+    closure: dict | None,
     refresh_report: dict | None,
     comparison: dict | None,
 ) -> dict:
+    doctor_record = doctor_record or {
+        "final_verdict": "NOT_RUN",
+        "blocking_failure_classes": [],
+    }
+    bundle = bundle or {
+        "status": state["proof_bundle"]["status"],
+        "missing_sections": list(state["proof_bundle"]["missing_sections"]),
+    }
+    closure = closure or {
+        "closure_status": state["closure"]["status"],
+        "blocking_reason": state["closure"]["blocking_reason"],
+    }
     return {
         "schema_version": "worked_orchestration_artifact_v0",
         "run_id": state["run_id"],
@@ -630,6 +642,8 @@ def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict) -> 
             "closure_status": report["closure_status"],
             "refresh_applied": report["refresh_applied"],
             "comparison_applied": report["comparison_applied"],
+            "blockers": list(report["blockers"]),
+            "dominant_blocker": report["dominant_blocker"],
             "resulting_state": report["resulting_state"],
             "next_safe_step": report["next_safe_step"],
         },
@@ -645,6 +659,35 @@ def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict) -> 
             "next_safe_step": worked["next_safe_step"],
         },
     }
+
+
+def emit_requested_artifacts(
+    args: argparse.Namespace,
+    *,
+    state: dict,
+    report: dict,
+    doctor_record: dict | None = None,
+    bundle: dict | None = None,
+    closure: dict | None = None,
+    refresh_report: dict | None = None,
+    comparison: dict | None = None,
+) -> None:
+    if not (args.worked_artifact_output or args.run_artifact_output):
+        return
+
+    worked = build_worked_orchestration_artifact(
+        state=state,
+        doctor_record=doctor_record,
+        bundle=bundle,
+        closure=closure,
+        refresh_report=refresh_report,
+        comparison=comparison,
+    )
+    if args.worked_artifact_output:
+        save_json(Path(args.worked_artifact_output), worked)
+    if args.run_artifact_output:
+        canonical = build_canonical_run_artifact(state=state, report=report, worked=worked)
+        save_json(Path(args.run_artifact_output), canonical)
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -722,16 +765,15 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     )
     code, state, block_report = maybe_advance_to_target_surface_attested(state)
     if code != 0:
-        save_state(state_path, state)
-        save_json(
-            Path(args.report_output),
-            build_transition_blocked_report(
-                state,
-                stopping_stage="target_surface_transition",
-                doctor_verdict="",
-                block_report=block_report,
-            ),
+        report = build_transition_blocked_report(
+            state,
+            stopping_stage="target_surface_transition",
+            doctor_verdict="",
+            block_report=block_report,
         )
+        save_state(state_path, state)
+        save_json(Path(args.report_output), report)
+        emit_requested_artifacts(args, state=state, report=report)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "target_surface_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -773,7 +815,9 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     code, state, block_report = apply_doctor(load_state(state_path), doctor_record)
     if code != 0:
         save_state(state_path, state)
-        save_json(Path(args.report_output), build_error_report(state, reason=block_report["dominant_blocker"], stopping_stage="doctor_apply"))
+        report = build_error_report(state, reason=block_report["dominant_blocker"], stopping_stage="doctor_apply")
+        save_json(Path(args.report_output), report)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record)
         print(json.dumps({"result": "ERROR", "stopping_stage": "doctor_apply", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     state = apply_integrity(
@@ -784,35 +828,35 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     code, state, block_report = maybe_advance_to_ready(state)
     if code != 0:
         save_state(state_path, state)
-        save_json(
-            Path(args.report_output),
-            build_transition_blocked_report(
-                state,
-                stopping_stage="ready_transition",
-                doctor_verdict=doctor_record["final_verdict"],
-                block_report=block_report,
-            ),
+        report = build_transition_blocked_report(
+            state,
+            stopping_stage="ready_transition",
+            doctor_verdict=doctor_record["final_verdict"],
+            block_report=block_report,
         )
+        save_json(Path(args.report_output), report)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "ready_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
     if state["doctor"]["status"] != "PASS":
-        save_json(Path(args.report_output), build_blocked_report(state, doctor_record))
+        report = build_blocked_report(state, doctor_record)
+        save_json(Path(args.report_output), report)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "doctor"}, ensure_ascii=True))
         return 0
 
     code, state, block_report = maybe_advance_to_execution_completed(load_state(state_path))
     if code != 0:
         save_state(state_path, state)
-        save_json(
-            Path(args.report_output),
-            build_transition_blocked_report(
-                state,
-                stopping_stage="execution_transition",
-                doctor_verdict=doctor_record["final_verdict"],
-                block_report=block_report,
-            ),
+        report = build_transition_blocked_report(
+            state,
+            stopping_stage="execution_transition",
+            doctor_verdict=doctor_record["final_verdict"],
+            block_report=block_report,
         )
+        save_json(Path(args.report_output), report)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "execution_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -839,15 +883,14 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     code, state, block_report = apply_bundle(load_state(state_path), bundle)
     if code != 0:
         save_state(state_path, state)
-        save_json(
-            Path(args.report_output),
-            build_transition_blocked_report(
-                state,
-                stopping_stage="proof_bundle_transition",
-                doctor_verdict=doctor_record["final_verdict"],
-                block_report=block_report,
-            ),
+        report = build_transition_blocked_report(
+            state,
+            stopping_stage="proof_bundle_transition",
+            doctor_verdict=doctor_record["final_verdict"],
+            block_report=block_report,
         )
+        save_json(Path(args.report_output), report)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, bundle=bundle)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "proof_bundle_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -860,15 +903,14 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     code, state, block_report = apply_closure(load_state(state_path), closure)
     if code != 0:
         save_state(state_path, state)
-        save_json(
-            Path(args.report_output),
-            build_transition_blocked_report(
-                state,
-                stopping_stage="closure_transition",
-                doctor_verdict=doctor_record["final_verdict"],
-                block_report=block_report,
-            ),
+        report = build_transition_blocked_report(
+            state,
+            stopping_stage="closure_transition",
+            doctor_verdict=doctor_record["final_verdict"],
+            block_report=block_report,
         )
+        save_json(Path(args.report_output), report)
+        emit_requested_artifacts(args, state=state, report=report, doctor_record=doctor_record, bundle=bundle, closure=closure)
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "closure_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
     save_state(state_path, state)
@@ -939,32 +981,16 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         "next_safe_step": state["next_safe_step"],
     }
     save_json(Path(args.report_output), report)
-
-    worked = None
-    if args.worked_artifact_output or args.run_artifact_output:
-        worked = build_worked_orchestration_artifact(
-            state=state,
-            doctor_record=doctor_record,
-            bundle=bundle,
-            closure=closure,
-            refresh_report=refresh_report,
-            comparison=comparison,
-        )
-        if args.worked_artifact_output:
-            save_json(Path(args.worked_artifact_output), worked)
-
-    if args.run_artifact_output:
-        if worked is None:
-            worked = build_worked_orchestration_artifact(
-                state=state,
-                doctor_record=doctor_record,
-                bundle=bundle,
-                closure=closure,
-                refresh_report=refresh_report,
-                comparison=comparison,
-            )
-        canonical = build_canonical_run_artifact(state=state, report=report, worked=worked)
-        save_json(Path(args.run_artifact_output), canonical)
+    emit_requested_artifacts(
+        args,
+        state=state,
+        report=report,
+        doctor_record=doctor_record,
+        bundle=bundle,
+        closure=closure,
+        refresh_report=refresh_report,
+        comparison=comparison,
+    )
 
     print(json.dumps({"result": "OK", "closure_status": closure["closure_status"]}, ensure_ascii=True))
     return 0

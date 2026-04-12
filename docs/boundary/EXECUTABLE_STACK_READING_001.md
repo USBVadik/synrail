@@ -91,6 +91,7 @@ The shortest current product reading is:
 The shortest current output reading is:
 
 - the spine can now emit one primary canonical run artifact
+- blocked contours now emit the same primary run artifact shape
 - that artifact is a better single entrypoint than reconstructing a run from report, state, and worked envelope separately
 
 ## What this changes for product direction

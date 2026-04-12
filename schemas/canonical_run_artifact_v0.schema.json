@@ -33,6 +33,8 @@
         "closure_status",
         "refresh_applied",
         "comparison_applied",
+        "blockers",
+        "dominant_blocker",
         "resulting_state",
         "next_safe_step"
       ],
@@ -45,6 +47,13 @@
         "closure_status": {"type": "string"},
         "refresh_applied": {"type": "boolean"},
         "comparison_applied": {"type": "boolean"},
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dominant_blocker": {"type": "string"},
         "resulting_state": {"type": "string", "minLength": 1},
         "next_safe_step": {"type": "string"}
       }
