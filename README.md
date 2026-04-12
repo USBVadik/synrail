@@ -59,6 +59,7 @@ For a quick document map, start with:
 - `intake_incident_hypothesis.sh`
 - `confirm_live_production_fix.sh`
 - `incident_operator_flow.sh`
+- `synrail_cli_v0.py`
 
 ## Reading Order
 

@@ -184,6 +184,23 @@ Does not guarantee:
 - broad orchestration behavior
 - rich multi-run coordination
 
+### `synrail_cli_v0.py`
+
+Purpose:
+
+- provide one small terminal-first operator entrypoint for the executable slices
+
+Guarantees:
+
+- exposes compact state reading
+- exposes bundle, closure, and refresh commands through one CLI
+
+Does not guarantee:
+
+- full end-to-end orchestration
+- interactive UX
+- broad product shell behavior
+
 ## Operating rule
 
 If a helper starts accumulating broad product logic, large orchestration behavior, or environment-specific sprawl, it should probably stop living under `tools/reference/` in this repo shape.
