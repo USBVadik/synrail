@@ -1,0 +1,43 @@
+{
+  "schema_version": "run_state_v0",
+  "run_id": "EXECUTABLE_LOOP_RUN_003",
+  "task_class": "medium_risk_ambiguous_fix",
+  "state": "EXECUTION_COMPLETED",
+  "target_surface": {
+    "status": "ATTESTED",
+    "identity": "medium_risk_path",
+    "baseline_relation": "trusted_local_state"
+  },
+  "doctor": {
+    "status": "PASS",
+    "blocking_failure_classes": []
+  },
+  "integrity": {
+    "status": "PASS",
+    "exact_task_identity_ok": true
+  },
+  "execution": {
+    "status": "COMPLETED",
+    "artifact_bundle_present": true
+  },
+  "proof_bundle": {
+    "status": "PARTIAL",
+    "missing_sections": [
+      "scenario_proof"
+    ]
+  },
+  "closure": {
+    "status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "MISSING_PROOF_SECTIONS",
+    "next_allowed_transition": "PROOF_BUNDLE_COMPLETION",
+    "narrow_next_safe_step": "rerun the scenario check against the attested target surface",
+    "missing_sections": [
+      "scenario_proof"
+    ]
+  },
+  "recovery": {
+    "status": "NOT_REQUIRED",
+    "reverification_complete": false
+  },
+  "next_safe_step": "rerun the scenario check against the attested target surface"
+}

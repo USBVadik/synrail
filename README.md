@@ -101,6 +101,7 @@ The current wedge reading is:
 
 - `Synrail` is strongest on proof-sensitive closure paths where false completion is expensive
 - it is not yet justified as a full governed path for every small incident
+- the hybrid subset remains promising, but still under-proven relative to the other two modes
 
 ## Contributing
 

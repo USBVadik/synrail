@@ -35,7 +35,7 @@ The current stack does **not** support the broader claim:
 
 ## Why that reading is credible
 
-Because the repo now contains two internal executable comparison readings:
+Because the repo now contains three internal executable comparison readings:
 
 1. strong path:
    - `docs/core/EXECUTABLE_LOOP_RUN_001.md`
@@ -43,13 +43,17 @@ Because the repo now contains two internal executable comparison readings:
 2. weaker path:
    - `docs/core/EXECUTABLE_LOOP_RUN_002.md`
    - verdict: `BASELINE_GOOD_ENOUGH`
+3. hybrid path:
+   - `docs/core/EXECUTABLE_LOOP_RUN_003.md`
+   - verdict: `UNCLEAR`
 
-This pair is stronger than either result alone.
+This set is stronger than any single result alone.
 
 It shows that the stack can express:
 
 - where `Synrail` currently earns its cost
 - where a simpler baseline may already be enough
+- where a middle mode looks plausible but not yet decisive
 
 ## What is currently strongest in the stack
 
@@ -76,6 +80,7 @@ The shortest current product reading is:
 
 - use `Synrail` when getting the truth wrong is expensive
 - do not assume the full governed path is justified for lower-risk honesty-restoration work
+- treat the hybrid subset as promising but still evidence-light
 
 ## What this changes for product direction
 

@@ -1,0 +1,13 @@
+{
+  "schema_version": "comparison_input_v0",
+  "system": "baseline",
+  "scenario_id": "SCENARIO_HYBRID_001",
+  "task_class": "medium_risk_ambiguous_fix",
+  "closure_result": "ACCEPTED",
+  "blocker_to_closure_cycles": 2,
+  "false_success_risk": "LOW",
+  "proof_completeness": "LOW",
+  "recovery_cost": "MEDIUM",
+  "coordination_overhead": "MEDIUM",
+  "notes": "Baseline is plausible but feels a little loose for this medium-risk ambiguous fix."
+}
