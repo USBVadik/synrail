@@ -48,6 +48,7 @@ Start here when you want to understand the kernel itself:
 - `core/EXECUTABLE_LOOP_RUN_001.md`
 - `core/EXECUTABLE_LOOP_RUN_002.md`
 - `core/EXECUTABLE_LOOP_RUN_003.md`
+- `core/EXECUTABLE_LOOP_ACCEPTED_RUN_001.md`
 - `core/EXECUTABLE_LOOP_BLOCKED_RUN_001.md`
 - `schemas/spine_block_report_v0.schema.json`
 - `schemas/canonical_run_artifact_v0.schema.json`
@@ -60,9 +61,14 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/executable_loop_run_001/run.json`
 - `../fixtures/executable_loop_run_002/run.json`
 - `../fixtures/executable_loop_run_003/run.json`
+- `../fixtures/executable_loop_accepted_run_001/run.json`
 - `../fixtures/executable_loop_blocked_run_001/run.json`
 
-That same `run.json` shape is now also the canonical starting point for blocked contours, not only successful or partial ones.
+That same `run.json` shape is now the canonical starting point for:
+
+- accepted contours
+- partial or mixed contours
+- blocked contours
 
 ## 3. Boundary
 

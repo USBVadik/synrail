@@ -91,8 +91,13 @@ The shortest current product reading is:
 The shortest current output reading is:
 
 - the spine can now emit one primary canonical run artifact
+- accepted contours now have a stable canonical repo fixture
 - blocked contours now emit the same primary run artifact shape
 - that artifact is a better single entrypoint than reconstructing a run from report, state, and worked envelope separately
+
+The first canonical accepted reference surface for that output now lives at:
+
+- `fixtures/executable_loop_accepted_run_001/run.json`
 
 The first canonical blocked reference surface for that output now lives at:
 

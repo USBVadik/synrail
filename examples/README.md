@@ -37,6 +37,10 @@ They are here to show how `Synrail` artifacts fit together without importing raw
 - `../fixtures/executable_loop_run_003/`
   - third internal end-to-end artifact set on a hybrid middle-mode scenario
   - includes `run.json` as the hybrid-path canonical run artifact
+- `../fixtures/executable_loop_accepted_run_001/`
+  - first canonical accepted contour for the executable stack
+  - includes `run.json` as the accepted-path primary run artifact
+  - includes `report.json` as the clean accepted orchestration reading
 - `../fixtures/executable_loop_blocked_run_001/`
   - first canonical blocked contour for the executable stack
   - includes `run.json` as the blocked-path primary run artifact

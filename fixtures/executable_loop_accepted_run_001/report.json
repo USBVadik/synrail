@@ -1,0 +1,19 @@
+{
+  "schema_version": "orchestration_report_v0",
+  "run_id": "EXECUTABLE_LOOP_ACCEPTED_RUN_001",
+  "task_class": "proof_sensitive_fix",
+  "result": "OK",
+  "stopping_stage": "accepted",
+  "reason": "NONE",
+  "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+  "bundle_status": "COMPLETE",
+  "closure_status": "ACCEPTED",
+  "refresh_applied": false,
+  "refresh_resulting_closure_status": "",
+  "comparison_applied": false,
+  "comparison_verdict": "",
+  "blockers": [],
+  "dominant_blocker": "",
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "next_safe_step": "NONE"
+}

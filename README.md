@@ -107,6 +107,7 @@ The current wedge reading is:
 The current executable output reading is:
 
 - the spine can now emit one primary canonical run artifact
+- the repo now carries one canonical accepted fixture and one canonical blocked fixture on that same artifact surface
 - that artifact is now the best single machine-readable entrypoint into a bounded internal run
 
 ## Contributing
