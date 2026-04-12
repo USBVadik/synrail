@@ -239,7 +239,7 @@ Does not guarantee:
 - semantic correctness
 - broad enforcement by itself
 
-### `synrail_doctor_v0.py`
+### `synrail_doctor_v1.py`
 
 Purpose:
 
@@ -248,6 +248,11 @@ Purpose:
 Guarantees:
 
 - evaluates a narrow gate set
+- can probe git cleanliness on a target surface
+- can probe artifact-path parent existence
+- can probe helper entrypoint presence
+- can probe credential env presence
+- can probe exact prompt identity file presence
 - emits a doctor record with blocking failure classes
 - can write doctor status back into the run state
 

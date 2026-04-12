@@ -70,7 +70,7 @@ Current strongest value carriers are:
 
 Current weaker areas are:
 
-- doctor is now executable, but still narrower than a mature readiness layer
+- doctor is now stronger than v0 and includes bounded filesystem/env probes, but it is still narrower than a mature readiness layer
 - the stack now has one bounded orchestration contour including optional refresh, but not yet a deeper end-to-end runtime
 - comparison harness is still narrow and heuristic
 - production-grade runtime readiness is not yet proven

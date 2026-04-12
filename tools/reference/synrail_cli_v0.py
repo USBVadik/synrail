@@ -16,7 +16,7 @@ BUNDLE = HERE / "synrail_bundle_v0.py"
 CLOSURE = HERE / "synrail_closure_v0.py"
 REFRESH = HERE / "synrail_refresh_v0.py"
 VALIDATE = HERE / "synrail_validate_v0.py"
-DOCTOR = HERE / "synrail_doctor_v0.py"
+DOCTOR = HERE / "synrail_doctor_v1.py"
 HARNESS = HERE / "synrail_baseline_harness_v0.py"
 
 
@@ -163,6 +163,16 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         forwarded.append("--credentials-ok")
     if args.prompt_identity_ok:
         forwarded.append("--prompt-identity-ok")
+    optional_pairs = [
+        ("--artifact-path", args.artifact_path),
+        ("--helper-path", args.helper_path),
+        ("--prompt-identity-file", args.prompt_identity_file),
+    ]
+    for flag, value in optional_pairs:
+        if value:
+            forwarded.extend([flag, value])
+    for env_name in args.credential_env:
+        forwarded.extend(["--credential-env", env_name])
     return run_python(DOCTOR, forwarded)
 
 
@@ -194,6 +204,16 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     ]:
         if enabled:
             doctor_args.append(flag)
+    optional_doctor_pairs = [
+        ("--artifact-path", args.artifact_path),
+        ("--helper-path", args.helper_path),
+        ("--prompt-identity-file", args.prompt_identity_file),
+    ]
+    for flag, value in optional_doctor_pairs:
+        if value:
+            doctor_args.extend([flag, value])
+    for env_name in args.credential_env:
+        doctor_args.extend(["--credential-env", env_name])
 
     code, _ = run_python_capture(DOCTOR, doctor_args, passthrough=False)
     if code != 0:
@@ -428,6 +448,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_doctor.add_argument("--helper-ok", action="store_true")
     p_doctor.add_argument("--credentials-ok", action="store_true")
     p_doctor.add_argument("--prompt-identity-ok", action="store_true")
+    p_doctor.add_argument("--artifact-path")
+    p_doctor.add_argument("--helper-path")
+    p_doctor.add_argument("--credential-env", action="append", default=[])
+    p_doctor.add_argument("--prompt-identity-file")
     p_doctor.set_defaults(func=cmd_doctor)
 
     p_compare = sub.add_parser("compare")
@@ -470,6 +494,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--helper-ok", action="store_true")
     p_orchestrate.add_argument("--credentials-ok", action="store_true")
     p_orchestrate.add_argument("--prompt-identity-ok", action="store_true")
+    p_orchestrate.add_argument("--artifact-path")
+    p_orchestrate.add_argument("--helper-path")
+    p_orchestrate.add_argument("--credential-env", action="append", default=[])
+    p_orchestrate.add_argument("--prompt-identity-file")
     p_orchestrate.set_defaults(func=cmd_orchestrate)
 
     return parser
