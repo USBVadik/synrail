@@ -1,0 +1,141 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "doctor",
+    "bundle",
+    "closure",
+    "refresh",
+    "comparison",
+    "resulting_state",
+    "current_closure_status",
+    "next_safe_step"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "worked_orchestration_artifact_v0"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "doctor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "final_verdict",
+        "blocking_failure_classes"
+      ],
+      "properties": {
+        "final_verdict": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocking_failure_classes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "missing_sections"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "missing_sections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "closure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "closure_status",
+        "blocking_reason"
+      ],
+      "properties": {
+        "closure_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocking_reason": {
+          "type": "string"
+        }
+      }
+    },
+    "refresh": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "event_type",
+        "resulting_closure_status"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "event_type": {
+          "type": "string"
+        },
+        "resulting_closure_status": {
+          "type": "string"
+        }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "verdict",
+        "reasons"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "verdict": {
+          "type": "string"
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "resulting_state": {
+      "type": "string",
+      "minLength": 1
+    },
+    "current_closure_status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "next_safe_step": {
+      "type": "string"
+    }
+  }
+}

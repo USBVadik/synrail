@@ -12,6 +12,7 @@ The first bounded orchestration slice now lives at:
 
 - `tools/reference/synrail_cli_v0.py`
 - `schemas/orchestration_report_v0.schema.json`
+- `schemas/worked_orchestration_artifact_v0.schema.json`
 
 ## What it does
 
@@ -36,6 +37,10 @@ The orchestration pass is the first move toward:
 - one bounded runtime path
 - less manual contour assembly
 - one summary artifact for what happened in the run
+
+The first canonical worked orchestration envelope now lives at:
+
+- `fixtures/executable_loop_run_001/orchestration.json`
 
 ## Current boundaries
 

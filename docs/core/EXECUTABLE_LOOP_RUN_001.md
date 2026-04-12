@@ -27,6 +27,7 @@ Included artifacts:
 - `closure.json`
 - `refresh.json`
 - `comparison.json`
+- `orchestration.json`
 - `readback.txt`
 - `scenario.txt`
 
@@ -112,6 +113,19 @@ This is the first internal run where the repo can point to one connected chain o
 It is still sanitized and narrow.
 
 But it is materially stronger than saying the kernel slices only work independently.
+
+This run now also has one canonical worked orchestration envelope:
+
+- `fixtures/executable_loop_run_001/orchestration.json`
+
+That gives one compact machine-readable entrypoint for the full internal reading:
+
+- doctor verdict
+- bundle status
+- closure result
+- refresh invalidation
+- comparison verdict
+- resulting state
 
 ## What this does not prove
 

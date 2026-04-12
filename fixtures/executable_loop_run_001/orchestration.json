@@ -1,0 +1,35 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "doctor": {
+    "final_verdict": "ACCEPTABLE_FOR_SUPPORT_RUN",
+    "blocking_failure_classes": []
+  },
+  "bundle": {
+    "status": "COMPLETE",
+    "missing_sections": []
+  },
+  "closure": {
+    "closure_status": "ACCEPTED",
+    "blocking_reason": ""
+  },
+  "refresh": {
+    "applied": true,
+    "event_type": "RECOVERY_EVENT",
+    "resulting_closure_status": "CLAIMED_NOT_ACCEPTED"
+  },
+  "comparison": {
+    "applied": true,
+    "verdict": "SYNRAIL_BETTER",
+    "reasons": [
+      "synrail_reduces_false_success_risk",
+      "synrail_improves_proof_completeness",
+      "synrail_lowers_recovery_cost",
+      "synrail_adds_coordination_overhead"
+    ]
+  },
+  "resulting_state": "PROOF_BUNDLE_COMPLETE",
+  "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "run reverification against the attested target surface"
+}
