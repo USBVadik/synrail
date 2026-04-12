@@ -20,7 +20,7 @@ The current executable stack can already provide:
 8. one bounded orchestration path across attestation, doctor, integrity, bundle, closure, optional refresh, and optional comparison
 9. one primary spine-produced canonical run artifact
 10. one cost-aware mode selector that can keep obvious non-winning paths out of heavier contours
-11. one operator-facing selection receipt that proves a heavier contour was deliberately skipped
+11. three operator-facing selection receipts that prove a heavier contour can now be deliberately skipped or deliberately entered before the runtime path begins
 
 That is enough to say:
 
@@ -164,6 +164,7 @@ The next phase should optimize for:
 - faster prove-or-demote pressure on the hybrid mode
 - cheaper pre-contour selection on paths that current evidence already says are non-winners
 - repeated operator-facing receipts proving that some heavier contours are now skipped deliberately instead of entered by habit
+- repeated operator-facing receipts proving that the strong wedge still enters the governed contour deliberately instead of drifting to baseline by cost anxiety
 
 Not for:
 

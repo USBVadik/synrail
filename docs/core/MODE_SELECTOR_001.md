@@ -23,6 +23,7 @@ The first operator-facing selection receipt now lives at:
 
 - `fixtures/mode_selection_run_001/receipt.json`
 - `fixtures/mode_selection_run_002/receipt.json`
+- `fixtures/mode_selection_run_003/receipt.json`
 
 ## What it does
 
@@ -54,6 +55,11 @@ Why:
 
 - wrong closure is still expensive here
 - measured class evidence still says `SYNRAIL_BETTER`
+
+Observed selection receipt:
+
+- `selected_mode = FULL_GOVERNED_PATH`
+- `heavier_contour_entered = true`
 
 ### 2. Weak path
 
@@ -92,7 +98,9 @@ That means the selector now helps reduce cost before the operator drifts into a 
 The shortest honest reading is:
 
 - `Synrail` now has one small executable policy surface that can steer obvious non-winning paths back to baseline
-- it now also has one operator-facing receipt that proves a heavier contour was deliberately skipped
-- it now has that receipt on both a demoted-hybrid path and a clearly weak low-risk path
+- it now also has operator-facing receipts that prove:
+  - a heavier contour was deliberately skipped on demoted-hybrid and weak paths
+  - a heavier contour was deliberately entered on the strong path
 - the selector does not replace the kernel
 - it reduces unnecessary kernel use where the measured signal already says the extra control is not paying off
+- it also records when the measured signal still says the heavier kernel path is worth entering

@@ -213,6 +213,40 @@ Does not guarantee:
 - interactive UX
 - broad product shell behavior
 
+### `synrail_mode_selector_v0.py`
+
+Purpose:
+
+- emit one cost-aware mode recommendation before the operator enters a heavier contour
+
+Guarantees:
+
+- can recommend `FULL_GOVERNED_PATH`, `LIGHTWEIGHT_BASELINE`, or `HYBRID_EXCEPTION`
+- can expose one short measured reason and one narrow next safe step
+
+Does not guarantee:
+
+- full policy automation
+- deep runtime execution
+- automatic mode enforcement
+
+### `synrail_mode_receipt_v0.py`
+
+Purpose:
+
+- emit one machine-readable receipt recording whether the operator followed the mode recommendation
+
+Guarantees:
+
+- records the recommended mode
+- records the selected mode
+- records whether the heavier contour was entered or skipped
+
+Does not guarantee:
+
+- runtime correctness on its own
+- economic correctness beyond the supplied recommendation artifact
+
 ### `synrail_runtime_v0.py`
 
 Purpose:
