@@ -66,6 +66,15 @@
     "comparison_verdict": {
       "type": "string"
     },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "dominant_blocker": {
+      "type": "string"
+    },
     "resulting_state": {
       "type": "string",
       "minLength": 1

@@ -18,6 +18,34 @@ CLOSURE = HERE / "synrail_closure_v0.py"
 REFRESH = HERE / "synrail_refresh_v0.py"
 HARNESS = HERE / "synrail_baseline_harness_v0.py"
 
+TRANSITION_PRECEDENCE = {
+    "TARGET_SURFACE_ATTESTED": [
+        "TARGET_SURFACE_NOT_ATTESTED",
+    ],
+    "READY": [
+        "TARGET_SURFACE_NOT_ATTESTED",
+        "DOCTOR_NOT_GREEN",
+        "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+    ],
+    "EXECUTION_COMPLETED": [
+        "TARGET_SURFACE_NOT_ATTESTED",
+        "DOCTOR_NOT_GREEN",
+        "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+        "EXECUTION_NOT_COMPLETED",
+    ],
+    "PROOF_BUNDLE_COMPLETE": [
+        "ARTIFACT_BUNDLE_MISSING",
+        "INVALID_PROOF_BUNDLE",
+        "MISSING_PROOF_SECTIONS",
+    ],
+    "CLOSURE_ACCEPTED": [
+        "ARTIFACT_BUNDLE_MISSING",
+        "INVALID_PROOF_BUNDLE",
+        "MISSING_PROOF_SECTIONS",
+        "RECOVERY_REVERIFICATION_INCOMPLETE",
+    ],
+}
+
 
 def default_state(run_id: str, task_class: str) -> dict:
     return {
@@ -83,11 +111,6 @@ def run_python_capture(script: Path, args: list[str]) -> tuple[int, str]:
     return completed.returncode, completed.stdout
 
 
-def deny(message: str) -> int:
-    print(json.dumps({"result": "DENY", "reason": message}, ensure_ascii=True))
-    return 2
-
-
 def allow(state: dict, target: str, next_safe_step: str) -> dict:
     state["state"] = target
     state["next_safe_step"] = next_safe_step
@@ -139,9 +162,185 @@ def gate_artifacts(state: dict) -> tuple[bool, str]:
 
 
 def gate_proof_bundle(state: dict) -> tuple[bool, str]:
-    if state["proof_bundle"]["status"] != "COMPLETE":
-        return False, "PROOF_BUNDLE_INCOMPLETE"
-    return True, ""
+    if state["proof_bundle"]["status"] == "COMPLETE":
+        return True, ""
+    if state["proof_bundle"]["status"] == "INVALID":
+        return False, "INVALID_PROOF_BUNDLE"
+    return False, "MISSING_PROOF_SECTIONS"
+
+
+def blockers_for_target(state: dict, target: str) -> list[str]:
+    blockers: list[str] = []
+
+    if target == "TARGET_SURFACE_ATTESTED":
+        ok, reason = gate_target_surface(state)
+        if not ok:
+            blockers.append(reason)
+        return blockers
+
+    if target == "READY":
+        for gate in (gate_target_surface, gate_doctor, gate_integrity):
+            ok, reason = gate(state)
+            if not ok:
+                blockers.append(reason)
+        return blockers
+
+    if target == "EXECUTION_COMPLETED":
+        for gate in (gate_target_surface, gate_doctor, gate_integrity):
+            ok, reason = gate(state)
+            if not ok:
+                blockers.append(reason)
+        if state["execution"]["status"] != "COMPLETED":
+            blockers.append("EXECUTION_NOT_COMPLETED")
+        return blockers
+
+    if target == "PROOF_BUNDLE_COMPLETE":
+        ok, reason = gate_artifacts(state)
+        if not ok:
+            blockers.append(reason)
+        ok, reason = gate_proof_bundle(state)
+        if not ok:
+            blockers.append(reason)
+        return blockers
+
+    if target == "CLOSURE_ACCEPTED":
+        for gate in (gate_artifacts, gate_proof_bundle, gate_recovery):
+            ok, reason = gate(state)
+            if not ok:
+                blockers.append(reason)
+        return blockers
+
+    return blockers
+
+
+def dominant_blocker(target: str, blockers: list[str]) -> str:
+    for candidate in TRANSITION_PRECEDENCE.get(target, []):
+        if candidate in blockers:
+            return candidate
+    return blockers[0] if blockers else ""
+
+
+def apply_dominant_blocker_to_state(state: dict, dominant: str) -> dict:
+    if dominant == "TARGET_SURFACE_NOT_ATTESTED":
+        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+        state["closure"]["blocking_reason"] = "TARGET_SURFACE_NOT_ATTESTED"
+        state["closure"]["next_allowed_transition"] = "TARGET_SURFACE_ATTESTED"
+        state["closure"]["narrow_next_safe_step"] = "attest target surface"
+        state["closure"]["missing_sections"] = []
+        state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+        return state
+
+    if dominant == "DOCTOR_NOT_GREEN":
+        return enter_blocked_state(
+            state,
+            target="DOCTOR_BLOCKED",
+            closure_status="CLAIMED_NOT_ACCEPTED",
+            blocking_reason="DOCTOR_NOT_GREEN",
+            next_allowed_transition="DOCTOR_READINESS",
+            narrow_next_safe_step="run doctor and clear blocking failure classes",
+        )
+
+    if dominant == "EXACT_TASK_IDENTITY_NOT_CONFIRMED":
+        state["integrity"]["status"] = "FAIL"
+        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+        state["closure"]["blocking_reason"] = "EXACT_TASK_IDENTITY_NOT_CONFIRMED"
+        state["closure"]["next_allowed_transition"] = "READY"
+        state["closure"]["narrow_next_safe_step"] = "restore exact prompt and task identity"
+        state["closure"]["missing_sections"] = []
+        state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+        return state
+
+    if dominant == "EXECUTION_NOT_COMPLETED":
+        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+        state["closure"]["blocking_reason"] = "EXECUTION_NOT_COMPLETED"
+        state["closure"]["next_allowed_transition"] = "EXECUTION_COMPLETED"
+        state["closure"]["narrow_next_safe_step"] = "complete bounded execution on the attested target surface"
+        state["closure"]["missing_sections"] = []
+        state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+        return state
+
+    if dominant == "ARTIFACT_BUNDLE_MISSING":
+        state["state"] = "EXECUTION_COMPLETED"
+        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+        state["closure"]["blocking_reason"] = "ARTIFACT_BUNDLE_MISSING"
+        state["closure"]["next_allowed_transition"] = "PROOF_BUNDLE_COMPLETION"
+        state["closure"]["narrow_next_safe_step"] = "capture the final result artifact and rebuild the proof bundle"
+        state["closure"]["missing_sections"] = []
+        state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+        return state
+
+    if dominant == "INVALID_PROOF_BUNDLE":
+        return enter_blocked_state(
+            state,
+            target="PROOF_BUNDLE_INVALID",
+            closure_status="CLAIMED_NOT_ACCEPTED",
+            blocking_reason="INVALID_PROOF_BUNDLE",
+            next_allowed_transition="PROOF_BUNDLE_REPAIR",
+            narrow_next_safe_step="repair the final result artifact and rebuild the proof bundle",
+            missing_sections=list(state["proof_bundle"]["missing_sections"]),
+        )
+
+    if dominant == "MISSING_PROOF_SECTIONS":
+        return enter_blocked_state(
+            state,
+            target="PROOF_BUNDLE_PARTIAL",
+            closure_status="CLAIMED_NOT_ACCEPTED",
+            blocking_reason="MISSING_PROOF_SECTIONS",
+            next_allowed_transition="PROOF_BUNDLE_COMPLETION",
+            narrow_next_safe_step="complete the missing proof sections",
+            missing_sections=list(state["proof_bundle"]["missing_sections"]),
+        )
+
+    if dominant == "RECOVERY_REVERIFICATION_INCOMPLETE":
+        return enter_blocked_state(
+            state,
+            target="RECOVERY_PENDING",
+            closure_status="CLAIMED_NOT_ACCEPTED",
+            blocking_reason="RECOVERY_REVERIFICATION_INCOMPLETE",
+            next_allowed_transition="RECOVERY_REVERIFICATION",
+            narrow_next_safe_step="run reverification against the attested target surface",
+        )
+
+    return state
+
+
+def build_transition_block_report(state: dict, *, target: str, blockers: list[str], dominant: str) -> dict:
+    return {
+        "schema_version": "spine_block_report_v0",
+        "run_id": state["run_id"],
+        "task_class": state["task_class"],
+        "target_state": target,
+        "blockers": blockers,
+        "dominant_blocker": dominant,
+        "resulting_state": state["state"],
+        "closure_status": state["closure"]["status"],
+        "blocking_reason": state["closure"]["blocking_reason"],
+        "next_allowed_transition": state["closure"]["next_allowed_transition"],
+        "next_safe_step": state["next_safe_step"],
+    }
+
+
+def deny_transition(state: dict, *, target: str, blockers: list[str], dominant: str) -> tuple[int, dict, dict]:
+    next_state = apply_dominant_blocker_to_state(state, dominant)
+    report = build_transition_block_report(next_state, target=target, blockers=blockers, dominant=dominant)
+    return 2, next_state, report
+
+
+def deny_simple(state: dict, *, target: str, reason: str) -> tuple[int, dict, dict]:
+    report = {
+        "schema_version": "spine_block_report_v0",
+        "run_id": state["run_id"],
+        "task_class": state["task_class"],
+        "target_state": target,
+        "blockers": [reason],
+        "dominant_blocker": reason,
+        "resulting_state": state["state"],
+        "closure_status": state["closure"]["status"],
+        "blocking_reason": state["closure"]["blocking_reason"],
+        "next_allowed_transition": state["closure"]["next_allowed_transition"],
+        "next_safe_step": state["next_safe_step"],
+    }
+    return 2, state, report
 
 
 def gate_recovery(state: dict) -> tuple[bool, str]:
@@ -150,64 +349,46 @@ def gate_recovery(state: dict) -> tuple[bool, str]:
     return True, ""
 
 
-def transition(state: dict, target: str) -> tuple[int, dict | None]:
+def transition(state: dict, target: str) -> tuple[int, dict, dict | None]:
     current = state["state"]
     if current in TERMINAL_STATES:
-        return deny("TERMINAL_STATE"), None
+        return deny_simple(state, target=target, reason="TERMINAL_STATE")
+
+    blockers = blockers_for_target(state, target)
+    if blockers:
+        dominant = dominant_blocker(target, blockers)
+        return deny_transition(state, target=target, blockers=blockers, dominant=dominant)
 
     if target == "TARGET_SURFACE_ATTESTED":
-        ok, reason = gate_target_surface(state)
-        if not ok:
-            return deny(reason), None
-        return 0, allow(state, target, "run doctor readiness")
+        return 0, allow(state, target, "run doctor readiness"), None
 
     if target == "READY":
-        for gate in (gate_target_surface, gate_doctor, gate_integrity):
-            ok, reason = gate(state)
-            if not ok:
-                return deny(reason), None
-        return 0, allow(state, target, "run execution")
+        return 0, allow(state, target, "run execution"), None
 
     if target == "EXECUTION_COMPLETED":
-        for gate in (gate_target_surface, gate_doctor, gate_integrity):
-            ok, reason = gate(state)
-            if not ok:
-                return deny(reason), None
-        if state["execution"]["status"] != "COMPLETED":
-            return deny("EXECUTION_NOT_COMPLETED"), None
-        return 0, allow(state, target, "assemble proof bundle")
+        return 0, allow(state, target, "assemble proof bundle"), None
 
     if target == "PROOF_BUNDLE_COMPLETE":
-        ok, reason = gate_artifacts(state)
-        if not ok:
-            return deny(reason), None
-        ok, reason = gate_proof_bundle(state)
-        if not ok:
-            return deny(reason), None
-        return 0, allow(state, target, "decide closure")
+        return 0, allow(state, target, "decide closure"), None
 
     if target == "CLOSURE_ACCEPTED":
-        for gate in (gate_artifacts, gate_proof_bundle, gate_recovery):
-            ok, reason = gate(state)
-            if not ok:
-                return deny(reason), None
         state["closure"]["status"] = "ACCEPTED"
         state["closure"]["blocking_reason"] = ""
         state["closure"]["next_allowed_transition"] = "NONE"
         state["closure"]["narrow_next_safe_step"] = "NONE"
         state["closure"]["missing_sections"] = []
-        return 0, allow(state, target, "NONE")
+        return 0, allow(state, target, "NONE"), None
 
     if target == "CLOSURE_REJECTED":
         state["closure"]["status"] = "REJECTED"
         state["closure"]["next_allowed_transition"] = "emit narrow next safe step"
         state["closure"]["narrow_next_safe_step"] = "emit narrow next safe step"
-        return 0, allow(state, target, "emit narrow next safe step")
+        return 0, allow(state, target, "emit narrow next safe step"), None
 
-    return deny(f"UNKNOWN_TARGET_STATE:{target}"), None
+    return deny_simple(state, target=target, reason=f"UNKNOWN_TARGET_STATE:{target}")
 
 
-def apply_bundle(state: dict, bundle: dict) -> tuple[int, dict | None]:
+def apply_bundle(state: dict, bundle: dict) -> tuple[int, dict, dict | None]:
     state["execution"]["artifact_bundle_present"] = bool(bundle.get("final_result", {}).get("present", False))
     state["proof_bundle"]["status"] = bundle.get("status", "INVALID")
     state["proof_bundle"]["missing_sections"] = list(bundle.get("missing_sections", []))
@@ -233,10 +414,10 @@ def apply_bundle(state: dict, bundle: dict) -> tuple[int, dict | None]:
         next_allowed_transition="PROOF_BUNDLE_COMPLETION",
         narrow_next_safe_step="complete the missing proof sections",
         missing_sections=list(bundle.get("missing_sections", [])),
-    )
+    ), None
 
 
-def apply_doctor(state: dict, record: dict) -> tuple[int, dict | None]:
+def apply_doctor(state: dict, record: dict) -> tuple[int, dict, dict | None]:
     acceptable = record.get("final_verdict", "").startswith("ACCEPTABLE_")
     state["doctor"]["status"] = "PASS" if acceptable else "FAIL"
     state["doctor"]["blocking_failure_classes"] = list(record.get("blocking_failure_classes", []))
@@ -248,7 +429,7 @@ def apply_doctor(state: dict, record: dict) -> tuple[int, dict | None]:
         state["closure"]["narrow_next_safe_step"] = "confirm exact task identity"
         state["closure"]["missing_sections"] = []
         state["next_safe_step"] = "confirm exact task identity"
-        return 0, state
+        return 0, state, None
 
     return 0, enter_blocked_state(
         state,
@@ -257,7 +438,7 @@ def apply_doctor(state: dict, record: dict) -> tuple[int, dict | None]:
         blocking_reason="DOCTOR_NOT_GREEN",
         next_allowed_transition="DOCTOR_READINESS",
         narrow_next_safe_step=record.get("recommended_next_safe_step", "run doctor readiness"),
-    )
+    ), None
 
 
 def apply_target_surface(state: dict, *, identity: str, baseline_relation: str) -> dict:
@@ -274,26 +455,26 @@ def apply_integrity(state: dict, *, prompt_identity: str, task_identity: str) ->
     return state
 
 
-def maybe_advance_to_target_surface_attested(state: dict) -> tuple[int, dict | None]:
+def maybe_advance_to_target_surface_attested(state: dict) -> tuple[int, dict, dict | None]:
     if state["state"] == "INITIALIZED":
         return transition(state, "TARGET_SURFACE_ATTESTED")
-    return 0, state
+    return 0, state, None
 
 
-def maybe_advance_to_ready(state: dict) -> tuple[int, dict | None]:
+def maybe_advance_to_ready(state: dict) -> tuple[int, dict, dict | None]:
     if state["state"] in {"INITIALIZED", "TARGET_SURFACE_ATTESTED"}:
         return transition(state, "READY")
-    return 0, state
+    return 0, state, None
 
 
-def maybe_advance_to_execution_completed(state: dict) -> tuple[int, dict | None]:
+def maybe_advance_to_execution_completed(state: dict) -> tuple[int, dict, dict | None]:
     if state["state"] == "READY":
         state["execution"]["status"] = "COMPLETED"
         return transition(state, "EXECUTION_COMPLETED")
-    return 0, state
+    return 0, state, None
 
 
-def apply_closure(state: dict, verdict: dict) -> tuple[int, dict | None]:
+def apply_closure(state: dict, verdict: dict) -> tuple[int, dict, dict | None]:
     state["closure"]["status"] = verdict["closure_status"]
     state["closure"]["blocking_reason"] = verdict["blocking_reason"]
     state["closure"]["next_allowed_transition"] = verdict["next_allowed_transition"]
@@ -309,17 +490,17 @@ def apply_closure(state: dict, verdict: dict) -> tuple[int, dict | None]:
 
     if verdict["blocking_reason"] == "INVALID_PROOF_BUNDLE":
         state["state"] = "PROOF_BUNDLE_INVALID"
-        return 0, state
+        return 0, state, None
 
     if verdict["blocking_reason"] == "MISSING_PROOF_SECTIONS":
         state["state"] = "PROOF_BUNDLE_PARTIAL"
-        return 0, state
+        return 0, state, None
 
     if state["proof_bundle"]["status"] == "COMPLETE":
         state["state"] = "PROOF_BUNDLE_COMPLETE"
     else:
         state["state"] = "EXECUTION_COMPLETED"
-    return 0, state
+    return 0, state, None
 
 
 def build_worked_orchestration_artifact(
@@ -363,13 +544,13 @@ def build_worked_orchestration_artifact(
     }
 
 
-def build_error_report(state: dict, *, reason: str) -> dict:
+def build_error_report(state: dict, *, reason: str, stopping_stage: str = "doctor") -> dict:
     return {
         "schema_version": "orchestration_report_v0",
         "run_id": state["run_id"],
         "task_class": state["task_class"],
         "result": "ERROR",
-        "stopping_stage": "doctor",
+        "stopping_stage": stopping_stage,
         "reason": reason,
         "doctor_verdict": "",
         "bundle_status": "",
@@ -378,6 +559,8 @@ def build_error_report(state: dict, *, reason: str) -> dict:
         "refresh_resulting_closure_status": "",
         "comparison_applied": False,
         "comparison_verdict": "",
+        "blockers": [],
+        "dominant_blocker": "",
         "resulting_state": state["state"],
         "next_safe_step": state["next_safe_step"],
     }
@@ -398,6 +581,36 @@ def build_blocked_report(state: dict, doctor_record: dict) -> dict:
         "refresh_resulting_closure_status": "",
         "comparison_applied": False,
         "comparison_verdict": "",
+        "blockers": list(state["doctor"]["blocking_failure_classes"]),
+        "dominant_blocker": "DOCTOR_NOT_GREEN",
+        "resulting_state": state["state"],
+        "next_safe_step": state["next_safe_step"],
+    }
+
+
+def build_transition_blocked_report(
+    state: dict,
+    *,
+    stopping_stage: str,
+    doctor_verdict: str,
+    block_report: dict,
+) -> dict:
+    return {
+        "schema_version": "orchestration_report_v0",
+        "run_id": state["run_id"],
+        "task_class": state["task_class"],
+        "result": "BLOCKED",
+        "stopping_stage": stopping_stage,
+        "reason": block_report["dominant_blocker"],
+        "doctor_verdict": doctor_verdict,
+        "bundle_status": state["proof_bundle"]["status"],
+        "closure_status": state["closure"]["status"],
+        "refresh_applied": False,
+        "refresh_resulting_closure_status": "",
+        "comparison_applied": False,
+        "comparison_verdict": "",
+        "blockers": list(block_report["blockers"]),
+        "dominant_blocker": block_report["dominant_blocker"],
         "resulting_state": state["state"],
         "next_safe_step": state["next_safe_step"],
     }
@@ -444,10 +657,11 @@ def cmd_init(args: argparse.Namespace) -> int:
 def cmd_transition(args: argparse.Namespace) -> int:
     path = Path(args.state_file)
     state = load_state(path)
-    code, next_state = transition(state, args.target)
-    if code != 0:
-        return code
+    code, next_state, block_report = transition(state, args.target)
     save_state(path, next_state)
+    if code != 0:
+        print(json.dumps(block_report, ensure_ascii=True))
+        return code
     print(json.dumps({"result": "ALLOW", "state": next_state["state"]}, ensure_ascii=True))
     return 0
 
@@ -462,10 +676,11 @@ def cmd_apply_bundle(args: argparse.Namespace) -> int:
     state_path = Path(args.state_file)
     state = load_state(state_path)
     bundle = load_json(Path(args.bundle_file))
-    code, next_state = apply_bundle(state, bundle)
-    if code != 0:
-        return code
+    code, next_state, block_report = apply_bundle(state, bundle)
     save_state(state_path, next_state)
+    if code != 0:
+        print(json.dumps(block_report, ensure_ascii=True))
+        return code
     print(json.dumps({"result": "OK", "state": next_state["state"], "proof_bundle": next_state["proof_bundle"]["status"]}, ensure_ascii=True))
     return 0
 
@@ -474,10 +689,11 @@ def cmd_apply_doctor(args: argparse.Namespace) -> int:
     state_path = Path(args.state_file)
     state = load_state(state_path)
     record = load_json(Path(args.doctor_file))
-    code, next_state = apply_doctor(state, record)
-    if code != 0:
-        return code
+    code, next_state, block_report = apply_doctor(state, record)
     save_state(state_path, next_state)
+    if code != 0:
+        print(json.dumps(block_report, ensure_ascii=True))
+        return code
     print(json.dumps({"result": "OK", "doctor": next_state["doctor"]["status"], "next_safe_step": next_state["next_safe_step"]}, ensure_ascii=True))
     return 0
 
@@ -486,10 +702,11 @@ def cmd_apply_closure(args: argparse.Namespace) -> int:
     state_path = Path(args.state_file)
     state = load_state(state_path)
     verdict = load_json(Path(args.closure_file))
-    code, next_state = apply_closure(state, verdict)
-    if code != 0:
-        return code
+    code, next_state, block_report = apply_closure(state, verdict)
     save_state(state_path, next_state)
+    if code != 0:
+        print(json.dumps(block_report, ensure_ascii=True))
+        return code
     print(json.dumps({"result": "OK", "state": next_state["state"], "closure": next_state["closure"]["status"]}, ensure_ascii=True))
     return 0
 
@@ -503,9 +720,20 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         identity=args.execution_surface_identity,
         baseline_relation=args.baseline_identity,
     )
-    code, state = maybe_advance_to_target_surface_attested(state)
+    code, state, block_report = maybe_advance_to_target_surface_attested(state)
     if code != 0:
-        return code
+        save_state(state_path, state)
+        save_json(
+            Path(args.report_output),
+            build_transition_blocked_report(
+                state,
+                stopping_stage="target_surface_transition",
+                doctor_verdict="",
+                block_report=block_report,
+            ),
+        )
+        print(json.dumps({"result": "BLOCKED", "stopping_stage": "target_surface_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
+        return 0
     save_state(state_path, state)
 
     doctor_args = [
@@ -542,26 +770,51 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         return code
 
     doctor_record = load_json(Path(args.doctor_output))
-    code, state = apply_doctor(load_state(state_path), doctor_record)
+    code, state, block_report = apply_doctor(load_state(state_path), doctor_record)
     if code != 0:
-        return code
+        save_state(state_path, state)
+        save_json(Path(args.report_output), build_error_report(state, reason=block_report["dominant_blocker"], stopping_stage="doctor_apply"))
+        print(json.dumps({"result": "ERROR", "stopping_stage": "doctor_apply", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
+        return 0
     state = apply_integrity(
         state,
         prompt_identity=args.prompt_identity,
         task_identity=args.task_identity,
     )
-    code, state = maybe_advance_to_ready(state)
+    code, state, block_report = maybe_advance_to_ready(state)
     if code != 0:
-        return code
+        save_state(state_path, state)
+        save_json(
+            Path(args.report_output),
+            build_transition_blocked_report(
+                state,
+                stopping_stage="ready_transition",
+                doctor_verdict=doctor_record["final_verdict"],
+                block_report=block_report,
+            ),
+        )
+        print(json.dumps({"result": "BLOCKED", "stopping_stage": "ready_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
+        return 0
     save_state(state_path, state)
     if state["doctor"]["status"] != "PASS":
         save_json(Path(args.report_output), build_blocked_report(state, doctor_record))
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "doctor"}, ensure_ascii=True))
         return 0
 
-    code, state = maybe_advance_to_execution_completed(load_state(state_path))
+    code, state, block_report = maybe_advance_to_execution_completed(load_state(state_path))
     if code != 0:
-        return code
+        save_state(state_path, state)
+        save_json(
+            Path(args.report_output),
+            build_transition_blocked_report(
+                state,
+                stopping_stage="execution_transition",
+                doctor_verdict=doctor_record["final_verdict"],
+                block_report=block_report,
+            ),
+        )
+        print(json.dumps({"result": "BLOCKED", "stopping_stage": "execution_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
+        return 0
     save_state(state_path, state)
 
     bundle_args = [
@@ -583,9 +836,20 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         return code
 
     bundle = load_json(Path(args.bundle_output))
-    code, state = apply_bundle(load_state(state_path), bundle)
+    code, state, block_report = apply_bundle(load_state(state_path), bundle)
     if code != 0:
-        return code
+        save_state(state_path, state)
+        save_json(
+            Path(args.report_output),
+            build_transition_blocked_report(
+                state,
+                stopping_stage="proof_bundle_transition",
+                doctor_verdict=doctor_record["final_verdict"],
+                block_report=block_report,
+            ),
+        )
+        print(json.dumps({"result": "BLOCKED", "stopping_stage": "proof_bundle_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
+        return 0
     save_state(state_path, state)
 
     code, _ = run_python_capture(CLOSURE, ["--state-file", args.state_file, "--bundle-file", args.bundle_output, "--output", args.closure_output])
@@ -593,9 +857,20 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         return code
 
     closure = load_json(Path(args.closure_output))
-    code, state = apply_closure(load_state(state_path), closure)
+    code, state, block_report = apply_closure(load_state(state_path), closure)
     if code != 0:
-        return code
+        save_state(state_path, state)
+        save_json(
+            Path(args.report_output),
+            build_transition_blocked_report(
+                state,
+                stopping_stage="closure_transition",
+                doctor_verdict=doctor_record["final_verdict"],
+                block_report=block_report,
+            ),
+        )
+        print(json.dumps({"result": "BLOCKED", "stopping_stage": "closure_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
+        return 0
     save_state(state_path, state)
 
     state = load_state(state_path)
@@ -658,6 +933,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         "refresh_resulting_closure_status": refresh_resulting_closure_status,
         "comparison_applied": comparison_applied,
         "comparison_verdict": comparison_verdict,
+        "blockers": [],
+        "dominant_blocker": "",
         "resulting_state": state["state"],
         "next_safe_step": state["next_safe_step"],
     }

@@ -48,6 +48,7 @@ Start here when you want to understand the kernel itself:
 - `core/EXECUTABLE_LOOP_RUN_001.md`
 - `core/EXECUTABLE_LOOP_RUN_002.md`
 - `core/EXECUTABLE_LOOP_RUN_003.md`
+- `schemas/spine_block_report_v0.schema.json`
 - `schemas/canonical_run_artifact_v0.schema.json`
 - `schemas/worked_orchestration_artifact_v0.schema.json`
 

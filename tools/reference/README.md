@@ -124,6 +124,7 @@ Guarantees:
 
 - can initialize a run state
 - can deny disallowed transitions
+- can emit one structured blocked-transition report with explicit blocker precedence
 - can apply doctor records back into the state machine
 - can apply bundle and closure artifacts back into the state machine
 - can run one bounded `doctor -> bundle -> closure` contour with optional `refresh`, `compare`, and worked-envelope emission

@@ -62,6 +62,31 @@ These gates are currently expressed in:
 
 - `tools/reference/synrail_spine_v0.py`
 
+The denied-transition output is now also expressed in:
+
+- `schemas/spine_block_report_v0.schema.json`
+
+## Current precedence rule
+
+When more than one gate blocks the same transition, the spine now reports:
+
+- all applicable blockers
+- one explicit dominant blocker
+
+This matters because it keeps denial semantics deterministic.
+
+Current priority is target-specific, but the main rule is:
+
+- readiness blockers dominate by:
+  - target surface
+  - doctor
+  - exact-task integrity
+- closure blockers dominate by:
+  - artifact presence
+  - invalid proof bundle
+  - partial proof bundle
+  - recovery reverification
+
 ## Decision rule
 
 Do not add more gates to v0 unless they clearly improve:

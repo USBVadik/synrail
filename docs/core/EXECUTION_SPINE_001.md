@@ -18,13 +18,14 @@ The v0 spine can:
 
 1. initialize a machine-readable run state
 2. attempt a state transition
-3. apply a doctor record back into the state machine
-4. apply a proof-bundle artifact back into the state machine
-5. apply a closure verdict back into the state machine
-6. run one bounded orchestration contour across doctor, bundle, closure, optional refresh, and optional comparison
-7. deny disallowed transitions through hard gate checks
-8. emit one primary canonical run artifact for the bounded contour
-9. emit the current machine-readable state
+3. emit one machine-readable block report when a transition is denied
+4. apply a doctor record back into the state machine
+5. apply a proof-bundle artifact back into the state machine
+6. apply a closure verdict back into the state machine
+7. run one bounded orchestration contour across doctor, bundle, closure, optional refresh, and optional comparison
+8. deny disallowed transitions through hard gate checks
+9. emit one primary canonical run artifact for the bounded contour
+10. emit the current machine-readable state
 
 ## Current transition contour
 
@@ -72,6 +73,12 @@ It now also gives explicit state shape to the main failure branches instead of l
 - `DOCTOR_BLOCKED`
 - `PROOF_BUNDLE_PARTIAL`
 - `PROOF_BUNDLE_INVALID`
+
+It now also gives explicit precedence to competing blockers inside the spine itself, instead of letting the first checked gate silently dominate.
+
+The current machine-readable block artifact for denied transitions lives at:
+
+- `schemas/spine_block_report_v0.schema.json`
 
 It is still small, but it is no longer only descriptive.
 

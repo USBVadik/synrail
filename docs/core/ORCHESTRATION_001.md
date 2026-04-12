@@ -79,6 +79,12 @@ The spine-driven contour now also emits explicit blocked state lanes instead of 
 - `PROOF_BUNDLE_PARTIAL`
 - `PROOF_BUNDLE_INVALID`
 
+It now also emits explicit blocked-transition readings when a contour step is denied, including:
+
+- all applicable blockers
+- one dominant blocker
+- one resulting blocked state / next safe step reading
+
 ## Current boundaries
 
 The v0 orchestration slice is intentionally narrow.

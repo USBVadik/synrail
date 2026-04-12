@@ -67,6 +67,7 @@ Current strongest value carriers are:
 - closure acceptance vs claimed-not-accepted separation
 - explicit blocked state lanes for main failure branches
 - explicit degradation lanes after refresh-driven invalidation
+- explicit precedence for competing spine-side blockers
 - explicit precedence for competing degradations
 - anti-drift refresh after state degradation
 
