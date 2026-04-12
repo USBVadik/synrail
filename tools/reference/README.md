@@ -6,6 +6,10 @@ They are included to show narrow `Synrail` control behaviors clearly.
 
 They are **not** a full orchestration platform.
 
+For the quickest helper-selection view, start with:
+
+- `USAGE_MATRIX.md`
+
 ## What these helpers are for
 
 Use them as:

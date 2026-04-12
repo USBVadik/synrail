@@ -50,6 +50,7 @@ For a quick document map, start with:
 
 - `docs/README.md`
 - `tools/reference/README.md`
+- `tools/reference/USAGE_MATRIX.md`
 
 ## First Reference Helpers
 
