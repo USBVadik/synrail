@@ -201,6 +201,23 @@ Does not guarantee:
 - interactive UX
 - broad product shell behavior
 
+### `synrail_baseline_harness_v0.py`
+
+Purpose:
+
+- compare one baseline artifact against one Synrail artifact and emit a machine-readable verdict
+
+Guarantees:
+
+- produces one repeatable comparison record
+- avoids purely prose-based comparison outcomes
+
+Does not guarantee:
+
+- statistical proof
+- deep scenario normalization
+- broad benchmarking behavior
+
 ## Operating rule
 
 If a helper starts accumulating broad product logic, large orchestration behavior, or environment-specific sprawl, it should probably stop living under `tools/reference/` in this repo shape.

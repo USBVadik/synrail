@@ -39,6 +39,7 @@ Start here when you want to understand the kernel itself:
 - `core/CLOSURE_ENGINE_001.md`
 - `core/REFRESH_CHAIN_AUTOMATION_001.md`
 - `core/TERMINAL_OPERATOR_UX_001.md`
+- `core/BASELINE_HARNESS_001.md`
 
 These documents describe how Synrail decides what is trustworthy, what is blocked, and what can be accepted.
 
