@@ -126,3 +126,4 @@ Everything else should support this set rather than compete with it for attentio
 The next practical operating layer around that anchor is:
 
 - `docs/boundary/APPLICATION_POLICY_001.md`
+- `docs/boundary/HYBRID_SUBSET_001.md`

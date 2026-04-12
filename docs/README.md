@@ -21,6 +21,7 @@ These are the shortest current path to:
 Then, if you want the practical “when should we actually use this?” rule, read:
 
 - `boundary/APPLICATION_POLICY_001.md`
+- `boundary/HYBRID_SUBSET_001.md`
 
 ## 2. Core
 
