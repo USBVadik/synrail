@@ -17,7 +17,7 @@ The current executable stack can already provide:
 5. refresh-driven invalidation after lower-level degradation
 6. terminal-first operator commands
 7. machine-readable baseline comparison records
-8. one bounded orchestration path across doctor, bundle, and closure
+8. one bounded orchestration path across doctor, bundle, closure, and optional refresh
 
 That is enough to say:
 
@@ -71,7 +71,7 @@ Current strongest value carriers are:
 Current weaker areas are:
 
 - doctor is now executable, but still narrower than a mature readiness layer
-- the stack now has one bounded orchestration contour, but not yet a deeper end-to-end runtime
+- the stack now has one bounded orchestration contour including optional refresh, but not yet a deeper end-to-end runtime
 - comparison harness is still narrow and heuristic
 - production-grade runtime readiness is not yet proven
 

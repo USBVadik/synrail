@@ -23,7 +23,8 @@ The `orchestrate` command currently runs one bounded path:
 4. write the bundle result back into state
 5. compute closure
 6. write the closure verdict back into state
-7. emit one machine-readable orchestration report
+7. optionally run refresh after a state-changing event
+8. emit one machine-readable orchestration report
 
 ## Why this matters
 
@@ -51,6 +52,10 @@ It only tightens the most important productive contour:
 - doctor
 - proof bundle
 - closure
+
+And now, when explicitly requested:
+
+- refresh after a bounded event
 
 ## Decision rule
 

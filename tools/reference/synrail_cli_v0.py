@@ -197,6 +197,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             "doctor_verdict": "",
             "bundle_status": "",
             "closure_status": "",
+            "refresh_applied": False,
+            "refresh_resulting_closure_status": "",
             "resulting_state": load_json(Path(args.state_file))["state"],
             "next_safe_step": load_json(Path(args.state_file))["next_safe_step"],
         }
@@ -220,6 +222,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             "doctor_verdict": doctor_record["final_verdict"],
             "bundle_status": "",
             "closure_status": state_after_doctor["closure"]["status"],
+            "refresh_applied": False,
+            "refresh_resulting_closure_status": "",
             "resulting_state": state_after_doctor["state"],
             "next_safe_step": state_after_doctor["next_safe_step"],
         }
@@ -260,16 +264,51 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     final_state = load_json(Path(args.state_file))
     bundle = load_json(Path(args.bundle_output))
     closure = load_json(Path(args.closure_output))
+    refresh_applied = False
+    refresh_resulting_closure_status = ""
+    stopping_stage = "closure" if closure["closure_status"] != "ACCEPTED" else "accepted"
+    reason = closure["blocking_reason"] or "NONE"
+
+    if args.refresh_output and args.refresh_event_type:
+        refresh_args = [
+            "--state-file", args.state_file,
+            "--event-type", args.refresh_event_type,
+            "--output", args.refresh_output,
+            "--update-state",
+        ]
+        optional_refresh_pairs = [
+            ("--doctor-status", args.refresh_doctor_status),
+            ("--bundle-file", args.bundle_output if args.refresh_use_bundle else ""),
+            ("--closure-file", args.closure_output if args.refresh_use_closure else ""),
+            ("--recovery-status", args.refresh_recovery_status),
+        ]
+        for flag, value in optional_refresh_pairs:
+            if value:
+                refresh_args.extend([flag, value])
+        if args.refresh_reverification_complete:
+            refresh_args.append("--reverification-complete")
+        code, _ = run_python_capture(REFRESH, refresh_args, passthrough=False)
+        if code != 0:
+            return code
+        final_state = load_json(Path(args.state_file))
+        refresh_report = load_json(Path(args.refresh_output))
+        refresh_applied = True
+        refresh_resulting_closure_status = refresh_report["resulting_closure_status"]
+        stopping_stage = "refresh"
+        reason = final_state["closure"]["blocking_reason"] or "NONE"
+
     report = {
         "schema_version": "orchestration_report_v0",
         "run_id": final_state["run_id"],
         "task_class": final_state["task_class"],
         "result": "OK",
-        "stopping_stage": "closure" if closure["closure_status"] != "ACCEPTED" else "accepted",
-        "reason": closure["blocking_reason"] or "NONE",
+        "stopping_stage": stopping_stage,
+        "reason": reason,
         "doctor_verdict": doctor_record["final_verdict"],
         "bundle_status": bundle["status"],
         "closure_status": closure["closure_status"],
+        "refresh_applied": refresh_applied,
+        "refresh_resulting_closure_status": refresh_resulting_closure_status,
         "resulting_state": final_state["state"],
         "next_safe_step": final_state["next_safe_step"],
     }
@@ -375,6 +414,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--task-identity", required=True)
     p_orchestrate.add_argument("--readback")
     p_orchestrate.add_argument("--scenario-proof")
+    p_orchestrate.add_argument("--refresh-output")
+    p_orchestrate.add_argument("--refresh-event-type")
+    p_orchestrate.add_argument("--refresh-doctor-status", choices=["PASS", "FAIL"])
+    p_orchestrate.add_argument("--refresh-recovery-status", choices=["NOT_REQUIRED", "PENDING", "COMPLETE"])
+    p_orchestrate.add_argument("--refresh-reverification-complete", action="store_true")
+    p_orchestrate.add_argument("--refresh-use-bundle", action="store_true")
+    p_orchestrate.add_argument("--refresh-use-closure", action="store_true")
     p_orchestrate.add_argument("--clean-surface", action="store_true")
     p_orchestrate.add_argument("--artifact-viable", action="store_true")
     p_orchestrate.add_argument("--helper-ok", action="store_true")

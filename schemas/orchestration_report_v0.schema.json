@@ -11,6 +11,8 @@
     "doctor_verdict",
     "bundle_status",
     "closure_status",
+    "refresh_applied",
+    "refresh_resulting_closure_status",
     "resulting_state",
     "next_safe_step"
   ],
@@ -48,6 +50,12 @@
       "type": "string"
     },
     "closure_status": {
+      "type": "string"
+    },
+    "refresh_applied": {
+      "type": "boolean"
+    },
+    "refresh_resulting_closure_status": {
       "type": "string"
     },
     "resulting_state": {
