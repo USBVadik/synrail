@@ -6,7 +6,7 @@ Record the first canonical happy-path checkpoint lifecycle for `Synrail`.
 
 This slice proves one narrow kernel move:
 
-- create a checkpoint from a known accepted contour
+- create a checkpoint from one verified accepted contour
 - verify that checkpoint as a safe point
 - restore it
 - require restore verification before calling the restore successful
@@ -44,6 +44,8 @@ Observed result:
 
 - `event_type = CREATE`
 - `result = OK`
+- `safe_point_class = VERIFIED_ACCEPTED_STATE`
+- `safe_point_eligible = true`
 
 ### 2. Verify
 
@@ -52,6 +54,7 @@ Checkpoint verification then checked:
 - required artifacts present
 - schema validation
 - state consistency
+- safe-point eligibility
 
 Observed result:
 
@@ -91,5 +94,6 @@ The shortest honest reading is:
   - verify
   - restore
   - restore verification before success
+- one verified accepted contour can now become a trusted safe point
 - the next pressure step is now obvious:
   - prove failed restore with explicit rollback

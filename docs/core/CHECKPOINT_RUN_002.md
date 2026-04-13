@@ -7,6 +7,7 @@ Record the first failed-restore checkpoint pressure-test for `Synrail`.
 This slice exists to prove the stricter checkpoint claim:
 
 - restore success is not “files copied”
+- restore must start from one pre-verified safe point
 - restore success requires restore verification
 - failed restore must not silently leave a half-restored target behind
 
@@ -36,6 +37,7 @@ Observed result:
 
 - `CREATE -> OK`
 - `VERIFY -> OK`
+- `safe_point_class = VERIFIED_ACCEPTED_STATE`
 
 ### 2. Restore
 
@@ -72,4 +74,5 @@ The shortest honest reading is:
 
 - happy-path checkpoint is now real
 - failed-restore rollback is now also real
+- restore is now gated by pre-verified safe-point truth, not only by copied files
 - checkpoint is now strong enough to move from “future safety idea” into “bounded kernel capability”

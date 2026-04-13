@@ -14,6 +14,11 @@
     "checkpoint_root",
     "source_state",
     "source_closure_status",
+    "source_doctor_status",
+    "source_target_surface_status",
+    "source_integrity_status",
+    "safe_point_class",
+    "safe_point_eligible",
     "verification",
     "restore",
     "rollback",
@@ -65,11 +70,34 @@
       "type": "string",
       "minLength": 1
     },
+    "source_doctor_status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_target_surface_status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_integrity_status": {
+      "type": "string",
+      "minLength": 1
+    },
     "source_resumability_status": {
       "type": "string"
     },
     "source_resumability_family": {
       "type": "string"
+    },
+    "safe_point_class": {
+      "type": "string",
+      "enum": [
+        "VERIFIED_ACCEPTED_STATE",
+        "VERIFIED_WORKING_STATE",
+        "NOT_SAFE_POINT"
+      ]
+    },
+    "safe_point_eligible": {
+      "type": "boolean"
     },
     "artifact_manifest": {
       "type": "array",
@@ -119,6 +147,7 @@
       "additionalProperties": false,
       "required": [
         "status",
+        "safe_point_eligible",
         "required_artifacts_present",
         "schema_validation_passed",
         "state_consistency_passed",
@@ -132,6 +161,9 @@
             "PASSED",
             "FAILED"
           ]
+        },
+        "safe_point_eligible": {
+          "type": "boolean"
         },
         "required_artifacts_present": {
           "type": "boolean"

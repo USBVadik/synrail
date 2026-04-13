@@ -5,11 +5,16 @@
   "task_class": "bounded_router_trigger_fix",
   "event_type": "CREATE",
   "result": "OK",
-  "checkpoint_root": "/Users/usbdick/Documents/New project/synrail/fixtures/checkpoint_run_001/checkpoint",
+  "checkpoint_root": "fixtures/checkpoint_run_001/checkpoint",
   "source_state": "CLOSURE_ACCEPTED",
   "source_closure_status": "ACCEPTED",
+  "source_doctor_status": "PASS",
+  "source_target_surface_status": "ATTESTED",
+  "source_integrity_status": "PASS",
   "source_resumability_status": "NOT_RESUMABLE",
   "source_resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+  "safe_point_class": "VERIFIED_ACCEPTED_STATE",
+  "safe_point_eligible": true,
   "artifact_manifest": [
     {
       "artifact_id": "state",
@@ -44,6 +49,7 @@
   ],
   "verification": {
     "status": "NOT_RUN",
+    "safe_point_eligible": false,
     "required_artifacts_present": false,
     "schema_validation_passed": false,
     "state_consistency_passed": false,

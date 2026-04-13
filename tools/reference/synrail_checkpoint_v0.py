@@ -32,6 +32,11 @@ SCHEMA_BY_KIND = {
     "REPAIR_RECEIPT": SCHEMAS / "artifact_repair_receipt_v0.schema.json",
 }
 
+SAFE_POINT_CLASSES = {
+    ("CLOSURE_ACCEPTED", "ACCEPTED"): "VERIFIED_ACCEPTED_STATE",
+    ("READY", "CLAIMED_NOT_ACCEPTED"): "VERIFIED_WORKING_STATE",
+}
+
 ARTIFACT_FLAGS = [
     ("state_file", "state", "STATE", True),
     ("report_file", "report", "REPORT", False),
@@ -59,13 +64,16 @@ def save_json(path: Path, payload: dict) -> None:
 def build_manifest(args: argparse.Namespace, checkpoint_root: Path) -> list[dict]:
     manifest: list[dict] = []
     artifacts_dir = checkpoint_root / "artifacts"
+    if artifacts_dir.exists():
+        shutil.rmtree(artifacts_dir)
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     for attr, artifact_id, kind, always_required in ARTIFACT_FLAGS:
         value = getattr(args, attr, None)
         if not value:
             continue
         source = Path(value)
-        destination = artifacts_dir / source.name
+        suffix = source.suffix or ".json"
+        destination = artifacts_dir / f"{artifact_id}{suffix}"
         shutil.copy2(source, destination)
         manifest.append(
             {
@@ -81,6 +89,7 @@ def build_manifest(args: argparse.Namespace, checkpoint_root: Path) -> list[dict
 def verification_template() -> dict:
     return {
         "status": "NOT_RUN",
+        "safe_point_eligible": False,
         "required_artifacts_present": False,
         "schema_validation_passed": False,
         "state_consistency_passed": False,
@@ -108,29 +117,56 @@ def rollback_template() -> dict:
     }
 
 
+def classify_safe_point(state: dict) -> tuple[str, bool, list[str]]:
+    failures: list[str] = []
+    safe_point_class = SAFE_POINT_CLASSES.get(
+        (state.get("state", ""), state.get("closure", {}).get("status", ""))
+    )
+    if not safe_point_class:
+        failures.append("state is not an eligible accepted or working checkpoint surface")
+        safe_point_class = "NOT_SAFE_POINT"
+    if state.get("doctor", {}).get("status", "") != "PASS":
+        failures.append("doctor must pass before checkpoint can be trusted")
+    if state.get("target_surface", {}).get("status", "") != "ATTESTED":
+        failures.append("target surface must be attested before checkpoint can be trusted")
+    if state.get("integrity", {}).get("status", "") != "PASS":
+        failures.append("integrity must pass before checkpoint can be trusted")
+    return safe_point_class, not failures, failures
+
+
 def create_record(args: argparse.Namespace) -> dict:
     checkpoint_root = Path(args.checkpoint_root)
     checkpoint_root.mkdir(parents=True, exist_ok=True)
     state = load_json(Path(args.state_file))
     resumability = build_resumability(state)
-    manifest = build_manifest(args, checkpoint_root)
+    safe_point_class, safe_point_eligible, safe_point_failures = classify_safe_point(state)
+    manifest = build_manifest(args, checkpoint_root) if safe_point_eligible else []
     return {
         "schema_version": "checkpoint_record_v0",
         "checkpoint_id": args.checkpoint_id,
         "run_id": state["run_id"],
         "task_class": state["task_class"],
         "event_type": "CREATE",
-        "result": "OK",
+        "result": "OK" if safe_point_eligible else "BLOCKED",
         "checkpoint_root": str(checkpoint_root),
         "source_state": state["state"],
         "source_closure_status": state["closure"]["status"],
+        "source_doctor_status": state.get("doctor", {}).get("status", ""),
+        "source_target_surface_status": state.get("target_surface", {}).get("status", ""),
+        "source_integrity_status": state.get("integrity", {}).get("status", ""),
         "source_resumability_status": resumability["status"],
         "source_resumability_family": resumability["family"],
+        "safe_point_class": safe_point_class,
+        "safe_point_eligible": safe_point_eligible,
         "artifact_manifest": manifest,
         "verification": verification_template(),
         "restore": restore_template(),
         "rollback": rollback_template(),
-        "next_safe_step": "verify checkpoint before trusting restore",
+        "next_safe_step": (
+            "verify checkpoint before trusting restore"
+            if safe_point_eligible
+            else "; ".join(safe_point_failures)
+        ),
     }
 
 
@@ -187,6 +223,13 @@ def state_consistency_errors(record: dict, *, root_override: Path | None = None)
     closure_status = state.get("closure", {}).get("status", "")
     if closure_status != record.get("source_closure_status"):
         errors.append("state.closure.status does not match checkpoint source_closure_status")
+    safe_point_class, safe_point_eligible, safe_point_failures = classify_safe_point(state)
+    if safe_point_class != record.get("safe_point_class", ""):
+        errors.append("state safe_point_class does not match checkpoint safe_point_class")
+    if safe_point_eligible != record.get("safe_point_eligible", False):
+        errors.append("state safe_point_eligible does not match checkpoint safe_point_eligible")
+    for failure in safe_point_failures:
+        errors.append(f"safe point eligibility failed: {failure}")
     return errors
 
 
@@ -208,6 +251,7 @@ def verify_record(record: dict, *, root_override: Path | None = None) -> dict:
     verified["result"] = "OK" if not (missing or schema_errors or consistency_errors or unexpected_paths) else "BLOCKED"
     verified["verification"] = {
         "status": "PASSED" if not (missing or schema_errors or consistency_errors or unexpected_paths) else "FAILED",
+        "safe_point_eligible": record.get("safe_point_eligible", False) and not consistency_errors,
         "required_artifacts_present": not missing,
         "schema_validation_passed": not schema_errors,
         "state_consistency_passed": not consistency_errors,
@@ -258,9 +302,12 @@ def rollback_from_backup(record: dict, target_root: Path, backup_root: Path, bac
             if artifact["artifact_id"] in backed_up_ids and backup_path.exists():
                 target_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(backup_path, target_path)
-                rolled_back_ids.append(artifact["artifact_id"])
+                if artifact["artifact_id"] not in rolled_back_ids:
+                    rolled_back_ids.append(artifact["artifact_id"])
             else:
                 target_path.unlink(missing_ok=True)
+                if artifact["artifact_id"] not in rolled_back_ids:
+                    rolled_back_ids.append(artifact["artifact_id"])
         return "ROLLED_BACK", rolled_back_ids, failures
     except Exception as exc:  # pragma: no cover - defensive path
         failures.append(str(exc))
@@ -270,6 +317,22 @@ def rollback_from_backup(record: dict, target_root: Path, backup_root: Path, bac
 
 
 def restore_record(record: dict, target_root: Path) -> dict:
+    preverify = verify_record(record)
+    if preverify["result"] != "OK":
+        blocked = dict(preverify)
+        blocked["event_type"] = "RESTORE"
+        blocked["result"] = "BLOCKED"
+        blocked["restore"] = {
+            "status": "RESTORE_FAILED",
+            "target_root": str(target_root),
+            "restore_verification_required": True,
+            "restored_artifact_ids": [],
+            "failure_reasons": list(preverify["verification"].get("failure_reasons", [])),
+        }
+        blocked["rollback"] = rollback_template()
+        blocked["next_safe_step"] = "verify checkpoint successfully before attempting restore"
+        return blocked
+
     restored = dict(record)
     restored["restore"] = restore_template()
     restored["rollback"] = rollback_template()

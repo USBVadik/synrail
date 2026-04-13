@@ -5,11 +5,16 @@
   "task_class": "bounded_router_trigger_fix",
   "event_type": "RESTORE_ROLLBACK",
   "result": "BLOCKED",
-  "checkpoint_root": "/Users/usbdick/Documents/New project/synrail/fixtures/checkpoint_run_002/checkpoint",
+  "checkpoint_root": "fixtures/checkpoint_run_002/checkpoint",
   "source_state": "CLOSURE_ACCEPTED",
   "source_closure_status": "ACCEPTED",
+  "source_doctor_status": "PASS",
+  "source_target_surface_status": "ATTESTED",
+  "source_integrity_status": "PASS",
   "source_resumability_status": "NOT_RESUMABLE",
   "source_resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+  "safe_point_class": "VERIFIED_ACCEPTED_STATE",
+  "safe_point_eligible": true,
   "artifact_manifest": [
     {
       "artifact_id": "state",
@@ -44,6 +49,7 @@
   ],
   "verification": {
     "status": "FAILED",
+    "safe_point_eligible": true,
     "required_artifacts_present": true,
     "schema_validation_passed": true,
     "state_consistency_passed": true,
@@ -57,7 +63,7 @@
   },
   "restore": {
     "status": "RESTORE_FAILED",
-    "target_root": "/Users/usbdick/Documents/New project/synrail/fixtures/checkpoint_run_002/restore_target",
+    "target_root": "fixtures/checkpoint_run_002/restore_target",
     "restore_verification_required": true,
     "restored_artifact_ids": [
       "state",
@@ -74,7 +80,13 @@
   "rollback": {
     "status": "ROLLED_BACK",
     "trigger": "RESTORE_VERIFICATION_FAILED",
-    "rolled_back_artifact_ids": [],
+    "rolled_back_artifact_ids": [
+      "state",
+      "report",
+      "orchestration",
+      "selection_receipt",
+      "preparation_receipt"
+    ],
     "failure_reasons": []
   },
   "next_safe_step": "inspect restore verification failure before attempting another restore"

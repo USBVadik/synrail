@@ -39,6 +39,7 @@ The first runtime proof points now live at:
 
 - `docs/core/CHECKPOINT_RUN_001.md`
 - `docs/core/CHECKPOINT_RUN_002.md`
+- `docs/core/CHECKPOINT_RUN_003.md`
 
 The runtime implementation will later emit one machine-readable `checkpoint_record`.
 
@@ -57,6 +58,7 @@ These are lifecycle events, not vague status labels.
 
 A Synrail checkpoint is only a safe point if:
 
+- the source state is either one verified accepted state or one verified working state
 - required artifacts exist
 - the checkpoint passes schema validation
 - the checkpoint passes state-consistency validation
@@ -74,6 +76,11 @@ Create must:
 - bind it to one `task_class`
 - record the current `source_state`
 - record the current `source_closure_status`
+- record the current doctor, target-surface, and integrity truth needed to classify safe-point eligibility
+- classify the source state as:
+  - `VERIFIED_ACCEPTED_STATE`
+  - `VERIFIED_WORKING_STATE`
+  - `NOT_SAFE_POINT`
 - record one artifact manifest
 
 ### `VERIFY`
@@ -91,6 +98,7 @@ If verification fails, the checkpoint must not be treated as a trusted restore p
 
 Restore must:
 
+- verify the checkpoint record before attempting restore
 - name the `target_root`
 - record which artifacts were restored
 - require restore verification before claiming success
@@ -123,6 +131,7 @@ Checkpoint must remain stricter than general artifact copying.
 The shortest invariant is:
 
 - a checkpoint is trustworthy only if `VERIFY = PASSED`
+- a checkpoint is only eligible if it is one verified accepted or verified working state
 - a restore is trustworthy only if restore verification passes
 - a failed restore without explicit rollback status is not a safe outcome
 
