@@ -155,6 +155,7 @@ Goal:
 Current sprint contract:
 
 - one first operator brief now compresses current runtime truth into one smaller handoff surface
+- one second canonical operator brief now also proves that this layer can preserve honest repairability on a `RECOVERY_PENDING` contour instead of only stopping exhausted loops
 - that brief must stay derived from:
   - `state`
   - `report`
