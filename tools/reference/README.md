@@ -794,3 +794,18 @@ Does not guarantee:
 
 - broad usability proof across many operators
 - replacement of the second-operator pressure slices
+
+### `synrail_externality_pressure_v0.py`
+
+Purpose:
+
+- aggregate a short external-ish pressure pass for one uglier contour from reproducibility, second-operator, and operator-reading records
+
+Guarantees:
+
+- records whether the contour survives those three bounded external-ish readings together
+
+Does not guarantee:
+
+- broad external market proof
+- replacement of harsher substitute testing

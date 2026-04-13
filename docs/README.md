@@ -18,6 +18,7 @@ Start here when you want the current product wedge rather than the full repo his
 - `boundary/HYBRID_STATUS_001.md`
 - `boundary/CONTINUATION_ADOPTION_001.md`
 - `boundary/OPERATOR_RENDER_ADOPTION_001.md`
+- `boundary/SHORT_EXTERNALITY_PRESSURE_001.md`
 - `boundary/SUBSTITUTE_KILL_TEST_002.md`
 - `boundary/SUBSTITUTE_KILL_TEST_003.md`
 - `boundary/KILLER_PATH_001.md`
@@ -183,6 +184,7 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/operator_render_adoption/delta.json`
 - `../fixtures/operator_reading_test_001/operator_reading.json`
 - `../fixtures/operator_reading_test_002/operator_reading.json`
+- `../fixtures/externality_pressure_001/pressure.json`
 - `../fixtures/artifact_consistency_run_001/consistent.json`
 - `../fixtures/artifact_consistency_run_002/inconsistent.json`
 - `../fixtures/doctor_pressure_test_003/doctor.json`

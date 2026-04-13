@@ -145,6 +145,7 @@ Current sprint contract:
   - one repeated doctor-return continuation stack
   - one less-curated stage-level continuation stack
   while the weak path still remains non-decisive
+- one first short external-ish pressure slice now also proves that one uglier repeated-doctor contour survives reproducibility, second-operator followability, and render followability together before the next harsher substitute tranche
 
 ### 1.0. Open the operator layer carefully
 

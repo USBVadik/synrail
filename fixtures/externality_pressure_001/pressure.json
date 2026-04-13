@@ -1,0 +1,20 @@
+{
+  "schema_version": "externality_pressure_record_v0",
+  "label": "repeated_doctor_externality",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "task_class": "bounded_router_trigger_fix",
+  "contour_reason": "DOCTOR_NOT_GREEN",
+  "packet_only_entry": true,
+  "requires_author_intuition": false,
+  "dimensions_passed": [
+    "REPRODUCIBILITY",
+    "SECOND_OPERATOR",
+    "OPERATOR_READING"
+  ],
+  "uncovered_risks": [],
+  "reproducibility_verdict": "REPRODUCIBLE_ON_KEY_TRUTH",
+  "second_operator_verdict": "FOLLOWABLE_BY_SECOND_OPERATOR",
+  "operator_reading_verdict": "FOLLOWABLE_WITH_RENDER",
+  "verdict": "SURVIVES_SHORT_EXTERNAL_PRESSURE",
+  "why": "the uglier contour stays reproducible, packet-followable, and render-followable without hidden author intuition"
+}

@@ -106,6 +106,7 @@ Read these next only if you need them:
 - `docs/core/OPERATOR_READING_TEST_001.md`
 - `docs/core/OPERATOR_READING_TEST_002.md`
 - `docs/boundary/OPERATOR_RENDER_ADOPTION_001.md`
+- `docs/boundary/SHORT_EXTERNALITY_PRESSURE_001.md`
 - `docs/boundary/SUBSTITUTE_KILL_TEST_002.md`
 - `docs/boundary/SUBSTITUTE_KILL_TEST_003.md`
 
@@ -246,6 +247,7 @@ Secondary repo-history and hardening context remains available in `docs/boundary
 - the repo now also has one first operator-render adoption slice showing that both measured renders are shorter than their source brief surfaces while preserving the key operator markers
 - the repo now also has one first less-curated operator reading slice showing that the derived render still preserves the repeated-doctor stop decision on a contour that a second operator can already follow without author memory
 - the repo now also has one second operator reading slice showing that the same derived render still preserves the repair-step decision, next safe step, and required inputs on a repairable recovery contour
+- the repo now also has one first short external-ish pressure slice showing that an uglier repeated-doctor contour survives reproducibility, second-operator followability, and render followability without hidden author intuition
 
 - the repo now also carries one first substitute-kill pressure slice against concrete substitute stacks instead of only one abstract baseline
 - that pressure slice currently shows two substitute-stack wins for Synrail and one still-unclear weak-path comparison

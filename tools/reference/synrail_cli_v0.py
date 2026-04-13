@@ -41,6 +41,7 @@ OPERATOR_RENDER = HERE / "synrail_operator_render_v0.py"
 OPERATOR_RENDER_ADOPTION = HERE / "synrail_operator_render_adoption_v0.py"
 OPERATOR_RENDER_ADOPTION_DELTA = HERE / "synrail_operator_render_adoption_delta_v0.py"
 OPERATOR_READING = HERE / "synrail_operator_reading_v0.py"
+EXTERNALITY_PRESSURE = HERE / "synrail_externality_pressure_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -465,6 +466,19 @@ def cmd_operator_reading(args: argparse.Namespace) -> int:
             "--second-operator-file", args.second_operator_file,
             "--brief-file", args.brief_file,
             "--render-file", args.render_file,
+            "--label", args.label,
+            "--output", args.output,
+        ],
+    )
+
+
+def cmd_externality_pressure(args: argparse.Namespace) -> int:
+    return run_python(
+        EXTERNALITY_PRESSURE,
+        [
+            "--reproducibility-file", args.reproducibility_file,
+            "--second-operator-file", args.second_operator_file,
+            "--operator-reading-file", args.operator_reading_file,
             "--label", args.label,
             "--output", args.output,
         ],
@@ -1309,6 +1323,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_operator_reading.add_argument("--label", required=True)
     p_operator_reading.add_argument("--output", required=True)
     p_operator_reading.set_defaults(func=cmd_operator_reading)
+
+    p_externality_pressure = sub.add_parser("externality-pressure")
+    p_externality_pressure.add_argument("--reproducibility-file", required=True)
+    p_externality_pressure.add_argument("--second-operator-file", required=True)
+    p_externality_pressure.add_argument("--operator-reading-file", required=True)
+    p_externality_pressure.add_argument("--label", required=True)
+    p_externality_pressure.add_argument("--output", required=True)
+    p_externality_pressure.set_defaults(func=cmd_externality_pressure)
 
     p_repair_handoff = sub.add_parser("repair-handoff")
     p_repair_handoff.add_argument("--state-file", required=True)
