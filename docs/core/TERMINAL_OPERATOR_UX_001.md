@@ -56,29 +56,31 @@ The CLI v0 currently exposes:
 14. `compare`
    - emit one machine-readable baseline comparison record through the CLI layer
    - route to the legacy comparison harness for `v0` inputs and the economics harness for `v1` inputs
-15. `hybrid-status`
+15. `substitute-pressure`
+   - aggregate several substitute comparison records into one bounded substitute-pressure reading
+16. `hybrid-status`
    - emit one machine-readable hybrid-mode status artifact from the current economics and hybrid evidence set
-16. `recommend-mode`
+17. `recommend-mode`
    - emit one machine-readable cost-aware mode recommendation before the operator enters a heavier contour
-17. `select-mode`
+18. `select-mode`
    - emit one machine-readable receipt that records whether the operator followed the recommendation and whether a heavier contour was skipped
-18. `plan-proof`
+19. `plan-proof`
    - emit one governed-path proof preparation plan before bundle assembly starts
-19. `preparation-receipt`
+20. `preparation-receipt`
    - emit one machine-readable receipt showing whether the planned proof surface reached a complete first bundle pass
-20. `governed-cost`
+21. `governed-cost`
    - emit one machine-readable cost delta between an unprepared and prepared governed path
-21. `reproducibility`
+22. `reproducibility`
    - compare two canonical run artifacts for one bounded reproducibility reading on key runtime truth
-22. `second-operator`
+23. `second-operator`
    - inspect whether one packet-first continuation path is followable without hidden author memory
-23. `operator-brief`
+24. `operator-brief`
    - compress current runtime truth into one operator-facing brief naming the blocker, current repair step, required inputs, stale sub-surfaces, and primary next action
-24. `operator-brief-chain`
+25. `operator-brief-chain`
    - compress multiple operator briefs into one stage-by-stage operator reading for an ugly continuation contour
-25. `operator-render`
+26. `operator-render`
    - turn one operator brief or one operator-brief chain into a small human-readable markdown handoff
-26. `operator-reading`
+27. `operator-reading`
    - check whether one human-readable operator render still preserves the bounded operator decision on a less-curated contour
 
 The selection layer can now also carry one preparation-aware strong-path recommendation when bounded governed-path cost evidence exists.

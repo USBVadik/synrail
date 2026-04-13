@@ -22,6 +22,7 @@ DOCTOR = HERE / "synrail_doctor_v1.py"
 HARNESS_V0 = HERE / "synrail_baseline_harness_v0.py"
 HARNESS_V1 = HERE / "synrail_baseline_harness_v1.py"
 HARNESS_V2 = HERE / "synrail_substitute_harness_v0.py"
+SUBSTITUTE_PRESSURE = HERE / "synrail_substitute_pressure_v0.py"
 HYBRID_STATUS = HERE / "synrail_hybrid_status_v0.py"
 MODE_SELECTOR = HERE / "synrail_mode_selector_v0.py"
 MODE_RECEIPT = HERE / "synrail_mode_receipt_v0.py"
@@ -226,6 +227,14 @@ def cmd_compare(args: argparse.Namespace) -> int:
             "--output", args.output,
         ]
     return run_python(harness, forwarded)
+
+
+def cmd_substitute_pressure(args: argparse.Namespace) -> int:
+    forwarded: list[str] = []
+    for record in args.record:
+        forwarded.extend(["--record", record])
+    forwarded.extend(["--output", args.output])
+    return run_python(SUBSTITUTE_PRESSURE, forwarded)
 
 
 def cmd_hybrid_status(args: argparse.Namespace) -> int:
@@ -1173,6 +1182,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_compare.add_argument("--synrail-file", required=True)
     p_compare.add_argument("--output", required=True)
     p_compare.set_defaults(func=cmd_compare)
+
+    p_substitute_pressure = sub.add_parser("substitute-pressure")
+    p_substitute_pressure.add_argument("--record", action="append", required=True)
+    p_substitute_pressure.add_argument("--output", required=True)
+    p_substitute_pressure.set_defaults(func=cmd_substitute_pressure)
 
     p_hybrid = sub.add_parser("hybrid-status")
     p_hybrid.add_argument("--cost-record", required=True)

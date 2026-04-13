@@ -709,6 +709,16 @@ Purpose:
 
 - aggregate a small set of substitute comparison records into one pressure reading
 
+Guarantees:
+
+- records verdict counts across the current substitute tranche
+- names the strongest Synrail edge and the current non-winning substitute stacks
+
+Does not guarantee:
+
+- broad market proof
+- automatic substitute selection policy on its own
+
 ### `synrail_operator_brief_v0.py`
 
 Purpose:
