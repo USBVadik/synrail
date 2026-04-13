@@ -1,0 +1,44 @@
+{
+  "schema_version": "doctor_record_v0",
+  "doctor_run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_009_RESUME",
+  "doctor_level": "CORE_DOCTOR",
+  "target_execution_surface": {
+    "path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009",
+    "classification": "resume_surface",
+    "observed_identity": "compound-prepared-surface-009",
+    "expected_identity": "compound-prepared-surface-009"
+  },
+  "trusted_baseline": {
+    "identity": "compound-prepared-surface-009"
+  },
+  "intended_run_class": "core_probe",
+  "gate_results": {
+    "baseline_identity": {
+      "status": "PASS",
+      "note": "trusted baseline identity is present and target identity matches expectation"
+    },
+    "clean_execution_surface": {
+      "status": "PASS",
+      "note": "non-git execution surface exists and is explicitly observed"
+    },
+    "artifact_viability": {
+      "status": "PASS",
+      "note": "artifact path parent exists and is writable by convention"
+    },
+    "helper_integrity": {
+      "status": "NOT_APPLICABLE",
+      "note": "helper integrity not required for this level"
+    },
+    "credential_surface": {
+      "status": "NOT_APPLICABLE",
+      "note": "credential surface not required for this level"
+    },
+    "prompt_task_identity": {
+      "status": "PASS",
+      "note": "exact prompt and task identity are present"
+    }
+  },
+  "blocking_failure_classes": [],
+  "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+  "recommended_next_safe_step": "run execution"
+}

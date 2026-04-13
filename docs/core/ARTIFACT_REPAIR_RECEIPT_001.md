@@ -91,3 +91,5 @@ The shortest honest reading is:
 - receipts now make stale artifact truth more precise at sub-surface level
 - receipts now make multi-step continuation progress machine-readable instead of leaving it implicit between packet snapshots
 - and receipts now also make that progress readable as one packet-native repair-history chain
+
+- the same repair-history truth is now also pulled up into the primary run artifact summary, so the operator no longer has to open the packet or receipt to see whether the continuation is actually progressing

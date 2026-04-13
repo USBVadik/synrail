@@ -1,0 +1,1094 @@
+{
+  "schema_version": "repair_packet_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_009",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "PROOF_BUNDLE_PARTIAL",
+  "continuation_entrypoint": "resume",
+  "repair_handoff": {
+    "schema_version": "repair_handoff_v0",
+    "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_009",
+    "task_class": "bounded_router_trigger_fix",
+    "from_state": "PROOF_BUNDLE_PARTIAL",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "MISSING_PROOF_SECTIONS",
+    "continuation_allowed": true,
+    "continuation_entrypoint": "resume",
+    "resumability": {
+      "status": "REPAIRABLE",
+      "family": "REPAIRABLE_COMPOUND",
+      "active_pressures": [
+        "PARTIAL_PROOF",
+        "RECOVERY_PENDING"
+      ],
+      "recommended_repair_order": [
+        "complete_missing_proof_sections",
+        "rebuild_proof_bundle",
+        "complete_recovery_reverification",
+        "run_refresh_reconciliation",
+        "rerun_closure"
+      ],
+      "requires_new_run": false,
+      "explanation": "more than one repairable pressure is active, so continuation should follow the ordered repair sequence before closure is rechecked"
+    },
+    "repair_policy": {
+      "policy_type": "MULTI_STEP_REPAIR",
+      "next_step_id": "complete_missing_proof_sections",
+      "ready_now_step_ids": [
+        "complete_missing_proof_sections"
+      ],
+      "ordered_steps": [
+        {
+          "step_id": "complete_missing_proof_sections",
+          "status": "READY_NOW",
+          "required_inputs": [
+            "readback",
+            "scenario_proof"
+          ],
+          "repairs_artifacts": [
+            "supporting_proof_artifacts"
+          ],
+          "resolves_pressures": [
+            "PARTIAL_PROOF"
+          ],
+          "why": "missing proof sections should be completed before bundle rebuild and closure recheck"
+        },
+        {
+          "step_id": "rebuild_proof_bundle",
+          "status": "WAITING_ON_PREVIOUS_STEP",
+          "required_inputs": [],
+          "repairs_artifacts": [
+            "proof_bundle_snapshot"
+          ],
+          "resolves_pressures": [
+            "PARTIAL_PROOF"
+          ],
+          "why": "the bundle should be rebuilt only after the stale proof artifacts above are repaired"
+        },
+        {
+          "step_id": "complete_recovery_reverification",
+          "status": "WAITING_ON_PREVIOUS_STEP",
+          "required_inputs": [
+            "refresh_recovery_complete",
+            "refresh_reverification_complete"
+          ],
+          "repairs_artifacts": [
+            "recovery_reverification_surface"
+          ],
+          "resolves_pressures": [
+            "RECOVERY_PENDING"
+          ],
+          "why": "recovery should be completed before refresh reconciliation can restore closure acceptance"
+        },
+        {
+          "step_id": "run_refresh_reconciliation",
+          "status": "WAITING_ON_PREVIOUS_STEP",
+          "required_inputs": [],
+          "repairs_artifacts": [
+            "closure_refresh_surface"
+          ],
+          "resolves_pressures": [
+            "RECOVERY_PENDING"
+          ],
+          "why": "refresh reconciliation should only run once recovery reverification is complete"
+        },
+        {
+          "step_id": "rerun_closure",
+          "status": "WAITING_ON_PREVIOUS_STEP",
+          "required_inputs": [],
+          "repairs_artifacts": [
+            "closure_verdict_surface"
+          ],
+          "resolves_pressures": [
+            "PARTIAL_PROOF",
+            "RECOVERY_PENDING"
+          ],
+          "why": "closure should be rechecked only after earlier repair steps finish"
+        }
+      ]
+    },
+    "artifact_quality_hints": [
+      {
+        "artifact_id": "supporting_proof_artifacts",
+        "quality": "STALE",
+        "still_stale_parts": [
+          "readback_record",
+          "scenario_proof_record"
+        ],
+        "mapped_inputs": [
+          "readback",
+          "scenario_proof"
+        ],
+        "repair_step": "complete_missing_proof_sections",
+        "why": "supporting proof sections are still missing from the current bundle",
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "readback_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "readback"
+            ],
+            "why": "the readback surface from changed sections is still missing"
+          },
+          {
+            "subsurface_id": "scenario_proof_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "scenario_proof"
+            ],
+            "why": "the scenario proof artifact is still missing"
+          }
+        ]
+      },
+      {
+        "artifact_id": "recovery_reverification_surface",
+        "quality": "STALE",
+        "still_stale_parts": [
+          "recovery_status_record",
+          "reverification_completion_record"
+        ],
+        "mapped_inputs": [
+          "refresh_recovery_complete",
+          "refresh_reverification_complete"
+        ],
+        "repair_step": "complete_recovery_reverification",
+        "why": "recovery was started but reverification has not been completed yet",
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "recovery_status_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "refresh_recovery_complete"
+            ],
+            "why": "the recovery status is still pending rather than complete"
+          },
+          {
+            "subsurface_id": "reverification_completion_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "refresh_reverification_complete"
+            ],
+            "why": "the recovery reverification completion flag is still missing"
+          }
+        ]
+      }
+    ],
+    "required_inputs": [
+      {
+        "input_id": "readback",
+        "kind": "file",
+        "cli_flag": "--readback",
+        "description": "supply readback from the changed sections on the attested surface",
+        "required_value": ""
+      },
+      {
+        "input_id": "scenario_proof",
+        "kind": "file",
+        "cli_flag": "--scenario-proof",
+        "description": "supply scenario proof for the continuation bundle",
+        "required_value": ""
+      }
+    ],
+    "runtime_defaults": {
+      "refresh_event_type": "",
+      "refresh_use_bundle": false,
+      "refresh_use_closure": false
+    },
+    "next_safe_step": "collect readback from changed sections on the attested surface"
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_COMPOUND",
+    "active_pressures": [
+      "PARTIAL_PROOF",
+      "RECOVERY_PENDING"
+    ],
+    "recommended_repair_order": [
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "explanation": "more than one repairable pressure is active, so continuation should follow the ordered repair sequence before closure is rechecked"
+  },
+  "repair_policy": {
+    "policy_type": "MULTI_STEP_REPAIR",
+    "next_step_id": "complete_missing_proof_sections",
+    "ready_now_step_ids": [
+      "complete_missing_proof_sections"
+    ],
+    "ordered_steps": [
+      {
+        "step_id": "complete_missing_proof_sections",
+        "status": "READY_NOW",
+        "required_inputs": [
+          "readback",
+          "scenario_proof"
+        ],
+        "repairs_artifacts": [
+          "supporting_proof_artifacts"
+        ],
+        "resolves_pressures": [
+          "PARTIAL_PROOF"
+        ],
+        "why": "missing proof sections should be completed before bundle rebuild and closure recheck"
+      },
+      {
+        "step_id": "rebuild_proof_bundle",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "proof_bundle_snapshot"
+        ],
+        "resolves_pressures": [
+          "PARTIAL_PROOF"
+        ],
+        "why": "the bundle should be rebuilt only after the stale proof artifacts above are repaired"
+      },
+      {
+        "step_id": "complete_recovery_reverification",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [
+          "refresh_recovery_complete",
+          "refresh_reverification_complete"
+        ],
+        "repairs_artifacts": [
+          "recovery_reverification_surface"
+        ],
+        "resolves_pressures": [
+          "RECOVERY_PENDING"
+        ],
+        "why": "recovery should be completed before refresh reconciliation can restore closure acceptance"
+      },
+      {
+        "step_id": "run_refresh_reconciliation",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_refresh_surface"
+        ],
+        "resolves_pressures": [
+          "RECOVERY_PENDING"
+        ],
+        "why": "refresh reconciliation should only run once recovery reverification is complete"
+      },
+      {
+        "step_id": "rerun_closure",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_verdict_surface"
+        ],
+        "resolves_pressures": [
+          "PARTIAL_PROOF",
+          "RECOVERY_PENDING"
+        ],
+        "why": "closure should be rechecked only after earlier repair steps finish"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "supporting_proof_artifacts",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "readback_record",
+        "scenario_proof_record"
+      ],
+      "mapped_inputs": [
+        "readback",
+        "scenario_proof"
+      ],
+      "repair_step": "complete_missing_proof_sections",
+      "why": "supporting proof sections are still missing from the current bundle",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "readback_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "readback"
+          ],
+          "why": "the readback surface from changed sections is still missing"
+        },
+        {
+          "subsurface_id": "scenario_proof_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "scenario_proof"
+          ],
+          "why": "the scenario proof artifact is still missing"
+        }
+      ]
+    },
+    {
+      "artifact_id": "recovery_reverification_surface",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "mapped_inputs": [
+        "refresh_recovery_complete",
+        "refresh_reverification_complete"
+      ],
+      "repair_step": "complete_recovery_reverification",
+      "why": "recovery was started but reverification has not been completed yet",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "recovery_status_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "refresh_recovery_complete"
+          ],
+          "why": "the recovery status is still pending rather than complete"
+        },
+        {
+          "subsurface_id": "reverification_completion_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "refresh_reverification_complete"
+          ],
+          "why": "the recovery reverification completion flag is still missing"
+        }
+      ]
+    }
+  ],
+  "artifact_quality_summary": {
+    "artifact_ids": [
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ],
+    "stale_artifact_ids": [
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ],
+    "non_resumable_artifact_ids": [],
+    "stale_subsurface_ids": [
+      "readback_record",
+      "scenario_proof_record",
+      "recovery_status_record",
+      "reverification_completion_record"
+    ],
+    "non_resumable_subsurface_ids": []
+  },
+  "repair_history": {
+    "applied": true,
+    "last_receipt_result": "STEP_COMPLETED",
+    "last_completed_step_id": "restore_readiness_truth",
+    "completed_step_ids": [
+      "restore_readiness_truth"
+    ],
+    "current_step_id": "complete_missing_proof_sections",
+    "waiting_step_ids": [
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "history_chain_length": 2,
+    "history_chain_results": [
+      "STEP_NOT_COMPLETED",
+      "STEP_COMPLETED"
+    ],
+    "history_chain_step_ids": [
+      "restore_readiness_truth",
+      "restore_readiness_truth"
+    ]
+  },
+  "repair_history_chain": [
+    {
+      "step_index": 1,
+      "from_state": "DOCTOR_BLOCKED",
+      "resulting_state": "DOCTOR_BLOCKED",
+      "result": "STEP_NOT_COMPLETED",
+      "active_step_id": "restore_readiness_truth",
+      "completed_step_id": "",
+      "next_step_id": "restore_readiness_truth",
+      "completed_subsurface_ids": [],
+      "next_step_subsurface_ids": [
+        "target_identity_record"
+      ],
+      "remaining_stale_subsurface_ids": [
+        "target_identity_record",
+        "readback_record",
+        "scenario_proof_record",
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "remaining_non_resumable_subsurface_ids": [],
+      "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+    },
+    {
+      "step_index": 2,
+      "from_state": "DOCTOR_BLOCKED",
+      "resulting_state": "PROOF_BUNDLE_PARTIAL",
+      "result": "STEP_COMPLETED",
+      "active_step_id": "restore_readiness_truth",
+      "completed_step_id": "restore_readiness_truth",
+      "next_step_id": "complete_missing_proof_sections",
+      "completed_subsurface_ids": [
+        "target_identity_record"
+      ],
+      "next_step_subsurface_ids": [
+        "readback_record",
+        "scenario_proof_record"
+      ],
+      "remaining_stale_subsurface_ids": [
+        "readback_record",
+        "scenario_proof_record",
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "remaining_non_resumable_subsurface_ids": [],
+      "operator_focus": "move to the next repair step and focus only on the remaining stale sub-surfaces there"
+    }
+  ],
+  "repair_receipt_context": {
+    "applied": true,
+    "result": "STEP_COMPLETED",
+    "completed_step_id": "restore_readiness_truth",
+    "remaining_stale_artifact_ids": [
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ],
+    "remaining_stale_subsurface_ids": [
+      "readback_record",
+      "scenario_proof_record",
+      "recovery_status_record",
+      "reverification_completion_record"
+    ],
+    "remaining_non_resumable_artifact_ids": [],
+    "remaining_non_resumable_subsurface_ids": [],
+    "remaining_stale_hints": [
+      {
+        "artifact_id": "supporting_proof_artifacts",
+        "quality": "STALE",
+        "repair_step": "complete_missing_proof_sections",
+        "still_stale_parts": [
+          "readback_record",
+          "scenario_proof_record"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "readback_record",
+            "why": "the readback surface from changed sections is still missing"
+          },
+          {
+            "subsurface_id": "scenario_proof_record",
+            "why": "the scenario proof artifact is still missing"
+          }
+        ]
+      },
+      {
+        "artifact_id": "recovery_reverification_surface",
+        "quality": "STALE",
+        "repair_step": "complete_recovery_reverification",
+        "still_stale_parts": [
+          "recovery_status_record",
+          "reverification_completion_record"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "recovery_status_record",
+            "why": "the recovery status is still pending rather than complete"
+          },
+          {
+            "subsurface_id": "reverification_completion_record",
+            "why": "the recovery reverification completion flag is still missing"
+          }
+        ]
+      }
+    ],
+    "remaining_non_resumable_hints": [],
+    "completed_hints": [
+      {
+        "artifact_id": "readiness_surface",
+        "quality": "STALE",
+        "repair_step": "restore_readiness_truth",
+        "still_stale_parts": [
+          "target_identity_record"
+        ],
+        "mapped_inputs": [
+          "target_identity_file"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "target_identity_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "target_identity_file"
+            ],
+            "why": "target identity evidence is missing or does not match the expected target surface"
+          }
+        ]
+      }
+    ],
+    "next_step_required_inputs": [
+      "readback",
+      "scenario_proof"
+    ],
+    "next_step_hints": [
+      {
+        "artifact_id": "supporting_proof_artifacts",
+        "quality": "STALE",
+        "repair_step": "complete_missing_proof_sections",
+        "still_stale_parts": [
+          "readback_record",
+          "scenario_proof_record"
+        ],
+        "mapped_inputs": [
+          "readback",
+          "scenario_proof"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "readback_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "readback"
+            ],
+            "why": "the readback surface from changed sections is still missing"
+          },
+          {
+            "subsurface_id": "scenario_proof_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "scenario_proof"
+            ],
+            "why": "the scenario proof artifact is still missing"
+          }
+        ]
+      }
+    ],
+    "history_chain": [
+      {
+        "step_index": 1,
+        "from_state": "DOCTOR_BLOCKED",
+        "resulting_state": "DOCTOR_BLOCKED",
+        "result": "STEP_NOT_COMPLETED",
+        "active_step_id": "restore_readiness_truth",
+        "completed_step_id": "",
+        "next_step_id": "restore_readiness_truth",
+        "completed_subsurface_ids": [],
+        "next_step_subsurface_ids": [
+          "target_identity_record"
+        ],
+        "remaining_stale_subsurface_ids": [
+          "target_identity_record",
+          "readback_record",
+          "scenario_proof_record",
+          "recovery_status_record",
+          "reverification_completion_record"
+        ],
+        "remaining_non_resumable_subsurface_ids": [],
+        "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+      },
+      {
+        "step_index": 2,
+        "from_state": "DOCTOR_BLOCKED",
+        "resulting_state": "PROOF_BUNDLE_PARTIAL",
+        "result": "STEP_COMPLETED",
+        "active_step_id": "restore_readiness_truth",
+        "completed_step_id": "restore_readiness_truth",
+        "next_step_id": "complete_missing_proof_sections",
+        "completed_subsurface_ids": [
+          "target_identity_record"
+        ],
+        "next_step_subsurface_ids": [
+          "readback_record",
+          "scenario_proof_record"
+        ],
+        "remaining_stale_subsurface_ids": [
+          "readback_record",
+          "scenario_proof_record",
+          "recovery_status_record",
+          "reverification_completion_record"
+        ],
+        "remaining_non_resumable_subsurface_ids": [],
+        "operator_focus": "move to the next repair step and focus only on the remaining stale sub-surfaces there"
+      }
+    ],
+    "operator_evidence": {
+      "completed_step_id": "restore_readiness_truth",
+      "completed_artifact_hints": [
+        {
+          "artifact_id": "readiness_surface",
+          "quality": "STALE",
+          "repair_step": "restore_readiness_truth",
+          "still_stale_parts": [
+            "target_identity_record"
+          ],
+          "mapped_inputs": [
+            "target_identity_file"
+          ],
+          "stale_subsurfaces": [
+            {
+              "subsurface_id": "target_identity_record",
+              "status": "STALE",
+              "mapped_inputs": [
+                "target_identity_file"
+              ],
+              "why": "target identity evidence is missing or does not match the expected target surface"
+            }
+          ]
+        }
+      ],
+      "completed_subsurface_ids": [
+        "target_identity_record"
+      ],
+      "next_step_id": "complete_missing_proof_sections",
+      "next_step_required_inputs": [
+        "readback",
+        "scenario_proof"
+      ],
+      "next_step_artifact_hints": [
+        {
+          "artifact_id": "supporting_proof_artifacts",
+          "quality": "STALE",
+          "repair_step": "complete_missing_proof_sections",
+          "still_stale_parts": [
+            "readback_record",
+            "scenario_proof_record"
+          ],
+          "mapped_inputs": [
+            "readback",
+            "scenario_proof"
+          ],
+          "stale_subsurfaces": [
+            {
+              "subsurface_id": "readback_record",
+              "status": "STALE",
+              "mapped_inputs": [
+                "readback"
+              ],
+              "why": "the readback surface from changed sections is still missing"
+            },
+            {
+              "subsurface_id": "scenario_proof_record",
+              "status": "STALE",
+              "mapped_inputs": [
+                "scenario_proof"
+              ],
+              "why": "the scenario proof artifact is still missing"
+            }
+          ]
+        }
+      ],
+      "next_step_subsurface_ids": [
+        "readback_record",
+        "scenario_proof_record"
+      ],
+      "operator_focus": "move to the next repair step and focus only on the remaining stale sub-surfaces there"
+    }
+  },
+  "continuation_plan": {
+    "doctor_required": true,
+    "bundle_required": true,
+    "closure_required": true,
+    "refresh_required": false,
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false,
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "resume_context": {
+    "doctor_run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_009_RESUME",
+    "doctor_level": "CORE_DOCTOR",
+    "target_path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009",
+    "target_classification": "resume_surface",
+    "baseline_identity": "compound-prepared-surface-009",
+    "intended_run_class": "core_probe",
+    "execution_surface_identity": "compound-prepared-surface-009"
+  },
+  "repair_inputs": {
+    "prompt_identity": "compound-prompt-009",
+    "task_identity": "bounded-router-task-009",
+    "prompt_identity_ok": true,
+    "target_identity_file": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009/stage1_target_identity.txt",
+    "clean_surface": false,
+    "artifact_viable": false,
+    "helper_ok": false,
+    "credentials_ok": false,
+    "artifact_path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009/fixed_final_result.json",
+    "helper_path": "",
+    "credential_env": [],
+    "final_result": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009/fixed_final_result.json",
+    "readback": "",
+    "scenario_proof": "",
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "selection_context": {
+    "applied": true,
+    "scenario_class": "expensive_wrong_closure",
+    "recommended_mode": "FULL_GOVERNED_PATH",
+    "selected_mode": "FULL_GOVERNED_PATH",
+    "followed_recommendation": true,
+    "governed_preparation_recommended": true,
+    "selected_with_preparation": true,
+    "heavier_contour_entered": true,
+    "estimated_avoided_operator_minutes": 0,
+    "estimated_avoided_interventions": 0,
+    "estimated_avoided_closure_latency_minutes": 0
+  },
+  "preparation_context": {
+    "applied": true,
+    "ready_for_closure": false,
+    "complete_on_first_bundle_pass": false,
+    "bundle_status": "PARTIAL",
+    "planned_required_sections_count": 7,
+    "planned_required_sections_present_count": 5
+  },
+  "runtime_truth": {
+    "report_result": "OK",
+    "stopping_stage": "closure",
+    "report_reason": "MISSING_PROOF_SECTIONS",
+    "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "bundle_status": "PARTIAL",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": false,
+    "refresh_resulting_closure_status": "",
+    "resulting_state": "PROOF_BUNDLE_PARTIAL",
+    "next_safe_step": "collect readback from changed sections on the attested surface",
+    "active_pressures": [
+      "PARTIAL_PROOF",
+      "RECOVERY_PENDING"
+    ],
+    "state_snapshot": {
+      "state": "PROOF_BUNDLE_PARTIAL",
+      "target_surface_status": "ATTESTED",
+      "doctor_status": "PASS",
+      "doctor_failure_classes": [],
+      "integrity_status": "PASS",
+      "execution_status": "COMPLETED",
+      "proof_bundle_status": "PARTIAL",
+      "proof_missing_sections": [
+        "readback",
+        "scenario_proof"
+      ],
+      "closure_status": "CLAIMED_NOT_ACCEPTED",
+      "closure_blocking_reason": "MISSING_PROOF_SECTIONS",
+      "recovery_status": "PENDING",
+      "recovery_reverification_complete": false
+    }
+  },
+  "output_defaults": {
+    "artifact_root": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009",
+    "doctor_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009/stage1_doctor.json",
+    "bundle_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009/stage1_bundle.json",
+    "closure_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009/stage1_closure.json",
+    "refresh_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009/stage1_refresh.json",
+    "report_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009/stage1_report.json",
+    "worked_artifact_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009/stage1_orchestration.json",
+    "run_artifact_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009/stage1_run.json",
+    "repair_handoff_output": "",
+    "repair_packet_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009/stage1_repair_packet.json",
+    "repair_receipt_output": "",
+    "plan_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009/stage1_plan.json",
+    "preparation_receipt_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009/stage1_preparation_receipt.json"
+  },
+  "provided_inputs": [
+    "prompt_identity",
+    "task_identity",
+    "target_identity_file",
+    "artifact_path",
+    "final_result"
+  ],
+  "missing_inputs": [
+    "readback",
+    "scenario_proof"
+  ],
+  "ready_for_resume": false,
+  "next_safe_step": "collect readback from changed sections on the attested surface",
+  "selection_receipt": {
+    "schema_version": "mode_selection_receipt_v0",
+    "recommendation_file": "/Users/usbdick/Documents/New project/synrail/fixtures/mode_selection_run_004/recommendation.json",
+    "scenario_class": "expensive_wrong_closure",
+    "task_class": "bounded_router_trigger_fix",
+    "recommended_mode": "FULL_GOVERNED_PATH",
+    "selected_mode": "FULL_GOVERNED_PATH",
+    "secondary_exception_mode": "",
+    "governed_preparation_recommended": true,
+    "selected_with_preparation": true,
+    "followed_recommendation": true,
+    "heavier_contour_entered": true,
+    "estimated_avoided_operator_minutes": 0,
+    "estimated_avoided_interventions": 0,
+    "estimated_avoided_closure_latency_minutes": 0,
+    "why": "expensive wrong-closure risk still dominates here, so the extra control remains justified despite added operator cost; bounded governed-path evidence also says preparation likely saves about 5 operator minutes, 1 intervention, and 7 closure-latency minutes without weakening the final safety surface",
+    "next_safe_step": "run the full governed path with preparation"
+  },
+  "repair_receipt": {
+    "schema_version": "artifact_repair_receipt_v0",
+    "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_009",
+    "task_class": "bounded_router_trigger_fix",
+    "from_state": "DOCTOR_BLOCKED",
+    "resulting_state": "PROOF_BUNDLE_PARTIAL",
+    "result": "STEP_COMPLETED",
+    "completed_step_id": "restore_readiness_truth",
+    "completed_artifact_ids": [
+      "readiness_surface"
+    ],
+    "completed_subsurface_ids": [
+      "target_identity_record"
+    ],
+    "remaining_stale_artifact_ids": [
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ],
+    "remaining_stale_subsurface_ids": [
+      "readback_record",
+      "scenario_proof_record",
+      "recovery_status_record",
+      "reverification_completion_record"
+    ],
+    "remaining_non_resumable_artifact_ids": [],
+    "remaining_non_resumable_subsurface_ids": [],
+    "remaining_stale_hints": [
+      {
+        "artifact_id": "supporting_proof_artifacts",
+        "quality": "STALE",
+        "repair_step": "complete_missing_proof_sections",
+        "still_stale_parts": [
+          "readback_record",
+          "scenario_proof_record"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "readback_record",
+            "why": "the readback surface from changed sections is still missing"
+          },
+          {
+            "subsurface_id": "scenario_proof_record",
+            "why": "the scenario proof artifact is still missing"
+          }
+        ]
+      },
+      {
+        "artifact_id": "recovery_reverification_surface",
+        "quality": "STALE",
+        "repair_step": "complete_recovery_reverification",
+        "still_stale_parts": [
+          "recovery_status_record",
+          "reverification_completion_record"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "recovery_status_record",
+            "why": "the recovery status is still pending rather than complete"
+          },
+          {
+            "subsurface_id": "reverification_completion_record",
+            "why": "the recovery reverification completion flag is still missing"
+          }
+        ]
+      }
+    ],
+    "remaining_non_resumable_hints": [],
+    "completed_hints": [
+      {
+        "artifact_id": "readiness_surface",
+        "quality": "STALE",
+        "repair_step": "restore_readiness_truth",
+        "still_stale_parts": [
+          "target_identity_record"
+        ],
+        "mapped_inputs": [
+          "target_identity_file"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "target_identity_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "target_identity_file"
+            ],
+            "why": "target identity evidence is missing or does not match the expected target surface"
+          }
+        ]
+      }
+    ],
+    "next_step_id": "complete_missing_proof_sections",
+    "ready_now_step_ids": [
+      "complete_missing_proof_sections"
+    ],
+    "next_step_required_inputs": [
+      "readback",
+      "scenario_proof"
+    ],
+    "next_step_hints": [
+      {
+        "artifact_id": "supporting_proof_artifacts",
+        "quality": "STALE",
+        "repair_step": "complete_missing_proof_sections",
+        "still_stale_parts": [
+          "readback_record",
+          "scenario_proof_record"
+        ],
+        "mapped_inputs": [
+          "readback",
+          "scenario_proof"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "readback_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "readback"
+            ],
+            "why": "the readback surface from changed sections is still missing"
+          },
+          {
+            "subsurface_id": "scenario_proof_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "scenario_proof"
+            ],
+            "why": "the scenario proof artifact is still missing"
+          }
+        ]
+      }
+    ],
+    "repair_history": {
+      "applied": true,
+      "completed_step_ids": [
+        "restore_readiness_truth"
+      ],
+      "last_completed_step_id": "restore_readiness_truth",
+      "current_step_id": "complete_missing_proof_sections",
+      "waiting_step_ids": [
+        "rebuild_proof_bundle",
+        "complete_recovery_reverification",
+        "run_refresh_reconciliation",
+        "rerun_closure"
+      ]
+    },
+    "repair_history_chain": [
+      {
+        "step_index": 1,
+        "from_state": "DOCTOR_BLOCKED",
+        "resulting_state": "DOCTOR_BLOCKED",
+        "result": "STEP_NOT_COMPLETED",
+        "active_step_id": "restore_readiness_truth",
+        "completed_step_id": "",
+        "next_step_id": "restore_readiness_truth",
+        "completed_subsurface_ids": [],
+        "next_step_subsurface_ids": [
+          "target_identity_record"
+        ],
+        "remaining_stale_subsurface_ids": [
+          "target_identity_record",
+          "readback_record",
+          "scenario_proof_record",
+          "recovery_status_record",
+          "reverification_completion_record"
+        ],
+        "remaining_non_resumable_subsurface_ids": [],
+        "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+      },
+      {
+        "step_index": 2,
+        "from_state": "DOCTOR_BLOCKED",
+        "resulting_state": "PROOF_BUNDLE_PARTIAL",
+        "result": "STEP_COMPLETED",
+        "active_step_id": "restore_readiness_truth",
+        "completed_step_id": "restore_readiness_truth",
+        "next_step_id": "complete_missing_proof_sections",
+        "completed_subsurface_ids": [
+          "target_identity_record"
+        ],
+        "next_step_subsurface_ids": [
+          "readback_record",
+          "scenario_proof_record"
+        ],
+        "remaining_stale_subsurface_ids": [
+          "readback_record",
+          "scenario_proof_record",
+          "recovery_status_record",
+          "reverification_completion_record"
+        ],
+        "remaining_non_resumable_subsurface_ids": [],
+        "operator_focus": "move to the next repair step and focus only on the remaining stale sub-surfaces there"
+      }
+    ],
+    "operator_evidence": {
+      "completed_step_id": "restore_readiness_truth",
+      "completed_artifact_hints": [
+        {
+          "artifact_id": "readiness_surface",
+          "quality": "STALE",
+          "repair_step": "restore_readiness_truth",
+          "still_stale_parts": [
+            "target_identity_record"
+          ],
+          "mapped_inputs": [
+            "target_identity_file"
+          ],
+          "stale_subsurfaces": [
+            {
+              "subsurface_id": "target_identity_record",
+              "status": "STALE",
+              "mapped_inputs": [
+                "target_identity_file"
+              ],
+              "why": "target identity evidence is missing or does not match the expected target surface"
+            }
+          ]
+        }
+      ],
+      "completed_subsurface_ids": [
+        "target_identity_record"
+      ],
+      "next_step_id": "complete_missing_proof_sections",
+      "next_step_required_inputs": [
+        "readback",
+        "scenario_proof"
+      ],
+      "next_step_artifact_hints": [
+        {
+          "artifact_id": "supporting_proof_artifacts",
+          "quality": "STALE",
+          "repair_step": "complete_missing_proof_sections",
+          "still_stale_parts": [
+            "readback_record",
+            "scenario_proof_record"
+          ],
+          "mapped_inputs": [
+            "readback",
+            "scenario_proof"
+          ],
+          "stale_subsurfaces": [
+            {
+              "subsurface_id": "readback_record",
+              "status": "STALE",
+              "mapped_inputs": [
+                "readback"
+              ],
+              "why": "the readback surface from changed sections is still missing"
+            },
+            {
+              "subsurface_id": "scenario_proof_record",
+              "status": "STALE",
+              "mapped_inputs": [
+                "scenario_proof"
+              ],
+              "why": "the scenario proof artifact is still missing"
+            }
+          ]
+        }
+      ],
+      "next_step_subsurface_ids": [
+        "readback_record",
+        "scenario_proof_record"
+      ],
+      "operator_focus": "move to the next repair step and focus only on the remaining stale sub-surfaces there"
+    },
+    "resumability": {
+      "status": "REPAIRABLE",
+      "family": "REPAIRABLE_COMPOUND"
+    },
+    "why": "the current repair step no longer leads the policy order, so the runtime records it as completed"
+  }
+}

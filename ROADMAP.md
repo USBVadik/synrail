@@ -226,3 +226,9 @@ The next practical operating layer around that anchor is:
 - `docs/boundary/APPLICATION_POLICY_001.md`
 - `docs/boundary/HYBRID_SUBSET_001.md`
 - `docs/boundary/HYBRID_STATUS_001.md`
+
+Current continuation-pressure work should keep optimizing for:
+
+- repair-history truth that survives across multi-step packet-first continuation
+- uglier continuation families where doctor pressure can return after intermediate repair
+- continuation compression that removes side artifacts when packet truth already carries enough state

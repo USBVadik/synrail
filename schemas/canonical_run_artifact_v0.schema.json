@@ -410,6 +410,84 @@
           }
         }
       }
+    },
+    "repair_history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "available",
+        "from_state",
+        "last_result",
+        "last_completed_step_id",
+        "current_step_id",
+        "waiting_step_ids",
+        "completed_step_ids",
+        "chain_length",
+        "chain_results",
+        "chain_step_ids",
+        "last_operator_focus",
+        "next_step_required_inputs",
+        "next_step_subsurface_ids"
+      ],
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "from_state": {
+          "type": "string"
+        },
+        "last_result": {
+          "type": "string"
+        },
+        "last_completed_step_id": {
+          "type": "string"
+        },
+        "current_step_id": {
+          "type": "string"
+        },
+        "waiting_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "completed_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "chain_length": {
+          "type": "integer"
+        },
+        "chain_results": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "chain_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "last_operator_focus": {
+          "type": "string"
+        },
+        "next_step_required_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "next_step_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     }
   }
 }

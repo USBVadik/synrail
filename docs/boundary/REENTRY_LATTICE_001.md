@@ -477,3 +477,5 @@ The next strongest kernel work should improve one of these:
 4. keep packet-first continuation the default operator path instead of letting raw flag replay creep back in
 
 If a change does not strengthen one of those, it is probably not the best next move for the executable kernel right now.
+
+- one ninth ugly continuation now also proves that doctor readiness pressure can return after one intermediate proof repair and still fold back into the same continuation family before final acceptance

@@ -231,6 +231,25 @@ def repair_packet_summary(packet: dict | None, state: dict) -> dict:
         "non_resumable_subsurface_ids": list(artifact_quality_summary.get("non_resumable_subsurface_ids", [])),
     }
 
+def repair_history_summary(packet: dict | None, state: dict) -> dict:
+    packet_summary = repair_packet_summary(packet, state)
+    return {
+        "available": packet_summary["emitted"],
+        "from_state": packet_summary["from_state"],
+        "last_result": packet_summary["repair_history_last_result"],
+        "last_completed_step_id": packet_summary["repair_history_last_completed_step_id"],
+        "current_step_id": packet_summary["repair_history_current_step_id"],
+        "waiting_step_ids": list(packet_summary["repair_history_waiting_step_ids"]),
+        "completed_step_ids": list(packet_summary["repair_history_completed_step_ids"]),
+        "chain_length": packet_summary["repair_history_chain_length"],
+        "chain_results": list(packet_summary["repair_history_chain_results"]),
+        "chain_step_ids": list(packet_summary["repair_history_chain_step_ids"]),
+        "last_operator_focus": packet_summary["repair_receipt_last_operator_focus"],
+        "next_step_required_inputs": list(packet_summary["repair_receipt_next_step_required_inputs"]),
+        "next_step_subsurface_ids": list(packet_summary["repair_receipt_next_step_subsurface_ids"]),
+    }
+
+
 
 def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path:
     baseline = load_json(Path(baseline_file))
@@ -386,9 +405,9 @@ def packet_output_defaults(args: argparse.Namespace, packet_output: Path) -> dic
         "report_output": getattr(args, "report_output", ""),
         "worked_artifact_output": getattr(args, "worked_artifact_output", ""),
         "run_artifact_output": getattr(args, "run_artifact_output", ""),
-        "repair_handoff_output": getattr(args, "repair_handoff_output", "") or str(packet_output.with_name("repair_handoff.json")),
+        "repair_handoff_output": getattr(args, "repair_handoff_output", ""),
         "repair_packet_output": str(packet_output),
-        "repair_receipt_output": getattr(args, "repair_receipt_output", "") or str(packet_output.with_name("repair_receipt.json")),
+        "repair_receipt_output": getattr(args, "repair_receipt_output", ""),
         "plan_output": getattr(args, "plan_output", "") or str(packet_output.with_name("plan.json")),
         "preparation_receipt_output": getattr(args, "preparation_receipt_output", "") or str(packet_output.with_name("preparation_receipt.json")),
     }
@@ -925,6 +944,7 @@ def build_worked_orchestration_artifact(
         "repair_packet": {
             **repair_packet_summary(repair_packet, state),
         },
+        "repair_history": repair_history_summary(repair_packet, state),
         "resumability": report_resumability_fields(state, repair_handoff),
         "selection": {
             "applied": selection_receipt is not None,
@@ -1171,6 +1191,7 @@ def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict, rep
             "next_safe_step": worked["next_safe_step"],
         },
         "repair_packet": repair_packet_summary(repair_packet, state),
+        "repair_history": repair_history_summary(repair_packet, state),
         "resumability": {
             "status": report.get("resumability_status", ""),
             "family": report.get("resumability_family", ""),
@@ -1914,6 +1935,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             repair_handoff=repair_handoff,
             missing_continuation_inputs=continuation_missing_inputs,
             selection_receipt=selection_receipt,
+            starting_repair_packet=starting_repair_packet,
+            previous_repair_receipt=previous_repair_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "ready_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
@@ -1940,6 +1963,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             repair_handoff=repair_handoff,
             missing_continuation_inputs=continuation_missing_inputs,
             selection_receipt=selection_receipt,
+            starting_repair_packet=starting_repair_packet,
+            previous_repair_receipt=previous_repair_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "doctor"}, ensure_ascii=True))
         return 0

@@ -61,9 +61,9 @@ def default_output_paths(root: Path) -> dict:
         "report_output": str(root / "report.json"),
         "worked_artifact_output": str(root / "orchestration.json"),
         "run_artifact_output": str(root / "run.json"),
-        "repair_handoff_output": str(root / "repair_handoff.json"),
+        "repair_handoff_output": "",
         "repair_packet_output": str(root / "repair_packet.json"),
-        "repair_receipt_output": str(root / "repair_receipt.json"),
+        "repair_receipt_output": "",
         "plan_output": str(root / "plan.json"),
         "preparation_receipt_output": str(root / "preparation_receipt.json"),
     }

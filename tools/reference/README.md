@@ -525,3 +525,19 @@ Does not guarantee:
 ## Operating rule
 
 If a helper starts accumulating broad product logic, large orchestration behavior, or environment-specific sprawl, it should probably stop living under `tools/reference/` in this repo shape.
+
+### `synrail_artifact_repair_receipt_v0.py`
+
+Purpose:
+
+- emit one machine-readable repair receipt that can also accumulate one packet-native repair-history chain across continuation stages
+
+Guarantees:
+
+- records the completed or still-active repair step
+- records the next exact stale sub-surfaces the operator should focus on
+- can be embedded back into the next repair packet so continuation history survives with less side-file replay
+
+Does not guarantee:
+
+- perfect operator guidance outside the bounded continuation families already modeled in the runtime

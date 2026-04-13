@@ -144,3 +144,5 @@ It does not yet try to become:
 It is one continuation packet for one named `resume` path.
 
 The current improvement makes that packet stronger where runtime truth already knew more than the old bounded fields expressed, especially around richer repair receipts, deeper multi-step repair order, and lower-replay operator continuation.
+
+- packet-first continuation now also defaults to fewer root-level side artifacts because the packet can carry the prior receipt and repair-history chain by itself

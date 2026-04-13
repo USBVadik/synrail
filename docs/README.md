@@ -207,3 +207,7 @@ If you only read four things first, use:
 2. `boundary/EXECUTABLE_STACK_READING_001.md`
 3. `boundary/TRIO_READING_001.md`
 4. `boundary/HYBRID_STATUS_001.md`
+
+Newest core continuation slice:
+
+- `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_009.md`

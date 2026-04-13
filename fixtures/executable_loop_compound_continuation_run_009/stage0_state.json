@@ -1,0 +1,47 @@
+{
+  "schema_version": "run_state_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_009",
+  "task_class": "bounded_router_trigger_fix",
+  "state": "DOCTOR_BLOCKED",
+  "target_surface": {
+    "status": "ATTESTED",
+    "identity": "compound-prepared-surface-009",
+    "baseline_relation": "compound-prepared-surface-009"
+  },
+  "doctor": {
+    "status": "FAIL",
+    "blocking_failure_classes": [
+      "baseline-identity ambiguous"
+    ]
+  },
+  "integrity": {
+    "status": "PASS",
+    "exact_task_identity_ok": true
+  },
+  "execution": {
+    "status": "COMPLETED",
+    "artifact_bundle_present": true
+  },
+  "proof_bundle": {
+    "status": "PARTIAL",
+    "missing_sections": [
+      "readback",
+      "scenario_proof"
+    ]
+  },
+  "closure": {
+    "status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "DOCTOR_NOT_GREEN",
+    "next_allowed_transition": "DOCTOR_READINESS",
+    "narrow_next_safe_step": "restore the trusted baseline and expected target-surface identity",
+    "missing_sections": [
+      "readback",
+      "scenario_proof"
+    ]
+  },
+  "recovery": {
+    "status": "PENDING",
+    "reverification_complete": false
+  },
+  "next_safe_step": "restore the trusted baseline and expected target-surface identity"
+}

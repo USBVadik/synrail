@@ -201,3 +201,7 @@ For active contribution shape, start here:
 - `docs/boundary/SYNRAIL_NOT_FOR_001.md`
 
 Secondary repo-history and hardening context remains available in `docs/boundary/`, but it is not the first route through the project anymore.
+
+- the repo now also carries one ninth canonical ugly compound continuation fixture on that same artifact surface
+- primary run artifacts now also carry one first-class repair-history summary instead of burying that truth only inside repair packets
+- packet-first continuation now defaults to fewer root-level side artifacts when packet truth is already sufficient

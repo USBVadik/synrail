@@ -394,8 +394,14 @@ def discover_repair_packet_file(args: argparse.Namespace) -> Path | None:
     state_path = Path(args.state_file)
     state_stem = state_path.stem
     prefixed_name = f"{state_stem.removesuffix('_state')}_repair_packet.json" if state_stem.endswith("_state") and state_stem != "state" else ""
+    previous_stage_candidate = None
+    if state_stem.startswith("stage") and state_stem.endswith("_state"):
+        stage_number = state_stem.removeprefix("stage").removesuffix("_state")
+        if stage_number.isdigit() and int(stage_number) > 0:
+            previous_stage_candidate = state_path.with_name(f"stage{int(stage_number) - 1}_repair_packet.json")
     candidates = [
         state_path.with_name(prefixed_name) if prefixed_name else None,
+        previous_stage_candidate,
         state_path.with_name("repair_packet.json"),
     ]
     if getattr(args, "report_output", None):

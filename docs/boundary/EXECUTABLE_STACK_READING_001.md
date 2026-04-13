@@ -301,3 +301,7 @@ Any next-step build work should now answer one of these questions:
 4. does it reduce the gap between current slices and a true executable kernel loop?
 
 If not, it is likely not the best next move for the project right now.
+
+- primary run artifacts now also surface one first-class repair-history summary instead of hiding that progression only inside repair packets
+- one ninth ugly compound continuation now proves doctor pressure can return after an intermediate proof repair and still resolve honestly through recovery to acceptance
+- packet-first continuation now emits fewer root-level side artifacts when the packet already carries enough truth for the next step

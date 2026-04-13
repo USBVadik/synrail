@@ -146,3 +146,5 @@ Future terminal UX work should improve:
 - speed of next-safe-step execution
 
 without turning the CLI into a broad orchestration shell too early.
+
+- packet-first `resume` now leaves fewer default root-level side files behind when the packet already carries enough continuation truth

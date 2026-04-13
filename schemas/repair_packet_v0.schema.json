@@ -1348,7 +1348,7 @@
         },
         "repair_handoff_output": {
           "type": "string",
-          "minLength": 1
+          "minLength": 0
         },
         "repair_packet_output": {
           "type": "string",
@@ -1356,7 +1356,7 @@
         },
         "repair_receipt_output": {
           "type": "string",
-          "minLength": 1
+          "minLength": 0
         },
         "plan_output": {
           "type": "string",
