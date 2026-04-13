@@ -249,6 +249,7 @@ Guarantees:
 - embeds one repair-receipt context when runtime truth already has prior continuation progression
 - embeds one packet-native repair-history chain across multiple continuation stages
 - can now rebuild one later repair packet from one earlier packet instead of forcing a full context replay each time
+- embeds one explicit repair-termination reading so runtime can stop a stalled loop before the next blind retry
 - records provided vs missing continuation inputs
 - records whether the current contour is repairable or terminal
 

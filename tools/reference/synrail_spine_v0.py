@@ -201,6 +201,15 @@ def repair_packet_summary(packet: dict | None, state: dict) -> dict:
     }
     receipt_context = packet.get("repair_receipt_context", {}) if packet else {}
     operator_evidence = receipt_context.get("operator_evidence", {}) if receipt_context else {}
+    repair_termination = (packet.get("repair_termination") or {}) if packet else {
+        "status": "CONTINUE",
+        "reason": "",
+        "attempt_count": 0,
+        "max_attempts": 0,
+        "no_progress_window": 0,
+        "stalled_step_id": "",
+        "next_action": "",
+    }
     return {
         "emitted": packet is not None,
         "from_state": packet["from_state"] if packet else "",
@@ -223,6 +232,13 @@ def repair_packet_summary(packet: dict | None, state: dict) -> dict:
         "repair_history_chain_length": repair_history.get("history_chain_length", 0),
         "repair_history_chain_results": list(repair_history.get("history_chain_results", [])),
         "repair_history_chain_step_ids": list(repair_history.get("history_chain_step_ids", [])),
+        "repair_termination_status": repair_termination.get("status", ""),
+        "repair_termination_reason": repair_termination.get("reason", ""),
+        "repair_attempt_count": repair_termination.get("attempt_count", 0),
+        "repair_max_attempts": repair_termination.get("max_attempts", 0),
+        "repair_no_progress_window": repair_termination.get("no_progress_window", 0),
+        "repair_stalled_step_id": repair_termination.get("stalled_step_id", ""),
+        "repair_termination_next_action": repair_termination.get("next_action", ""),
         "repair_receipt_last_operator_focus": operator_evidence.get("operator_focus", ""),
         "repair_receipt_next_step_required_inputs": list(operator_evidence.get("next_step_required_inputs", [])),
         "repair_receipt_next_step_subsurface_ids": list(operator_evidence.get("next_step_subsurface_ids", [])),
@@ -245,6 +261,13 @@ def repair_history_summary(packet: dict | None, state: dict) -> dict:
         "chain_length": packet_summary["repair_history_chain_length"],
         "chain_results": list(packet_summary["repair_history_chain_results"]),
         "chain_step_ids": list(packet_summary["repair_history_chain_step_ids"]),
+        "termination_status": packet_summary["repair_termination_status"],
+        "termination_reason": packet_summary["repair_termination_reason"],
+        "attempt_count": packet_summary["repair_attempt_count"],
+        "max_attempts": packet_summary["repair_max_attempts"],
+        "no_progress_window": packet_summary["repair_no_progress_window"],
+        "stalled_step_id": packet_summary["repair_stalled_step_id"],
+        "termination_next_action": packet_summary["repair_termination_next_action"],
         "last_operator_focus": packet_summary["repair_receipt_last_operator_focus"],
         "next_step_required_inputs": list(packet_summary["repair_receipt_next_step_required_inputs"]),
         "next_step_subsurface_ids": list(packet_summary["repair_receipt_next_step_subsurface_ids"]),
@@ -1008,6 +1031,12 @@ def build_error_report(state: dict, *, reason: str, stopping_stage: str = "docto
         "refresh_resulting_closure_status": "",
         "comparison_applied": False,
         "comparison_verdict": "",
+        "repair_termination_status": "",
+        "repair_termination_reason": "",
+        "repair_attempt_count": 0,
+        "repair_max_attempts": 0,
+        "repair_no_progress_window": 0,
+        "repair_stalled_step_id": "",
         "blockers": [],
         "dominant_blocker": "",
         "resulting_state": state["state"],
@@ -1465,6 +1494,74 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                 selected_with_preparation = bool(selection_receipt.get("selected_with_preparation", False))
             if previous_repair_receipt is None and starting_repair_packet.get("repair_receipt"):
                 previous_repair_receipt = dict(starting_repair_packet["repair_receipt"])
+            repair_termination = dict(starting_repair_packet.get("repair_termination") or {})
+            if repair_termination.get("status") == "TERMINATE" and repair_termination.get("reason") in {
+                "MAX_REPAIR_ATTEMPTS",
+                "NO_PROGRESS_DETECTED",
+            }:
+                state["closure"]["status"] = state["closure"]["status"] or "CLAIMED_NOT_ACCEPTED"
+                state["closure"]["blocking_reason"] = repair_termination["reason"]
+                state["closure"]["next_allowed_transition"] = "NONE"
+                state["closure"]["narrow_next_safe_step"] = repair_termination.get(
+                    "next_action",
+                    "stop this repair loop and start a new run instead",
+                )
+                state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+                report = {
+                    "schema_version": "orchestration_report_v0",
+                    "run_id": state["run_id"],
+                    "task_class": state["task_class"],
+                    "result": "BLOCKED",
+                    "stopping_stage": "resume",
+                    "reason": repair_termination["reason"],
+                    "doctor_verdict": "",
+                    "resume_applied": True,
+                    "resume_from_state": resume_from_state,
+                    "selection_applied": selection_applied,
+                    "selected_mode": selected_mode,
+                    "selected_with_preparation": selected_with_preparation,
+                    "preparation_applied": False,
+                    "preparation_ready_for_closure": False,
+                    "bundle_status": state["proof_bundle"]["status"],
+                    "closure_status": state["closure"]["status"],
+                    "refresh_applied": False,
+                    "refresh_resulting_closure_status": "",
+                    "comparison_applied": False,
+                    "comparison_verdict": "",
+                    "repair_termination_status": repair_termination.get("status", ""),
+                    "repair_termination_reason": repair_termination.get("reason", ""),
+                    "repair_attempt_count": repair_termination.get("attempt_count", 0),
+                    "repair_max_attempts": repair_termination.get("max_attempts", 0),
+                    "repair_no_progress_window": repair_termination.get("no_progress_window", 0),
+                    "repair_stalled_step_id": repair_termination.get("stalled_step_id", ""),
+                    "blockers": [repair_termination["reason"]],
+                    "dominant_blocker": repair_termination["reason"],
+                    "resulting_state": state["state"],
+                    "next_safe_step": state["next_safe_step"],
+                }
+                save_state(state_path, state)
+                save_json(Path(args.report_output), report)
+                finalize_runtime_outputs(
+                    args,
+                    state=state,
+                    report=report,
+                    resume_applied=True,
+                    resume_from_state=resume_from_state,
+                    selection_receipt=selection_receipt,
+                    starting_repair_packet=starting_repair_packet,
+                    previous_repair_receipt=previous_repair_receipt,
+                )
+                print(
+                    json.dumps(
+                        {
+                            "result": "BLOCKED",
+                            "stopping_stage": "resume",
+                            "reason": repair_termination["reason"],
+                        },
+                        ensure_ascii=True,
+                    )
+                )
+                return 0
         if state["state"] != resume_from_state:
             report = build_error_report(state, reason="RESUME_STATE_MISMATCH", stopping_stage="resume")
             report["resume_applied"] = True

@@ -55,6 +55,8 @@ Start here when you want to understand the kernel itself:
 - `core/CHECKPOINT_001.md`
 - `core/CHECKPOINT_RUN_001.md`
 - `core/CHECKPOINT_RUN_002.md`
+- `core/REPAIR_TERMINATION_001.md`
+- `core/REPAIR_CONVERGENCE_RUN_001.md`
 - `core/GOVERNED_PATH_PREPARATION_001.md`
 - `core/GOVERNED_PATH_COST_REDUCTION_001.md`
 - `core/REPAIR_HANDOFF_001.md`
@@ -145,6 +147,7 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/executable_loop_minimal_continuation_run_001/run.json`
 - `../fixtures/checkpoint_run_001/checkpoint_restore.json`
 - `../fixtures/checkpoint_run_002/checkpoint_restore.json`
+- `../fixtures/repair_convergence_run_001/run.json`
 - `../fixtures/executable_loop_compound_continuation_run_010/run.json`
 - `../fixtures/executable_loop_runtime_non_resumable_run_001/run.json`
 - `../fixtures/executable_loop_runtime_non_resumable_run_004/run.json`

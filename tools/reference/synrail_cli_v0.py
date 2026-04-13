@@ -1119,6 +1119,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_repair_packet.add_argument("--repair-handoff-file")
     p_repair_packet.add_argument("--mode-selection-receipt")
     p_repair_packet.add_argument("--preparation-receipt-file")
+    p_repair_packet.add_argument("--repair-receipt-file")
     p_repair_packet.add_argument("--report-file")
     p_repair_packet.add_argument("--doctor-run-id")
     p_repair_packet.add_argument("--doctor-level", choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])

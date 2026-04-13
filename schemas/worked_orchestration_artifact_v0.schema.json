@@ -190,6 +190,27 @@
             "type": "string"
           }
         },
+        "repair_termination_status": {
+          "type": "string"
+        },
+        "repair_termination_reason": {
+          "type": "string"
+        },
+        "repair_attempt_count": {
+          "type": "integer"
+        },
+        "repair_max_attempts": {
+          "type": "integer"
+        },
+        "repair_no_progress_window": {
+          "type": "integer"
+        },
+        "repair_stalled_step_id": {
+          "type": "string"
+        },
+        "repair_termination_next_action": {
+          "type": "string"
+        },
         "repair_receipt_last_operator_focus": {
           "type": "string"
         },
@@ -430,6 +451,13 @@
         "chain_length",
         "chain_results",
         "chain_step_ids",
+        "termination_status",
+        "termination_reason",
+        "attempt_count",
+        "max_attempts",
+        "no_progress_window",
+        "stalled_step_id",
+        "termination_next_action",
         "last_operator_focus",
         "next_step_required_inputs",
         "next_step_subsurface_ids"
@@ -476,6 +504,27 @@
           "items": {
             "type": "string"
           }
+        },
+        "termination_status": {
+          "type": "string"
+        },
+        "termination_reason": {
+          "type": "string"
+        },
+        "attempt_count": {
+          "type": "integer"
+        },
+        "max_attempts": {
+          "type": "integer"
+        },
+        "no_progress_window": {
+          "type": "integer"
+        },
+        "stalled_step_id": {
+          "type": "string"
+        },
+        "termination_next_action": {
+          "type": "string"
         },
         "last_operator_focus": {
           "type": "string"

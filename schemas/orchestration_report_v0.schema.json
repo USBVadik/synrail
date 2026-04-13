@@ -105,6 +105,24 @@
     "comparison_verdict": {
       "type": "string"
     },
+    "repair_termination_status": {
+      "type": "string"
+    },
+    "repair_termination_reason": {
+      "type": "string"
+    },
+    "repair_attempt_count": {
+      "type": "integer"
+    },
+    "repair_max_attempts": {
+      "type": "integer"
+    },
+    "repair_no_progress_window": {
+      "type": "integer"
+    },
+    "repair_stalled_step_id": {
+      "type": "string"
+    },
     "resumability_status": {
       "type": "string"
     },

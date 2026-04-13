@@ -673,6 +673,47 @@
         }
       }
     },
+    "repair_termination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reason",
+        "attempt_count",
+        "max_attempts",
+        "no_progress_window",
+        "stalled_step_id",
+        "next_action"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["CONTINUE", "TERMINATE"]
+        },
+        "reason": {
+          "type": "string",
+          "enum": ["", "NON_RESUMABLE", "MAX_REPAIR_ATTEMPTS", "NO_PROGRESS_DETECTED"]
+        },
+        "attempt_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "no_progress_window": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stalled_step_id": {
+          "type": "string"
+        },
+        "next_action": {
+          "type": "string"
+        }
+      }
+    },
     "repair_history_chain": {
       "type": "array",
       "items": {

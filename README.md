@@ -89,6 +89,8 @@ Read these next only if you need them:
 - `docs/core/CHECKPOINT_001.md`
 - `docs/core/CHECKPOINT_RUN_001.md`
 - `docs/core/CHECKPOINT_RUN_002.md`
+- `docs/core/REPAIR_TERMINATION_001.md`
+- `docs/core/REPAIR_CONVERGENCE_RUN_001.md`
 
 ## Current State
 
@@ -218,3 +220,5 @@ Secondary repo-history and hardening context remains available in `docs/boundary
 - that pressure slice currently shows two substitute-stack wins for Synrail and one still-unclear weak-path comparison
 - the repo now also has one first-class checkpoint contract plus one canonical happy-path checkpoint run proving create, verify, and restore on an accepted contour
 - the repo now also has one failed-restore checkpoint run proving restore verification can fail honestly and roll back checkpoint-owned artifacts
+- repair termination is now explicit kernel truth instead of one future continuation concern
+- the repo now also has one canonical repair-convergence run proving that repeated no-progress now terminates packet-first `resume` before the next blind retry

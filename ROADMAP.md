@@ -80,6 +80,27 @@ Current sprint contract:
   - the runtime emits `RESTORE_ROLLBACK`
   - checkpoint-owned restore artifacts are rolled back instead of being left behind
 
+### 0.75. Add explicit repair termination
+
+Goal:
+
+- stop packet-first continuation from becoming one disciplined-looking but non-converging retry loop
+
+Current sprint contract:
+
+- repair termination is now explicitly defined in:
+  - `docs/core/REPAIR_TERMINATION_001.md`
+- the first bounded termination reasons are now:
+  - `NON_RESUMABLE`
+  - `MAX_REPAIR_ATTEMPTS`
+  - `NO_PROGRESS_DETECTED`
+- packet truth now carries one explicit `repair_termination` block
+- `resume` now stops early when the starting packet already says `TERMINATE`
+- one canonical convergence pressure-test now proves:
+  - two repeated no-progress attempts can accumulate in the repair-history chain
+  - the next packet flips to `TERMINATE`
+  - the next `resume` blocks before one more blind retry
+
 ### 1. Make comparator economics central
 
 Goal:

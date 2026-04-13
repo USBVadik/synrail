@@ -15,6 +15,9 @@ from synrail_repair_handoff_v0 import (
     load_json as load_state_json,
 )
 
+MAX_REPAIR_ATTEMPTS = 3
+NO_PROGRESS_WINDOW = 2
+
 
 def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
@@ -298,6 +301,60 @@ def build_repair_history(handoff: dict, repair_receipt: dict | None) -> dict:
     }
 
 
+def build_repair_termination(*, resumability: dict, repair_history: dict, repair_receipt: dict | None) -> dict:
+    history_chain = list(repair_receipt.get("repair_history_chain", [])) if repair_receipt else []
+    attempt_count = len(history_chain)
+    if resumability.get("status") == "NOT_RESUMABLE":
+        return {
+            "status": "TERMINATE",
+            "reason": "NON_RESUMABLE",
+            "attempt_count": attempt_count,
+            "max_attempts": MAX_REPAIR_ATTEMPTS,
+            "no_progress_window": NO_PROGRESS_WINDOW,
+            "stalled_step_id": repair_history.get("current_step_id", ""),
+            "next_action": "stop resuming this contour and follow the named non-resumable boundary",
+        }
+
+    if len(history_chain) >= NO_PROGRESS_WINDOW:
+        window = history_chain[-NO_PROGRESS_WINDOW:]
+        if all(entry.get("result", "") in {"STEP_NOT_COMPLETED", "STEP_PROGRESS_RECORDED"} for entry in window):
+            active_step_ids = {entry.get("active_step_id", "") for entry in window}
+            completed_step_ids = {entry.get("completed_step_id", "") for entry in window if entry.get("completed_step_id", "")}
+            next_step_ids = {entry.get("next_step_id", "") for entry in window}
+            if len(active_step_ids) == 1 and not completed_step_ids and len(next_step_ids) == 1:
+                stalled_step_id = next(iter(active_step_ids))
+                return {
+                    "status": "TERMINATE",
+                    "reason": "NO_PROGRESS_DETECTED",
+                    "attempt_count": attempt_count,
+                    "max_attempts": MAX_REPAIR_ATTEMPTS,
+                    "no_progress_window": NO_PROGRESS_WINDOW,
+                    "stalled_step_id": stalled_step_id,
+                    "next_action": "stop retrying the same repair step without new evidence or inputs",
+                }
+
+    if attempt_count >= MAX_REPAIR_ATTEMPTS:
+        return {
+            "status": "TERMINATE",
+            "reason": "MAX_REPAIR_ATTEMPTS",
+            "attempt_count": attempt_count,
+            "max_attempts": MAX_REPAIR_ATTEMPTS,
+            "no_progress_window": NO_PROGRESS_WINDOW,
+            "stalled_step_id": repair_history.get("current_step_id", ""),
+            "next_action": "stop this repair loop and start a new run or manual recovery path",
+        }
+
+    return {
+        "status": "CONTINUE",
+        "reason": "",
+        "attempt_count": attempt_count,
+        "max_attempts": MAX_REPAIR_ATTEMPTS,
+        "no_progress_window": NO_PROGRESS_WINDOW,
+        "stalled_step_id": "",
+        "next_action": "continue with the current repair policy order",
+    }
+
+
 def build_receipt_context(repair_receipt: dict | None) -> dict:
     if not repair_receipt:
         return {
@@ -352,6 +409,7 @@ def build_continuation_core(
     receipt_context: dict,
     selection_context: dict,
     missing_ids: list[str],
+    repair_termination: dict,
 ) -> dict:
     operator_evidence = dict(receipt_context.get("operator_evidence", {}))
     required_inputs = [item.get("input_id", "") for item in handoff.get("required_inputs", []) if item.get("input_id", "")]
@@ -360,7 +418,7 @@ def build_continuation_core(
         artifact_quality_summary.get("stale_subsurface_ids", [])
     )
     operator_focus = operator_evidence.get("operator_focus", "") or handoff.get("next_safe_step", "")
-    ready_for_resume = handoff.get("continuation_allowed", False) and not missing_ids
+    ready_for_resume = handoff.get("continuation_allowed", False) and not missing_ids and repair_termination.get("status") != "TERMINATE"
     return {
         "contract_version": "continuation_core_v0",
         "entrypoint": "resume",
@@ -457,6 +515,11 @@ def build_packet_from_runtime_truth(
     artifact_quality_summary = build_artifact_quality_summary(handoff)
     repair_history = build_repair_history(handoff, repair_receipt)
     receipt_context = build_receipt_context(repair_receipt)
+    repair_termination = build_repair_termination(
+        resumability=resumability,
+        repair_history=repair_history,
+        repair_receipt=repair_receipt,
+    )
     selection_context = build_selection_context(selection_receipt)
     ready_for_resume = handoff.get("continuation_allowed", False) and not missing_ids
 
@@ -473,6 +536,7 @@ def build_packet_from_runtime_truth(
         "artifact_quality_summary": artifact_quality_summary,
         "repair_history": repair_history,
         "repair_history_chain": list(repair_receipt.get("repair_history_chain", [])) if repair_receipt else [],
+        "repair_termination": repair_termination,
         "repair_receipt_context": receipt_context,
         "continuation_plan": build_continuation_plan(packet_args, handoff),
         "resume_context": {
@@ -519,6 +583,7 @@ def build_packet_from_runtime_truth(
         receipt_context=receipt_context,
         selection_context=selection_context,
         missing_ids=missing_ids,
+        repair_termination=repair_termination,
     )
     if selection_receipt:
         packet["selection_receipt"] = selection_receipt
