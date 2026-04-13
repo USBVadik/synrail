@@ -211,3 +211,8 @@ If you only read four things first, use:
 Newest core continuation slice:
 
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_009.md`
+
+- `boundary/SUBSTITUTE_KILL_TEST_001.md`
+- `schemas/comparison_input_v2.schema.json`
+- `schemas/substitute_comparison_record_v0.schema.json`
+- `schemas/substitute_pressure_record_v0.schema.json`

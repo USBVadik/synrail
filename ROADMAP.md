@@ -232,3 +232,8 @@ Current continuation-pressure work should keep optimizing for:
 - repair-history truth that survives across multi-step packet-first continuation
 - uglier continuation families where doctor pressure can return after intermediate repair
 - continuation compression that removes side artifacts when packet truth already carries enough state
+
+The next product-proof layer should now prefer:
+
+- substitute-kill tests against concrete simpler stacks instead of only abstract baseline comparison
+- finding where Synrail is materially necessary against real substitutes and where it is still only internally convincing

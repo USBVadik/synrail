@@ -22,6 +22,7 @@ CLOSURE = HERE / "synrail_closure_v0.py"
 REFRESH = HERE / "synrail_refresh_v0.py"
 HARNESS_V0 = HERE / "synrail_baseline_harness_v0.py"
 HARNESS_V1 = HERE / "synrail_baseline_harness_v1.py"
+HARNESS_V2 = HERE / "synrail_substitute_harness_v0.py"
 PROOF_PLAN = HERE / "synrail_proof_plan_v0.py"
 PREPARATION_RECEIPT = HERE / "synrail_preparation_receipt_v0.py"
 
@@ -262,6 +263,8 @@ def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path
 
     if baseline_version == "comparison_input_v1":
         return HARNESS_V1
+    if baseline_version == "comparison_input_v2":
+        return HARNESS_V2
 
     return HARNESS_V0
 

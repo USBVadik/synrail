@@ -541,3 +541,26 @@ Guarantees:
 Does not guarantee:
 
 - perfect operator guidance outside the bounded continuation families already modeled in the runtime
+
+### `synrail_substitute_harness_v0.py`
+
+Purpose:
+
+- compare one concrete substitute stack against one Synrail path
+
+Guarantees:
+
+- uses the same bounded economics surface as the baseline harness
+- emits a substitute-specific machine-readable verdict
+- can say `SYNRAIL_BETTER`, `SUBSTITUTE_GOOD_ENOUGH`, or `UNCLEAR`
+
+Does not guarantee:
+
+- a full external benchmark program
+- broad scenario normalization across teams or environments
+
+### `synrail_substitute_pressure_v0.py`
+
+Purpose:
+
+- aggregate a small set of substitute comparison records into one pressure reading

@@ -21,6 +21,7 @@ VALIDATE = HERE / "synrail_validate_v0.py"
 DOCTOR = HERE / "synrail_doctor_v1.py"
 HARNESS_V0 = HERE / "synrail_baseline_harness_v0.py"
 HARNESS_V1 = HERE / "synrail_baseline_harness_v1.py"
+HARNESS_V2 = HERE / "synrail_substitute_harness_v0.py"
 HYBRID_STATUS = HERE / "synrail_hybrid_status_v0.py"
 MODE_SELECTOR = HERE / "synrail_mode_selector_v0.py"
 MODE_RECEIPT = HERE / "synrail_mode_receipt_v0.py"
@@ -51,6 +52,8 @@ def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path
 
     if baseline_version == "comparison_input_v1":
         return HARNESS_V1
+    if baseline_version == "comparison_input_v2":
+        return HARNESS_V2
 
     return HARNESS_V0
 
@@ -193,15 +196,23 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 def cmd_compare(args: argparse.Namespace) -> int:
     try:
+        baseline = load_json(Path(args.baseline_file))
         harness = comparison_harness_for_inputs(args.baseline_file, args.synrail_file)
     except ValueError as exc:
         print(json.dumps({"result": "ERROR", "reason": "COMPARISON_INPUT_SCHEMA_MISMATCH", "detail": str(exc)}, ensure_ascii=True))
         return 2
-    forwarded = [
-        "--baseline-file", args.baseline_file,
-        "--synrail-file", args.synrail_file,
-        "--output", args.output,
-    ]
+    if baseline.get("schema_version") == "comparison_input_v2":
+        forwarded = [
+            "--substitute-file", args.baseline_file,
+            "--synrail-file", args.synrail_file,
+            "--output", args.output,
+        ]
+    else:
+        forwarded = [
+            "--baseline-file", args.baseline_file,
+            "--synrail-file", args.synrail_file,
+            "--output", args.output,
+        ]
     return run_python(harness, forwarded)
 
 

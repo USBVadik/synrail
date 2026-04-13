@@ -103,3 +103,18 @@ Future harness work should strengthen:
 - clearer economics around where `Synrail` earns or fails to earn its extra control cost
 
 without turning the harness into a broad benchmarking platform too early.
+
+## v2 substitute-pressure slice
+
+The active comparison layer now also has one `v2` path that can:
+
+1. compare `Synrail` against one named substitute stack
+2. keep the same bounded economics counters
+3. emit one substitute-specific machine-readable record
+4. aggregate several substitute records into one pressure reading
+
+The current substitute stacks are intentionally simple:
+
+- `temp_clone_strict_validation`
+- `ci_approval_checklist`
+- `bounded_patch_validation_loop`
