@@ -38,6 +38,8 @@ SECOND_OPERATOR = HERE / "synrail_second_operator_v0.py"
 OPERATOR_BRIEF = HERE / "synrail_operator_brief_v0.py"
 OPERATOR_BRIEF_CHAIN = HERE / "synrail_operator_brief_chain_v0.py"
 OPERATOR_RENDER = HERE / "synrail_operator_render_v0.py"
+OPERATOR_RENDER_ADOPTION = HERE / "synrail_operator_render_adoption_v0.py"
+OPERATOR_RENDER_ADOPTION_DELTA = HERE / "synrail_operator_render_adoption_delta_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -433,6 +435,26 @@ def cmd_operator_render(args: argparse.Namespace) -> int:
     if args.chain_file:
         forwarded.extend(["--chain-file", args.chain_file])
     return run_python(OPERATOR_RENDER, forwarded)
+
+
+def cmd_operator_render_adoption(args: argparse.Namespace) -> int:
+    return run_python(
+        OPERATOR_RENDER_ADOPTION,
+        [
+            "--source", args.source,
+            "--render", args.render,
+            "--label", args.label,
+            "--output", args.output,
+        ],
+    )
+
+
+def cmd_operator_render_adoption_delta(args: argparse.Namespace) -> int:
+    forwarded: list[str] = []
+    for record in args.record:
+        forwarded.extend(["--record", record])
+    forwarded.extend(["--output", args.output])
+    return run_python(OPERATOR_RENDER_ADOPTION_DELTA, forwarded)
 
 
 def cmd_repair_handoff(args: argparse.Namespace) -> int:
@@ -1253,6 +1275,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_operator_render.add_argument("--chain-file")
     p_operator_render.add_argument("--output", required=True)
     p_operator_render.set_defaults(func=cmd_operator_render)
+
+    p_operator_render_adoption = sub.add_parser("operator-render-adoption")
+    p_operator_render_adoption.add_argument("--source", required=True)
+    p_operator_render_adoption.add_argument("--render", required=True)
+    p_operator_render_adoption.add_argument("--label", required=True)
+    p_operator_render_adoption.add_argument("--output", required=True)
+    p_operator_render_adoption.set_defaults(func=cmd_operator_render_adoption)
+
+    p_operator_render_adoption_delta = sub.add_parser("operator-render-adoption-delta")
+    p_operator_render_adoption_delta.add_argument("--record", action="append", required=True)
+    p_operator_render_adoption_delta.add_argument("--output", required=True)
+    p_operator_render_adoption_delta.set_defaults(func=cmd_operator_render_adoption_delta)
 
     p_repair_handoff = sub.add_parser("repair-handoff")
     p_repair_handoff.add_argument("--state-file", required=True)

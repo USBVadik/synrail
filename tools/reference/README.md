@@ -756,3 +756,25 @@ Does not guarantee:
 
 - any new source of runtime truth
 - replacement of the underlying brief or chain records
+
+### `synrail_operator_render_adoption_v0.py`
+
+Purpose:
+
+- measure whether one operator render is shorter than its source brief surface while still preserving the key operator markers
+
+Guarantees:
+
+- compares one source artifact to one render artifact
+- records line reduction and missing marker truth explicitly
+
+Does not guarantee:
+
+- broad usability proof on its own
+- real user comprehension beyond the bounded markers it checks
+
+### `synrail_operator_render_adoption_delta_v0.py`
+
+Purpose:
+
+- aggregate a small set of operator-render adoption records into one bounded reading

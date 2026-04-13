@@ -1,0 +1,18 @@
+{
+  "schema_version": "operator_render_adoption_record_v0",
+  "label": "brief_recovery_render",
+  "source_kind": "BRIEF",
+  "source_path": "fixtures/operator_brief_run_002/operator_brief.json",
+  "render_path": "fixtures/operator_render_run_001/operator_render.md",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "task_class": "bounded_router_trigger_fix",
+  "source_line_count": 63,
+  "render_line_count": 42,
+  "line_reduction": 21,
+  "render_is_shorter": true,
+  "key_marker_count": 6,
+  "missing_markers": [],
+  "truth_preserved": true,
+  "verdict": "READING_TAX_REDUCED_WITHOUT_TRUTH_LOSS",
+  "why": "the render is shorter than the source artifact and still preserves the key operator markers"
+}
