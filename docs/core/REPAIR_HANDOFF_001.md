@@ -117,6 +117,17 @@ Those handoffs record:
   - `accepted_terminal_state`
   - `rejected_terminal_state`
 
+The current handoff layer now also proves one forward-path non-resumable family:
+
+- `fixtures/executable_loop_runtime_non_resumable_run_004/repair_handoff.json`
+
+That handoff records:
+
+- `resumability.family = NOT_RESUMABLE_FRESH_ORCHESTRATION`
+- `repair_policy.next_step_id = continue_forward_orchestration`
+- artifact-quality stale sub-surface:
+  - `forward_orchestration_entrypoint`
+
 The current handoff layer also now supports one stricter multi-step compound family:
 
 - `fixtures/executable_loop_compound_continuation_run_005/stage0_repair_handoff.json`

@@ -1,0 +1,68 @@
+{
+  "schema_version": "repair_handoff_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "from_state": "READY",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "FORWARD_ORCHESTRATION_CONTINUES",
+  "continuation_allowed": false,
+  "continuation_entrypoint": "",
+  "resumability": {
+    "status": "NOT_RESUMABLE",
+    "family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
+    "active_pressures": [
+      "FRESH_ORCHESTRATION"
+    ],
+    "recommended_repair_order": [
+      "continue_forward_orchestration"
+    ],
+    "requires_new_run": false,
+    "explanation": "the run is still on the forward governed path, so continuation should use orchestrate rather than resume"
+  },
+  "repair_policy": {
+    "policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "next_step_id": "continue_forward_orchestration",
+    "ready_now_step_ids": [],
+    "ordered_steps": [
+      {
+        "step_id": "continue_forward_orchestration",
+        "status": "TERMINAL_NEXT_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "runtime_entrypoint_state"
+        ],
+        "resolves_pressures": [
+          "FRESH_ORCHESTRATION"
+        ],
+        "why": "this contour should continue through the forward governed path rather than the named continuation entrypoint"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "runtime_entrypoint_state",
+      "quality": "NON_RESUMABLE",
+      "still_stale_parts": [
+        "forward_orchestration_entrypoint"
+      ],
+      "mapped_inputs": [],
+      "repair_step": "continue_forward_orchestration",
+      "why": "this state still belongs to forward governed orchestration rather than named continuation",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "forward_orchestration_entrypoint",
+          "status": "NON_RESUMABLE",
+          "mapped_inputs": [],
+          "why": "the run has not yet entered a repairable continuation family, so `orchestrate` is the correct entrypoint rather than `resume`"
+        }
+      ]
+    }
+  ],
+  "required_inputs": [],
+  "runtime_defaults": {
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false
+  },
+  "next_safe_step": "continue through the governed forward path instead of named resume"
+}

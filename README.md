@@ -129,6 +129,7 @@ The current proof reading is:
 - the repo now also has one canonical runtime non-resumable run showing that a lighter-mode selection block now stops governed continuation at `resume` with `STATE_NOT_RESUMABLE`
 - the repo now also has one second canonical runtime non-resumable run showing that accepted terminal closure is now its own explicit non-resumable continuation family
 - the repo now also has one third canonical runtime non-resumable run showing that rejected terminal closure is now its own explicit non-resumable continuation family
+- the repo now also has one fourth canonical runtime non-resumable run showing that a fresh governed `READY` state now stops `resume` with one explicit forward-orchestration non-resumable family
 - the repo now also has one fourth canonical runtime-resume run showing that sibling artifact auto-discovery now lets packet-first `resume` reach accepted closure with much less manual replay
 - the repo now also has one bounded governed-path cost delta showing that preparation can reduce operator tax inside the winning contour without weakening closure safety
 - the repo now also has one canonical ugly compound continuation run showing that two staged repair handoffs plus named `resume` can cross doctor-blocked, partial-proof, and degraded-recovery pressure on the same runtime surface
@@ -136,6 +137,8 @@ The current proof reading is:
 - the repo now also has one third uglier packet-first compound continuation run showing that selection/preparation handoff, auto-synthesized repair packets, and named `resume` can now cross invalid proof and degraded recovery on the same runtime surface
 - the repo now also has one fourth uglier packet-first compound continuation run showing that selection/preparation handoff, packet-first `resume`, repair-handoff blocking, degraded recovery, and a final explicit terminal not-resumable reading can now live on the same runtime surface
 - the repo now also has one fifth uglier packet-first compound continuation run showing that selection/preparation handoff, stale-artifact hints, explicit repair order, one mid-continuation readiness failure, and accepted closure can now live on the same runtime surface
+- the repo now also has one first-class artifact repair receipt layer showing which repair step actually completed and which narrower artifact sub-surfaces are still stale afterward
+- the repo now also has one sixth uglier packet-first compound continuation run showing that repair receipts, packet carry-over, explicit step order, and final truthful terminal packet emission can all now live on the same runtime surface
 
 The current wedge reading is:
 
@@ -159,12 +162,14 @@ The current executable output reading is:
 - the repo now also carries one canonical runtime non-resumable fixture on that same artifact surface
 - the repo now also carries one second canonical runtime non-resumable fixture on that same artifact surface
 - the repo now also carries one third canonical runtime non-resumable fixture on that same artifact surface
+- the repo now also carries one fourth canonical runtime non-resumable fixture on that same artifact surface
 - the repo now also carries one canonical ugly compound repair fixture on that same artifact surface
 - the repo now also carries one canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one second canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one third canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one fourth canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one fifth canonical ugly compound continuation fixture on that same artifact surface
+- the repo now also carries one sixth canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one canonical hybrid pressure fixture on that same artifact surface
 - the repo now also has one explicit outcome lattice across accepted, partial, degraded, and blocked contours
 - the repo now also has one explicit re-entry reading for blocked-to-accepted, partial-to-accepted, and degraded-to-accepted repair

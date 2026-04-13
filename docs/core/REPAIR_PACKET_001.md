@@ -89,6 +89,11 @@ Current canonical packet surfaces are:
   - `fixtures/executable_loop_compound_continuation_run_005/stage0_repair_packet.json`
   - `fixtures/executable_loop_compound_continuation_run_005/stage1_repair_packet.json`
   - `fixtures/executable_loop_compound_continuation_run_005/stage2_repair_packet.json`
+- repair-receipt-aware ordered continuation:
+  - `fixtures/executable_loop_compound_continuation_run_006/stage0_repair_packet.json`
+  - `fixtures/executable_loop_compound_continuation_run_006/stage1_repair_packet.json`
+  - `fixtures/executable_loop_compound_continuation_run_006/stage2_repair_packet.json`
+  - `fixtures/executable_loop_compound_continuation_run_006/stage3_repair_packet.json`
 - lower-replay packet-first runtime continuation:
   - `fixtures/executable_loop_runtime_resume_run_004/repair_packet.json`
   - `fixtures/executable_loop_runtime_resume_run_004/run.json`
@@ -104,6 +109,7 @@ These prove:
 - runtime-owned packets can now narrow `required_inputs` to the current repair step instead of flattening the whole future repair debt into one giant input list
 - runtime-owned packets can now emit artifact-quality hints that say which existing artifact surface is still stale during continuation
 - runtime-owned packets can now emit narrower stale sub-surface ids inside those artifacts
+- runtime-owned packets can now carry repair-receipt context so one later packet can say which repair step actually completed on the previous continuation step
 - packet-first `resume` can now auto-discover sibling continuation artifacts strongly enough to reach accepted closure with almost no raw flag replay
 
 ## Current boundary
@@ -120,7 +126,7 @@ It is one continuation packet for one named `resume` path.
 
 The next improvement should make that packet:
 
-- stronger where runtime truth already knows more than the current bounded fields express, especially around continuation ergonomics and deeper multi-step repair order
+- stronger where runtime truth already knows more than the current bounded fields express, especially around richer repair receipts and deeper multi-step repair order
 
 not:
 

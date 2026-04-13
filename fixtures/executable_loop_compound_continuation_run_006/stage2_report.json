@@ -1,0 +1,62 @@
+{
+  "schema_version": "orchestration_report_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "result": "BLOCKED",
+  "stopping_stage": "repair_handoff",
+  "reason": "CONTINUATION_INPUTS_MISSING",
+  "doctor_verdict": "",
+  "resume_applied": true,
+  "resume_from_state": "PROOF_BUNDLE_COMPLETE",
+  "repair_handoff_applied": true,
+  "repair_handoff_from_state": "PROOF_BUNDLE_COMPLETE",
+  "repair_handoff_required_inputs": [
+    "refresh_recovery_complete",
+    "refresh_reverification_complete"
+  ],
+  "missing_continuation_inputs": [
+    "refresh_recovery_complete",
+    "refresh_reverification_complete"
+  ],
+  "selection_applied": true,
+  "selected_mode": "FULL_GOVERNED_PATH",
+  "selected_with_preparation": true,
+  "preparation_applied": false,
+  "preparation_ready_for_closure": false,
+  "bundle_status": "COMPLETE",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "refresh_applied": false,
+  "refresh_resulting_closure_status": "",
+  "comparison_applied": false,
+  "comparison_verdict": "",
+  "blockers": [
+    "refresh_recovery_complete",
+    "refresh_reverification_complete"
+  ],
+  "dominant_blocker": "CONTINUATION_INPUTS_MISSING",
+  "resulting_state": "PROOF_BUNDLE_COMPLETE",
+  "next_safe_step": "run reverification against the attested target surface",
+  "resumability_status": "REPAIRABLE",
+  "resumability_family": "REPAIRABLE_RECOVERY_PENDING",
+  "resumability_active_pressures": [
+    "RECOVERY_PENDING"
+  ],
+  "resumability_repair_order": [
+    "complete_recovery_reverification",
+    "run_refresh_reconciliation",
+    "rerun_closure"
+  ],
+  "resumability_requires_new_run": false,
+  "resumability_policy_type": "MULTI_STEP_REPAIR",
+  "resumability_policy_next_step": "complete_recovery_reverification",
+  "resumability_ready_now_steps": [
+    "complete_recovery_reverification"
+  ],
+  "resumability_stale_artifact_ids": [
+    "recovery_reverification_surface"
+  ],
+  "resumability_stale_subsurface_ids": [
+    "recovery_status_record",
+    "reverification_completion_record"
+  ]
+}

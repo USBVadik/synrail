@@ -108,6 +108,7 @@ STEP_ARTIFACTS = {
     "run_refresh_reconciliation": ["closure_refresh_surface"],
     "rerun_closure": ["closure_verdict_surface"],
     "switch_to_lighter_mode": ["mode_selection_receipt"],
+    "continue_forward_orchestration": ["runtime_entrypoint_state"],
     "start_new_run": ["terminal_run_state"],
     "inspect_runtime_state": ["runtime_state"],
 }
@@ -121,6 +122,7 @@ STEP_PRESSURES = {
     "run_refresh_reconciliation": ["RECOVERY_PENDING"],
     "rerun_closure": ["DOCTOR_BLOCKED", "INVALID_PROOF", "PARTIAL_PROOF", "RECOVERY_PENDING"],
     "switch_to_lighter_mode": ["SELECTION_BLOCKED"],
+    "continue_forward_orchestration": ["FRESH_ORCHESTRATION"],
     "start_new_run": ["TERMINAL_STATE", "TERMINAL_ACCEPTED", "TERMINAL_REJECTED"],
     "inspect_runtime_state": [],
 }
@@ -210,6 +212,8 @@ def build_runtime_defaults(state: dict, required_inputs: list[str]) -> dict:
 
 def collect_active_pressures(state: dict) -> list[str]:
     pressures: list[str] = []
+    if state.get("state") in {"INITIALIZED", "TARGET_SURFACE_ATTESTED", "READY"}:
+        add_unique(pressures, "FRESH_ORCHESTRATION")
     if state.get("state") == "CLOSURE_ACCEPTED" or state.get("closure", {}).get("status") == "ACCEPTED":
         add_unique(pressures, "TERMINAL_ACCEPTED")
         add_unique(pressures, "TERMINAL_STATE")
@@ -243,6 +247,8 @@ def collect_active_pressures(state: dict) -> list[str]:
 
 
 def continuation_allowed(state: dict) -> bool:
+    if state.get("state") in {"INITIALIZED", "TARGET_SURFACE_ATTESTED", "READY"}:
+        return False
     if state.get("state") in {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}:
         return False
     if state.get("closure", {}).get("status") == "ACCEPTED":
@@ -253,6 +259,8 @@ def continuation_allowed(state: dict) -> bool:
 
 
 def resumability_family(state: dict, active_pressures: list[str], allowed: bool) -> str:
+    if "FRESH_ORCHESTRATION" in active_pressures:
+        return "NOT_RESUMABLE_FRESH_ORCHESTRATION"
     if state.get("state") == "CLOSURE_ACCEPTED" or state.get("closure", {}).get("status") == "ACCEPTED":
         return "NOT_RESUMABLE_TERMINAL_ACCEPTED"
     if state.get("state") == "CLOSURE_REJECTED" or state.get("closure", {}).get("status") == "REJECTED":
@@ -279,6 +287,8 @@ def resumability_family(state: dict, active_pressures: list[str], allowed: bool)
 
 
 def recommended_repair_order(active_pressures: list[str], family: str) -> list[str]:
+    if family == "NOT_RESUMABLE_FRESH_ORCHESTRATION":
+        return ["continue_forward_orchestration"]
     if family == "NOT_RESUMABLE_SELECTION_BLOCKED":
         return ["switch_to_lighter_mode"]
     if family in {"NOT_RESUMABLE_TERMINAL_ACCEPTED", "NOT_RESUMABLE_TERMINAL_REJECTED", "NOT_RESUMABLE_TERMINAL"}:
@@ -532,6 +542,26 @@ def build_artifact_quality_hints(state: dict) -> list[dict]:
             )
         )
 
+    if state.get("state") in {"INITIALIZED", "TARGET_SURFACE_ATTESTED", "READY"}:
+        hints.append(
+            make_hint(
+                "runtime_entrypoint_state",
+                quality="NON_RESUMABLE",
+                still_stale_parts=["forward_orchestration_entrypoint"],
+                mapped_inputs=[],
+                repair_step="continue_forward_orchestration",
+                why="this state still belongs to forward governed orchestration rather than named continuation",
+                stale_subsurfaces=[
+                    make_subsurface(
+                        "forward_orchestration_entrypoint",
+                        status="NON_RESUMABLE",
+                        mapped_inputs=[],
+                        why="the run has not yet entered a repairable continuation family, so `orchestrate` is the correct entrypoint rather than `resume`",
+                    )
+                ],
+            )
+        )
+
     if state.get("state") == "CLOSURE_ACCEPTED" or state.get("closure", {}).get("status") == "ACCEPTED":
         hints.append(
             make_hint(
@@ -626,12 +656,13 @@ def build_repair_policy(resumability: dict, artifact_quality_hints: list[dict]) 
                     "complete_missing_proof_sections": "missing proof sections should be completed before bundle rebuild and closure recheck",
                     "rebuild_proof_bundle": "the bundle should be rebuilt only after the stale proof artifacts above are repaired",
                     "complete_recovery_reverification": "recovery should be completed before refresh reconciliation can restore closure acceptance",
-                    "run_refresh_reconciliation": "refresh reconciliation should only run once recovery reverification is complete",
-                    "rerun_closure": "closure should be rechecked only after earlier repair steps finish",
-                    "switch_to_lighter_mode": "this contour should follow the lighter selected mode instead of resuming governed execution",
-                    "start_new_run": "terminal state should yield to a new run rather than another resume attempt",
-                    "inspect_runtime_state": "runtime state should be inspected before the next continuation decision is made",
-                }.get(step_id, "follow the bounded repair order before resuming"),
+                "run_refresh_reconciliation": "refresh reconciliation should only run once recovery reverification is complete",
+                "rerun_closure": "closure should be rechecked only after earlier repair steps finish",
+                "switch_to_lighter_mode": "this contour should follow the lighter selected mode instead of resuming governed execution",
+                "continue_forward_orchestration": "this contour should continue through the forward governed path rather than the named continuation entrypoint",
+                "start_new_run": "terminal state should yield to a new run rather than another resume attempt",
+                "inspect_runtime_state": "runtime state should be inspected before the next continuation decision is made",
+            }.get(step_id, "follow the bounded repair order before resuming"),
             }
         )
     return {
@@ -650,6 +681,7 @@ def resumability_explanation(family: str) -> str:
         "REPAIRABLE_RECOVERY_PENDING": "recovery reverification is still pending, but continuation can resume once recovery is completed and refresh can reconcile closure",
         "REPAIRABLE_COMPOUND": "more than one repairable pressure is active, so continuation should follow the ordered repair sequence before closure is rechecked",
         "REPAIRABLE_OTHER": "the bounded runtime still treats this contour as repairable through the named resume path",
+        "NOT_RESUMABLE_FRESH_ORCHESTRATION": "the run is still on the forward governed path, so continuation should use orchestrate rather than resume",
         "NOT_RESUMABLE_SELECTION_BLOCKED": "the governed contour should not resume because the current policy choice points to a lighter mode instead",
         "NOT_RESUMABLE_TERMINAL_ACCEPTED": "the run is already accepted, so continuation should stop and a new run should start instead",
         "NOT_RESUMABLE_TERMINAL_REJECTED": "the run is already rejected, so continuation should stop and a new run should start instead",

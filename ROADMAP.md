@@ -122,12 +122,16 @@ Current pressure-tested slice:
 
 - repair packets now carry explicit artifact-quality hints in addition to missing-input truth
 - repair packets now carry narrower stale sub-surface hints inside those artifacts
+- repair packets now also carry repair-receipt context so runtime continuation can see which repair step actually completed and which stale sub-surfaces remain after that step
 - three truly not-resumable continuation families now exist:
   - selection-blocked
   - terminal accepted
   - terminal rejected
+- one fresh forward-orchestration non-resumable family now also exists:
+  - `NOT_RESUMABLE_FRESH_ORCHESTRATION`
 - one lower-replay packet-first continuation run now proves that sibling auto-discovery can drive `resume` back to accepted closure with much less raw flag replay
 - one uglier packet-first continuation run now proves explicit repair order, stale-artifact hints, mid-continuation doctor failure, and return to accepted closure
+- one further packet-first continuation run now proves that repair receipts, explicit step progression, blocked recovery completion, and final truthful terminal packet emission can all live on the same runtime surface
 
 Next likely strengthening moves:
 

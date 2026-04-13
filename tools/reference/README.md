@@ -225,6 +225,7 @@ Guarantees:
 - embeds one continuation plan
 - embeds one repair-input set
 - embeds one runtime output-default set
+- embeds one repair-receipt context when runtime truth already has prior continuation progression
 - records provided vs missing continuation inputs
 - records whether the current contour is repairable or terminal
 
@@ -233,6 +234,25 @@ Does not guarantee:
 - broad workflow planning
 - deep multi-run coordination
 - a mature continuation packet that captures every future runtime dependency
+
+### `synrail_artifact_repair_receipt_v0.py`
+
+Purpose:
+
+- emit one machine-readable repair receipt between packet-first continuation steps
+
+Guarantees:
+
+- records which repair step actually completed
+- records which artifact and sub-surface hints remain stale afterward
+- records whether continuation crossed into one non-resumable boundary
+- records one bounded repair-history progression
+
+Does not guarantee:
+
+- broad repair orchestration on its own
+- automatic packet synthesis on its own
+- full runtime coordination without the spine
 
 ### `synrail_closure_v0.py`
 

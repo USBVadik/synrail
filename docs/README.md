@@ -53,6 +53,7 @@ Start here when you want to understand the kernel itself:
 - `core/GOVERNED_PATH_COST_REDUCTION_001.md`
 - `core/REPAIR_HANDOFF_001.md`
 - `core/REPAIR_PACKET_001.md`
+- `core/ARTIFACT_REPAIR_RECEIPT_001.md`
 - `core/CLOSURE_ENGINE_001.md`
 - `core/REFRESH_CHAIN_AUTOMATION_001.md`
 - `core/TERMINAL_OPERATOR_UX_001.md`
@@ -73,11 +74,13 @@ Start here when you want to understand the kernel itself:
 - `core/EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_001.md`
 - `core/EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_002.md`
 - `core/EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_003.md`
+- `core/EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_001.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_002.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_003.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_004.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005.md`
+- `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_006.md`
 - `core/SCHEMA_VALIDATION_001.md`
 - `core/EXECUTABLE_LOOP_RUN_001.md`
 - `core/EXECUTABLE_LOOP_RUN_002.md`
@@ -94,6 +97,7 @@ Start here when you want to understand the kernel itself:
 - `schemas/canonical_run_artifact_v0.schema.json`
 - `schemas/worked_orchestration_artifact_v0.schema.json`
 - `schemas/repair_packet_v0.schema.json`
+- `schemas/artifact_repair_receipt_v0.schema.json`
 - `schemas/comparison_input_v1.schema.json`
 - `schemas/baseline_comparison_record_v1.schema.json`
 
@@ -126,8 +130,10 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/executable_loop_runtime_resume_run_002/run.json`
 - `../fixtures/executable_loop_runtime_resume_run_003/run.json`
 - `../fixtures/executable_loop_runtime_non_resumable_run_001/run.json`
+- `../fixtures/executable_loop_runtime_non_resumable_run_004/run.json`
 - `../fixtures/repair_packet_run_001/run.json`
 - `../fixtures/repair_handoff_run_001/run.json`
+- `../fixtures/executable_loop_compound_continuation_run_006/run.json`
 - `../fixtures/executable_loop_compound_continuation_run_001/run.json`
 - `../fixtures/executable_loop_compound_continuation_run_002/run.json`
 - `../fixtures/executable_loop_compound_continuation_run_003/run.json`

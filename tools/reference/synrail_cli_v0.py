@@ -310,6 +310,7 @@ def cmd_repair_packet(args: argparse.Namespace) -> int:
         ("--repair-handoff-file", args.repair_handoff_file),
         ("--mode-selection-receipt", args.mode_selection_receipt),
         ("--preparation-receipt-file", args.preparation_receipt_file),
+        ("--repair-receipt-file", args.repair_receipt_file),
         ("--report-file", args.report_file),
         ("--readback", args.readback),
         ("--scenario-proof", args.scenario_proof),
@@ -373,6 +374,16 @@ def discover_resume_sibling_inputs(args: argparse.Namespace, state: dict) -> Non
         if candidate:
             args.mode_selection_receipt = str(candidate)
 
+    if not getattr(args, "repair_receipt_file", None):
+        candidate = existing("repair_receipt.json")
+        if candidate:
+            args.repair_receipt_file = str(candidate)
+
+    if not getattr(args, "repair_handoff_file", None):
+        candidate = existing("repair_handoff.json")
+        if candidate:
+            args.repair_handoff_file = str(candidate)
+
     if not getattr(args, "final_result", None):
         candidate = existing("final_result.json")
         if candidate:
@@ -419,6 +430,7 @@ def synthesize_repair_packet(args: argparse.Namespace, state: dict) -> Path:
     root = Path(args.state_file).parent
     packet_output = Path(args.repair_packet_output)
     selection_receipt = load_json(Path(args.mode_selection_receipt)) if getattr(args, "mode_selection_receipt", None) else None
+    repair_receipt = load_json(Path(args.repair_receipt_file)) if getattr(args, "repair_receipt_file", None) else None
 
     preparation_receipt = None
     preparation_candidate = root / "preparation_receipt.json"
@@ -462,6 +474,7 @@ def synthesize_repair_packet(args: argparse.Namespace, state: dict) -> Path:
         refresh_use_closure=getattr(args, "refresh_use_closure", False),
         selection_receipt=selection_receipt,
         preparation_receipt=preparation_receipt,
+        repair_receipt=repair_receipt,
         report=report,
     )
     packet_output.write_text(json.dumps(packet, indent=2, ensure_ascii=True) + "\n")
@@ -482,6 +495,7 @@ def apply_resume_output_defaults(args: argparse.Namespace, state: dict) -> None:
         "run_artifact_output": str(root / "run.json"),
         "repair_handoff_output": str(root / "repair_handoff.json"),
         "repair_packet_output": str(root / "repair_packet.json"),
+        "repair_receipt_output": str(root / "repair_receipt.json"),
         "plan_output": str(root / "plan.json"),
         "preparation_receipt_output": str(root / "preparation_receipt.json"),
     }
@@ -566,6 +580,7 @@ def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> list[str
         ("run_artifact_output", output_defaults["run_artifact_output"]),
         ("repair_handoff_output", output_defaults["repair_handoff_output"]),
         ("repair_packet_output", output_defaults["repair_packet_output"]),
+        ("repair_receipt_output", output_defaults.get("repair_receipt_output", str(Path(output_defaults["repair_packet_output"]).with_name("repair_receipt.json")))),
         ("plan_output", output_defaults["plan_output"]),
         ("preparation_receipt_output", output_defaults["preparation_receipt_output"]),
     ]:
@@ -640,11 +655,14 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         forwarded.extend(["--resume-from-state", args.resume_from_state])
     if args.repair_handoff_file:
         forwarded.extend(["--repair-handoff-file", args.repair_handoff_file])
+    if args.repair_packet_file:
+        forwarded.extend(["--repair-packet-file", args.repair_packet_file])
     if args.mode_selection_receipt:
         forwarded.extend(["--mode-selection-receipt", args.mode_selection_receipt])
     for flag, value in [
         ("--repair-handoff-output", args.repair_handoff_output),
         ("--repair-packet-output", args.repair_packet_output),
+        ("--repair-receipt-output", args.repair_receipt_output),
         ("--readback", args.readback),
         ("--scenario-proof", args.scenario_proof),
         ("--plan-output", args.plan_output),
@@ -733,6 +751,8 @@ def add_orchestration_args(
     parser.add_argument("--repair-handoff-output")
     parser.add_argument("--repair-packet-file")
     parser.add_argument("--repair-packet-output")
+    parser.add_argument("--repair-receipt-file")
+    parser.add_argument("--repair-receipt-output")
     parser.add_argument("--mode-selection-receipt")
     parser.add_argument("--doctor-run-id", required=not relaxed_runtime)
     parser.add_argument("--doctor-level", required=not relaxed_runtime, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])

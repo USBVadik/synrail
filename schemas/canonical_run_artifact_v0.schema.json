@@ -273,6 +273,30 @@
             "type": "string"
           }
         },
+        "repair_history_applied": {
+          "type": "boolean"
+        },
+        "repair_history_last_result": {
+          "type": "string"
+        },
+        "repair_history_last_completed_step_id": {
+          "type": "string"
+        },
+        "repair_history_completed_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repair_history_current_step_id": {
+          "type": "string"
+        },
+        "repair_history_waiting_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "stale_artifact_ids": {
           "type": "array",
           "items": {

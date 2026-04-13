@@ -9,6 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from synrail_artifact_repair_receipt_v0 import build_receipt as build_artifact_repair_receipt
 from synrail_repair_handoff_v0 import build_repair_handoff, build_resumability
 from synrail_repair_packet_v0 import build_packet_from_runtime_truth
 
@@ -117,6 +118,20 @@ def load_repair_handoff(path: Path) -> dict:
     return handoff
 
 
+def load_repair_packet(path: Path) -> dict:
+    packet = load_json(path)
+    if packet.get("schema_version") != "repair_packet_v0":
+        raise ValueError("repair packet must use repair_packet_v0")
+    return packet
+
+
+def load_repair_receipt(path: Path) -> dict:
+    receipt = load_json(path)
+    if receipt.get("schema_version") != "artifact_repair_receipt_v0":
+        raise ValueError("repair receipt must use artifact_repair_receipt_v0")
+    return receipt
+
+
 def report_resumability_fields(state: dict, handoff: dict | None = None) -> dict:
     current_handoff = handoff if handoff and handoff.get("from_state") == state.get("state") else build_repair_handoff(state)
     resumability = current_handoff.get("resumability", build_resumability(state))
@@ -150,6 +165,18 @@ def repair_packet_summary(packet: dict | None, state: dict) -> dict:
     handoff = packet["repair_handoff"] if packet else build_repair_handoff(state)
     resumability = packet["resumability"] if packet else handoff.get("resumability", build_resumability(state))
     repair_policy = packet["repair_policy"] if packet else handoff.get("repair_policy", {})
+    repair_history = packet.get("repair_history", {}) if packet else {
+        "applied": False,
+        "last_receipt_result": "",
+        "last_completed_step_id": "",
+        "completed_step_ids": [],
+        "current_step_id": repair_policy.get("next_step_id", ""),
+        "waiting_step_ids": [
+            step.get("step_id", "")
+            for step in repair_policy.get("ordered_steps", [])
+            if step.get("step_id", "") and step.get("step_id", "") != repair_policy.get("next_step_id", "")
+        ],
+    }
     artifact_quality_summary = packet.get("artifact_quality_summary", {}) if packet else {
         "stale_artifact_ids": [hint["artifact_id"] for hint in handoff.get("artifact_quality_hints", []) if hint.get("quality") == "STALE"],
         "non_resumable_artifact_ids": [hint["artifact_id"] for hint in handoff.get("artifact_quality_hints", []) if hint.get("quality") == "NON_RESUMABLE"],
@@ -181,6 +208,12 @@ def repair_packet_summary(packet: dict | None, state: dict) -> dict:
         "policy_type": repair_policy.get("policy_type", ""),
         "policy_next_step": repair_policy.get("next_step_id", ""),
         "policy_ready_steps": list(repair_policy.get("ready_now_step_ids", [])),
+        "repair_history_applied": repair_history.get("applied", False),
+        "repair_history_last_result": repair_history.get("last_receipt_result", ""),
+        "repair_history_last_completed_step_id": repair_history.get("last_completed_step_id", ""),
+        "repair_history_completed_step_ids": list(repair_history.get("completed_step_ids", [])),
+        "repair_history_current_step_id": repair_history.get("current_step_id", ""),
+        "repair_history_waiting_step_ids": list(repair_history.get("waiting_step_ids", [])),
         "stale_artifact_ids": list(artifact_quality_summary.get("stale_artifact_ids", [])),
         "non_resumable_artifact_ids": list(artifact_quality_summary.get("non_resumable_artifact_ids", [])),
         "stale_subsurface_ids": list(artifact_quality_summary.get("stale_subsurface_ids", [])),
@@ -323,6 +356,14 @@ def resolve_repair_packet_output(args: argparse.Namespace) -> Path | None:
     return None
 
 
+def resolve_repair_receipt_output(args: argparse.Namespace) -> Path | None:
+    if getattr(args, "repair_receipt_output", None):
+        return Path(args.repair_receipt_output)
+    if getattr(args, "report_output", None):
+        return Path(args.report_output).with_name("repair_receipt.json")
+    return None
+
+
 def packet_output_defaults(args: argparse.Namespace, packet_output: Path) -> dict:
     return {
         "doctor_output": getattr(args, "doctor_output", ""),
@@ -334,6 +375,7 @@ def packet_output_defaults(args: argparse.Namespace, packet_output: Path) -> dic
         "run_artifact_output": getattr(args, "run_artifact_output", ""),
         "repair_handoff_output": getattr(args, "repair_handoff_output", "") or str(packet_output.with_name("repair_handoff.json")),
         "repair_packet_output": str(packet_output),
+        "repair_receipt_output": getattr(args, "repair_receipt_output", "") or str(packet_output.with_name("repair_receipt.json")),
         "plan_output": getattr(args, "plan_output", "") or str(packet_output.with_name("plan.json")),
         "preparation_receipt_output": getattr(args, "preparation_receipt_output", "") or str(packet_output.with_name("preparation_receipt.json")),
     }
@@ -347,6 +389,7 @@ def maybe_emit_repair_packet(
     repair_handoff: dict | None,
     selection_receipt: dict | None = None,
     preparation_receipt: dict | None = None,
+    repair_receipt: dict | None = None,
 ) -> dict | None:
     packet_output = resolve_repair_packet_output(args)
     if not packet_output:
@@ -356,8 +399,6 @@ def maybe_emit_repair_packet(
     handoff = state_handoff
     if repair_handoff and repair_handoff.get("from_state") == state["state"]:
         handoff = repair_handoff
-    if not handoff.get("continuation_allowed", False):
-        return None
 
     packet = build_packet_from_runtime_truth(
         state=state,
@@ -393,10 +434,32 @@ def maybe_emit_repair_packet(
         output_defaults_overrides=packet_output_defaults(args, packet_output),
         selection_receipt=selection_receipt,
         preparation_receipt=preparation_receipt,
+        repair_receipt=repair_receipt,
         report=report,
     )
     save_json(packet_output, packet)
     return packet
+
+
+def maybe_emit_repair_receipt(
+    args: argparse.Namespace,
+    *,
+    starting_repair_packet: dict | None,
+    previous_repair_receipt: dict | None,
+    state: dict,
+    report: dict,
+) -> dict | None:
+    receipt_output = resolve_repair_receipt_output(args)
+    if not receipt_output or not starting_repair_packet:
+        return None
+    receipt = build_artifact_repair_receipt(
+        starting_packet=starting_repair_packet,
+        resulting_state=state,
+        report=report,
+        previous_receipt=previous_repair_receipt,
+    )
+    save_json(receipt_output, receipt)
+    return receipt
 
 
 def run_python_capture(script: Path, args: list[str]) -> tuple[int, str]:
@@ -1164,11 +1227,23 @@ def finalize_runtime_outputs(
     missing_continuation_inputs: list[str] | None = None,
     selection_receipt: dict | None = None,
     preparation_receipt: dict | None = None,
+    starting_repair_packet: dict | None = None,
+    previous_repair_receipt: dict | None = None,
     bundle: dict | None = None,
     closure: dict | None = None,
     refresh_report: dict | None = None,
     comparison: dict | None = None,
 ) -> None:
+    if starting_repair_packet is None and getattr(args, "repair_packet_file", None):
+        try:
+            starting_repair_packet = load_repair_packet(Path(args.repair_packet_file))
+        except ValueError:
+            starting_repair_packet = None
+    if previous_repair_receipt is None and getattr(args, "repair_receipt_file", None):
+        try:
+            previous_repair_receipt = load_repair_receipt(Path(args.repair_receipt_file))
+        except ValueError:
+            previous_repair_receipt = None
     if repair_handoff and repair_handoff.get("from_state") == state["state"]:
         current_handoff = repair_handoff
     else:
@@ -1178,6 +1253,13 @@ def finalize_runtime_outputs(
     report.update(report_resumability_fields(state, current_handoff))
     if getattr(args, "report_output", None):
         save_json(Path(args.report_output), report)
+    emitted_repair_receipt = maybe_emit_repair_receipt(
+        args,
+        starting_repair_packet=starting_repair_packet,
+        previous_repair_receipt=previous_repair_receipt,
+        state=state,
+        report=report,
+    )
     repair_packet = maybe_emit_repair_packet(
         args,
         state=state,
@@ -1185,6 +1267,7 @@ def finalize_runtime_outputs(
         repair_handoff=current_handoff,
         selection_receipt=selection_receipt,
         preparation_receipt=preparation_receipt,
+        repair_receipt=emitted_repair_receipt,
     )
     emit_requested_artifacts(
         args,
@@ -1277,6 +1360,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     repair_handoff = None
     repair_handoff_applied = False
     continuation_missing_inputs: list[str] = []
+    starting_repair_packet = None
+    previous_repair_receipt = None
     selection_receipt = None
     selection_applied = False
     selected_mode = ""
@@ -1307,7 +1392,34 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         selected_mode = selection_receipt["selected_mode"]
         selected_with_preparation = bool(selection_receipt.get("selected_with_preparation", False))
 
+    if getattr(args, "repair_receipt_file", None):
+        try:
+            previous_repair_receipt = load_repair_receipt(Path(args.repair_receipt_file))
+        except ValueError:
+            previous_repair_receipt = None
+
     if resume_applied:
+        if getattr(args, "repair_packet_file", None):
+            try:
+                starting_repair_packet = load_repair_packet(Path(args.repair_packet_file))
+            except ValueError:
+                report = build_error_report(state, reason="INVALID_REPAIR_PACKET", stopping_stage="repair_packet")
+                report["resume_applied"] = True
+                report["resume_from_state"] = resume_from_state
+                report["selection_applied"] = selection_applied
+                report["selected_mode"] = selected_mode
+                report["selected_with_preparation"] = selected_with_preparation
+                save_json(Path(args.report_output), report)
+                finalize_runtime_outputs(
+                    args,
+                    state=state,
+                    report=report,
+                    resume_applied=True,
+                    resume_from_state=resume_from_state,
+                    selection_receipt=selection_receipt,
+                    previous_repair_receipt=previous_repair_receipt,
+                )
+                return 2
         if state["state"] != resume_from_state:
             report = build_error_report(state, reason="RESUME_STATE_MISMATCH", stopping_stage="resume")
             report["resume_applied"] = True
@@ -1323,6 +1435,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                 resume_applied=True,
                 resume_from_state=resume_from_state,
                 selection_receipt=selection_receipt,
+                starting_repair_packet=starting_repair_packet,
+                previous_repair_receipt=previous_repair_receipt,
             )
             return 2
         if state["state"] in TERMINAL_STATES:
@@ -1366,6 +1480,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                 resume_applied=True,
                 resume_from_state=resume_from_state,
                 selection_receipt=selection_receipt,
+                starting_repair_packet=starting_repair_packet,
+                previous_repair_receipt=previous_repair_receipt,
             )
             print(json.dumps({"result": "BLOCKED", "stopping_stage": "resume", "reason": "TERMINAL_STATE_NOT_RESUMABLE"}, ensure_ascii=True))
             return 0
@@ -1392,6 +1508,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                     resume_from_state=resume_from_state,
                     missing_continuation_inputs=continuation_missing_inputs,
                     selection_receipt=selection_receipt,
+                    starting_repair_packet=starting_repair_packet,
+                    previous_repair_receipt=previous_repair_receipt,
                 )
                 return 2
             repair_handoff_applied = True
@@ -1415,6 +1533,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                     resume_from_state=resume_from_state,
                     repair_handoff=repair_handoff,
                     selection_receipt=selection_receipt,
+                    starting_repair_packet=starting_repair_packet,
+                    previous_repair_receipt=previous_repair_receipt,
                 )
                 return 2
         current_resume_handoff = repair_handoff or build_repair_handoff(state)
@@ -1460,6 +1580,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                 resume_from_state=resume_from_state,
                 repair_handoff=current_resume_handoff,
                 selection_receipt=selection_receipt,
+                starting_repair_packet=starting_repair_packet,
+                previous_repair_receipt=previous_repair_receipt,
             )
             print(json.dumps({"result": "BLOCKED", "stopping_stage": "resume", "reason": "STATE_NOT_RESUMABLE"}, ensure_ascii=True))
             return 0
@@ -2109,7 +2231,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--resume-from-state")
     p_orchestrate.add_argument("--repair-handoff-file")
     p_orchestrate.add_argument("--repair-handoff-output")
+    p_orchestrate.add_argument("--repair-packet-file")
     p_orchestrate.add_argument("--repair-packet-output")
+    p_orchestrate.add_argument("--repair-receipt-file")
+    p_orchestrate.add_argument("--repair-receipt-output")
     p_orchestrate.add_argument("--mode-selection-receipt")
     p_orchestrate.add_argument("--doctor-run-id", required=True)
     p_orchestrate.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])

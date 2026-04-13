@@ -63,6 +63,7 @@ def default_output_paths(root: Path) -> dict:
         "run_artifact_output": str(root / "run.json"),
         "repair_handoff_output": str(root / "repair_handoff.json"),
         "repair_packet_output": str(root / "repair_packet.json"),
+        "repair_receipt_output": str(root / "repair_receipt.json"),
         "plan_output": str(root / "plan.json"),
         "preparation_receipt_output": str(root / "preparation_receipt.json"),
     }
@@ -211,6 +212,47 @@ def build_artifact_quality_summary(handoff: dict) -> dict:
     }
 
 
+def build_repair_history(handoff: dict, repair_receipt: dict | None) -> dict:
+    completed_step_ids = list(repair_receipt.get("repair_history", {}).get("completed_step_ids", [])) if repair_receipt else []
+    current_step_id = handoff.get("repair_policy", {}).get("next_step_id", "")
+    ordered = [step.get("step_id", "") for step in handoff.get("repair_policy", {}).get("ordered_steps", []) if step.get("step_id", "")]
+    waiting = [step_id for step_id in ordered if step_id and step_id not in completed_step_ids and step_id != current_step_id]
+    return {
+        "applied": bool(repair_receipt),
+        "last_receipt_result": repair_receipt.get("result", "") if repair_receipt else "",
+        "last_completed_step_id": repair_receipt.get("completed_step_id", "") if repair_receipt else "",
+        "completed_step_ids": completed_step_ids,
+        "current_step_id": current_step_id,
+        "waiting_step_ids": waiting,
+    }
+
+
+def build_receipt_context(repair_receipt: dict | None) -> dict:
+    if not repair_receipt:
+        return {
+            "applied": False,
+            "result": "",
+            "completed_step_id": "",
+            "remaining_stale_artifact_ids": [],
+            "remaining_stale_subsurface_ids": [],
+            "remaining_non_resumable_artifact_ids": [],
+            "remaining_non_resumable_subsurface_ids": [],
+            "remaining_stale_hints": [],
+            "remaining_non_resumable_hints": [],
+        }
+    return {
+        "applied": True,
+        "result": repair_receipt.get("result", ""),
+        "completed_step_id": repair_receipt.get("completed_step_id", ""),
+        "remaining_stale_artifact_ids": list(repair_receipt.get("remaining_stale_artifact_ids", [])),
+        "remaining_stale_subsurface_ids": list(repair_receipt.get("remaining_stale_subsurface_ids", [])),
+        "remaining_non_resumable_artifact_ids": list(repair_receipt.get("remaining_non_resumable_artifact_ids", [])),
+        "remaining_non_resumable_subsurface_ids": list(repair_receipt.get("remaining_non_resumable_subsurface_ids", [])),
+        "remaining_stale_hints": list(repair_receipt.get("remaining_stale_hints", [])),
+        "remaining_non_resumable_hints": list(repair_receipt.get("remaining_non_resumable_hints", [])),
+    }
+
+
 def build_packet_from_runtime_truth(
     *,
     state: dict,
@@ -246,6 +288,7 @@ def build_packet_from_runtime_truth(
     output_defaults_overrides: dict | None = None,
     selection_receipt: dict | None = None,
     preparation_receipt: dict | None = None,
+    repair_receipt: dict | None = None,
     report: dict | None = None,
 ) -> dict:
     handoff = repair_handoff or build_repair_handoff(state)
@@ -291,6 +334,8 @@ def build_packet_from_runtime_truth(
         "repair_policy": handoff.get("repair_policy", {}),
         "artifact_quality_hints": list(handoff.get("artifact_quality_hints", [])),
         "artifact_quality_summary": build_artifact_quality_summary(handoff),
+        "repair_history": build_repair_history(handoff, repair_receipt),
+        "repair_receipt_context": build_receipt_context(repair_receipt),
         "continuation_plan": build_continuation_plan(packet_args, handoff),
         "resume_context": {
             "doctor_run_id": doctor_run_id,
@@ -330,6 +375,8 @@ def build_packet_from_runtime_truth(
     }
     if selection_receipt:
         packet["selection_receipt"] = selection_receipt
+    if repair_receipt:
+        packet["repair_receipt"] = repair_receipt
     return packet
 
 
@@ -342,6 +389,7 @@ def build_packet(args: argparse.Namespace) -> dict:
 
     selection_receipt = load_json(Path(args.mode_selection_receipt)) if getattr(args, "mode_selection_receipt", None) else None
     preparation_receipt = load_json(Path(args.preparation_receipt_file)) if getattr(args, "preparation_receipt_file", None) else None
+    repair_receipt = load_json(Path(args.repair_receipt_file)) if getattr(args, "repair_receipt_file", None) else None
     report = load_json(Path(args.report_file)) if getattr(args, "report_file", None) else None
 
     return build_packet_from_runtime_truth(
@@ -377,6 +425,7 @@ def build_packet(args: argparse.Namespace) -> dict:
         refresh_use_closure=args.refresh_use_closure,
         selection_receipt=selection_receipt,
         preparation_receipt=preparation_receipt,
+        repair_receipt=repair_receipt,
         report=report,
     )
 
@@ -389,6 +438,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repair-handoff-file")
     parser.add_argument("--mode-selection-receipt")
     parser.add_argument("--preparation-receipt-file")
+    parser.add_argument("--repair-receipt-file")
     parser.add_argument("--report-file")
     parser.add_argument("--doctor-run-id", required=True)
     parser.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])

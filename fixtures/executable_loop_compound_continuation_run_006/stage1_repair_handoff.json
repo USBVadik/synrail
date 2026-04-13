@@ -1,0 +1,128 @@
+{
+  "schema_version": "repair_handoff_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "PROOF_BUNDLE_COMPLETE",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "RECOVERY_REVERIFICATION_INCOMPLETE",
+  "continuation_allowed": true,
+  "continuation_entrypoint": "resume",
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_RECOVERY_PENDING",
+    "active_pressures": [
+      "RECOVERY_PENDING"
+    ],
+    "recommended_repair_order": [
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "explanation": "recovery reverification is still pending, but continuation can resume once recovery is completed and refresh can reconcile closure"
+  },
+  "repair_policy": {
+    "policy_type": "MULTI_STEP_REPAIR",
+    "next_step_id": "complete_recovery_reverification",
+    "ready_now_step_ids": [
+      "complete_recovery_reverification"
+    ],
+    "ordered_steps": [
+      {
+        "step_id": "complete_recovery_reverification",
+        "status": "READY_NOW",
+        "required_inputs": [
+          "refresh_recovery_complete",
+          "refresh_reverification_complete"
+        ],
+        "repairs_artifacts": [
+          "recovery_reverification_surface"
+        ],
+        "resolves_pressures": [
+          "RECOVERY_PENDING"
+        ],
+        "why": "recovery should be completed before refresh reconciliation can restore closure acceptance"
+      },
+      {
+        "step_id": "run_refresh_reconciliation",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_refresh_surface"
+        ],
+        "resolves_pressures": [
+          "RECOVERY_PENDING"
+        ],
+        "why": "refresh reconciliation should only run once recovery reverification is complete"
+      },
+      {
+        "step_id": "rerun_closure",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_verdict_surface"
+        ],
+        "resolves_pressures": [
+          "RECOVERY_PENDING"
+        ],
+        "why": "closure should be rechecked only after earlier repair steps finish"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "recovery_reverification_surface",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "mapped_inputs": [
+        "refresh_recovery_complete",
+        "refresh_reverification_complete"
+      ],
+      "repair_step": "complete_recovery_reverification",
+      "why": "recovery was started but reverification has not been completed yet",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "recovery_status_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "refresh_recovery_complete"
+          ],
+          "why": "the recovery status is still pending rather than complete"
+        },
+        {
+          "subsurface_id": "reverification_completion_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "refresh_reverification_complete"
+          ],
+          "why": "the recovery reverification completion flag is still missing"
+        }
+      ]
+    }
+  ],
+  "required_inputs": [
+    {
+      "input_id": "refresh_recovery_complete",
+      "kind": "enum",
+      "cli_flag": "--refresh-recovery-status",
+      "description": "mark recovery as complete before resuming closure acceptance",
+      "required_value": "COMPLETE"
+    },
+    {
+      "input_id": "refresh_reverification_complete",
+      "kind": "flag",
+      "cli_flag": "--refresh-reverification-complete",
+      "description": "confirm recovery reverification is complete before refresh reconciliation",
+      "required_value": "true"
+    }
+  ],
+  "runtime_defaults": {
+    "refresh_event_type": "RECOVERY_EVENT",
+    "refresh_use_bundle": true,
+    "refresh_use_closure": true
+  },
+  "next_safe_step": "run reverification against the attested target surface"
+}

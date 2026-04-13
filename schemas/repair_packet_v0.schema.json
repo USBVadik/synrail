@@ -12,6 +12,8 @@
     "repair_policy",
     "artifact_quality_hints",
     "artifact_quality_summary",
+    "repair_history",
+    "repair_receipt_context",
     "continuation_plan",
     "resume_context",
     "repair_inputs",
@@ -614,6 +616,210 @@
         }
       }
     },
+    "repair_history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "last_receipt_result",
+        "last_completed_step_id",
+        "completed_step_ids",
+        "current_step_id",
+        "waiting_step_ids"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "last_receipt_result": {
+          "type": "string"
+        },
+        "last_completed_step_id": {
+          "type": "string"
+        },
+        "completed_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "current_step_id": {
+          "type": "string"
+        },
+        "waiting_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "repair_receipt_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "result",
+        "completed_step_id",
+        "remaining_stale_artifact_ids",
+        "remaining_stale_subsurface_ids",
+        "remaining_non_resumable_artifact_ids",
+        "remaining_non_resumable_subsurface_ids",
+        "remaining_stale_hints",
+        "remaining_non_resumable_hints"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": "string"
+        },
+        "completed_step_id": {
+          "type": "string"
+        },
+        "remaining_stale_artifact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "remaining_stale_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "remaining_non_resumable_artifact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "remaining_non_resumable_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "remaining_stale_hints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "artifact_id",
+              "quality",
+              "repair_step",
+              "still_stale_parts",
+              "stale_subsurfaces"
+            ],
+            "properties": {
+              "artifact_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quality": {
+                "const": "STALE"
+              },
+              "repair_step": {
+                "type": "string",
+                "minLength": 1
+              },
+              "still_stale_parts": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "stale_subsurfaces": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "subsurface_id",
+                    "why"
+                  ],
+                  "properties": {
+                    "subsurface_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "why": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "remaining_non_resumable_hints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "artifact_id",
+              "quality",
+              "repair_step",
+              "still_stale_parts",
+              "stale_subsurfaces"
+            ],
+            "properties": {
+              "artifact_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quality": {
+                "const": "NON_RESUMABLE"
+              },
+              "repair_step": {
+                "type": "string",
+                "minLength": 1
+              },
+              "still_stale_parts": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "stale_subsurfaces": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "subsurface_id",
+                    "why"
+                  ],
+                  "properties": {
+                    "subsurface_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "why": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "continuation_plan": {
       "type": "object",
       "additionalProperties": false,
@@ -1052,6 +1258,7 @@
         "run_artifact_output",
         "repair_handoff_output",
         "repair_packet_output",
+        "repair_receipt_output",
         "plan_output",
         "preparation_receipt_output"
       ],
@@ -1096,6 +1303,10 @@
           "type": "string",
           "minLength": 1
         },
+        "repair_receipt_output": {
+          "type": "string",
+          "minLength": 1
+        },
         "plan_output": {
           "type": "string",
           "minLength": 1
@@ -1125,6 +1336,9 @@
     },
     "next_safe_step": {
       "type": "string"
+    },
+    "repair_receipt": {
+      "type": "object"
     }
   }
 }

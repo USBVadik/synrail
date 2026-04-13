@@ -1,0 +1,50 @@
+{
+  "schema_version": "artifact_repair_receipt_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "from_state": "READY",
+  "resulting_state": "READY",
+  "result": "NON_RESUMABLE_BOUNDARY_REACHED",
+  "completed_step_id": "",
+  "completed_artifact_ids": [],
+  "completed_subsurface_ids": [],
+  "remaining_stale_artifact_ids": [],
+  "remaining_stale_subsurface_ids": [],
+  "remaining_non_resumable_artifact_ids": [
+    "runtime_entrypoint_state"
+  ],
+  "remaining_non_resumable_subsurface_ids": [
+    "forward_orchestration_entrypoint"
+  ],
+  "remaining_stale_hints": [],
+  "remaining_non_resumable_hints": [
+    {
+      "artifact_id": "runtime_entrypoint_state",
+      "quality": "NON_RESUMABLE",
+      "repair_step": "continue_forward_orchestration",
+      "still_stale_parts": [
+        "forward_orchestration_entrypoint"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "forward_orchestration_entrypoint",
+          "why": "the run has not yet entered a repairable continuation family, so `orchestrate` is the correct entrypoint rather than `resume`"
+        }
+      ]
+    }
+  ],
+  "next_step_id": "continue_forward_orchestration",
+  "ready_now_step_ids": [],
+  "repair_history": {
+    "applied": false,
+    "completed_step_ids": [],
+    "last_completed_step_id": "",
+    "current_step_id": "continue_forward_orchestration",
+    "waiting_step_ids": []
+  },
+  "resumability": {
+    "status": "NOT_RESUMABLE",
+    "family": "NOT_RESUMABLE_FRESH_ORCHESTRATION"
+  },
+  "why": "the continuation crossed into a non-resumable boundary, so the next move is no longer another repair step"
+}

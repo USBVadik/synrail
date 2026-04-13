@@ -418,10 +418,12 @@ The current re-entry lattice supports a stronger kernel-level claim:
   - one explicit non-resumable selection-blocked continuation family
   - one explicit non-resumable accepted-terminal continuation family
   - one explicit non-resumable rejected-terminal continuation family
+  - one explicit non-resumable fresh-forward-orchestration continuation family
   - one packet-driven compound continuation family that crosses blocked, invalid, degraded, and accepted contours on the way back to honest closure
   - one packet-first continuation family that carries selection/preparation handoff through invalid-proof and degraded-recovery repair back to accepted closure
   - one stricter packet-first continuation family that now carries repair order and stale-artifact hints through invalid-proof, readiness repair, and recovery repair back to accepted closure
   - one lower-replay packet-first continuation family that now reaches accepted closure from doctor-blocked truth through sibling auto-discovery
+  - one repair-receipt-aware packet-first continuation family that now records explicit step progression and final truthful terminal packet emission
 
 That is stronger than saying only:
 
@@ -436,7 +438,7 @@ because it shows the kernel can sometimes recover honestly after a prior block.
 The re-entry lattice still has visible gaps:
 
 - the current canonical reverse edges now cover readiness repair, proof completion, one recovery repair, and one ugly mixed family, but not the full set of future compound families
-- named runtime `resume` now exists for partial-proof, degraded-recovery, doctor-blocked continuation, one explicit non-resumable selection-blocked family, and two explicit terminal non-resumable families, and repair handoff plus repair packet now name the continuation contract much more honestly, but the packet is still narrower than a mature continuation surface should be
+- named runtime `resume` now exists for partial-proof, degraded-recovery, doctor-blocked continuation, one explicit non-resumable selection-blocked family, one explicit fresh-forward-orchestration family, and two explicit terminal non-resumable families, and repair handoff plus repair packet now name the continuation contract much more honestly, but the packet is still narrower than a mature continuation surface should be
 - hybrid compound repair is still much weaker than it should be
 
 ## How this relates to other readings
