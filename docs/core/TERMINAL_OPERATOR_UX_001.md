@@ -76,6 +76,8 @@ The CLI v0 currently exposes:
    - compress current runtime truth into one operator-facing brief naming the blocker, current repair step, required inputs, stale sub-surfaces, and primary next action
 24. `operator-brief-chain`
    - compress multiple operator briefs into one stage-by-stage operator reading for an ugly continuation contour
+25. `operator-render`
+   - turn one operator brief or one operator-brief chain into a small human-readable markdown handoff
 
 The selection layer can now also carry one preparation-aware strong-path recommendation when bounded governed-path cost evidence exists.
 
@@ -153,6 +155,7 @@ The first broader operator-layer move now also exists:
 - it is now proven on both honest endings:
   - follow the terminal boundary
   - stop replaying this contour and start a new run
+- `operator-render` stays strictly derived from those brief surfaces and exists only to reduce reading tax further for a human operator
 
 ## Decision rule
 

@@ -740,3 +740,19 @@ Does not guarantee:
 
 - replacement of the underlying stage briefs
 - broad operator workflow automation
+
+### `synrail_operator_render_v0.py`
+
+Purpose:
+
+- turn one operator brief or one operator-brief chain into a small markdown handoff for a human operator
+
+Guarantees:
+
+- stays strictly derived from the operator brief surfaces
+- preserves the main action, next step, current step, required inputs, and chain progression
+
+Does not guarantee:
+
+- any new source of runtime truth
+- replacement of the underlying brief or chain records

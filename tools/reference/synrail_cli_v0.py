@@ -37,6 +37,7 @@ REPRODUCIBILITY = HERE / "synrail_reproducibility_v0.py"
 SECOND_OPERATOR = HERE / "synrail_second_operator_v0.py"
 OPERATOR_BRIEF = HERE / "synrail_operator_brief_v0.py"
 OPERATOR_BRIEF_CHAIN = HERE / "synrail_operator_brief_chain_v0.py"
+OPERATOR_RENDER = HERE / "synrail_operator_render_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -423,6 +424,15 @@ def cmd_operator_brief_chain(args: argparse.Namespace) -> int:
         forwarded.extend(["--brief", brief])
     forwarded.extend(["--output", args.output])
     return run_python(OPERATOR_BRIEF_CHAIN, forwarded)
+
+
+def cmd_operator_render(args: argparse.Namespace) -> int:
+    forwarded = ["--output", args.output]
+    if args.brief_file:
+        forwarded.extend(["--brief-file", args.brief_file])
+    if args.chain_file:
+        forwarded.extend(["--chain-file", args.chain_file])
+    return run_python(OPERATOR_RENDER, forwarded)
 
 
 def cmd_repair_handoff(args: argparse.Namespace) -> int:
@@ -1237,6 +1247,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_operator_brief_chain.add_argument("--brief", action="append", required=True)
     p_operator_brief_chain.add_argument("--output", required=True)
     p_operator_brief_chain.set_defaults(func=cmd_operator_brief_chain)
+
+    p_operator_render = sub.add_parser("operator-render")
+    p_operator_render.add_argument("--brief-file")
+    p_operator_render.add_argument("--chain-file")
+    p_operator_render.add_argument("--output", required=True)
+    p_operator_render.set_defaults(func=cmd_operator_render)
 
     p_repair_handoff = sub.add_parser("repair-handoff")
     p_repair_handoff.add_argument("--state-file", required=True)

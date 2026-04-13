@@ -158,6 +158,7 @@ Current sprint contract:
 - one second canonical operator brief now also proves that this layer can preserve honest repairability on a `RECOVERY_PENDING` contour instead of only stopping exhausted loops
 - one first operator-brief chain now also proves that the same layer can compress a full ugly repair sequence instead of only one runtime snapshot
 - one second canonical operator-brief chain now also proves the complementary ugly ending: bounded repair can end in `STOP_AND_START_NEW_RUN`, not only terminal follow-boundary
+- one first strictly derived operator render now also proves that this layer can become easier to scan for humans without introducing a new control surface
 - that brief must stay derived from:
   - `state`
   - `report`
