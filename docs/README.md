@@ -69,6 +69,7 @@ Start here when you want to understand the kernel itself:
 - `core/REPRODUCIBILITY_TEST_002.md`
 - `core/SECOND_OPERATOR_TEST_001.md`
 - `core/SECOND_OPERATOR_TEST_002.md`
+- `core/OPERATOR_BRIEF_001.md`
 - `core/GOVERNED_PATH_PREPARATION_001.md`
 - `core/GOVERNED_PATH_COST_REDUCTION_001.md`
 - `core/REPAIR_HANDOFF_001.md`
@@ -165,6 +166,7 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/reproducibility_test_002/reproducibility.json`
 - `../fixtures/second_operator_test_001/second_operator.json`
 - `../fixtures/second_operator_test_002/second_operator.json`
+- `../fixtures/operator_brief_run_001/operator_brief.json`
 - `../fixtures/artifact_consistency_run_001/consistent.json`
 - `../fixtures/artifact_consistency_run_002/inconsistent.json`
 - `../fixtures/doctor_pressure_test_003/doctor.json`

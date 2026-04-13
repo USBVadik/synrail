@@ -98,6 +98,7 @@ Read these next only if you need them:
 - `docs/core/SECOND_OPERATOR_TEST_001.md`
 - `docs/core/REPRODUCIBILITY_TEST_002.md`
 - `docs/core/SECOND_OPERATOR_TEST_002.md`
+- `docs/core/OPERATOR_BRIEF_001.md`
 - `docs/boundary/SUBSTITUTE_KILL_TEST_002.md`
 - `docs/boundary/SUBSTITUTE_KILL_TEST_003.md`
 
@@ -230,6 +231,7 @@ Secondary repo-history and hardening context remains available in `docs/boundary
 - the repo now also has one second less-curated reproducibility pressure slice showing that an uglier repeated-doctor continuation step now preserves the same bounded block and termination truth across repeated replays
 - the repo now also has one second less-curated second-operator pressure slice showing that packet-first continuation is still followable on a repeated-doctor contour that returns to bounded doctor pressure instead of clean acceptance
 - the repo now also has one third harsher substitute-kill pressure slice showing that the tightened kernel now also wins on one repeated doctor-return continuation stack and one less-curated stage-level continuation stack, while the weak path still remains non-decisive
+- the repo now also has one first broader operator-layer slice that compresses runtime truth into one operator brief and, on one ugly repeated-doctor contour, correctly tells the operator to stop replaying the same contour and start a new run instead
 
 - the repo now also carries one first substitute-kill pressure slice against concrete substitute stacks instead of only one abstract baseline
 - that pressure slice currently shows two substitute-stack wins for Synrail and one still-unclear weak-path comparison

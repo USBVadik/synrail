@@ -146,6 +146,22 @@ Current sprint contract:
   - one less-curated stage-level continuation stack
   while the weak path still remains non-decisive
 
+### 1.0. Open the operator layer carefully
+
+Goal:
+
+- start broadening the operator layer only where it compresses existing runtime truth instead of inventing new product surface area
+
+Current sprint contract:
+
+- one first operator brief now compresses current runtime truth into one smaller handoff surface
+- that brief must stay derived from:
+  - `state`
+  - `report`
+  - `repair_packet`
+  - optional `doctor`
+- and its value should be judged by whether it reduces reading tax without weakening truth discipline
+
 ### 1. Make comparator economics central
 
 Goal:

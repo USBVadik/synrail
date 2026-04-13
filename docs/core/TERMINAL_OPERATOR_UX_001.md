@@ -68,6 +68,12 @@ The CLI v0 currently exposes:
    - emit one machine-readable receipt showing whether the planned proof surface reached a complete first bundle pass
 20. `governed-cost`
    - emit one machine-readable cost delta between an unprepared and prepared governed path
+21. `reproducibility`
+   - compare two canonical run artifacts for one bounded reproducibility reading on key runtime truth
+22. `second-operator`
+   - inspect whether one packet-first continuation path is followable without hidden author memory
+23. `operator-brief`
+   - compress current runtime truth into one operator-facing brief naming the blocker, current repair step, required inputs, stale sub-surfaces, and primary next action
 
 The selection layer can now also carry one preparation-aware strong-path recommendation when bounded governed-path cost evidence exists.
 
@@ -136,6 +142,11 @@ Its continuation surface is now stricter too:
 - and it can now say that a contour is not resumable at all and should follow either the lighter selected mode or a fresh new run instead
 
 It is a small facade, not the final UX.
+
+The first broader operator-layer move now also exists:
+
+- `operator-brief` does not replace the runtime packet or report
+- it compresses them into one smaller actionable surface when the operator needs a quick truthful handoff
 
 ## Decision rule
 

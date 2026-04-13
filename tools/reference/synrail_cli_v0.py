@@ -35,6 +35,7 @@ ARTIFACT_CONSISTENCY = HERE / "synrail_artifact_consistency_v0.py"
 OBSERVABILITY = HERE / "synrail_observability_v0.py"
 REPRODUCIBILITY = HERE / "synrail_reproducibility_v0.py"
 SECOND_OPERATOR = HERE / "synrail_second_operator_v0.py"
+OPERATOR_BRIEF = HERE / "synrail_operator_brief_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -401,6 +402,18 @@ def cmd_second_operator(args: argparse.Namespace) -> int:
             "--output", args.output,
         ],
     )
+
+
+def cmd_operator_brief(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--state-file", args.state_file,
+        "--report-file", args.report_file,
+        "--repair-packet-file", args.repair_packet_file,
+        "--output", args.output,
+    ]
+    if args.doctor_file:
+        forwarded.extend(["--doctor-file", args.doctor_file])
+    return run_python(OPERATOR_BRIEF, forwarded)
 
 
 def cmd_repair_handoff(args: argparse.Namespace) -> int:
@@ -1202,6 +1215,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_second_operator.add_argument("--run-file", required=True)
     p_second_operator.add_argument("--output", required=True)
     p_second_operator.set_defaults(func=cmd_second_operator)
+
+    p_operator_brief = sub.add_parser("operator-brief")
+    p_operator_brief.add_argument("--state-file", required=True)
+    p_operator_brief.add_argument("--report-file", required=True)
+    p_operator_brief.add_argument("--repair-packet-file", required=True)
+    p_operator_brief.add_argument("--doctor-file")
+    p_operator_brief.add_argument("--output", required=True)
+    p_operator_brief.set_defaults(func=cmd_operator_brief)
 
     p_repair_handoff = sub.add_parser("repair-handoff")
     p_repair_handoff.add_argument("--state-file", required=True)

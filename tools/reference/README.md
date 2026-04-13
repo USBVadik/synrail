@@ -349,6 +349,22 @@ Does not guarantee:
 - a real user study on its own
 - broad usability proof across every continuation family
 
+### `synrail_operator_brief_v0.py`
+
+Purpose:
+
+- compress current runtime truth into one bounded operator-facing brief without replacing the packet, report, or state as sources of truth
+
+Guarantees:
+
+- records result, blocker, doctor verdict, resumability family, current repair step, required inputs, stale sub-surfaces, and one primary operator action
+- records whether another `resume` still makes sense or whether the contour should stop and move into a new run
+
+Does not guarantee:
+
+- a broad interactive operator shell
+- replacement of the underlying runtime artifacts
+
 ### `synrail_continuation_adoption_v0.py`
 
 Purpose:
