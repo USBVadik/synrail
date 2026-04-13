@@ -33,6 +33,8 @@ REPAIR_PACKET = HERE / "synrail_repair_packet_v0.py"
 CHECKPOINT = HERE / "synrail_checkpoint_v0.py"
 ARTIFACT_CONSISTENCY = HERE / "synrail_artifact_consistency_v0.py"
 OBSERVABILITY = HERE / "synrail_observability_v0.py"
+REPRODUCIBILITY = HERE / "synrail_reproducibility_v0.py"
+SECOND_OPERATOR = HERE / "synrail_second_operator_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -376,6 +378,29 @@ def cmd_observability(args: argparse.Namespace) -> int:
         if value:
             forwarded.extend([flag, value])
     return run_python(OBSERVABILITY, forwarded)
+
+
+def cmd_reproducibility(args: argparse.Namespace) -> int:
+    return run_python(
+        REPRODUCIBILITY,
+        [
+            "--run-a", args.run_a,
+            "--run-b", args.run_b,
+            "--output", args.output,
+        ],
+    )
+
+
+def cmd_second_operator(args: argparse.Namespace) -> int:
+    return run_python(
+        SECOND_OPERATOR,
+        [
+            "--state-file", args.state_file,
+            "--repair-packet-file", args.repair_packet_file,
+            "--run-file", args.run_file,
+            "--output", args.output,
+        ],
+    )
 
 
 def cmd_repair_handoff(args: argparse.Namespace) -> int:
@@ -1164,6 +1189,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_observability.add_argument("--repair-receipt-file")
     p_observability.add_argument("--refresh-file")
     p_observability.set_defaults(func=cmd_observability)
+
+    p_reproducibility = sub.add_parser("reproducibility")
+    p_reproducibility.add_argument("--run-a", required=True)
+    p_reproducibility.add_argument("--run-b", required=True)
+    p_reproducibility.add_argument("--output", required=True)
+    p_reproducibility.set_defaults(func=cmd_reproducibility)
+
+    p_second_operator = sub.add_parser("second-operator")
+    p_second_operator.add_argument("--state-file", required=True)
+    p_second_operator.add_argument("--repair-packet-file", required=True)
+    p_second_operator.add_argument("--run-file", required=True)
+    p_second_operator.add_argument("--output", required=True)
+    p_second_operator.set_defaults(func=cmd_second_operator)
 
     p_repair_handoff = sub.add_parser("repair-handoff")
     p_repair_handoff.add_argument("--state-file", required=True)

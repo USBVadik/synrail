@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v2",
+  "system": "synrail",
+  "scenario_id": "SUBSTITUTE_SCENARIO_SECOND_OPERATOR_002",
+  "scenario_class": "packet_only_second_operator_resume",
+  "task_class": "bounded_router_trigger_fix",
+  "path_id": "minimal_packet_only_resume",
+  "closure_result": "ACCEPTED",
+  "blocker_to_closure_cycles": 1,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "MEDIUM",
+  "operator_minutes": 11,
+  "intervention_count": 1,
+  "repair_cycles": 1,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 13,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 92,
+  "notes": "packet-only minimal continuation reduces author-memory dependence while keeping closure truth explicit"
+}

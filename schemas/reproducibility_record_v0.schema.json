@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "required": ["schema_version","run_id","task_class","run_a_path","run_b_path","key_truth_a","key_truth_b","mismatches","verdict","why"],
+  "properties": {
+    "schema_version": {"type": "string", "const": "reproducibility_record_v0"},
+    "run_id": {"type": "string", "minLength": 1},
+    "task_class": {"type": "string", "minLength": 1},
+    "run_a_path": {"type": "string", "minLength": 1},
+    "run_b_path": {"type": "string", "minLength": 1},
+    "key_truth_a": {"type": "object"},
+    "key_truth_b": {"type": "object"},
+    "mismatches": {"type": "array", "items": {"type": "string"}},
+    "verdict": {"type": "string", "enum": ["REPRODUCIBLE_ON_KEY_TRUTH", "DRIFT_ON_KEY_TRUTH"]},
+    "why": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

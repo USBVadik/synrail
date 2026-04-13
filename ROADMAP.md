@@ -125,6 +125,21 @@ Current sprint contract:
   - sanitized session export
 - one runtime-emitted observability run now proves that blocked continuation can be inspected without reconstructing the whole contour by hand
 
+### 0.95. Add short externality pressure on the tightened kernel
+
+Goal:
+
+- stop treating kernel hardening as complete until the tighter contour also survives short reproducibility, second-operator, and substitute pressure
+
+Current sprint contract:
+
+- one first reproducibility slice now proves that a repeated stalled repair-loop contour preserves the same key blocking and termination truth
+- one first second-operator slice now proves that the compressed `state + repair_packet` continuation entry is followable without hidden author memory on one repaired `DOCTOR_BLOCKED` path
+- one second substitute-kill slice now proves that the tightened kernel wins more clearly on:
+  - stalled repair-loop convergence control
+  - packet-first second-operator continuation
+- the weak path still remains non-decisive against a lighter substitute stack, so this pressure remains wedge-shaped rather than universal
+
 ### 1. Make comparator economics central
 
 Goal:

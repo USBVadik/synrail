@@ -94,6 +94,9 @@ Read these next only if you need them:
 - `docs/core/ARTIFACT_CONSISTENCY_001.md`
 - `docs/core/DOCTOR_COVERAGE_MAP_001.md`
 - `docs/core/OBSERVABILITY_001.md`
+- `docs/core/REPRODUCIBILITY_TEST_001.md`
+- `docs/core/SECOND_OPERATOR_TEST_001.md`
+- `docs/boundary/SUBSTITUTE_KILL_TEST_002.md`
 
 ## Current State
 
@@ -218,6 +221,9 @@ Secondary repo-history and hardening context remains available in `docs/boundary
 - the repo now also carries one first low-friction minimal-continuation run proving that one repaired `DOCTOR_BLOCKED` contour can now continue from just `state + repair_packet`
 - the repo now also carries one tenth ugly compound continuation run proving that repeated doctor pressure can now survive packet-chained minimal-core continuation with lower visible side-file tax
 - the repo now also has one continuation-adoption pressure slice showing that this compressed continuation model reduced root side-file tax without losing repeated doctor pressure or accepted closure
+- the repo now also has one first reproducibility pressure slice showing that a stalled repair-loop contour now preserves the same key blocking and termination truth across repeated runs
+- the repo now also has one first second-operator pressure slice showing that the compressed `state + repair_packet` continuation entry is now followable without hidden author memory on one repaired `DOCTOR_BLOCKED` path
+- the repo now also has one second substitute-kill pressure slice showing that the tightened kernel now wins more clearly on stalled repair-loop convergence control and packet-first second-operator continuation, while the weak path still remains non-decisive against a lighter substitute stack
 
 - the repo now also carries one first substitute-kill pressure slice against concrete substitute stacks instead of only one abstract baseline
 - that pressure slice currently shows two substitute-stack wins for Synrail and one still-unclear weak-path comparison

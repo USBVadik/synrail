@@ -316,6 +316,39 @@ Does not guarantee:
 - hosted telemetry
 - broad tracing across every external system
 
+### `synrail_reproducibility_v0.py`
+
+Purpose:
+
+- compare two canonical run artifacts for one bounded reproducibility reading on key runtime truth
+
+Guarantees:
+
+- compares blocking result, stopping stage, reason, resulting state, repair-history, repair-packet family, and next safe step
+- emits one machine-readable reproducibility verdict for the paired runs
+
+Does not guarantee:
+
+- broad determinism proof across every runtime family
+- byte-for-byte artifact equality across repeated runs
+
+### `synrail_second_operator_v0.py`
+
+Purpose:
+
+- inspect whether one packet-first continuation path is followable by a second operator without hidden author memory
+
+Guarantees:
+
+- records whether the visible entry is now only `state_file + repair_packet`
+- records whether next-step, required-input, and operator-focus truth are explicit enough for the continuation path
+- emits one bounded second-operator verdict
+
+Does not guarantee:
+
+- a real user study on its own
+- broad usability proof across every continuation family
+
 ### `synrail_continuation_adoption_v0.py`
 
 Purpose:
