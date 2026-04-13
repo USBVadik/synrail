@@ -156,11 +156,13 @@ Current sprint contract:
 
 - one first operator brief now compresses current runtime truth into one smaller handoff surface
 - one second canonical operator brief now also proves that this layer can preserve honest repairability on a `RECOVERY_PENDING` contour instead of only stopping exhausted loops
+- one first operator-brief chain now also proves that the same layer can compress a full ugly repair sequence instead of only one runtime snapshot
 - that brief must stay derived from:
   - `state`
   - `report`
   - `repair_packet`
   - optional `doctor`
+- and the chain must stay derived from operator briefs that are themselves derived from the same runtime truth
 - and its value should be judged by whether it reduces reading tax without weakening truth discipline
 
 ### 1. Make comparator economics central

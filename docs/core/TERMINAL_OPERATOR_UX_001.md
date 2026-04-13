@@ -74,6 +74,8 @@ The CLI v0 currently exposes:
    - inspect whether one packet-first continuation path is followable without hidden author memory
 23. `operator-brief`
    - compress current runtime truth into one operator-facing brief naming the blocker, current repair step, required inputs, stale sub-surfaces, and primary next action
+24. `operator-brief-chain`
+   - compress multiple operator briefs into one stage-by-stage operator reading for an ugly continuation contour
 
 The selection layer can now also carry one preparation-aware strong-path recommendation when bounded governed-path cost evidence exists.
 
@@ -147,6 +149,7 @@ The first broader operator-layer move now also exists:
 
 - `operator-brief` does not replace the runtime packet or report
 - it compresses them into one smaller actionable surface when the operator needs a quick truthful handoff
+- `operator-brief-chain` extends that same idea across multiple continuation stages when one snapshot is no longer enough to read the contour cleanly
 
 ## Decision rule
 

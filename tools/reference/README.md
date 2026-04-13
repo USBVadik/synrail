@@ -708,3 +708,35 @@ Does not guarantee:
 Purpose:
 
 - aggregate a small set of substitute comparison records into one pressure reading
+
+### `synrail_operator_brief_v0.py`
+
+Purpose:
+
+- compress one current runtime snapshot into one smaller operator-facing handoff
+
+Guarantees:
+
+- preserves blocker, current repair step, required inputs, stale sub-surfaces, and one primary next action
+- stays derived from `state`, `report`, `repair_packet`, and optional `doctor`
+
+Does not guarantee:
+
+- replacement of the underlying runtime artifacts
+- full multi-stage reading on its own
+
+### `synrail_operator_brief_chain_v0.py`
+
+Purpose:
+
+- compress several operator briefs into one stage-by-stage repair reading for a multi-stage contour
+
+Guarantees:
+
+- preserves one ordered sequence of operator actions across an ugly continuation family
+- records the final operator action and final resumability family
+
+Does not guarantee:
+
+- replacement of the underlying stage briefs
+- broad operator workflow automation

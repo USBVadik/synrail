@@ -1,0 +1,49 @@
+{
+  "schema_version": "operator_brief_record_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "task_class": "bounded_router_trigger_fix",
+  "entrypoint": "resume",
+  "entry_state": "PROOF_BUNDLE_COMPLETE",
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "result": "OK",
+  "stopping_stage": "refresh",
+  "reason": "NONE",
+  "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+  "closure_status": "ACCEPTED",
+  "resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+  "active_pressures": [
+    "TERMINAL_ACCEPTED",
+    "TERMINAL_STATE"
+  ],
+  "primary_action": "FOLLOW_NON_RESUMABLE_BOUNDARY",
+  "why_action": "this contour is no longer resumable, so the operator should follow the named boundary instead of replaying resume",
+  "next_safe_step": "NONE",
+  "operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead",
+  "current_step_id": "start_new_run",
+  "ready_now_step_ids": [],
+  "next_step_required_inputs": [],
+  "next_step_subsurface_ids": [
+    "accepted_terminal_state"
+  ],
+  "blockers": [],
+  "dominant_blocker": "",
+  "termination_status": "CONTINUE",
+  "termination_reason": "",
+  "attempt_count": 0,
+  "history_chain_length": 4,
+  "completed_step_ids": [
+    "restore_readiness_truth",
+    "complete_missing_proof_sections",
+    "complete_recovery_reverification"
+  ],
+  "stale_artifact_ids": [],
+  "stale_subsurface_ids": [],
+  "entry_artifacts": [
+    "state_file",
+    "repair_packet"
+  ],
+  "suggested_cli": {
+    "command": "NONE",
+    "args": []
+  }
+}
