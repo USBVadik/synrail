@@ -34,6 +34,7 @@ The packet keeps the existing handoff, but now auto-synthesizes one fuller conti
 10. embedded `preparation_context`
 11. embedded `runtime_truth`
 12. packet-native `repair_history_chain`
+13. one compact embedded `continuation_core`
 
 That means the packet can now say both:
 
@@ -130,6 +131,10 @@ These prove:
   - recovery pressure
   - accepted terminal truth
   while still keeping that repair-history chain inside the packet surface
+- repair packets can now also expose one smaller embedded continuation core so `resume` can treat the packet as its default continuation contract instead of first depending on wider sibling discovery
+- one low-friction canonical continuation run now proves that `resume` can return from `DOCTOR_BLOCKED` to accepted closure from just:
+  - `state.json`
+  - `repair_packet.json`
 
 ## Current boundary
 
@@ -146,3 +151,4 @@ It is one continuation packet for one named `resume` path.
 The current improvement makes that packet stronger where runtime truth already knew more than the old bounded fields expressed, especially around richer repair receipts, deeper multi-step repair order, and lower-replay operator continuation.
 
 - packet-first continuation now also defaults to fewer root-level side artifacts because the packet can carry the prior receipt and repair-history chain by itself
+- packet-first continuation now also has one smaller embedded core so the packet can stay rich without forcing the runtime to consume all of that richness as the default operator contract

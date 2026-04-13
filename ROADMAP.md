@@ -130,6 +130,7 @@ Current pressure-tested slice:
 - one fresh forward-orchestration non-resumable family now also exists:
   - `NOT_RESUMABLE_FRESH_ORCHESTRATION`
 - one lower-replay packet-first continuation run now proves that sibling auto-discovery can drive `resume` back to accepted closure with much less raw flag replay
+- one minimal-continuation-core run now proves that packet-first `resume` can return from `DOCTOR_BLOCKED` to accepted closure from only `state + repair_packet`
 - one uglier packet-first continuation run now proves explicit repair order, stale-artifact hints, mid-continuation doctor failure, and return to accepted closure
 - one further packet-first continuation run now proves that repair receipts, explicit step progression, blocked recovery completion, and final truthful terminal packet emission can all live on the same runtime surface
 - one next packet-first continuation run now proves that recovery completion supply, doctor target-identity pressure, richer repair receipts, and accepted closure can all live on the same runtime surface with stage-aware sibling discovery
@@ -142,6 +143,7 @@ Next likely strengthening moves:
 - sharpen artifact-quality hints so they name even more precise stale sub-surfaces inside larger artifacts
 - pressure-test more non-resumable families beyond lighter-mode selection and terminal acceptance or rejection
 - keep compressing packet-first `resume` so more continuation truth stays inside runtime-owned packet surfaces rather than adjacent side files
+- keep validating the minimal lovable continuation core so continuation does not expand faster than its real operator value
 
 ### 6. Sharpen doctor on expensive false-readiness modes
 

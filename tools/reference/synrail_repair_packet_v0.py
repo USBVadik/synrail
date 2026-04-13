@@ -280,6 +280,47 @@ def build_receipt_context(repair_receipt: dict | None) -> dict:
     }
 
 
+def build_continuation_core(
+    *,
+    handoff: dict,
+    resumability: dict,
+    artifact_quality_summary: dict,
+    repair_history: dict,
+    receipt_context: dict,
+    selection_context: dict,
+    missing_ids: list[str],
+) -> dict:
+    operator_evidence = dict(receipt_context.get("operator_evidence", {}))
+    required_inputs = [item.get("input_id", "") for item in handoff.get("required_inputs", []) if item.get("input_id", "")]
+    next_step_required_inputs = list(operator_evidence.get("next_step_required_inputs", [])) or required_inputs
+    next_step_subsurface_ids = list(operator_evidence.get("next_step_subsurface_ids", [])) or list(
+        artifact_quality_summary.get("stale_subsurface_ids", [])
+    )
+    operator_focus = operator_evidence.get("operator_focus", "") or handoff.get("next_safe_step", "")
+    ready_for_resume = handoff.get("continuation_allowed", False) and not missing_ids
+    return {
+        "contract_version": "continuation_core_v0",
+        "entrypoint": "resume",
+        "ready_for_resume": ready_for_resume,
+        "resumability_status": resumability.get("status", ""),
+        "resumability_family": resumability.get("family", ""),
+        "current_step_id": handoff.get("repair_policy", {}).get("next_step_id", ""),
+        "required_inputs": required_inputs,
+        "missing_inputs": list(missing_ids),
+        "next_step_required_inputs": next_step_required_inputs,
+        "next_step_subsurface_ids": next_step_subsurface_ids,
+        "operator_focus": operator_focus,
+        "next_safe_step": handoff.get("next_safe_step", ""),
+        "history_chain_length": repair_history.get("history_chain_length", 0),
+        "selection_applied": selection_context.get("applied", False),
+        "selected_with_preparation": selection_context.get("selected_with_preparation", False),
+        "packet_supplies_resume_context": True,
+        "packet_supplies_repair_inputs": True,
+        "packet_supplies_output_defaults": True,
+        "requires_sibling_discovery": False,
+    }
+
+
 def build_packet_from_runtime_truth(
     *,
     state: dict,
@@ -350,6 +391,12 @@ def build_packet_from_runtime_truth(
     if refresh_output:
         output_defaults["refresh_output"] = refresh_output
 
+    artifact_quality_summary = build_artifact_quality_summary(handoff)
+    repair_history = build_repair_history(handoff, repair_receipt)
+    receipt_context = build_receipt_context(repair_receipt)
+    selection_context = build_selection_context(selection_receipt)
+    ready_for_resume = handoff.get("continuation_allowed", False) and not missing_ids
+
     packet = {
         "schema_version": "repair_packet_v0",
         "run_id": state["run_id"],
@@ -360,10 +407,10 @@ def build_packet_from_runtime_truth(
         "resumability": resumability,
         "repair_policy": handoff.get("repair_policy", {}),
         "artifact_quality_hints": list(handoff.get("artifact_quality_hints", [])),
-        "artifact_quality_summary": build_artifact_quality_summary(handoff),
-        "repair_history": build_repair_history(handoff, repair_receipt),
+        "artifact_quality_summary": artifact_quality_summary,
+        "repair_history": repair_history,
         "repair_history_chain": list(repair_receipt.get("repair_history_chain", [])) if repair_receipt else [],
-        "repair_receipt_context": build_receipt_context(repair_receipt),
+        "repair_receipt_context": receipt_context,
         "continuation_plan": build_continuation_plan(packet_args, handoff),
         "resume_context": {
             "doctor_run_id": doctor_run_id,
@@ -392,15 +439,24 @@ def build_packet_from_runtime_truth(
             "refresh_recovery_status": refresh_recovery_status,
             "refresh_reverification_complete": refresh_reverification_complete,
         },
-        "selection_context": build_selection_context(selection_receipt),
+        "selection_context": selection_context,
         "preparation_context": build_preparation_context(preparation_receipt),
         "runtime_truth": build_runtime_truth(state, report),
         "output_defaults": output_defaults,
         "provided_inputs": provided_ids,
         "missing_inputs": missing_ids,
-        "ready_for_resume": handoff.get("continuation_allowed", False) and not missing_ids,
+        "ready_for_resume": ready_for_resume,
         "next_safe_step": handoff["next_safe_step"],
     }
+    packet["continuation_core"] = build_continuation_core(
+        handoff=handoff,
+        resumability=resumability,
+        artifact_quality_summary=artifact_quality_summary,
+        repair_history=repair_history,
+        receipt_context=receipt_context,
+        selection_context=selection_context,
+        missing_ids=missing_ids,
+    )
     if selection_receipt:
         packet["selection_receipt"] = selection_receipt
     if repair_receipt:

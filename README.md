@@ -205,6 +205,7 @@ Secondary repo-history and hardening context remains available in `docs/boundary
 - the repo now also carries one ninth canonical ugly compound continuation fixture on that same artifact surface
 - primary run artifacts now also carry one first-class repair-history summary instead of burying that truth only inside repair packets
 - packet-first continuation now defaults to fewer root-level side artifacts when packet truth is already sufficient
+- the repo now also carries one first low-friction minimal-continuation run proving that one repaired `DOCTOR_BLOCKED` contour can now continue from just `state + repair_packet`
 
 - the repo now also carries one first substitute-kill pressure slice against concrete substitute stacks instead of only one abstract baseline
 - that pressure slice currently shows two substitute-stack wins for Synrail and one still-unclear weak-path comparison

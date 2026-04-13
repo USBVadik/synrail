@@ -54,6 +54,8 @@ Start here when you want to understand the kernel itself:
 - `core/REPAIR_HANDOFF_001.md`
 - `core/REPAIR_PACKET_001.md`
 - `core/ARTIFACT_REPAIR_RECEIPT_001.md`
+- `core/MINIMAL_CONTINUATION_CORE_001.md`
+- `core/EXECUTABLE_LOOP_MINIMAL_CONTINUATION_RUN_001.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_007.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_008.md`
 - `core/CLOSURE_ENGINE_001.md`
@@ -132,6 +134,7 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/executable_loop_runtime_resume_run_001/run.json`
 - `../fixtures/executable_loop_runtime_resume_run_002/run.json`
 - `../fixtures/executable_loop_runtime_resume_run_003/run.json`
+- `../fixtures/executable_loop_minimal_continuation_run_001/run.json`
 - `../fixtures/executable_loop_runtime_non_resumable_run_001/run.json`
 - `../fixtures/executable_loop_runtime_non_resumable_run_004/run.json`
 - `../fixtures/repair_packet_run_001/run.json`

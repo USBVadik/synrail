@@ -871,6 +871,110 @@
         }
       }
     },
+    "continuation_core": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "entrypoint",
+        "ready_for_resume",
+        "resumability_status",
+        "resumability_family",
+        "current_step_id",
+        "required_inputs",
+        "missing_inputs",
+        "next_step_required_inputs",
+        "next_step_subsurface_ids",
+        "operator_focus",
+        "next_safe_step",
+        "history_chain_length",
+        "selection_applied",
+        "selected_with_preparation",
+        "packet_supplies_resume_context",
+        "packet_supplies_repair_inputs",
+        "packet_supplies_output_defaults",
+        "requires_sibling_discovery"
+      ],
+      "properties": {
+        "contract_version": {
+          "const": "continuation_core_v0"
+        },
+        "entrypoint": {
+          "const": "resume"
+        },
+        "ready_for_resume": {
+          "type": "boolean"
+        },
+        "resumability_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resumability_family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "current_step_id": {
+          "type": "string"
+        },
+        "required_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "missing_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "next_step_required_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "next_step_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "operator_focus": {
+          "type": "string"
+        },
+        "next_safe_step": {
+          "type": "string",
+          "minLength": 1
+        },
+        "history_chain_length": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "selection_applied": {
+          "type": "boolean"
+        },
+        "selected_with_preparation": {
+          "type": "boolean"
+        },
+        "packet_supplies_resume_context": {
+          "type": "boolean"
+        },
+        "packet_supplies_repair_inputs": {
+          "type": "boolean"
+        },
+        "packet_supplies_output_defaults": {
+          "type": "boolean"
+        },
+        "requires_sibling_discovery": {
+          "type": "boolean"
+        }
+      }
+    },
     "continuation_plan": {
       "type": "object",
       "additionalProperties": false,

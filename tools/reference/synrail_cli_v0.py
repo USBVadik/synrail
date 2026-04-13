@@ -627,7 +627,6 @@ def apply_resume_output_defaults(args: argparse.Namespace, state: dict) -> None:
 
 
 def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> list[str]:
-    discover_resume_sibling_inputs(args, state)
     packet_path = discover_repair_packet_file(args)
     packet = None
     if packet_path:
@@ -640,8 +639,13 @@ def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> list[str
             packet = None
 
     if packet is None:
+        discover_resume_sibling_inputs(args, state)
         packet_path = synthesize_repair_packet(args, state)
         packet = load_repair_packet(packet_path)
+    else:
+        core = dict(packet.get("continuation_core", {}))
+        if core.get("requires_sibling_discovery", False):
+            discover_resume_sibling_inputs(args, state)
 
     if packet.get("resumability", {}).get("status", "REPAIRABLE") != "REPAIRABLE":
         return []

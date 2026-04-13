@@ -37,6 +37,7 @@ The current executable stack can already provide:
 25. one fifth uglier packet-first continuation contour that crosses invalid proof, recovery pressure, doctor identity pressure, and accepted closure through one packet-first repair chain
 26. one sixth uglier packet-first continuation contour that crosses doctor identity pressure, partial proof pressure, recovery pressure, and accepted closure while keeping one packet-native repair-history chain
 27. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
+28. one minimal-continuation-core run that shows packet-first `resume` can now return from `DOCTOR_BLOCKED` to accepted closure from just `state + repair_packet`
 
 That is enough to say:
 
@@ -115,6 +116,7 @@ Current strongest value carriers are:
 - one canonical truly not-resumable rejected-terminal continuation contour
 - one canonical truly not-resumable fresh-forward-orchestration continuation contour
 - one canonical packet-first runtime-resume contour that now reaches accepted closure through sibling auto-discovery instead of long raw flag replay
+- one canonical minimal-continuation contour that now reaches accepted closure from one compact packet contract without separate repair handoff, repair receipt, or resume-input side files
 - one canonical packet-first continuation contour that now uses stage-aware sibling discovery plus one narrow `resume_inputs.json` file to avoid replaying most continuation flags by hand
 - one fifth uglier packet-first compound continuation contour that now carries stale-artifact hints, explicit repair order, one newly surfaced readiness failure, and accepted closure on the same runtime surface
 - one first-class artifact repair receipt layer that now records step completion and narrower stale sub-surface truth between packet states

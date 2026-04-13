@@ -223,6 +223,7 @@ Guarantees:
 
 - embeds one repair handoff
 - embeds one explicit resumability reading
+- embeds one compact continuation core for the default runtime contract
 - embeds one continuation plan
 - embeds one repair-input set
 - embeds one runtime output-default set
@@ -307,6 +308,7 @@ Guarantees:
 - exposes bundle, closure, and refresh commands through one CLI
 - exposes one bounded orchestration path for `doctor -> optional preparation -> bundle -> closure`
 - exposes one named `resume` path that now defaults to packet-first continuation through a sibling `repair_packet.json`
+- exposes one named `resume` path that now treats the packet's embedded continuation core as the default continuation contract
 - exposes one named `resume` path that now also supports stage-aware sibling discovery plus one narrow `resume_inputs.json` override file
 - exposes one `repair-packet` command that groups continuation contract, continuation plan, repair inputs, output defaults, and current selection/preparation context
 - exposes baseline comparison through the same CLI layer

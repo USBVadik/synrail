@@ -148,3 +148,4 @@ Future terminal UX work should improve:
 without turning the CLI into a broad orchestration shell too early.
 
 - packet-first `resume` now leaves fewer default root-level side files behind when the packet already carries enough continuation truth
+- packet-first `resume` now also trusts one compact embedded continuation core inside the packet, so the normal continuation path can start from `state + repair_packet` instead of reopening more side artifacts by default
