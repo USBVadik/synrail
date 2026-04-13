@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v2",
+  "system": "synrail",
+  "scenario_id": "SUBSTITUTE_SCENARIO_FRESH_ORCHESTRATION_005",
+  "scenario_class": "fresh_orchestration_non_resumable_contour",
+  "task_class": "bounded_router_trigger_fix",
+  "path_id": "fresh_orchestration_non_resumable_kernel",
+  "closure_result": "BLOCKED",
+  "blocker_to_closure_cycles": 1,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "MEDIUM",
+  "operator_minutes": 17,
+  "intervention_count": 1,
+  "repair_cycles": 0,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 18,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 90,
+  "notes": "Synrail names the fresh-orchestration boundary as not resumable, blocks the wrong resume path immediately, and points the operator back to the governed forward contour without hidden judgment"
+}

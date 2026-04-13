@@ -22,6 +22,7 @@ Start here when you want the current product wedge rather than the full repo his
 - `boundary/SUBSTITUTE_KILL_TEST_002.md`
 - `boundary/SUBSTITUTE_KILL_TEST_003.md`
 - `boundary/SUBSTITUTE_KILL_TEST_004.md`
+- `boundary/SUBSTITUTE_KILL_TEST_005.md`
 - `boundary/KILLER_PATH_001.md`
 - `boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `boundary/MINIMUM_UNDENIABLE_CORE_001.md`

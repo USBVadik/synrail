@@ -1,0 +1,45 @@
+{
+  "schema_version": "substitute_pressure_record_v0",
+  "record_count": 3,
+  "source_records": [
+    {
+      "path": "fixtures/substitute_kill_test_005/record_fresh_orchestration.json",
+      "scenario_id": "SUBSTITUTE_SCENARIO_FRESH_ORCHESTRATION_005",
+      "substitute_stack": "manual_forward_orchestration_runbook",
+      "verdict": "SYNRAIL_BETTER"
+    },
+    {
+      "path": "fixtures/substitute_kill_test_005/record_selection_chain.json",
+      "scenario_id": "SUBSTITUTE_SCENARIO_SELECTION_CHAIN_005",
+      "substitute_stack": "manual_stage_runbook_chain",
+      "verdict": "SYNRAIL_BETTER"
+    },
+    {
+      "path": "fixtures/substitute_kill_test_005/record_weak.json",
+      "scenario_id": "SUBSTITUTE_SCENARIO_WEAK_005",
+      "substitute_stack": "bounded_patch_validation_loop",
+      "verdict": "UNCLEAR"
+    }
+  ],
+  "verdict_counts": {
+    "SYNRAIL_BETTER": 2,
+    "SUBSTITUTE_GOOD_ENOUGH": 0,
+    "UNCLEAR": 1
+  },
+  "substitute_stack_counts": {
+    "manual_forward_orchestration_runbook": 1,
+    "manual_stage_runbook_chain": 1,
+    "bounded_patch_validation_loop": 1
+  },
+  "reading": {
+    "strongest_synrail_edge": "SUBSTITUTE_SCENARIO_FRESH_ORCHESTRATION_005",
+    "clearest_substitute_sufficient_path": "",
+    "winning_substitute_stacks": [
+      "manual_forward_orchestration_runbook",
+      "manual_stage_runbook_chain"
+    ],
+    "non_winning_substitute_stacks": [
+      "bounded_patch_validation_loop"
+    ]
+  }
+}
