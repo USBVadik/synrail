@@ -19,6 +19,7 @@ Start here when you want the current product wedge rather than the full repo his
 - `boundary/CONTINUATION_ADOPTION_001.md`
 - `boundary/OPERATOR_RENDER_ADOPTION_001.md`
 - `boundary/SHORT_EXTERNALITY_PRESSURE_001.md`
+- `boundary/SHORT_EXTERNALITY_PRESSURE_002.md`
 - `boundary/SUBSTITUTE_KILL_TEST_002.md`
 - `boundary/SUBSTITUTE_KILL_TEST_003.md`
 - `boundary/SUBSTITUTE_KILL_TEST_004.md`

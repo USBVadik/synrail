@@ -22,11 +22,17 @@ def build_record(*, state: dict, packet: dict, run_artifact: dict) -> dict:
     report = run_artifact.get("report", {})
     repair_packet = run_artifact.get("repair_packet", {})
     visible_entry_artifacts = ["state_file", "repair_packet"]
+    resumability_status = repair_packet.get("resumability_status", core.get("resumability_status", ""))
     has_explicit_next_step = bool(core.get("next_safe_step", ""))
     has_explicit_required_inputs = bool(core.get("next_step_required_inputs", []))
+    no_input_boundary = resumability_status == "NOT_RESUMABLE" and not core.get("next_step_required_inputs", [])
     has_explicit_focus = bool(core.get("operator_focus", ""))
     packet_only_entry = visible_entry_artifacts == ["state_file", "repair_packet"]
-    requires_author_intuition = not (has_explicit_next_step and has_explicit_required_inputs and has_explicit_focus)
+    requires_author_intuition = not (
+        has_explicit_next_step
+        and has_explicit_focus
+        and (has_explicit_required_inputs or no_input_boundary)
+    )
     verdict = "FOLLOWABLE_BY_SECOND_OPERATOR" if packet_only_entry and not requires_author_intuition else "AUTHOR_INTUITION_STILL_REQUIRED"
     return {
         "schema_version": "second_operator_record_v0",

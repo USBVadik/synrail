@@ -73,6 +73,8 @@ Observed final reading:
 - `resumability_status = NOT_RESUMABLE`
 - `resumability_family = NOT_RESUMABLE_FRESH_ORCHESTRATION`
 - `resumability_policy_next_step = continue_forward_orchestration`
+- `repair_history.chain_length = 1`
+- `repair_history.termination_reason = NON_RESUMABLE`
 
 ## Why this run matters
 
@@ -94,3 +96,4 @@ The shortest honest reading is:
 - `resume` is no longer treated as a vague generic re-entry verb
 - forward governed progress is now one explicit non-resumable family of its own
 - packet-first runtime is getting stricter about which entrypoint is valid for which state
+- the refreshed canonical artifact set now also records the non-resumable repair-history chain instead of hiding it outside the primary run artifact

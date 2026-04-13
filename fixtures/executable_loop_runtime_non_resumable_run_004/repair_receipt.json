@@ -33,14 +33,85 @@
       ]
     }
   ],
+  "completed_hints": [],
   "next_step_id": "continue_forward_orchestration",
   "ready_now_step_ids": [],
+  "next_step_required_inputs": [],
+  "next_step_hints": [
+    {
+      "artifact_id": "runtime_entrypoint_state",
+      "quality": "NON_RESUMABLE",
+      "repair_step": "continue_forward_orchestration",
+      "still_stale_parts": [
+        "forward_orchestration_entrypoint"
+      ],
+      "mapped_inputs": [],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "forward_orchestration_entrypoint",
+          "status": "NON_RESUMABLE",
+          "mapped_inputs": [],
+          "why": "the run has not yet entered a repairable continuation family, so `orchestrate` is the correct entrypoint rather than `resume`"
+        }
+      ]
+    }
+  ],
   "repair_history": {
-    "applied": false,
+    "applied": true,
     "completed_step_ids": [],
     "last_completed_step_id": "",
     "current_step_id": "continue_forward_orchestration",
     "waiting_step_ids": []
+  },
+  "repair_history_chain": [
+    {
+      "step_index": 1,
+      "from_state": "READY",
+      "resulting_state": "READY",
+      "result": "NON_RESUMABLE_BOUNDARY_REACHED",
+      "active_step_id": "continue_forward_orchestration",
+      "completed_step_id": "",
+      "next_step_id": "continue_forward_orchestration",
+      "completed_subsurface_ids": [],
+      "next_step_subsurface_ids": [
+        "forward_orchestration_entrypoint"
+      ],
+      "remaining_stale_subsurface_ids": [],
+      "remaining_non_resumable_subsurface_ids": [
+        "forward_orchestration_entrypoint"
+      ],
+      "operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead"
+    }
+  ],
+  "operator_evidence": {
+    "completed_step_id": "",
+    "completed_artifact_hints": [],
+    "completed_subsurface_ids": [],
+    "next_step_id": "continue_forward_orchestration",
+    "next_step_required_inputs": [],
+    "next_step_artifact_hints": [
+      {
+        "artifact_id": "runtime_entrypoint_state",
+        "quality": "NON_RESUMABLE",
+        "repair_step": "continue_forward_orchestration",
+        "still_stale_parts": [
+          "forward_orchestration_entrypoint"
+        ],
+        "mapped_inputs": [],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "forward_orchestration_entrypoint",
+            "status": "NON_RESUMABLE",
+            "mapped_inputs": [],
+            "why": "the run has not yet entered a repairable continuation family, so `orchestrate` is the correct entrypoint rather than `resume`"
+          }
+        ]
+      }
+    ],
+    "next_step_subsurface_ids": [
+      "forward_orchestration_entrypoint"
+    ],
+    "operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead"
   },
   "resumability": {
     "status": "NOT_RESUMABLE",

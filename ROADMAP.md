@@ -146,6 +146,7 @@ Current sprint contract:
   - one less-curated stage-level continuation stack
   while the weak path still remains non-decisive
 - one first short external-ish pressure slice now also proves that one uglier repeated-doctor contour survives reproducibility, second-operator followability, and render followability together before the next harsher substitute tranche
+- one second short external-ish pressure slice now also proves that one fresh-orchestration non-resumable contour survives those same three external-ish readings together without hidden author intuition
 - one fourth substitute-kill slice now also proves that the same external-ish repeated-doctor contour still beats a simpler manual resume-triage stack, while a repairable recovery contour also keeps an edge and the weak path still remains non-decisive
 - one fifth substitute-kill slice now also proves that the tightened kernel keeps an edge on:
   - one fresh-orchestration non-resumable boundary

@@ -1,0 +1,46 @@
+{
+  "schema_version": "operator_brief_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "entrypoint": "resume",
+  "entry_state": "READY",
+  "resulting_state": "READY",
+  "result": "BLOCKED",
+  "stopping_stage": "resume",
+  "reason": "STATE_NOT_RESUMABLE",
+  "doctor_verdict": "",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "resumability_family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
+  "active_pressures": [
+    "FRESH_ORCHESTRATION"
+  ],
+  "primary_action": "FOLLOW_NON_RESUMABLE_BOUNDARY",
+  "why_action": "this contour is no longer resumable, so the operator should follow the named boundary instead of replaying resume",
+  "next_safe_step": "continue through the governed forward path instead of named resume",
+  "operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead",
+  "current_step_id": "continue_forward_orchestration",
+  "ready_now_step_ids": [],
+  "next_step_required_inputs": [],
+  "next_step_subsurface_ids": [
+    "forward_orchestration_entrypoint"
+  ],
+  "blockers": [
+    "NOT_RESUMABLE_FRESH_ORCHESTRATION"
+  ],
+  "dominant_blocker": "STATE_NOT_RESUMABLE",
+  "termination_status": "TERMINATE",
+  "termination_reason": "NON_RESUMABLE",
+  "attempt_count": 1,
+  "history_chain_length": 1,
+  "completed_step_ids": [],
+  "stale_artifact_ids": [],
+  "stale_subsurface_ids": [],
+  "entry_artifacts": [
+    "state_file",
+    "repair_packet"
+  ],
+  "suggested_cli": {
+    "command": "NONE",
+    "args": []
+  }
+}

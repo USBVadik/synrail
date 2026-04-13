@@ -1,0 +1,20 @@
+{
+  "schema_version": "externality_pressure_record_v0",
+  "label": "fresh_orchestration_non_resumable_contour",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "contour_reason": "STATE_NOT_RESUMABLE",
+  "packet_only_entry": true,
+  "requires_author_intuition": false,
+  "dimensions_passed": [
+    "REPRODUCIBILITY",
+    "SECOND_OPERATOR",
+    "OPERATOR_READING"
+  ],
+  "uncovered_risks": [],
+  "reproducibility_verdict": "REPRODUCIBLE_ON_KEY_TRUTH",
+  "second_operator_verdict": "FOLLOWABLE_BY_SECOND_OPERATOR",
+  "operator_reading_verdict": "FOLLOWABLE_WITH_RENDER",
+  "verdict": "SURVIVES_SHORT_EXTERNAL_PRESSURE",
+  "why": "the uglier contour stays reproducible, packet-followable, and render-followable without hidden author intuition"
+}
