@@ -101,6 +101,30 @@ Current sprint contract:
   - the next packet flips to `TERMINATE`
   - the next `resume` blocks before one more blind retry
 
+### 0.9. Add artifact consistency, doctor precision, and basic observability
+
+Goal:
+
+- make the kernel stricter about derived artifact truth, bounded doctor false-greens, and runtime inspectability
+
+Current sprint contract:
+
+- one first explicit artifact-consistency model now exists:
+  - `state_file` is the source of truth for the current state
+  - current-state runtime artifacts are only trusted while they remain consistent with that source state
+- one bounded consistency helper now proves:
+  - one consistent current-state surface
+  - one intentionally stale derived report surface
+- doctor is now sharpened on one more expensive false-readiness mode:
+  - helper entrypoint exists but is already parse-broken
+- one doctor pressure-test now proves that parse-broken helper surfaces do not pass readiness
+- one first bounded observability record now exists with:
+  - state transition log
+  - repair attempt log
+  - rejection log
+  - sanitized session export
+- one runtime-emitted observability run now proves that blocked continuation can be inspected without reconstructing the whole contour by hand
+
 ### 1. Make comparator economics central
 
 Goal:

@@ -91,6 +91,9 @@ Read these next only if you need them:
 - `docs/core/CHECKPOINT_RUN_002.md`
 - `docs/core/REPAIR_TERMINATION_001.md`
 - `docs/core/REPAIR_CONVERGENCE_RUN_001.md`
+- `docs/core/ARTIFACT_CONSISTENCY_001.md`
+- `docs/core/DOCTOR_COVERAGE_MAP_001.md`
+- `docs/core/OBSERVABILITY_001.md`
 
 ## Current State
 
@@ -222,3 +225,6 @@ Secondary repo-history and hardening context remains available in `docs/boundary
 - the repo now also has one failed-restore checkpoint run proving restore verification can fail honestly and roll back checkpoint-owned artifacts
 - repair termination is now explicit kernel truth instead of one future continuation concern
 - the repo now also has one canonical repair-convergence run proving that repeated no-progress now terminates packet-first `resume` before the next blind retry
+- the repo now also has one first explicit artifact-consistency model treating `state_file` as source of truth and one paired proof slice for consistent vs stale derived artifacts
+- doctor now also has one tighter helper-integrity pressure-test proving that a parse-broken helper entrypoint no longer counts as green readiness
+- the runtime now also emits one bounded observability artifact with state-transition, repair-attempt, rejection, and sanitized session-export truth

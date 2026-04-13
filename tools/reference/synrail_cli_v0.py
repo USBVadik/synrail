@@ -31,6 +31,8 @@ GOVERNED_COST = HERE / "synrail_governed_cost_delta_v0.py"
 REPAIR_HANDOFF = HERE / "synrail_repair_handoff_v0.py"
 REPAIR_PACKET = HERE / "synrail_repair_packet_v0.py"
 CHECKPOINT = HERE / "synrail_checkpoint_v0.py"
+ARTIFACT_CONSISTENCY = HERE / "synrail_artifact_consistency_v0.py"
+OBSERVABILITY = HERE / "synrail_observability_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -342,6 +344,40 @@ def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
     )
 
 
+def cmd_artifact_consistency(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--state-file", args.state_file,
+        "--output", args.output,
+    ]
+    for flag, value in [
+        ("--report-file", args.report_file),
+        ("--orchestration-file", args.orchestration_file),
+        ("--run-file", args.run_file),
+        ("--repair-packet-file", args.repair_packet_file),
+        ("--repair-handoff-file", args.repair_handoff_file),
+        ("--repair-receipt-file", args.repair_receipt_file),
+    ]:
+        if value:
+            forwarded.extend([flag, value])
+    return run_python(ARTIFACT_CONSISTENCY, forwarded)
+
+
+def cmd_observability(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--state-file", args.state_file,
+        "--report-file", args.report_file,
+        "--output", args.output,
+    ]
+    for flag, value in [
+        ("--repair-packet-file", args.repair_packet_file),
+        ("--repair-receipt-file", args.repair_receipt_file),
+        ("--refresh-file", args.refresh_file),
+    ]:
+        if value:
+            forwarded.extend([flag, value])
+    return run_python(OBSERVABILITY, forwarded)
+
+
 def cmd_repair_handoff(args: argparse.Namespace) -> int:
     forwarded = [
         "--state-file", args.state_file,
@@ -642,6 +678,7 @@ def apply_resume_output_defaults(args: argparse.Namespace, state: dict) -> None:
         "bundle_output": str(root / runtime_name("bundle.json")),
         "closure_output": str(root / runtime_name("closure.json")),
         "refresh_output": str(root / runtime_name("refresh.json")),
+        "observability_output": str(root / runtime_name("observability.json")),
         "report_output": str(root / runtime_name("report.json")),
         "worked_artifact_output": str(root / runtime_name("orchestration.json")),
         "run_artifact_output": str(root / runtime_name("run.json")),
@@ -808,6 +845,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ("--preparation-receipt-output", args.preparation_receipt_output),
         ("--preparation-artifact-root", args.preparation_artifact_root),
         ("--refresh-output", args.refresh_output),
+        ("--observability-output", args.observability_output),
         ("--refresh-event-type", args.refresh_event_type),
         ("--refresh-doctor-status", args.refresh_doctor_status),
         ("--refresh-recovery-status", args.refresh_recovery_status),
@@ -914,6 +952,7 @@ def add_orchestration_args(
     parser.add_argument("--preparation-receipt-output")
     parser.add_argument("--preparation-artifact-root")
     parser.add_argument("--refresh-output")
+    parser.add_argument("--observability-output")
     parser.add_argument("--refresh-event-type")
     parser.add_argument("--refresh-doctor-status", choices=["PASS", "FAIL"])
     parser.add_argument("--refresh-recovery-status", choices=["NOT_REQUIRED", "PENDING", "COMPLETE"])
@@ -1105,6 +1144,26 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_restore.add_argument("--target-root", required=True)
     p_checkpoint_restore.add_argument("--output", required=True)
     p_checkpoint_restore.set_defaults(func=cmd_restore_checkpoint)
+
+    p_artifact_consistency = sub.add_parser("artifact-consistency")
+    p_artifact_consistency.add_argument("--state-file", required=True)
+    p_artifact_consistency.add_argument("--output", required=True)
+    p_artifact_consistency.add_argument("--report-file")
+    p_artifact_consistency.add_argument("--orchestration-file")
+    p_artifact_consistency.add_argument("--run-file")
+    p_artifact_consistency.add_argument("--repair-packet-file")
+    p_artifact_consistency.add_argument("--repair-handoff-file")
+    p_artifact_consistency.add_argument("--repair-receipt-file")
+    p_artifact_consistency.set_defaults(func=cmd_artifact_consistency)
+
+    p_observability = sub.add_parser("observability")
+    p_observability.add_argument("--state-file", required=True)
+    p_observability.add_argument("--report-file", required=True)
+    p_observability.add_argument("--output", required=True)
+    p_observability.add_argument("--repair-packet-file")
+    p_observability.add_argument("--repair-receipt-file")
+    p_observability.add_argument("--refresh-file")
+    p_observability.set_defaults(func=cmd_observability)
 
     p_repair_handoff = sub.add_parser("repair-handoff")
     p_repair_handoff.add_argument("--state-file", required=True)

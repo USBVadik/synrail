@@ -1,0 +1,32 @@
+{
+  "schema_version": "artifact_consistency_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+  "task_class": "bounded_router_trigger_fix",
+  "source_of_truth": {
+    "artifact_id": "state_file",
+    "state": "DOCTOR_BLOCKED",
+    "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+    "task_class": "bounded_router_trigger_fix"
+  },
+  "checked_artifacts": [
+    "state_file",
+    "report"
+  ],
+  "update_model": "ATOMIC_OR_ROLLBACKABLE_DERIVED_SURFACES",
+  "conflict_precedence": [
+    "RUN_ID_MISMATCH",
+    "TASK_CLASS_MISMATCH",
+    "DERIVED_FROM_STATE_MISMATCH",
+    "RESULTING_STATE_MISMATCH"
+  ],
+  "result": "INCONSISTENT",
+  "dominant_conflict": "RESULTING_STATE_MISMATCH",
+  "failure_reasons": [
+    "report refers to CLOSURE_ACCEPTED while source-of-truth state is DOCTOR_BLOCKED"
+  ],
+  "stale_artifact_ids": [
+    "report"
+  ],
+  "conflicting_artifact_ids": [],
+  "next_action": "re-emit derived artifacts from the current state or restore from a verified checkpoint"
+}

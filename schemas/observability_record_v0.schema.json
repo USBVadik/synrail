@@ -1,0 +1,104 @@
+{
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "resulting_state",
+    "report_summary",
+    "event_counts",
+    "state_transition_log",
+    "repair_attempt_log",
+    "rejection_log",
+    "sanitized_session_export"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "observability_record_v0"},
+    "run_id": {"type": "string", "minLength": 1},
+    "task_class": {"type": "string", "minLength": 1},
+    "resulting_state": {"type": "string", "minLength": 1},
+    "report_summary": {
+      "type": "object",
+      "required": ["result", "stopping_stage", "reason", "next_safe_step"],
+      "properties": {
+        "result": {"type": "string"},
+        "stopping_stage": {"type": "string"},
+        "reason": {"type": "string"},
+        "next_safe_step": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "event_counts": {
+      "type": "object",
+      "required": ["transition_count", "repair_attempt_count", "rejection_count"],
+      "properties": {
+        "transition_count": {"type": "integer", "minimum": 0},
+        "repair_attempt_count": {"type": "integer", "minimum": 0},
+        "rejection_count": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "state_transition_log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["transition_id", "from_state", "to_state", "trigger", "outcome", "why"],
+        "properties": {
+          "transition_id": {"type": "integer", "minimum": 1},
+          "from_state": {"type": "string"},
+          "to_state": {"type": "string"},
+          "trigger": {"type": "string"},
+          "outcome": {"type": "string"},
+          "why": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "repair_attempt_log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["attempt_number", "step_id", "result"],
+        "properties": {
+          "attempt_number": {"type": "integer", "minimum": 1},
+          "step_id": {"type": "string"},
+          "result": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "rejection_log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["stage", "reason", "dominant_blocker", "next_safe_step"],
+        "properties": {
+          "stage": {"type": "string"},
+          "reason": {"type": "string"},
+          "dominant_blocker": {"type": "string"},
+          "next_safe_step": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "sanitized_session_export": {
+      "type": "object",
+      "required": ["sensitive_values_redacted", "run_id", "task_class", "state", "result", "reason", "next_safe_step", "resumability_family", "repair_current_step_id", "repair_last_result", "artifact_files"],
+      "properties": {
+        "sensitive_values_redacted": {"type": "boolean"},
+        "run_id": {"type": "string", "minLength": 1},
+        "task_class": {"type": "string", "minLength": 1},
+        "state": {"type": "string", "minLength": 1},
+        "result": {"type": "string"},
+        "reason": {"type": "string"},
+        "next_safe_step": {"type": "string"},
+        "resumability_family": {"type": "string"},
+        "repair_current_step_id": {"type": "string"},
+        "repair_last_result": {"type": "string"},
+        "artifact_files": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

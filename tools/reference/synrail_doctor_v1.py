@@ -38,7 +38,7 @@ FAILURE_CLASSES = {
 NEXT_STEPS = {
     "baseline_identity": "restore the trusted baseline and expected target-surface identity",
     "clean_execution_surface": "move to a clean or explicitly observed-safe execution surface",
-    "helper_integrity": "trust or safely bypass the helper entrypoint",
+    "helper_integrity": "repair, replace, or safely bypass the helper entrypoint before execution",
     "credential_surface": "restore required provider credentials",
     "artifact_viability": "restore a reliable machine-readable artifact path",
     "prompt_task_identity": "restore the exact prompt and task identity artifacts",
@@ -163,7 +163,26 @@ def probe_helper_integrity(args: argparse.Namespace) -> dict:
 
     helper = Path(args.helper_path)
     if helper.exists() and helper.is_file():
-        return gate("PASS", "helper entrypoint exists")
+        if helper.suffix == ".py":
+            completed = subprocess.run(
+                ["python3", "-m", "py_compile", str(helper)],
+                check=False,
+                capture_output=True,
+                text=True,
+                env={**os.environ, "PYTHONPYCACHEPREFIX": "/tmp/synrail_doctor_pycache"},
+            )
+            if completed.returncode != 0:
+                return gate("FAIL", "helper entrypoint exists but python syntax is invalid")
+        elif helper.suffix in {".sh", ""}:
+            completed = subprocess.run(
+                ["bash", "-n", str(helper)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if completed.returncode != 0:
+                return gate("FAIL", "helper entrypoint exists but shell syntax is invalid")
+        return gate("PASS", "helper entrypoint exists and parses successfully")
     return gate("FAIL", "helper entrypoint is missing")
 
 

@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from synrail_artifact_repair_receipt_v0 import build_receipt as build_artifact_repair_receipt
+from synrail_observability_v0 import build_record as build_observability_record
 from synrail_repair_handoff_v0 import build_repair_handoff, build_resumability
 from synrail_repair_packet_v0 import build_packet_from_runtime_truth
 
@@ -1353,6 +1354,26 @@ def finalize_runtime_outputs(
         refresh_report=refresh_report,
         comparison=comparison,
     )
+    if getattr(args, "observability_output", None):
+        output_files = {
+            "state": Path(args.state_file).name,
+            "report": Path(args.report_output).name if getattr(args, "report_output", None) else "",
+        }
+        if getattr(args, "repair_packet_output", None):
+            output_files["repair_packet"] = Path(args.repair_packet_output).name
+        if getattr(args, "repair_receipt_output", None):
+            output_files["repair_receipt"] = Path(args.repair_receipt_output).name
+        if getattr(args, "refresh_output", None):
+            output_files["refresh"] = Path(args.refresh_output).name
+        observability = build_observability_record(
+            state=state,
+            report=report,
+            repair_packet=repair_packet,
+            repair_receipt=emitted_repair_receipt,
+            refresh_report=refresh_report,
+            output_files={key: value for key, value in output_files.items() if value},
+        )
+        save_json(Path(args.observability_output), observability)
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -2426,6 +2447,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--preparation-receipt-output")
     p_orchestrate.add_argument("--preparation-artifact-root")
     p_orchestrate.add_argument("--refresh-output")
+    p_orchestrate.add_argument("--observability-output")
     p_orchestrate.add_argument("--refresh-event-type")
     p_orchestrate.add_argument("--refresh-doctor-status", choices=["PASS", "FAIL"])
     p_orchestrate.add_argument("--refresh-recovery-status", choices=["NOT_REQUIRED", "PENDING", "COMPLETE"])

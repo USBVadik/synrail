@@ -259,6 +259,23 @@ Does not guarantee:
 - deep multi-run coordination
 - a mature continuation packet that captures every future runtime dependency
 
+### `synrail_artifact_consistency_v0.py`
+
+Purpose:
+
+- check whether current-state runtime artifacts are still consistent with the source-of-truth state file
+
+Guarantees:
+
+- treats `state_file` as the current source of truth
+- checks current-state derived artifacts for run/task/state mismatches
+- returns one bounded dominant conflict with explicit precedence
+
+Does not guarantee:
+
+- every future artifact family is already covered
+- deep historical consistency across old stage artifacts
+
 ### `synrail_artifact_repair_receipt_v0.py`
 
 Purpose:
@@ -279,6 +296,25 @@ Does not guarantee:
 - broad repair orchestration on its own
 - automatic packet synthesis on its own
 - full runtime coordination without the spine
+
+### `synrail_observability_v0.py`
+
+Purpose:
+
+- emit one bounded observability record from current runtime artifacts
+
+Guarantees:
+
+- records one report summary
+- records one state-transition log
+- records one repair-attempt log
+- records one rejection log
+- records one sanitized session export with no secret values
+
+Does not guarantee:
+
+- hosted telemetry
+- broad tracing across every external system
 
 ### `synrail_continuation_adoption_v0.py`
 
