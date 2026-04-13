@@ -30,25 +30,29 @@ A derived artifact is consistent only if:
 - `run_id` matches the source state
 - `task_class` matches the source state
 - any state-carrying field refers to the same current state as the source state
+- the derived artifact is still readable and not corrupt
 
 ## Conflict precedence
 
 Current precedence is:
 
-1. `RUN_ID_MISMATCH`
-2. `TASK_CLASS_MISMATCH`
-3. `DERIVED_FROM_STATE_MISMATCH`
-4. `RESULTING_STATE_MISMATCH`
+1. `CORRUPT_DERIVED_ARTIFACT`
+2. `RUN_ID_MISMATCH`
+3. `TASK_CLASS_MISMATCH`
+4. `DERIVED_FROM_STATE_MISMATCH`
+5. `RESULTING_STATE_MISMATCH`
 
 ## Update model
 
 The current bounded rule is:
 
 - current-state artifacts must be treated as one atomic-or-rollbackable derived surface
+- spine writes current-state artifacts with atomic replace instead of in-place partial overwrite
 
 Meaning:
 
 - if one derived artifact disagrees with the source state, that derived surface must be re-emitted or restored from a verified checkpoint
+- if one derived artifact is corrupt, the kernel must tell the operator to restore it from a verified checkpoint or re-emit it from the source state
 - the kernel must not silently trust stale derived artifacts just because they are machine-readable
 
 ## Current reading
@@ -57,4 +61,6 @@ The shortest honest reading is:
 
 - Synrail now treats `state_file` as the current source of truth
 - derived runtime artifacts are useful only while they remain consistent with that source state
+- corrupt derived artifacts now also count as first-class consistency failures
+- spine can now emit one runtime-owned artifact-consistency record after writing the derived surface
 - artifact richness without consistency is not kernel maturity

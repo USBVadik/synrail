@@ -208,8 +208,17 @@ def probe_credential_surface(args: argparse.Namespace) -> dict:
         candidate = Path(value).expanduser()
         if not candidate.exists():
             invalid_paths.append(f"{name} -> {candidate}")
+            continue
+        if name.upper().endswith("_FILE") and candidate.is_dir():
+            invalid_paths.append(f"{name} -> {candidate} is a directory, expected a file")
+            continue
+        if candidate.suffix == ".json" and candidate.is_file():
+            try:
+                json.loads(candidate.read_text())
+            except json.JSONDecodeError:
+                invalid_paths.append(f"{name} -> {candidate} contains invalid json")
     if invalid_paths:
-        return gate("FAIL", f"credential env points to a missing path: {', '.join(invalid_paths)}")
+        return gate("FAIL", f"credential env points to an invalid credential surface: {', '.join(invalid_paths)}")
 
     return gate("PASS", "required credential env is present")
 

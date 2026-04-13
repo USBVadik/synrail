@@ -1,0 +1,32 @@
+{
+  "type": "object",
+  "required": [
+    "schema_version",
+    "mode",
+    "run_id",
+    "task_class",
+    "outcome_class",
+    "summary",
+    "diagnosis",
+    "next_step",
+    "restore_available",
+    "checkpoint_id",
+    "suggested_command",
+    "technical_lines"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "thin_output_record_v0"},
+    "mode": {"type": "string", "enum": ["default", "dev"]},
+    "run_id": {"type": "string", "minLength": 1},
+    "task_class": {"type": "string", "minLength": 1},
+    "outcome_class": {"type": "string", "enum": ["NON_RESUMABLE", "CLOSURE_REJECTED", "PROOF_INVALID", "PROOF_PARTIAL", "REPAIR_STOP", "SCOPE_VIOLATION", "DOCTOR_BLOCKED", "NON_GREEN"]},
+    "summary": {"type": "string", "minLength": 1},
+    "diagnosis": {"type": "string", "minLength": 1},
+    "next_step": {"type": "string", "minLength": 1},
+    "restore_available": {"type": "boolean"},
+    "checkpoint_id": {"type": "string"},
+    "suggested_command": {"type": "string", "minLength": 1},
+    "technical_lines": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

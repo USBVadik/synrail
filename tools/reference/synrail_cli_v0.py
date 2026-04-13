@@ -43,6 +43,8 @@ OPERATOR_RENDER_ADOPTION = HERE / "synrail_operator_render_adoption_v0.py"
 OPERATOR_RENDER_ADOPTION_DELTA = HERE / "synrail_operator_render_adoption_delta_v0.py"
 OPERATOR_READING = HERE / "synrail_operator_reading_v0.py"
 EXTERNALITY_PRESSURE = HERE / "synrail_externality_pressure_v0.py"
+THIN_OUTPUT = HERE / "synrail_thin_output_v0.py"
+PROMPT_BRIDGE = HERE / "synrail_repair_prompt_bridge_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -378,6 +380,33 @@ def cmd_artifact_consistency(args: argparse.Namespace) -> int:
         if value:
             forwarded.extend([flag, value])
     return run_python(ARTIFACT_CONSISTENCY, forwarded)
+
+
+def cmd_thin_output(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--state-file", args.state_file,
+        "--report-file", args.report_file,
+        "--mode", args.mode,
+        "--output", args.output,
+    ]
+    for flag, value in [
+        ("--repair-packet-file", args.repair_packet_file),
+        ("--doctor-file", args.doctor_file),
+        ("--checkpoint-record-file", args.checkpoint_record_file),
+    ]:
+        if value:
+            forwarded.extend([flag, value])
+    return run_python(THIN_OUTPUT, forwarded)
+
+
+def cmd_generate_prompt(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--repair-packet-file", args.repair_packet_file,
+        "--output", args.output,
+    ]
+    if args.checkpoint_record_file:
+        forwarded.extend(["--checkpoint-record-file", args.checkpoint_record_file])
+    return run_python(PROMPT_BRIDGE, forwarded)
 
 
 def cmd_observability(args: argparse.Namespace) -> int:
@@ -962,6 +991,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ("--preparation-artifact-root", args.preparation_artifact_root),
         ("--refresh-output", args.refresh_output),
         ("--observability-output", args.observability_output),
+        ("--artifact-consistency-output", args.artifact_consistency_output),
         ("--refresh-event-type", args.refresh_event_type),
         ("--refresh-doctor-status", args.refresh_doctor_status),
         ("--refresh-recovery-status", args.refresh_recovery_status),
@@ -1078,6 +1108,7 @@ def add_orchestration_args(
     parser.add_argument("--baseline-file")
     parser.add_argument("--synrail-file")
     parser.add_argument("--comparison-output")
+    parser.add_argument("--artifact-consistency-output")
     parser.add_argument("--worked-artifact-output")
     parser.add_argument("--run-artifact-output")
     parser.add_argument("--clean-surface", action="store_true")
@@ -1285,6 +1316,22 @@ def build_parser() -> argparse.ArgumentParser:
     p_observability.add_argument("--repair-receipt-file")
     p_observability.add_argument("--refresh-file")
     p_observability.set_defaults(func=cmd_observability)
+
+    p_thin_output = sub.add_parser("thin-output")
+    p_thin_output.add_argument("--state-file", required=True)
+    p_thin_output.add_argument("--report-file", required=True)
+    p_thin_output.add_argument("--mode", required=True, choices=["default", "dev"])
+    p_thin_output.add_argument("--output", required=True)
+    p_thin_output.add_argument("--repair-packet-file")
+    p_thin_output.add_argument("--doctor-file")
+    p_thin_output.add_argument("--checkpoint-record-file")
+    p_thin_output.set_defaults(func=cmd_thin_output)
+
+    p_generate_prompt = sub.add_parser("generate-prompt")
+    p_generate_prompt.add_argument("--repair-packet-file", required=True)
+    p_generate_prompt.add_argument("--output", required=True)
+    p_generate_prompt.add_argument("--checkpoint-record-file")
+    p_generate_prompt.set_defaults(func=cmd_generate_prompt)
 
     p_reproducibility = sub.add_parser("reproducibility")
     p_reproducibility.add_argument("--run-a", required=True)

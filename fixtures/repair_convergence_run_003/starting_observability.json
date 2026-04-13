@@ -61,8 +61,8 @@
     "repair_current_step_id": "restore_readiness_truth",
     "repair_last_result": "STEP_NOT_COMPLETED",
     "artifact_files": [
-      "final_repair_packet.json",
-      "stage1_report.json",
+      "repair_packet.json",
+      "report.json",
       "starting_refresh.json",
       "starting_state.json"
     ]

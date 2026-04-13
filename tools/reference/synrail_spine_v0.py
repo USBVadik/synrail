@@ -5,10 +5,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
+from synrail_artifact_consistency_v0 import build_record as build_artifact_consistency_record
 from synrail_artifact_repair_receipt_v0 import build_receipt as build_artifact_repair_receipt
 from synrail_observability_v0 import build_record as build_observability_record
 from synrail_repair_handoff_v0 import build_repair_handoff, build_resumability
@@ -294,11 +297,22 @@ def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path
 
 
 def save_state(path: Path, state: dict) -> None:
-    path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+    save_json(path, state)
 
 
 def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        dir=path.parent,
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        delete=False,
+    ) as handle:
+        handle.write(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+        temp_name = handle.name
+    os.replace(temp_name, path)
 
 
 def repair_handoff_required_input_ids(handoff: dict | None) -> list[str]:
@@ -1260,9 +1274,6 @@ def emit_requested_artifacts(
     refresh_report: dict | None = None,
     comparison: dict | None = None,
 ) -> None:
-    if not (args.worked_artifact_output or args.run_artifact_output):
-        return
-
     worked = build_worked_orchestration_artifact(
         state=state,
         doctor_record=doctor_record,
@@ -1278,11 +1289,21 @@ def emit_requested_artifacts(
         refresh_report=refresh_report,
         comparison=comparison,
     )
+    canonical = build_canonical_run_artifact(state=state, report=report, worked=worked, repair_packet=repair_packet)
     if args.worked_artifact_output:
         save_json(Path(args.worked_artifact_output), worked)
     if args.run_artifact_output:
-        canonical = build_canonical_run_artifact(state=state, report=report, worked=worked, repair_packet=repair_packet)
         save_json(Path(args.run_artifact_output), canonical)
+    if getattr(args, "artifact_consistency_output", None):
+        consistency = build_artifact_consistency_record(
+            state=state,
+            report=report,
+            orchestration=worked,
+            run_artifact=canonical,
+            repair_packet=repair_packet,
+            repair_handoff=repair_handoff,
+        )
+        save_json(Path(args.artifact_consistency_output), consistency)
 
 
 def finalize_runtime_outputs(
@@ -2452,6 +2473,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--preparation-artifact-root")
     p_orchestrate.add_argument("--refresh-output")
     p_orchestrate.add_argument("--observability-output")
+    p_orchestrate.add_argument("--artifact-consistency-output")
     p_orchestrate.add_argument("--refresh-event-type")
     p_orchestrate.add_argument("--refresh-doctor-status", choices=["PASS", "FAIL"])
     p_orchestrate.add_argument("--refresh-recovery-status", choices=["NOT_REQUIRED", "PENDING", "COMPLETE"])

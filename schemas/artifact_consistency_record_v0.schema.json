@@ -13,6 +13,8 @@
     "failure_reasons",
     "stale_artifact_ids",
     "conflicting_artifact_ids",
+    "corrupt_artifact_ids",
+    "artifact_actions",
     "next_action"
   ],
   "properties": {
@@ -34,10 +36,25 @@
     "update_model": {"type": "string", "const": "ATOMIC_OR_ROLLBACKABLE_DERIVED_SURFACES"},
     "conflict_precedence": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "result": {"type": "string", "enum": ["CONSISTENT", "INCONSISTENT"]},
-    "dominant_conflict": {"type": "string", "enum": ["", "RUN_ID_MISMATCH", "TASK_CLASS_MISMATCH", "DERIVED_FROM_STATE_MISMATCH", "RESULTING_STATE_MISMATCH"]},
+    "dominant_conflict": {"type": "string", "enum": ["", "CORRUPT_DERIVED_ARTIFACT", "RUN_ID_MISMATCH", "TASK_CLASS_MISMATCH", "DERIVED_FROM_STATE_MISMATCH", "RESULTING_STATE_MISMATCH"]},
     "failure_reasons": {"type": "array", "items": {"type": "string"}},
     "stale_artifact_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "conflicting_artifact_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "corrupt_artifact_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "artifact_actions": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {},
+      "properties": {
+        "state_file": {"type": "string", "enum": ["TRUST_SOURCE_OF_TRUTH"]},
+        "report": {"type": "string", "enum": ["KEEP_DERIVED_ARTIFACT", "REEMIT_FROM_STATE", "RESTORE_FROM_CHECKPOINT_OR_REEMIT"]},
+        "orchestration": {"type": "string", "enum": ["KEEP_DERIVED_ARTIFACT", "REEMIT_FROM_STATE", "RESTORE_FROM_CHECKPOINT_OR_REEMIT"]},
+        "run": {"type": "string", "enum": ["KEEP_DERIVED_ARTIFACT", "REEMIT_FROM_STATE", "RESTORE_FROM_CHECKPOINT_OR_REEMIT"]},
+        "repair_packet": {"type": "string", "enum": ["KEEP_DERIVED_ARTIFACT", "REEMIT_FROM_STATE", "RESTORE_FROM_CHECKPOINT_OR_REEMIT"]},
+        "repair_handoff": {"type": "string", "enum": ["KEEP_DERIVED_ARTIFACT", "REEMIT_FROM_STATE", "RESTORE_FROM_CHECKPOINT_OR_REEMIT"]},
+        "repair_receipt": {"type": "string", "enum": ["KEEP_DERIVED_ARTIFACT", "REEMIT_FROM_STATE", "RESTORE_FROM_CHECKPOINT_OR_REEMIT"]}
+      }
+    },
     "next_action": {"type": "string", "minLength": 1}
   },
   "additionalProperties": false

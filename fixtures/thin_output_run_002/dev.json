@@ -1,0 +1,25 @@
+{
+  "schema_version": "thin_output_record_v0",
+  "mode": "dev",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_009",
+  "task_class": "bounded_router_trigger_fix",
+  "outcome_class": "PROOF_PARTIAL",
+  "summary": "The proof bundle is still incomplete.",
+  "diagnosis": "Supply the missing proof sections and resume only the current repair step.",
+  "next_step": "collect readback from changed sections on the attested surface",
+  "restore_available": false,
+  "checkpoint_id": "",
+  "suggested_command": "generate-prompt then resume after supplying proof inputs",
+  "technical_lines": [
+    "state=PROOF_BUNDLE_PARTIAL",
+    "result=OK",
+    "stopping_stage=closure",
+    "reason=MISSING_PROOF_SECTIONS",
+    "closure_status=CLAIMED_NOT_ACCEPTED",
+    "proof_bundle_status=PARTIAL",
+    "repair_termination_reason=",
+    "current_step_id=complete_missing_proof_sections",
+    "next_safe_step=collect readback from changed sections on the attested surface",
+    "checkpoint_restore_available=False"
+  ]
+}

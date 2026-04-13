@@ -1,0 +1,38 @@
+{
+  "schema_version": "artifact_consistency_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+  "task_class": "bounded_router_trigger_fix",
+  "source_of_truth": {
+    "artifact_id": "state_file",
+    "state": "DOCTOR_BLOCKED",
+    "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+    "task_class": "bounded_router_trigger_fix"
+  },
+  "checked_artifacts": [
+    "state_file",
+    "report"
+  ],
+  "update_model": "ATOMIC_OR_ROLLBACKABLE_DERIVED_SURFACES",
+  "conflict_precedence": [
+    "CORRUPT_DERIVED_ARTIFACT",
+    "RUN_ID_MISMATCH",
+    "TASK_CLASS_MISMATCH",
+    "DERIVED_FROM_STATE_MISMATCH",
+    "RESULTING_STATE_MISMATCH"
+  ],
+  "result": "INCONSISTENT",
+  "dominant_conflict": "CORRUPT_DERIVED_ARTIFACT",
+  "failure_reasons": [
+    "report is corrupt or unreadable: Expecting property name enclosed in double quotes: line 1 column 46 (char 45)"
+  ],
+  "stale_artifact_ids": [],
+  "conflicting_artifact_ids": [],
+  "corrupt_artifact_ids": [
+    "report"
+  ],
+  "artifact_actions": {
+    "state_file": "TRUST_SOURCE_OF_TRUTH",
+    "report": "RESTORE_FROM_CHECKPOINT_OR_REEMIT"
+  },
+  "next_action": "restore corrupt derived artifacts from a verified checkpoint or re-emit them from the current state"
+}
