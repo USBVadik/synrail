@@ -1,0 +1,213 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "task_class": "bounded_router_trigger_fix",
+  "doctor": {
+    "final_verdict": "NOT_ACCEPTABLE_BASELINE_IDENTITY",
+    "blocking_failure_classes": [
+      "baseline-identity ambiguous"
+    ]
+  },
+  "resume": {
+    "applied": true,
+    "from_state": "DOCTOR_BLOCKED"
+  },
+  "repair_handoff": {
+    "applied": true,
+    "from_state": "DOCTOR_BLOCKED",
+    "required_inputs": [
+      "target_identity_file"
+    ],
+    "missing_inputs": []
+  },
+  "repair_packet": {
+    "emitted": true,
+    "from_state": "DOCTOR_BLOCKED",
+    "ready_for_resume": true,
+    "missing_inputs": [],
+    "selected_with_preparation": false,
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "active_pressures": [
+      "DOCTOR_BLOCKED",
+      "PARTIAL_PROOF",
+      "RECOVERY_PENDING"
+    ],
+    "repair_order": [
+      "restore_readiness_truth",
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "policy_type": "MULTI_STEP_REPAIR",
+    "policy_next_step": "restore_readiness_truth",
+    "policy_ready_steps": [
+      "restore_readiness_truth"
+    ],
+    "repair_history_applied": true,
+    "repair_history_last_result": "STEP_PROGRESS_RECORDED",
+    "repair_history_last_completed_step_id": "complete_missing_proof_sections",
+    "repair_history_completed_step_ids": [
+      "restore_readiness_truth",
+      "complete_missing_proof_sections"
+    ],
+    "repair_history_current_step_id": "restore_readiness_truth",
+    "repair_history_waiting_step_ids": [
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "repair_history_chain_length": 3,
+    "repair_history_chain_results": [
+      "STEP_COMPLETED",
+      "STEP_COMPLETED",
+      "STEP_PROGRESS_RECORDED"
+    ],
+    "repair_history_chain_step_ids": [
+      "restore_readiness_truth",
+      "complete_missing_proof_sections",
+      "complete_missing_proof_sections"
+    ],
+    "repair_termination_status": "TERMINATE",
+    "repair_termination_reason": "MAX_REPAIR_ATTEMPTS",
+    "repair_attempt_count": 3,
+    "repair_max_attempts": 3,
+    "repair_no_progress_window": 2,
+    "repair_stalled_step_id": "restore_readiness_truth",
+    "repair_termination_next_action": "stop this repair loop and start a new run or manual recovery path",
+    "repair_receipt_last_operator_focus": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there",
+    "repair_receipt_next_step_required_inputs": [
+      "target_identity_file"
+    ],
+    "repair_receipt_next_step_subsurface_ids": [
+      "target_identity_record"
+    ],
+    "stale_artifact_ids": [
+      "readiness_surface",
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ],
+    "non_resumable_artifact_ids": [],
+    "stale_subsurface_ids": [
+      "target_identity_record",
+      "readback_record",
+      "scenario_proof_record",
+      "recovery_status_record",
+      "reverification_completion_record"
+    ],
+    "non_resumable_subsurface_ids": []
+  },
+  "repair_history": {
+    "available": true,
+    "from_state": "DOCTOR_BLOCKED",
+    "last_result": "STEP_PROGRESS_RECORDED",
+    "last_completed_step_id": "complete_missing_proof_sections",
+    "current_step_id": "restore_readiness_truth",
+    "waiting_step_ids": [
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "completed_step_ids": [
+      "restore_readiness_truth",
+      "complete_missing_proof_sections"
+    ],
+    "chain_length": 3,
+    "chain_results": [
+      "STEP_COMPLETED",
+      "STEP_COMPLETED",
+      "STEP_PROGRESS_RECORDED"
+    ],
+    "chain_step_ids": [
+      "restore_readiness_truth",
+      "complete_missing_proof_sections",
+      "complete_missing_proof_sections"
+    ],
+    "termination_status": "TERMINATE",
+    "termination_reason": "MAX_REPAIR_ATTEMPTS",
+    "attempt_count": 3,
+    "max_attempts": 3,
+    "no_progress_window": 2,
+    "stalled_step_id": "restore_readiness_truth",
+    "termination_next_action": "stop this repair loop and start a new run or manual recovery path",
+    "last_operator_focus": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there",
+    "next_step_required_inputs": [
+      "target_identity_file"
+    ],
+    "next_step_subsurface_ids": [
+      "target_identity_record"
+    ]
+  },
+  "resumability": {
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "resumability_active_pressures": [
+      "DOCTOR_BLOCKED",
+      "PARTIAL_PROOF",
+      "RECOVERY_PENDING"
+    ],
+    "resumability_repair_order": [
+      "restore_readiness_truth",
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "resumability_requires_new_run": false,
+    "resumability_policy_type": "MULTI_STEP_REPAIR",
+    "resumability_policy_next_step": "restore_readiness_truth",
+    "resumability_ready_now_steps": [
+      "restore_readiness_truth"
+    ],
+    "resumability_stale_artifact_ids": [
+      "readiness_surface",
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ],
+    "resumability_stale_subsurface_ids": [
+      "target_identity_record",
+      "readback_record",
+      "scenario_proof_record",
+      "recovery_status_record",
+      "reverification_completion_record"
+    ]
+  },
+  "selection": {
+    "applied": false,
+    "selected_mode": "",
+    "selected_with_preparation": false
+  },
+  "preparation": {
+    "applied": false,
+    "ready_for_closure": false
+  },
+  "bundle": {
+    "status": "PARTIAL",
+    "missing_sections": [
+      "readback",
+      "scenario_proof"
+    ]
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "DOCTOR_NOT_GREEN"
+  },
+  "refresh": {
+    "applied": false,
+    "event_type": "",
+    "resulting_closure_status": ""
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "DOCTOR_BLOCKED",
+  "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "restore the trusted baseline and expected target-surface identity"
+}

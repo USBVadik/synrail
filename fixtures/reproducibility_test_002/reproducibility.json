@@ -1,0 +1,34 @@
+{
+  "schema_version": "reproducibility_record_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "task_class": "bounded_router_trigger_fix",
+  "run_a_path": "/Users/usbdick/Documents/New project/synrail/fixtures/second_operator_test_002/starting_run.json",
+  "run_b_path": "/Users/usbdick/Documents/New project/synrail/fixtures/reproducibility_test_002/starting_run.json",
+  "key_truth_a": {
+    "result": "BLOCKED",
+    "stopping_stage": "doctor",
+    "reason": "DOCTOR_NOT_GREEN",
+    "resulting_state": "DOCTOR_BLOCKED",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "repair_history_chain_length": 3,
+    "repair_history_termination_reason": "MAX_REPAIR_ATTEMPTS",
+    "repair_packet_family": "REPAIRABLE_COMPOUND",
+    "repair_packet_termination_reason": "MAX_REPAIR_ATTEMPTS",
+    "next_safe_step": "restore the trusted baseline and expected target-surface identity"
+  },
+  "key_truth_b": {
+    "result": "BLOCKED",
+    "stopping_stage": "doctor",
+    "reason": "DOCTOR_NOT_GREEN",
+    "resulting_state": "DOCTOR_BLOCKED",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "repair_history_chain_length": 3,
+    "repair_history_termination_reason": "MAX_REPAIR_ATTEMPTS",
+    "repair_packet_family": "REPAIRABLE_COMPOUND",
+    "repair_packet_termination_reason": "MAX_REPAIR_ATTEMPTS",
+    "next_safe_step": "restore the trusted baseline and expected target-surface identity"
+  },
+  "mismatches": [],
+  "verdict": "REPRODUCIBLE_ON_KEY_TRUTH",
+  "why": "the paired runs preserve the same blocking, state, repair-history, and next-step truth"
+}

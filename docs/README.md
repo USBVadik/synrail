@@ -18,6 +18,7 @@ Start here when you want the current product wedge rather than the full repo his
 - `boundary/HYBRID_STATUS_001.md`
 - `boundary/CONTINUATION_ADOPTION_001.md`
 - `boundary/SUBSTITUTE_KILL_TEST_002.md`
+- `boundary/SUBSTITUTE_KILL_TEST_003.md`
 - `boundary/KILLER_PATH_001.md`
 - `boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `boundary/MINIMUM_UNDENIABLE_CORE_001.md`
@@ -65,7 +66,9 @@ Start here when you want to understand the kernel itself:
 - `core/OBSERVABILITY_001.md`
 - `core/OBSERVABILITY_RUN_001.md`
 - `core/REPRODUCIBILITY_TEST_001.md`
+- `core/REPRODUCIBILITY_TEST_002.md`
 - `core/SECOND_OPERATOR_TEST_001.md`
+- `core/SECOND_OPERATOR_TEST_002.md`
 - `core/GOVERNED_PATH_PREPARATION_001.md`
 - `core/GOVERNED_PATH_COST_REDUCTION_001.md`
 - `core/REPAIR_HANDOFF_001.md`
@@ -159,13 +162,16 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/repair_convergence_run_001/run.json`
 - `../fixtures/repair_convergence_run_002/run.json`
 - `../fixtures/reproducibility_test_001/reproducibility.json`
+- `../fixtures/reproducibility_test_002/reproducibility.json`
 - `../fixtures/second_operator_test_001/second_operator.json`
+- `../fixtures/second_operator_test_002/second_operator.json`
 - `../fixtures/artifact_consistency_run_001/consistent.json`
 - `../fixtures/artifact_consistency_run_002/inconsistent.json`
 - `../fixtures/doctor_pressure_test_003/doctor.json`
 - `../fixtures/observability_run_001/observability.json`
 - `../fixtures/executable_loop_compound_continuation_run_010/run.json`
 - `../fixtures/substitute_kill_test_002/substitute_pressure.json`
+- `../fixtures/substitute_kill_test_003/substitute_pressure.json`
 - `../fixtures/executable_loop_runtime_non_resumable_run_001/run.json`
 - `../fixtures/executable_loop_runtime_non_resumable_run_004/run.json`
 - `../fixtures/repair_packet_run_001/run.json`

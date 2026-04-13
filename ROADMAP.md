@@ -139,6 +139,12 @@ Current sprint contract:
   - stalled repair-loop convergence control
   - packet-first second-operator continuation
 - the weak path still remains non-decisive against a lighter substitute stack, so this pressure remains wedge-shaped rather than universal
+- one second less-curated reproducibility slice now also proves that one uglier repeated-doctor continuation step preserves the same bounded block and termination truth across repeated replays
+- one second less-curated second-operator slice now also proves that packet-first continuation stays followable on one repeated-doctor contour that returns to bounded doctor pressure
+- one third harsher substitute-kill slice now also proves that the tightened kernel wins on:
+  - one repeated doctor-return continuation stack
+  - one less-curated stage-level continuation stack
+  while the weak path still remains non-decisive
 
 ### 1. Make comparator economics central
 

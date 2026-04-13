@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v2",
+  "system": "synrail",
+  "scenario_id": "SUBSTITUTE_SCENARIO_WEAK_003",
+  "scenario_class": "low_risk_honesty_restoration",
+  "task_class": "honesty_restoration_guard",
+  "path_id": "full_governed_path",
+  "closure_result": "CLAIMED_NOT_ACCEPTED",
+  "blocker_to_closure_cycles": 2,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "HIGH",
+  "operator_minutes": 27,
+  "intervention_count": 4,
+  "repair_cycles": 1,
+  "invalidation_count": 1,
+  "closure_latency_minutes": 31,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 90,
+  "notes": "even after kernel tightening, the weak path still does not obviously beat a light substitute"
+}

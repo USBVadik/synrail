@@ -96,7 +96,10 @@ Read these next only if you need them:
 - `docs/core/OBSERVABILITY_001.md`
 - `docs/core/REPRODUCIBILITY_TEST_001.md`
 - `docs/core/SECOND_OPERATOR_TEST_001.md`
+- `docs/core/REPRODUCIBILITY_TEST_002.md`
+- `docs/core/SECOND_OPERATOR_TEST_002.md`
 - `docs/boundary/SUBSTITUTE_KILL_TEST_002.md`
+- `docs/boundary/SUBSTITUTE_KILL_TEST_003.md`
 
 ## Current State
 
@@ -224,6 +227,9 @@ Secondary repo-history and hardening context remains available in `docs/boundary
 - the repo now also has one first reproducibility pressure slice showing that a stalled repair-loop contour now preserves the same key blocking and termination truth across repeated runs
 - the repo now also has one first second-operator pressure slice showing that the compressed `state + repair_packet` continuation entry is now followable without hidden author memory on one repaired `DOCTOR_BLOCKED` path
 - the repo now also has one second substitute-kill pressure slice showing that the tightened kernel now wins more clearly on stalled repair-loop convergence control and packet-first second-operator continuation, while the weak path still remains non-decisive against a lighter substitute stack
+- the repo now also has one second less-curated reproducibility pressure slice showing that an uglier repeated-doctor continuation step now preserves the same bounded block and termination truth across repeated replays
+- the repo now also has one second less-curated second-operator pressure slice showing that packet-first continuation is still followable on a repeated-doctor contour that returns to bounded doctor pressure instead of clean acceptance
+- the repo now also has one third harsher substitute-kill pressure slice showing that the tightened kernel now also wins on one repeated doctor-return continuation stack and one less-curated stage-level continuation stack, while the weak path still remains non-decisive
 
 - the repo now also carries one first substitute-kill pressure slice against concrete substitute stacks instead of only one abstract baseline
 - that pressure slice currently shows two substitute-stack wins for Synrail and one still-unclear weak-path comparison
