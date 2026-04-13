@@ -9,6 +9,7 @@ Use this map when you want the fastest way to orient yourself without reading ev
 Start here when you want the current product wedge rather than the full repo history:
 
 - `boundary/EXECUTABLE_STACK_READING_001.md`
+- `boundary/CORE_SCOPE_001.md`
 - `boundary/OUTCOME_LATTICE_001.md`
 - `boundary/TRANSITION_LATTICE_001.md`
 - `boundary/REENTRY_LATTICE_001.md`
@@ -23,6 +24,7 @@ Start here when you want the current product wedge rather than the full repo his
 These are the shortest current path to:
 
 - what Synrail is trying to win
+- what is currently frozen into the minimal kernel scope
 - why it currently looks better than a simpler baseline on that path
 - what its current control cost actually looks like across the measured scenario set
 - what should remain in the core
@@ -50,6 +52,9 @@ Start here when you want to understand the kernel itself:
 - `core/EXECUTION_SPINE_001.md`
 - `core/GATE_SET_001.md`
 - `core/PROOF_BUNDLE_ASSEMBLER_001.md`
+- `core/CHECKPOINT_001.md`
+- `core/CHECKPOINT_RUN_001.md`
+- `core/CHECKPOINT_RUN_002.md`
 - `core/GOVERNED_PATH_PREPARATION_001.md`
 - `core/GOVERNED_PATH_COST_REDUCTION_001.md`
 - `core/REPAIR_HANDOFF_001.md`
@@ -100,6 +105,7 @@ Start here when you want to understand the kernel itself:
 - `core/EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_002.md`
 - `core/EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_003.md`
 - `schemas/spine_block_report_v0.schema.json`
+- `schemas/checkpoint_record_v0.schema.json`
 - `schemas/canonical_run_artifact_v0.schema.json`
 - `schemas/worked_orchestration_artifact_v0.schema.json`
 - `schemas/repair_packet_v0.schema.json`
@@ -137,6 +143,8 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/executable_loop_runtime_resume_run_002/run.json`
 - `../fixtures/executable_loop_runtime_resume_run_003/run.json`
 - `../fixtures/executable_loop_minimal_continuation_run_001/run.json`
+- `../fixtures/checkpoint_run_001/checkpoint_restore.json`
+- `../fixtures/checkpoint_run_002/checkpoint_restore.json`
 - `../fixtures/executable_loop_compound_continuation_run_010/run.json`
 - `../fixtures/executable_loop_runtime_non_resumable_run_001/run.json`
 - `../fixtures/executable_loop_runtime_non_resumable_run_004/run.json`

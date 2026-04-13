@@ -1,0 +1,73 @@
+{
+  "schema_version": "checkpoint_record_v0",
+  "checkpoint_id": "CHECKPOINT_RUN_001",
+  "run_id": "EXECUTABLE_LOOP_SELECTED_PREPARED_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "event_type": "RESTORE",
+  "result": "OK",
+  "checkpoint_root": "/Users/usbdick/Documents/New project/synrail/fixtures/checkpoint_run_001/checkpoint",
+  "source_state": "CLOSURE_ACCEPTED",
+  "source_closure_status": "ACCEPTED",
+  "source_resumability_status": "NOT_RESUMABLE",
+  "source_resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+  "artifact_manifest": [
+    {
+      "artifact_id": "state",
+      "path": "artifacts/state.json",
+      "required": true,
+      "kind": "STATE"
+    },
+    {
+      "artifact_id": "report",
+      "path": "artifacts/report.json",
+      "required": true,
+      "kind": "REPORT"
+    },
+    {
+      "artifact_id": "orchestration",
+      "path": "artifacts/orchestration.json",
+      "required": true,
+      "kind": "ORCHESTRATION"
+    },
+    {
+      "artifact_id": "selection_receipt",
+      "path": "artifacts/selection_receipt.json",
+      "required": true,
+      "kind": "SELECTION"
+    },
+    {
+      "artifact_id": "preparation_receipt",
+      "path": "artifacts/preparation_receipt.json",
+      "required": true,
+      "kind": "PREPARATION"
+    }
+  ],
+  "verification": {
+    "status": "PASSED",
+    "required_artifacts_present": true,
+    "schema_validation_passed": true,
+    "state_consistency_passed": true,
+    "stale_artifacts_detected": [],
+    "failure_reasons": []
+  },
+  "restore": {
+    "status": "RESTORED",
+    "target_root": "/Users/usbdick/Documents/New project/synrail/fixtures/checkpoint_run_001/restored",
+    "restore_verification_required": true,
+    "restored_artifact_ids": [
+      "state",
+      "report",
+      "orchestration",
+      "selection_receipt",
+      "preparation_receipt"
+    ],
+    "failure_reasons": []
+  },
+  "rollback": {
+    "status": "NOT_NEEDED",
+    "trigger": "NONE",
+    "rolled_back_artifact_ids": [],
+    "failure_reasons": []
+  },
+  "next_safe_step": "inspect or continue from the restored checkpoint state"
+}

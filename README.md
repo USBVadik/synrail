@@ -66,17 +66,18 @@ For a quick document map, start with:
 Read these first:
 
 1. `docs/boundary/EXECUTABLE_STACK_READING_001.md`
-2. `docs/boundary/OUTCOME_LATTICE_001.md`
-3. `docs/boundary/TRANSITION_LATTICE_001.md`
-4. `docs/boundary/REENTRY_LATTICE_001.md`
-5. `docs/boundary/TRIO_READING_001.md`
-6. `docs/boundary/COST_OF_CONTROL_001.md`
-7. `docs/boundary/HYBRID_STATUS_001.md`
-8. `docs/boundary/KILLER_PATH_001.md`
-9. `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
-10. `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
-11. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
-12. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
+2. `docs/boundary/CORE_SCOPE_001.md`
+3. `docs/boundary/OUTCOME_LATTICE_001.md`
+4. `docs/boundary/TRANSITION_LATTICE_001.md`
+5. `docs/boundary/REENTRY_LATTICE_001.md`
+6. `docs/boundary/TRIO_READING_001.md`
+7. `docs/boundary/COST_OF_CONTROL_001.md`
+8. `docs/boundary/HYBRID_STATUS_001.md`
+9. `docs/boundary/KILLER_PATH_001.md`
+10. `docs/boundary/BASELINE_COMPARISON_RECORD_001.md`
+11. `docs/boundary/MINIMUM_UNDENIABLE_CORE_001.md`
+12. `docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
+13. `docs/core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md`
 
 Read these next only if you need them:
 
@@ -85,6 +86,9 @@ Read these next only if you need them:
 - `docs/boundary/HYBRID_SUBSET_001.md`
 - `docs/boundary/OVERHEAD_VS_VALUE_MAP_001.md`
 - `docs/boundary/CORE_COMPRESSION_PASS_001.md`
+- `docs/core/CHECKPOINT_001.md`
+- `docs/core/CHECKPOINT_RUN_001.md`
+- `docs/core/CHECKPOINT_RUN_002.md`
 
 ## Current State
 
@@ -95,6 +99,7 @@ It is meant to establish identity and boundary clearly before any broader packag
 The current working mode is:
 
 - private executable pressure-testing before any public release pressure
+- kernel hardening first, with secondary layers frozen unless they directly support the core
 
 The current proof reading is:
 
@@ -211,3 +216,5 @@ Secondary repo-history and hardening context remains available in `docs/boundary
 
 - the repo now also carries one first substitute-kill pressure slice against concrete substitute stacks instead of only one abstract baseline
 - that pressure slice currently shows two substitute-stack wins for Synrail and one still-unclear weak-path comparison
+- the repo now also has one first-class checkpoint contract plus one canonical happy-path checkpoint run proving create, verify, and restore on an accepted contour
+- the repo now also has one failed-restore checkpoint run proving restore verification can fail honestly and roll back checkpoint-owned artifacts

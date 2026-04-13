@@ -213,6 +213,25 @@ Does not guarantee:
 - broad economics proof across every governed path
 - baseline-vs-Synrail comparison on its own
 
+### `synrail_checkpoint_v0.py`
+
+Purpose:
+
+- treat checkpoint as one minimal kernel lifecycle rather than one loose snapshot helper
+
+Guarantees:
+
+- can create one checkpoint record from a current contour
+- can verify required checkpoint artifacts, schema validity, and state consistency
+- can restore a checkpoint artifact set and require restore verification before success
+- can now roll back checkpoint-owned restore artifacts when restore verification fails on a conflicting target surface
+
+Does not guarantee:
+
+- broad snapshotting across every future runtime dependency
+- final artifact-consistency semantics for every conflict case
+- broad restore conflict handling beyond the current bounded checkpoint manifest
+
 ### `synrail_repair_packet_v0.py`
 
 Purpose:

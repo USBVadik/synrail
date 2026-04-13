@@ -30,6 +30,7 @@ PREPARATION_RECEIPT = HERE / "synrail_preparation_receipt_v0.py"
 GOVERNED_COST = HERE / "synrail_governed_cost_delta_v0.py"
 REPAIR_HANDOFF = HERE / "synrail_repair_handoff_v0.py"
 REPAIR_PACKET = HERE / "synrail_repair_packet_v0.py"
+CHECKPOINT = HERE / "synrail_checkpoint_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -290,6 +291,55 @@ def cmd_governed_cost(args: argparse.Namespace) -> int:
         "--output", args.output,
     ]
     return run_python(GOVERNED_COST, forwarded)
+
+
+def cmd_create_checkpoint(args: argparse.Namespace) -> int:
+    forwarded = [
+        "create",
+        "--checkpoint-id", args.checkpoint_id,
+        "--checkpoint-root", args.checkpoint_root,
+        "--state-file", args.state_file,
+        "--output", args.output,
+    ]
+    optional_pairs = [
+        ("--report-file", args.report_file),
+        ("--orchestration-file", args.orchestration_file),
+        ("--bundle-file", args.bundle_file),
+        ("--closure-file", args.closure_file),
+        ("--refresh-file", args.refresh_file),
+        ("--selection-file", args.selection_file),
+        ("--preparation-file", args.preparation_file),
+        ("--repair-packet-file", args.repair_packet_file),
+        ("--repair-handoff-file", args.repair_handoff_file),
+        ("--repair-receipt-file", args.repair_receipt_file),
+    ]
+    for flag, value in optional_pairs:
+        if value:
+            forwarded.extend([flag, value])
+    return run_python(CHECKPOINT, forwarded)
+
+
+def cmd_verify_checkpoint(args: argparse.Namespace) -> int:
+    return run_python(
+        CHECKPOINT,
+        [
+            "verify",
+            "--checkpoint-record-file", args.checkpoint_record_file,
+            "--output", args.output,
+        ],
+    )
+
+
+def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
+    return run_python(
+        CHECKPOINT,
+        [
+            "restore",
+            "--checkpoint-record-file", args.checkpoint_record_file,
+            "--target-root", args.target_root,
+            "--output", args.output,
+        ],
+    )
 
 
 def cmd_repair_handoff(args: argparse.Namespace) -> int:
@@ -1027,6 +1077,34 @@ def build_parser() -> argparse.ArgumentParser:
     p_governed_cost.add_argument("--prepared-file", required=True)
     p_governed_cost.add_argument("--output", required=True)
     p_governed_cost.set_defaults(func=cmd_governed_cost)
+
+    p_checkpoint_create = sub.add_parser("create-checkpoint")
+    p_checkpoint_create.add_argument("--checkpoint-id", required=True)
+    p_checkpoint_create.add_argument("--checkpoint-root", required=True)
+    p_checkpoint_create.add_argument("--state-file", required=True)
+    p_checkpoint_create.add_argument("--report-file")
+    p_checkpoint_create.add_argument("--orchestration-file")
+    p_checkpoint_create.add_argument("--bundle-file")
+    p_checkpoint_create.add_argument("--closure-file")
+    p_checkpoint_create.add_argument("--refresh-file")
+    p_checkpoint_create.add_argument("--selection-file")
+    p_checkpoint_create.add_argument("--preparation-file")
+    p_checkpoint_create.add_argument("--repair-packet-file")
+    p_checkpoint_create.add_argument("--repair-handoff-file")
+    p_checkpoint_create.add_argument("--repair-receipt-file")
+    p_checkpoint_create.add_argument("--output", required=True)
+    p_checkpoint_create.set_defaults(func=cmd_create_checkpoint)
+
+    p_checkpoint_verify = sub.add_parser("verify-checkpoint")
+    p_checkpoint_verify.add_argument("--checkpoint-record-file", required=True)
+    p_checkpoint_verify.add_argument("--output", required=True)
+    p_checkpoint_verify.set_defaults(func=cmd_verify_checkpoint)
+
+    p_checkpoint_restore = sub.add_parser("restore-checkpoint")
+    p_checkpoint_restore.add_argument("--checkpoint-record-file", required=True)
+    p_checkpoint_restore.add_argument("--target-root", required=True)
+    p_checkpoint_restore.add_argument("--output", required=True)
+    p_checkpoint_restore.set_defaults(func=cmd_restore_checkpoint)
 
     p_repair_handoff = sub.add_parser("repair-handoff")
     p_repair_handoff.add_argument("--state-file", required=True)

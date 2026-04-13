@@ -12,6 +12,19 @@ Current phase:
 
 - harden the current kernel into a more usable product contour while keeping cost and evidence pressure on it
 
+Current sprint freeze:
+
+- the active kernel scope is only:
+  - `Doctor`
+  - `State / Spine`
+  - `Bundle`
+  - `Closure`
+  - `Refresh`
+  - `Continuation / Resume`
+  - `Checkpoint`
+- secondary layers may still be updated to reflect kernel progress, but they should not drive build work
+- new surface-area growth is off-roadmap unless it clearly hardens this kernel
+
 That means the near-term work is now mostly about:
 
 - first-class continuation and re-entry instead of manual repaired replay
@@ -21,6 +34,51 @@ That means the near-term work is now mostly about:
 - sharpening doctor only where it reduces expensive false-readiness decisions
 
 ## Near-term priorities
+
+### 0. Freeze the minimal kernel scope
+
+Goal:
+
+- stop broadening Synrail and make Sprint 01 a kernel-hardening tranche
+
+Active scope:
+
+- `Doctor`
+- `State / Spine`
+- `Bundle`
+- `Closure`
+- `Refresh`
+- `Continuation / Resume`
+- `Checkpoint`
+
+Explicitly frozen:
+
+- new continuation families for richness alone
+- hybrid expansion
+- novice-facing UX work
+- broad framing or platform packaging
+- meta-doc growth without direct runtime payload
+
+### 0.5. Make checkpoint first-class
+
+Goal:
+
+- turn safe-point creation, verification, restore, and restore rollback into explicit kernel behavior
+
+Current sprint contract:
+
+- checkpoint is now defined as a verified safe point, not a loose snapshot
+- the sprint now expects one explicit lifecycle:
+  - `CREATE`
+  - `VERIFY`
+  - `RESTORE`
+  - `RESTORE_ROLLBACK`
+- runtime work should now target one checkpoint record instead of scattered future restore semantics
+- one canonical happy-path checkpoint run now proves create, verify, and restore on an accepted contour
+- one canonical failed-restore checkpoint run now also proves:
+  - restore verification can fail on conflicting target artifacts
+  - the runtime emits `RESTORE_ROLLBACK`
+  - checkpoint-owned restore artifacts are rolled back instead of being left behind
 
 ### 1. Make comparator economics central
 

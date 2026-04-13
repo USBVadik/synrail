@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/checkpoint_record_v0.schema.json",
+  "title": "Synrail Checkpoint Record v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "checkpoint_id",
+    "run_id",
+    "task_class",
+    "event_type",
+    "result",
+    "checkpoint_root",
+    "source_state",
+    "source_closure_status",
+    "verification",
+    "restore",
+    "rollback",
+    "next_safe_step"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "checkpoint_record_v0"
+    },
+    "checkpoint_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "CREATE",
+        "VERIFY",
+        "RESTORE",
+        "RESTORE_ROLLBACK"
+      ]
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "OK",
+        "BLOCKED",
+        "ERROR"
+      ]
+    },
+    "checkpoint_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_state": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_closure_status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_resumability_status": {
+      "type": "string"
+    },
+    "source_resumability_family": {
+      "type": "string"
+    },
+    "artifact_manifest": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifact_id",
+          "path",
+          "required",
+          "kind"
+        ],
+        "properties": {
+          "artifact_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "STATE",
+              "REPORT",
+              "ORCHESTRATION",
+              "BUNDLE",
+              "CLOSURE",
+              "REFRESH",
+              "SELECTION",
+              "PREPARATION",
+              "REPAIR_PACKET",
+              "REPAIR_HANDOFF",
+              "REPAIR_RECEIPT",
+              "AUXILIARY"
+            ]
+          }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "required_artifacts_present",
+        "schema_validation_passed",
+        "state_consistency_passed",
+        "stale_artifacts_detected"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "NOT_RUN",
+            "PASSED",
+            "FAILED"
+          ]
+        },
+        "required_artifacts_present": {
+          "type": "boolean"
+        },
+        "schema_validation_passed": {
+          "type": "boolean"
+        },
+        "state_consistency_passed": {
+          "type": "boolean"
+        },
+        "stale_artifacts_detected": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "failure_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "restore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "target_root",
+        "restore_verification_required"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "NOT_RUN",
+            "RESTORED",
+            "RESTORE_FAILED"
+          ]
+        },
+        "target_root": {
+          "type": "string"
+        },
+        "restore_verification_required": {
+          "type": "boolean"
+        },
+        "restored_artifact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "failure_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "NOT_NEEDED",
+            "ROLLED_BACK",
+            "ROLLBACK_FAILED"
+          ]
+        },
+        "trigger": {
+          "type": "string",
+          "enum": [
+            "NONE",
+            "RESTORE_VERIFICATION_FAILED",
+            "RESTORE_RUNTIME_ERROR",
+            "RESTORE_CONSISTENCY_ERROR"
+          ]
+        },
+        "rolled_back_artifact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "failure_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "next_safe_step": {
+      "type": "string"
+    }
+  }
+}
