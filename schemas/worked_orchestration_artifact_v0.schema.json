@@ -175,6 +175,21 @@
             "type": "string"
           }
         },
+        "repair_receipt_last_operator_focus": {
+          "type": "string"
+        },
+        "repair_receipt_next_step_required_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repair_receipt_next_step_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "stale_artifact_ids": {
           "type": "array",
           "items": {

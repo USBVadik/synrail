@@ -1,0 +1,18 @@
+{
+  "schema_version": "mode_selection_receipt_v0",
+  "recommendation_file": "fixtures/executable_loop_compound_continuation_run_005/recommendation.json",
+  "scenario_class": "expensive_wrong_closure",
+  "task_class": "bounded_router_trigger_fix",
+  "recommended_mode": "FULL_GOVERNED_PATH",
+  "selected_mode": "FULL_GOVERNED_PATH",
+  "secondary_exception_mode": "",
+  "governed_preparation_recommended": true,
+  "selected_with_preparation": true,
+  "followed_recommendation": true,
+  "heavier_contour_entered": true,
+  "estimated_avoided_operator_minutes": 0,
+  "estimated_avoided_interventions": 0,
+  "estimated_avoided_closure_latency_minutes": 0,
+  "why": "expensive wrong-closure risk still dominates here, so the extra control remains justified despite added operator cost; bounded governed-path evidence also says preparation likely saves about 5 operator minutes, 1 intervention, and 7 closure-latency minutes without weakening the final safety surface",
+  "next_safe_step": "run the full governed path with preparation"
+}

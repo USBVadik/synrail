@@ -239,6 +239,19 @@ def build_receipt_context(repair_receipt: dict | None) -> dict:
             "remaining_non_resumable_subsurface_ids": [],
             "remaining_stale_hints": [],
             "remaining_non_resumable_hints": [],
+            "completed_hints": [],
+            "next_step_required_inputs": [],
+            "next_step_hints": [],
+            "operator_evidence": {
+                "completed_step_id": "",
+                "completed_artifact_hints": [],
+                "completed_subsurface_ids": [],
+                "next_step_id": "",
+                "next_step_required_inputs": [],
+                "next_step_artifact_hints": [],
+                "next_step_subsurface_ids": [],
+                "operator_focus": "",
+            },
         }
     return {
         "applied": True,
@@ -250,6 +263,10 @@ def build_receipt_context(repair_receipt: dict | None) -> dict:
         "remaining_non_resumable_subsurface_ids": list(repair_receipt.get("remaining_non_resumable_subsurface_ids", [])),
         "remaining_stale_hints": list(repair_receipt.get("remaining_stale_hints", [])),
         "remaining_non_resumable_hints": list(repair_receipt.get("remaining_non_resumable_hints", [])),
+        "completed_hints": list(repair_receipt.get("completed_hints", [])),
+        "next_step_required_inputs": list(repair_receipt.get("next_step_required_inputs", [])),
+        "next_step_hints": list(repair_receipt.get("next_step_hints", [])),
+        "operator_evidence": dict(repair_receipt.get("operator_evidence", {})),
     }
 
 

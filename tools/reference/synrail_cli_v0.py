@@ -347,16 +347,63 @@ def load_repair_packet(path: Path) -> dict:
     return packet
 
 
+def apply_resume_input_overrides(args: argparse.Namespace, path: Path) -> None:
+    payload = load_json(path)
+    if payload.get("schema_version", "resume_input_overrides_v0") != "resume_input_overrides_v0":
+        raise ValueError("resume input overrides must use resume_input_overrides_v0")
+    scalar_fields = [
+        "final_result",
+        "readback",
+        "scenario_proof",
+        "prompt_identity",
+        "task_identity",
+        "target_identity_file",
+        "artifact_path",
+        "helper_path",
+        "refresh_event_type",
+        "refresh_recovery_status",
+    ]
+    for field in scalar_fields:
+        value = payload.get(field)
+        if value in {None, ""}:
+            continue
+        current = getattr(args, field, None)
+        if current in {None, ""}:
+            setattr(args, field, value)
+
+    truthy_fields = [
+        "refresh_reverification_complete",
+        "refresh_use_bundle",
+        "refresh_use_closure",
+        "clean_surface",
+        "artifact_viable",
+        "helper_ok",
+        "credentials_ok",
+        "prompt_identity_ok",
+    ]
+    for field in truthy_fields:
+        if payload.get(field) and not getattr(args, field, False):
+            setattr(args, field, True)
+
+    if payload.get("credential_env") and not getattr(args, "credential_env", []):
+        args.credential_env = list(payload["credential_env"])
+
+
 def discover_repair_packet_file(args: argparse.Namespace) -> Path | None:
     if getattr(args, "repair_packet_file", None):
         return Path(args.repair_packet_file)
     state_path = Path(args.state_file)
+    state_stem = state_path.stem
+    prefixed_name = f"{state_stem.removesuffix('_state')}_repair_packet.json" if state_stem.endswith("_state") and state_stem != "state" else ""
     candidates = [
+        state_path.with_name(prefixed_name) if prefixed_name else None,
         state_path.with_name("repair_packet.json"),
     ]
     if getattr(args, "report_output", None):
         candidates.append(Path(args.report_output).with_name("repair_packet.json"))
     for candidate in candidates:
+        if candidate is None:
+            continue
         if candidate.exists():
             return candidate
     return None
@@ -364,44 +411,62 @@ def discover_repair_packet_file(args: argparse.Namespace) -> Path | None:
 
 def discover_resume_sibling_inputs(args: argparse.Namespace, state: dict) -> None:
     root = Path(args.state_file).parent
+    state_stem = Path(args.state_file).stem
+    state_prefix = f"{state_stem.removesuffix('_state')}_" if state_stem.endswith("_state") and state_stem != "state" else ""
 
     def existing(name: str) -> Path | None:
         candidate = root / name
         return candidate if candidate.exists() else None
 
+    def existing_variants(*names: str) -> Path | None:
+        seen: set[str] = set()
+        candidates: list[str] = []
+        for name in names:
+            if state_prefix:
+                candidates.append(f"{state_prefix}{name}")
+            candidates.append(name)
+        for name in candidates:
+            if name in seen:
+                continue
+            seen.add(name)
+            candidate = existing(name)
+            if candidate:
+                return candidate
+        return None
+
     if not getattr(args, "mode_selection_receipt", None):
-        candidate = existing("selection_receipt.json")
+        candidate = existing_variants("selection_receipt.json")
         if candidate:
             args.mode_selection_receipt = str(candidate)
 
     if not getattr(args, "repair_receipt_file", None):
-        candidate = existing("repair_receipt.json")
+        candidate = existing_variants("repair_receipt.json")
         if candidate:
             args.repair_receipt_file = str(candidate)
 
     if not getattr(args, "repair_handoff_file", None):
-        candidate = existing("repair_handoff.json")
+        candidate = existing_variants("repair_handoff.json")
         if candidate:
             args.repair_handoff_file = str(candidate)
 
     if not getattr(args, "final_result", None):
-        candidate = existing("final_result.json")
+        candidate = existing_variants("fixed_final_result.json", "final_result.json")
         if candidate:
             args.final_result = str(candidate)
 
     if not getattr(args, "readback", None):
-        candidate = existing("readback.txt")
+        candidate = existing_variants("later_readback.txt", "readback.txt")
         if candidate:
             args.readback = str(candidate)
 
     if not getattr(args, "scenario_proof", None):
-        candidate = existing("scenario.txt")
+        candidate = existing_variants("later_scenario.txt", "scenario.txt")
         if candidate:
             args.scenario_proof = str(candidate)
 
     if not getattr(args, "target_identity_file", None):
         for name in ["target_identity.txt", "target_identity.json"]:
-            candidate = existing(name)
+            candidate = existing_variants(name)
             if candidate:
                 args.target_identity_file = str(candidate)
                 break
@@ -410,36 +475,50 @@ def discover_resume_sibling_inputs(args: argparse.Namespace, state: dict) -> Non
         args.artifact_path = args.final_result
 
     if not getattr(args, "prompt_identity_file", None):
-        candidate = existing("prompt_identity.txt")
+        candidate = existing_variants("prompt_identity.txt")
         if candidate:
             args.prompt_identity_file = str(candidate)
 
     if not getattr(args, "prompt_identity", None):
-        candidate = existing("prompt_identity.txt")
+        candidate = existing_variants("prompt_identity.txt")
         if candidate:
             args.prompt_identity = candidate.read_text().strip()
 
     if not getattr(args, "task_identity", None):
-        candidate = existing("task_identity.txt")
+        candidate = existing_variants("task_identity.txt")
         if candidate:
             args.task_identity = candidate.read_text().strip()
+
+    resume_inputs_candidate = existing_variants("resume_inputs.json")
+    if resume_inputs_candidate:
+        apply_resume_input_overrides(args, resume_inputs_candidate)
 
 
 def synthesize_repair_packet(args: argparse.Namespace, state: dict) -> Path:
     discover_resume_sibling_inputs(args, state)
     root = Path(args.state_file).parent
+    state_stem = Path(args.state_file).stem
+    state_prefix = f"{state_stem.removesuffix('_state')}_" if state_stem.endswith("_state") and state_stem != "state" else ""
+
+    def sibling_variant(name: str) -> Path | None:
+        for candidate_name in ([f"{state_prefix}{name}"] if state_prefix else []) + [name]:
+            candidate = root / candidate_name
+            if candidate.exists():
+                return candidate
+        return None
+
     packet_output = Path(args.repair_packet_output)
     selection_receipt = load_json(Path(args.mode_selection_receipt)) if getattr(args, "mode_selection_receipt", None) else None
     repair_receipt = load_json(Path(args.repair_receipt_file)) if getattr(args, "repair_receipt_file", None) else None
 
     preparation_receipt = None
-    preparation_candidate = root / "preparation_receipt.json"
-    if preparation_candidate.exists():
+    preparation_candidate = sibling_variant("preparation_receipt.json")
+    if preparation_candidate:
         preparation_receipt = load_json(preparation_candidate)
 
     report = None
-    report_candidate = root / "report.json"
-    if report_candidate.exists():
+    report_candidate = sibling_variant("report.json")
+    if report_candidate:
         report = load_json(report_candidate)
 
     packet = build_packet_from_runtime_truth(
@@ -485,19 +564,25 @@ def synthesize_repair_packet(args: argparse.Namespace, state: dict) -> Path:
 def apply_resume_output_defaults(args: argparse.Namespace, state: dict) -> None:
     state_path = Path(args.state_file)
     root = state_path.parent
+    state_stem = state_path.stem
+    state_prefix = f"{state_stem.removesuffix('_state')}_" if state_stem.endswith("_state") and state_stem != "state" else ""
+
+    def runtime_name(name: str) -> str:
+        return f"{state_prefix}{name}" if state_prefix else name
+
     defaults = {
-        "doctor_output": str(root / "doctor.json"),
-        "bundle_output": str(root / "bundle.json"),
-        "closure_output": str(root / "closure.json"),
-        "refresh_output": str(root / "refresh.json"),
-        "report_output": str(root / "report.json"),
-        "worked_artifact_output": str(root / "orchestration.json"),
-        "run_artifact_output": str(root / "run.json"),
-        "repair_handoff_output": str(root / "repair_handoff.json"),
-        "repair_packet_output": str(root / "repair_packet.json"),
-        "repair_receipt_output": str(root / "repair_receipt.json"),
-        "plan_output": str(root / "plan.json"),
-        "preparation_receipt_output": str(root / "preparation_receipt.json"),
+        "doctor_output": str(root / runtime_name("doctor.json")),
+        "bundle_output": str(root / runtime_name("bundle.json")),
+        "closure_output": str(root / runtime_name("closure.json")),
+        "refresh_output": str(root / runtime_name("refresh.json")),
+        "report_output": str(root / runtime_name("report.json")),
+        "worked_artifact_output": str(root / runtime_name("orchestration.json")),
+        "run_artifact_output": str(root / runtime_name("run.json")),
+        "repair_handoff_output": str(root / runtime_name("repair_handoff.json")),
+        "repair_packet_output": str(root / runtime_name("repair_packet.json")),
+        "repair_receipt_output": str(root / runtime_name("repair_receipt.json")),
+        "plan_output": str(root / runtime_name("plan.json")),
+        "preparation_receipt_output": str(root / runtime_name("preparation_receipt.json")),
     }
     for attr, value in defaults.items():
         if not getattr(args, attr, None):

@@ -195,6 +195,8 @@ def repair_packet_summary(packet: dict | None, state: dict) -> dict:
             if subsurface.get("subsurface_id", "")
         ],
     }
+    receipt_context = packet.get("repair_receipt_context", {}) if packet else {}
+    operator_evidence = receipt_context.get("operator_evidence", {}) if receipt_context else {}
     return {
         "emitted": packet is not None,
         "from_state": packet["from_state"] if packet else "",
@@ -214,6 +216,9 @@ def repair_packet_summary(packet: dict | None, state: dict) -> dict:
         "repair_history_completed_step_ids": list(repair_history.get("completed_step_ids", [])),
         "repair_history_current_step_id": repair_history.get("current_step_id", ""),
         "repair_history_waiting_step_ids": list(repair_history.get("waiting_step_ids", [])),
+        "repair_receipt_last_operator_focus": operator_evidence.get("operator_focus", ""),
+        "repair_receipt_next_step_required_inputs": list(operator_evidence.get("next_step_required_inputs", [])),
+        "repair_receipt_next_step_subsurface_ids": list(operator_evidence.get("next_step_subsurface_ids", [])),
         "stale_artifact_ids": list(artifact_quality_summary.get("stale_artifact_ids", [])),
         "non_resumable_artifact_ids": list(artifact_quality_summary.get("non_resumable_artifact_ids", [])),
         "stale_subsurface_ids": list(artifact_quality_summary.get("stale_subsurface_ids", [])),

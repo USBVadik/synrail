@@ -1,0 +1,31 @@
+{
+  "schema_version": "proof_bundle_plan_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "governed_mode": "FULL_GOVERNED_PATH",
+  "required_sections": [
+    "final_result",
+    "modified_files",
+    "diff_provenance",
+    "readback",
+    "scenario_proof",
+    "artifact_identity",
+    "cleanup_status"
+  ],
+  "recommended_artifacts": {
+    "final_result": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_007/final_result.json",
+    "readback": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_007/readback.txt",
+    "scenario_proof": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_007/scenario.txt",
+    "bundle_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_007/bundle.json",
+    "closure_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_007/closure.json",
+    "preparation_receipt_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_007/preparation_receipt.json"
+  },
+  "artifact_identity": {
+    "baseline_identity": "compound-prepared-surface-004",
+    "execution_surface_identity": "compound-prepared-surface-004",
+    "prompt_identity": "PROMPT_A",
+    "task_identity": "TASK_A"
+  },
+  "planning_status": "READY",
+  "next_safe_step": "collect the planned proof artifacts and assemble the bundle before closure"
+}

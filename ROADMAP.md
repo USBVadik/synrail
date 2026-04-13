@@ -132,6 +132,7 @@ Current pressure-tested slice:
 - one lower-replay packet-first continuation run now proves that sibling auto-discovery can drive `resume` back to accepted closure with much less raw flag replay
 - one uglier packet-first continuation run now proves explicit repair order, stale-artifact hints, mid-continuation doctor failure, and return to accepted closure
 - one further packet-first continuation run now proves that repair receipts, explicit step progression, blocked recovery completion, and final truthful terminal packet emission can all live on the same runtime surface
+- one next packet-first continuation run now proves that recovery completion supply, doctor target-identity pressure, richer repair receipts, and accepted closure can all live on the same runtime surface with stage-aware sibling discovery
 
 Next likely strengthening moves:
 

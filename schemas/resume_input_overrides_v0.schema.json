@@ -1,0 +1,87 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "resume_input_overrides_v0"
+    },
+    "final_result": {
+      "type": "string",
+      "minLength": 1
+    },
+    "readback": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scenario_proof": {
+      "type": "string",
+      "minLength": 1
+    },
+    "prompt_identity": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_identity": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_identity_file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "helper_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "refresh_event_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "refresh_recovery_status": {
+      "type": "string",
+      "enum": [
+        "NOT_REQUIRED",
+        "PENDING",
+        "COMPLETE"
+      ]
+    },
+    "refresh_reverification_complete": {
+      "type": "boolean"
+    },
+    "refresh_use_bundle": {
+      "type": "boolean"
+    },
+    "refresh_use_closure": {
+      "type": "boolean"
+    },
+    "clean_surface": {
+      "type": "boolean"
+    },
+    "artifact_viable": {
+      "type": "boolean"
+    },
+    "helper_ok": {
+      "type": "boolean"
+    },
+    "credentials_ok": {
+      "type": "boolean"
+    },
+    "prompt_identity_ok": {
+      "type": "boolean"
+    },
+    "credential_env": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

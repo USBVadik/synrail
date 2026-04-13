@@ -817,6 +817,28 @@
               }
             }
           }
+        },
+        "completed_hints": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "next_step_required_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "next_step_hints": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "operator_evidence": {
+          "type": "object"
         }
       }
     },

@@ -1,0 +1,160 @@
+{
+  "schema_version": "repair_handoff_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "DOCTOR_BLOCKED",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "DOCTOR_NOT_GREEN",
+  "continuation_allowed": true,
+  "continuation_entrypoint": "resume",
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_COMPOUND",
+    "active_pressures": [
+      "DOCTOR_BLOCKED",
+      "RECOVERY_PENDING"
+    ],
+    "recommended_repair_order": [
+      "restore_readiness_truth",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "explanation": "more than one repairable pressure is active, so continuation should follow the ordered repair sequence before closure is rechecked"
+  },
+  "repair_policy": {
+    "policy_type": "MULTI_STEP_REPAIR",
+    "next_step_id": "restore_readiness_truth",
+    "ready_now_step_ids": [
+      "restore_readiness_truth"
+    ],
+    "ordered_steps": [
+      {
+        "step_id": "restore_readiness_truth",
+        "status": "READY_NOW",
+        "required_inputs": [
+          "target_identity_file"
+        ],
+        "repairs_artifacts": [
+          "readiness_surface"
+        ],
+        "resolves_pressures": [
+          "DOCTOR_BLOCKED"
+        ],
+        "why": "doctor-blocked truth must be repaired before governed continuation can restart honestly"
+      },
+      {
+        "step_id": "complete_recovery_reverification",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [
+          "refresh_recovery_complete",
+          "refresh_reverification_complete"
+        ],
+        "repairs_artifacts": [
+          "recovery_reverification_surface"
+        ],
+        "resolves_pressures": [
+          "RECOVERY_PENDING"
+        ],
+        "why": "recovery should be completed before refresh reconciliation can restore closure acceptance"
+      },
+      {
+        "step_id": "run_refresh_reconciliation",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_refresh_surface"
+        ],
+        "resolves_pressures": [
+          "RECOVERY_PENDING"
+        ],
+        "why": "refresh reconciliation should only run once recovery reverification is complete"
+      },
+      {
+        "step_id": "rerun_closure",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_verdict_surface"
+        ],
+        "resolves_pressures": [
+          "DOCTOR_BLOCKED",
+          "RECOVERY_PENDING"
+        ],
+        "why": "closure should be rechecked only after earlier repair steps finish"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "readiness_surface",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "target_identity_record"
+      ],
+      "mapped_inputs": [
+        "target_identity_file"
+      ],
+      "repair_step": "restore_readiness_truth",
+      "why": "doctor still sees stale readiness evidence: baseline-identity ambiguous",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "target_identity_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "target_identity_file"
+          ],
+          "why": "target identity evidence is missing or does not match the expected target surface"
+        }
+      ]
+    },
+    {
+      "artifact_id": "recovery_reverification_surface",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "mapped_inputs": [
+        "refresh_recovery_complete",
+        "refresh_reverification_complete"
+      ],
+      "repair_step": "complete_recovery_reverification",
+      "why": "recovery was started but reverification has not been completed yet",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "recovery_status_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "refresh_recovery_complete"
+          ],
+          "why": "the recovery status is still pending rather than complete"
+        },
+        {
+          "subsurface_id": "reverification_completion_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "refresh_reverification_complete"
+          ],
+          "why": "the recovery reverification completion flag is still missing"
+        }
+      ]
+    }
+  ],
+  "required_inputs": [
+    {
+      "input_id": "target_identity_file",
+      "kind": "file",
+      "cli_flag": "--target-identity-file",
+      "description": "supply target identity evidence for readiness verification",
+      "required_value": ""
+    }
+  ],
+  "runtime_defaults": {
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false
+  },
+  "next_safe_step": "restore the trusted baseline and expected target-surface identity"
+}

@@ -42,6 +42,7 @@ The CLI v0 currently exposes:
    - can now consume one repair handoff artifact and block at `repair_handoff` when the continuation contract is still incomplete
    - now auto-discovers one sibling `repair_packet.json` by default, so packet-first continuation becomes the normal operator path instead of an optional extra
    - can now consume one richer repair packet so the operator no longer has to replay the full runtime surface as raw flags on every continuation
+   - now also uses stage-aware sibling discovery, so `stage2_state.json` can naturally pair with `stage2_repair_packet.json`, `stage2_target_identity.txt`, and `stage2_resume_inputs.json`
    - now proven on:
      - `DOCTOR_BLOCKED`
      - `PROOF_BUNDLE_PARTIAL`
@@ -126,7 +127,9 @@ Its continuation surface is now stricter too:
 
 - packet-first `resume` can auto-discover a sibling repair packet
 - packet-first `resume` can now also auto-discover sibling prompt, task, proof, and final-result artifacts
+- packet-first `resume` can now also auto-discover stage-aware sibling outputs and one narrow `resume_inputs.json` override file
 - that packet can now carry current-step repair order plus artifact-quality hints
+- that packet plus repair receipt can now tell the operator which exact stale sub-surfaces are still next in line
 - the runtime now blocks explicitly when the operator tries to jump ahead of the current repair step
 - and it can now say that a contour is not resumable at all and should follow either the lighter selected mode or a fresh new run instead
 

@@ -113,9 +113,11 @@ Current strongest value carriers are:
 - one canonical truly not-resumable rejected-terminal continuation contour
 - one canonical truly not-resumable fresh-forward-orchestration continuation contour
 - one canonical packet-first runtime-resume contour that now reaches accepted closure through sibling auto-discovery instead of long raw flag replay
+- one canonical packet-first continuation contour that now uses stage-aware sibling discovery plus one narrow `resume_inputs.json` file to avoid replaying most continuation flags by hand
 - one fifth uglier packet-first compound continuation contour that now carries stale-artifact hints, explicit repair order, one newly surfaced readiness failure, and accepted closure on the same runtime surface
 - one first-class artifact repair receipt layer that now records step completion and narrower stale sub-surface truth between packet states
 - one sixth uglier packet-first compound continuation contour that now carries repair receipts, blocked recovery completion, and a final truthful non-resumable packet on the same runtime surface
+- one seventh uglier packet-first compound continuation contour that now crosses invalid proof, recovery repair, doctor target-identity pressure, and accepted closure on the same runtime surface
 - explicit precedence for competing spine-side blockers
 - explicit precedence for competing degradations
 - anti-drift refresh after state degradation
@@ -216,6 +218,10 @@ The fifth canonical ugly compound continuation reference surface for that output
 The sixth canonical ugly compound continuation reference surface for that output now lives at:
 
 - `fixtures/executable_loop_compound_continuation_run_006/run.json`
+
+The seventh canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_007/run.json`
 
 The first canonical selection-blocked reference surface for that output now lives at:
 

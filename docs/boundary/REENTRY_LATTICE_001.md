@@ -424,6 +424,7 @@ The current re-entry lattice supports a stronger kernel-level claim:
   - one stricter packet-first continuation family that now carries repair order and stale-artifact hints through invalid-proof, readiness repair, and recovery repair back to accepted closure
   - one lower-replay packet-first continuation family that now reaches accepted closure from doctor-blocked truth through sibling auto-discovery
   - one repair-receipt-aware packet-first continuation family that now records explicit step progression and final truthful terminal packet emission
+  - one uglier packet-first continuation family that now crosses invalid proof, recovery completion, doctor target-identity pressure, and accepted closure on the same runtime surface
 
 That is stronger than saying only:
 

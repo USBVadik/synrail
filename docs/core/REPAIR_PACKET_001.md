@@ -111,6 +111,11 @@ These prove:
 - runtime-owned packets can now emit narrower stale sub-surface ids inside those artifacts
 - runtime-owned packets can now carry repair-receipt context so one later packet can say which repair step actually completed on the previous continuation step
 - packet-first `resume` can now auto-discover sibling continuation artifacts strongly enough to reach accepted closure with almost no raw flag replay
+- packet-first `resume` can now also use stage-aware sibling names like `stage2_repair_packet.json`, `stage2_target_identity.txt`, and `stage2_resume_inputs.json` so multi-step continuation can stay mostly file-driven instead of flag-driven
+- repair-receipt context can now carry operator-facing evidence about:
+  - the last completed repair step
+  - the next exact stale sub-surfaces
+  - the next exact required inputs
 
 ## Current boundary
 
@@ -124,10 +129,4 @@ It does not yet try to become:
 
 It is one continuation packet for one named `resume` path.
 
-The next improvement should make that packet:
-
-- stronger where runtime truth already knows more than the current bounded fields express, especially around richer repair receipts and deeper multi-step repair order
-
-not:
-
-- broader for its own sake
+The current improvement makes that packet stronger where runtime truth already knew more than the old bounded fields expressed, especially around richer repair receipts, deeper multi-step repair order, and lower-replay operator continuation.

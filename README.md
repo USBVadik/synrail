@@ -139,6 +139,7 @@ The current proof reading is:
 - the repo now also has one fifth uglier packet-first compound continuation run showing that selection/preparation handoff, stale-artifact hints, explicit repair order, one mid-continuation readiness failure, and accepted closure can now live on the same runtime surface
 - the repo now also has one first-class artifact repair receipt layer showing which repair step actually completed and which narrower artifact sub-surfaces are still stale afterward
 - the repo now also has one sixth uglier packet-first compound continuation run showing that repair receipts, packet carry-over, explicit step order, and final truthful terminal packet emission can all now live on the same runtime surface
+- the repo now also has one seventh uglier packet-first compound continuation run showing that invalid proof, recovery repair, doctor target-identity pressure, and accepted closure can now all live on the same runtime surface
 
 The current wedge reading is:
 

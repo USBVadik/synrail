@@ -100,111 +100,31 @@
     "remaining_stale_hints": {
       "type": "array",
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "artifact_id",
-          "quality",
-          "repair_step",
-          "still_stale_parts",
-          "stale_subsurfaces"
-        ],
-        "properties": {
-          "artifact_id": {
-            "type": "string",
-            "minLength": 1
+        "allOf": [
+          {
+            "$ref": "#/$defs/artifactHint"
           },
-          "quality": {
-            "const": "STALE"
-          },
-          "repair_step": {
-            "type": "string",
-            "minLength": 1
-          },
-          "still_stale_parts": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "stale_subsurfaces": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "subsurface_id",
-                "why"
-              ],
-              "properties": {
-                "subsurface_id": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "why": {
-                  "type": "string",
-                  "minLength": 1
-                }
+          {
+            "type": "object",
+            "properties": {
+              "quality": {
+                "const": "STALE"
               }
             }
           }
-        }
+        ]
       }
     },
     "remaining_non_resumable_hints": {
       "type": "array",
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "artifact_id",
-          "quality",
-          "repair_step",
-          "still_stale_parts",
-          "stale_subsurfaces"
-        ],
-        "properties": {
-          "artifact_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "quality": {
-            "const": "NON_RESUMABLE"
-          },
-          "repair_step": {
-            "type": "string",
-            "minLength": 1
-          },
-          "still_stale_parts": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "stale_subsurfaces": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "subsurface_id",
-                "why"
-              ],
-              "properties": {
-                "subsurface_id": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "why": {
-                  "type": "string",
-                  "minLength": 1
-                }
-              }
-            }
-          }
-        }
+        "$ref": "#/$defs/nonResumableHint"
+      }
+    },
+    "completed_hints": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/artifactHint"
       }
     },
     "next_step_id": {
@@ -215,6 +135,19 @@
       "items": {
         "type": "string",
         "minLength": 1
+      }
+    },
+    "next_step_required_inputs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "next_step_hints": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/artifactHint"
       }
     },
     "repair_history": {
@@ -253,6 +186,65 @@
         }
       }
     },
+    "operator_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "completed_step_id",
+        "completed_artifact_hints",
+        "completed_subsurface_ids",
+        "next_step_id",
+        "next_step_required_inputs",
+        "next_step_artifact_hints",
+        "next_step_subsurface_ids",
+        "operator_focus"
+      ],
+      "properties": {
+        "completed_step_id": {
+          "type": "string"
+        },
+        "completed_artifact_hints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifactHint"
+          }
+        },
+        "completed_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "next_step_id": {
+          "type": "string"
+        },
+        "next_step_required_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "next_step_artifact_hints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifactHint"
+          }
+        },
+        "next_step_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "operator_focus": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "resumability": {
       "type": "object",
       "additionalProperties": false,
@@ -277,6 +269,96 @@
     "why": {
       "type": "string",
       "minLength": 1
+    }
+  },
+  "$defs": {
+    "subsurfaceHint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subsurface_id",
+        "why"
+      ],
+      "properties": {
+        "subsurface_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string"
+        },
+        "mapped_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "why": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "artifactHint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "quality",
+        "repair_step",
+        "still_stale_parts",
+        "stale_subsurfaces"
+      ],
+      "properties": {
+        "artifact_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "quality": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repair_step": {
+          "type": "string",
+          "minLength": 1
+        },
+        "still_stale_parts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "mapped_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "stale_subsurfaces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/subsurfaceHint"
+          }
+        }
+      }
+    },
+    "nonResumableHint": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/artifactHint"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "quality": {
+              "const": "NON_RESUMABLE"
+            }
+          }
+        }
+      ]
     }
   }
 }

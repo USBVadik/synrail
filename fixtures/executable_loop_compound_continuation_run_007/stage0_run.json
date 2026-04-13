@@ -1,0 +1,185 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "report": {
+    "result": "BLOCKED",
+    "stopping_stage": "repair_handoff",
+    "reason": "CONTINUATION_INPUTS_MISSING",
+    "doctor_verdict": "",
+    "resume_applied": true,
+    "resume_from_state": "PROOF_BUNDLE_INVALID",
+    "repair_handoff_applied": true,
+    "repair_handoff_from_state": "PROOF_BUNDLE_INVALID",
+    "repair_handoff_required_inputs": [
+      "final_result"
+    ],
+    "missing_continuation_inputs": [
+      "final_result"
+    ],
+    "selection_applied": true,
+    "selected_mode": "FULL_GOVERNED_PATH",
+    "selected_with_preparation": true,
+    "preparation_applied": false,
+    "preparation_ready_for_closure": false,
+    "bundle_status": "INVALID",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": false,
+    "comparison_applied": false,
+    "blockers": [
+      "final_result"
+    ],
+    "dominant_blocker": "CONTINUATION_INPUTS_MISSING",
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "resumability_active_pressures": [
+      "INVALID_PROOF",
+      "PARTIAL_PROOF",
+      "RECOVERY_PENDING"
+    ],
+    "resumability_repair_order": [
+      "repair_final_result_artifact",
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "resumability_requires_new_run": false,
+    "resumability_policy_type": "MULTI_STEP_REPAIR",
+    "resumability_policy_next_step": "repair_final_result_artifact",
+    "resumability_ready_now_steps": [
+      "repair_final_result_artifact"
+    ],
+    "resumability_stale_artifact_ids": [
+      "final_result_artifact",
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ],
+    "resumability_stale_subsurface_ids": [
+      "final_result_payload",
+      "diff_provenance_record",
+      "cleanup_status_record",
+      "readback_record",
+      "scenario_proof_record",
+      "recovery_status_record",
+      "reverification_completion_record"
+    ],
+    "resulting_state": "PROOF_BUNDLE_INVALID",
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+  },
+  "resulting_state": {
+    "state": "PROOF_BUNDLE_INVALID",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "INVALID_PROOF_BUNDLE",
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+  },
+  "worked_envelope": {
+    "resulting_state": "PROOF_BUNDLE_INVALID",
+    "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+  },
+  "repair_packet": {
+    "emitted": true,
+    "from_state": "PROOF_BUNDLE_INVALID",
+    "ready_for_resume": false,
+    "missing_inputs": [
+      "final_result"
+    ],
+    "selected_with_preparation": true,
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "active_pressures": [
+      "INVALID_PROOF",
+      "PARTIAL_PROOF",
+      "RECOVERY_PENDING"
+    ],
+    "repair_order": [
+      "repair_final_result_artifact",
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "policy_type": "MULTI_STEP_REPAIR",
+    "policy_next_step": "repair_final_result_artifact",
+    "policy_ready_steps": [
+      "repair_final_result_artifact"
+    ],
+    "repair_history_applied": true,
+    "repair_history_last_result": "STEP_NOT_COMPLETED",
+    "repair_history_last_completed_step_id": "",
+    "repair_history_completed_step_ids": [],
+    "repair_history_current_step_id": "repair_final_result_artifact",
+    "repair_history_waiting_step_ids": [
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "repair_receipt_last_operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
+    "repair_receipt_next_step_required_inputs": [
+      "final_result"
+    ],
+    "repair_receipt_next_step_subsurface_ids": [
+      "final_result_payload",
+      "diff_provenance_record",
+      "cleanup_status_record"
+    ],
+    "stale_artifact_ids": [
+      "final_result_artifact",
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ],
+    "non_resumable_artifact_ids": [],
+    "stale_subsurface_ids": [
+      "final_result_payload",
+      "diff_provenance_record",
+      "cleanup_status_record",
+      "readback_record",
+      "scenario_proof_record",
+      "recovery_status_record",
+      "reverification_completion_record"
+    ],
+    "non_resumable_subsurface_ids": []
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_COMPOUND",
+    "active_pressures": [
+      "INVALID_PROOF",
+      "PARTIAL_PROOF",
+      "RECOVERY_PENDING"
+    ],
+    "repair_order": [
+      "repair_final_result_artifact",
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "policy_type": "MULTI_STEP_REPAIR",
+    "policy_next_step": "repair_final_result_artifact",
+    "ready_now_steps": [
+      "repair_final_result_artifact"
+    ],
+    "stale_artifact_ids": [
+      "final_result_artifact",
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ],
+    "stale_subsurface_ids": [
+      "final_result_payload",
+      "diff_provenance_record",
+      "cleanup_status_record",
+      "readback_record",
+      "scenario_proof_record",
+      "recovery_status_record",
+      "reverification_completion_record"
+    ]
+  }
+}

@@ -77,6 +77,76 @@ def hints_for_quality(handoff: dict, *, quality: str) -> list[dict]:
     return hints
 
 
+def hints_for_step(container: dict, step_id: str) -> list[dict]:
+    hints: list[dict] = []
+    if not step_id:
+        return hints
+    for hint in container.get("artifact_quality_hints", []):
+        if hint.get("repair_step") != step_id:
+            continue
+        hints.append(
+            {
+                "artifact_id": hint.get("artifact_id", ""),
+                "quality": hint.get("quality", ""),
+                "repair_step": hint.get("repair_step", ""),
+                "still_stale_parts": list(hint.get("still_stale_parts", [])),
+                "mapped_inputs": list(hint.get("mapped_inputs", [])),
+                "stale_subsurfaces": [
+                    {
+                        "subsurface_id": subsurface.get("subsurface_id", ""),
+                        "status": subsurface.get("status", ""),
+                        "mapped_inputs": list(subsurface.get("mapped_inputs", [])),
+                        "why": subsurface.get("why", ""),
+                    }
+                    for subsurface in hint.get("stale_subsurfaces", [])
+                    if subsurface.get("subsurface_id", "")
+                ],
+            }
+        )
+    return hints
+
+
+def required_inputs_for_step(handoff: dict, step_id: str) -> list[str]:
+    if not step_id:
+        return []
+    for step in handoff.get("repair_policy", {}).get("ordered_steps", []):
+        if step.get("step_id", "") == step_id:
+            return list(step.get("required_inputs", []))
+    return []
+
+
+def subsurface_ids_from_hints(hints: list[dict]) -> list[str]:
+    values: list[str] = []
+    for hint in hints:
+        for subsurface in hint.get("stale_subsurfaces", []):
+            subsurface_id = subsurface.get("subsurface_id", "")
+            if subsurface_id and subsurface_id not in values:
+                values.append(subsurface_id)
+    return values
+
+
+def build_operator_evidence(*, starting_packet: dict, resulting_handoff: dict, history: dict, result: str) -> dict:
+    completed_step_id = history.get("last_completed_step_id", "")
+    next_step_id = resulting_handoff.get("repair_policy", {}).get("next_step_id", "")
+    completed_hints = hints_for_step(starting_packet, completed_step_id)
+    next_step_hints = hints_for_step(resulting_handoff, next_step_id)
+    return {
+        "completed_step_id": completed_step_id,
+        "completed_artifact_hints": completed_hints,
+        "completed_subsurface_ids": subsurface_ids_from_hints(completed_hints),
+        "next_step_id": next_step_id,
+        "next_step_required_inputs": required_inputs_for_step(resulting_handoff, next_step_id),
+        "next_step_artifact_hints": next_step_hints,
+        "next_step_subsurface_ids": subsurface_ids_from_hints(next_step_hints),
+        "operator_focus": {
+            "STEP_NOT_COMPLETED": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
+            "NON_RESUMABLE_BOUNDARY_REACHED": "stop trying to continue this contour and follow the named non-resumable boundary instead",
+            "STEP_COMPLETED": "move to the next repair step and focus only on the remaining stale sub-surfaces there",
+            "STEP_PROGRESS_RECORDED": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there",
+        }[result],
+    }
+
+
 def build_repair_history(packet: dict, previous_receipt: dict | None, resulting_handoff: dict) -> dict:
     prior_completed = list(previous_receipt.get("repair_history", {}).get("completed_step_ids", [])) if previous_receipt else []
     prior_current = packet.get("repair_history", {}).get("current_step_id", "")
@@ -122,6 +192,12 @@ def build_receipt(*, starting_packet: dict, resulting_state: dict, report: dict,
     completed_subsurface_ids = ids_for_step(starting_packet, starting_step, kind="subsurface")
     history = build_repair_history(starting_packet, previous_receipt, resulting_handoff)
     result = receipt_result(report, starting_packet, resulting_handoff)
+    operator_evidence = build_operator_evidence(
+        starting_packet=starting_packet,
+        resulting_handoff=resulting_handoff,
+        history=history,
+        result=result,
+    )
     return {
         "schema_version": "artifact_repair_receipt_v0",
         "run_id": starting_packet["run_id"],
@@ -138,9 +214,13 @@ def build_receipt(*, starting_packet: dict, resulting_state: dict, report: dict,
         "remaining_non_resumable_subsurface_ids": stale_ids(resulting_handoff, quality="NON_RESUMABLE", kind="subsurface"),
         "remaining_stale_hints": hints_for_quality(resulting_handoff, quality="STALE"),
         "remaining_non_resumable_hints": hints_for_quality(resulting_handoff, quality="NON_RESUMABLE"),
+        "completed_hints": operator_evidence["completed_artifact_hints"],
         "next_step_id": resulting_handoff.get("repair_policy", {}).get("next_step_id", ""),
         "ready_now_step_ids": list(resulting_handoff.get("repair_policy", {}).get("ready_now_step_ids", [])),
+        "next_step_required_inputs": operator_evidence["next_step_required_inputs"],
+        "next_step_hints": operator_evidence["next_step_artifact_hints"],
         "repair_history": history,
+        "operator_evidence": operator_evidence,
         "resumability": {
             "status": resulting_handoff.get("resumability", {}).get("status", ""),
             "family": resulting_handoff.get("resumability", {}).get("family", ""),

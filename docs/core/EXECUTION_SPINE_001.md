@@ -101,6 +101,7 @@ That repair-packet layer is now proven on:
 - one second uglier compound continuation that crosses blocked readiness, invalid proof, degraded recovery, and accepted closure
 - one third uglier compound continuation that carries selection/preparation handoff through packet-first runtime continuation
 - one fourth uglier compound continuation that carries selection/preparation handoff through repair-handoff blocking, recovery repair, and one explicit terminal not-resumable finish
+- one fifth uglier compound continuation that carries invalid proof, recovery completion, doctor target-identity pressure, and accepted closure through stage-aware packet-first continuation
 
 It now also chooses the comparison harness by input schema version, so the same bounded contour can still read legacy comparison inputs while moving the active pressure-testing path toward economics-aware comparison records.
 
@@ -169,3 +170,4 @@ It now also proves two stronger continuation edges than before:
 
 - one explicit truly not-resumable selection-blocked family that stops at `resume` with `STATE_NOT_RESUMABLE`
 - one fifth uglier packet-first continuation family that carries stale-artifact hints, explicit repair order, one newly surfaced readiness failure, recovery repair, and accepted closure on the same runtime surface
+- one sixth uglier packet-first continuation family that now carries richer repair receipts, stage-aware sibling discovery, doctor target-identity pressure, and accepted closure on the same runtime surface
