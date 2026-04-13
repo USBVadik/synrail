@@ -10,7 +10,7 @@
     "task_class": "bounded_router_trigger_fix",
     "from_state": "DOCTOR_BLOCKED",
     "closure_status": "CLAIMED_NOT_ACCEPTED",
-    "blocking_reason": "NO_PROGRESS_DETECTED",
+    "blocking_reason": "MAX_REPAIR_ATTEMPTS",
     "continuation_allowed": true,
     "continuation_entrypoint": "resume",
     "resumability": {
@@ -117,7 +117,7 @@
       "refresh_use_bundle": false,
       "refresh_use_closure": false
     },
-    "next_safe_step": "stop retrying the same repair step without new evidence or inputs"
+    "next_safe_step": "stop this repair loop and start a new run or manual recovery path"
   },
   "resumability": {
     "status": "REPAIRABLE",
@@ -225,14 +225,16 @@
     "waiting_step_ids": [
       "rerun_closure"
     ],
-    "history_chain_length": 2,
+    "history_chain_length": 3,
     "history_chain_results": [
       "STEP_NOT_COMPLETED",
-      "STEP_NOT_COMPLETED"
+      "STEP_NOT_COMPLETED",
+      "STEP_PROGRESS_RECORDED"
     ],
     "history_chain_step_ids": [
       "restore_readiness_truth",
-      "restore_readiness_truth"
+      "restore_readiness_truth",
+      "rerun_closure"
     ]
   },
   "repair_history_chain": [
@@ -275,16 +277,36 @@
       ],
       "remaining_non_resumable_subsurface_ids": [],
       "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+    },
+    {
+      "step_index": 3,
+      "from_state": "DOCTOR_BLOCKED",
+      "resulting_state": "DOCTOR_BLOCKED",
+      "result": "STEP_PROGRESS_RECORDED",
+      "active_step_id": "rerun_closure",
+      "completed_step_id": "",
+      "next_step_id": "restore_readiness_truth",
+      "completed_subsurface_ids": [],
+      "next_step_subsurface_ids": [
+        "prompt_identity_record",
+        "task_identity_record"
+      ],
+      "remaining_stale_subsurface_ids": [
+        "prompt_identity_record",
+        "task_identity_record"
+      ],
+      "remaining_non_resumable_subsurface_ids": [],
+      "operator_focus": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there"
     }
   ],
   "repair_termination": {
     "status": "TERMINATE",
-    "reason": "NO_PROGRESS_DETECTED",
-    "attempt_count": 2,
+    "reason": "MAX_REPAIR_ATTEMPTS",
+    "attempt_count": 3,
     "max_attempts": 3,
     "no_progress_window": 2,
     "stalled_step_id": "restore_readiness_truth",
-    "next_action": "stop retrying the same repair step without new evidence or inputs"
+    "next_action": "stop this repair loop and start a new run or manual recovery path"
   },
   "repair_receipt_context": {
     "applied": true,
@@ -399,6 +421,26 @@
         ],
         "remaining_non_resumable_subsurface_ids": [],
         "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+      },
+      {
+        "step_index": 3,
+        "from_state": "DOCTOR_BLOCKED",
+        "resulting_state": "DOCTOR_BLOCKED",
+        "result": "STEP_PROGRESS_RECORDED",
+        "active_step_id": "rerun_closure",
+        "completed_step_id": "",
+        "next_step_id": "restore_readiness_truth",
+        "completed_subsurface_ids": [],
+        "next_step_subsurface_ids": [
+          "prompt_identity_record",
+          "task_identity_record"
+        ],
+        "remaining_stale_subsurface_ids": [
+          "prompt_identity_record",
+          "task_identity_record"
+        ],
+        "remaining_non_resumable_subsurface_ids": [],
+        "operator_focus": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there"
       }
     ],
     "operator_evidence": {
@@ -464,7 +506,7 @@
   "resume_context": {
     "doctor_run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003_RESUME",
     "doctor_level": "CORE_DOCTOR",
-    "target_path": "fixtures/repair_convergence_run_001",
+    "target_path": "fixtures/repair_convergence_run_003",
     "target_classification": "resume_surface",
     "baseline_identity": "compound-reentry-surface",
     "intended_run_class": "core_probe",
@@ -512,14 +554,14 @@
   "runtime_truth": {
     "report_result": "BLOCKED",
     "stopping_stage": "resume",
-    "report_reason": "NO_PROGRESS_DETECTED",
+    "report_reason": "MAX_REPAIR_ATTEMPTS",
     "doctor_verdict": "",
     "bundle_status": "MISSING",
     "closure_status": "CLAIMED_NOT_ACCEPTED",
     "refresh_applied": false,
     "refresh_resulting_closure_status": "",
     "resulting_state": "DOCTOR_BLOCKED",
-    "next_safe_step": "stop retrying the same repair step without new evidence or inputs",
+    "next_safe_step": "stop this repair loop and start a new run or manual recovery path",
     "active_pressures": [
       "DOCTOR_BLOCKED"
     ],
@@ -535,25 +577,25 @@
       "proof_bundle_status": "MISSING",
       "proof_missing_sections": [],
       "closure_status": "CLAIMED_NOT_ACCEPTED",
-      "closure_blocking_reason": "NO_PROGRESS_DETECTED",
+      "closure_blocking_reason": "MAX_REPAIR_ATTEMPTS",
       "recovery_status": "NOT_REQUIRED",
       "recovery_reverification_complete": false
     }
   },
   "output_defaults": {
-    "artifact_root": "fixtures/repair_convergence_run_001",
-    "doctor_output": "fixtures/repair_convergence_run_001/starting_doctor.json",
-    "bundle_output": "fixtures/repair_convergence_run_001/starting_bundle.json",
-    "closure_output": "fixtures/repair_convergence_run_001/starting_closure.json",
-    "refresh_output": "fixtures/repair_convergence_run_001/starting_refresh.json",
-    "report_output": "fixtures/repair_convergence_run_001/stage3_report.json",
-    "worked_artifact_output": "fixtures/repair_convergence_run_001/orchestration.json",
-    "run_artifact_output": "fixtures/repair_convergence_run_001/run.json",
+    "artifact_root": "fixtures/repair_convergence_run_003",
+    "doctor_output": "fixtures/repair_convergence_run_003/starting_doctor.json",
+    "bundle_output": "fixtures/repair_convergence_run_003/starting_bundle.json",
+    "closure_output": "fixtures/repair_convergence_run_003/starting_closure.json",
+    "refresh_output": "fixtures/repair_convergence_run_003/starting_refresh.json",
+    "report_output": "fixtures/repair_convergence_run_003/stage1_report.json",
+    "worked_artifact_output": "fixtures/repair_convergence_run_003/orchestration.json",
+    "run_artifact_output": "fixtures/repair_convergence_run_003/run.json",
     "repair_handoff_output": "",
-    "repair_packet_output": "fixtures/repair_convergence_run_001/final_repair_packet.json",
+    "repair_packet_output": "fixtures/repair_convergence_run_003/final_repair_packet.json",
     "repair_receipt_output": "",
-    "plan_output": "fixtures/repair_convergence_run_001/starting_plan.json",
-    "preparation_receipt_output": "fixtures/repair_convergence_run_001/starting_preparation_receipt.json"
+    "plan_output": "fixtures/repair_convergence_run_003/starting_plan.json",
+    "preparation_receipt_output": "fixtures/repair_convergence_run_003/starting_preparation_receipt.json"
   },
   "provided_inputs": [],
   "missing_inputs": [
@@ -561,7 +603,7 @@
     "task_identity"
   ],
   "ready_for_resume": false,
-  "next_safe_step": "stop retrying the same repair step without new evidence or inputs",
+  "next_safe_step": "stop this repair loop and start a new run or manual recovery path",
   "continuation_core": {
     "contract_version": "continuation_core_v0",
     "entrypoint": "resume",
@@ -586,8 +628,8 @@
       "task_identity_record"
     ],
     "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
-    "next_safe_step": "stop retrying the same repair step without new evidence or inputs",
-    "history_chain_length": 2,
+    "next_safe_step": "stop this repair loop and start a new run or manual recovery path",
+    "history_chain_length": 3,
     "selection_applied": false,
     "selected_with_preparation": false,
     "packet_supplies_resume_context": true,
@@ -727,6 +769,26 @@
         ],
         "remaining_non_resumable_subsurface_ids": [],
         "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+      },
+      {
+        "step_index": 3,
+        "from_state": "DOCTOR_BLOCKED",
+        "resulting_state": "DOCTOR_BLOCKED",
+        "result": "STEP_PROGRESS_RECORDED",
+        "active_step_id": "rerun_closure",
+        "completed_step_id": "",
+        "next_step_id": "restore_readiness_truth",
+        "completed_subsurface_ids": [],
+        "next_step_subsurface_ids": [
+          "prompt_identity_record",
+          "task_identity_record"
+        ],
+        "remaining_stale_subsurface_ids": [
+          "prompt_identity_record",
+          "task_identity_record"
+        ],
+        "remaining_non_resumable_subsurface_ids": [],
+        "operator_focus": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there"
       }
     ],
     "operator_evidence": {

@@ -40,32 +40,30 @@
       "restore_readiness_truth"
     ],
     "repair_history_applied": true,
-    "repair_history_last_result": "STEP_PROGRESS_RECORDED",
+    "repair_history_last_result": "STEP_NOT_COMPLETED",
     "repair_history_last_completed_step_id": "",
     "repair_history_completed_step_ids": [],
     "repair_history_current_step_id": "restore_readiness_truth",
     "repair_history_waiting_step_ids": [
       "rerun_closure"
     ],
-    "repair_history_chain_length": 3,
+    "repair_history_chain_length": 2,
     "repair_history_chain_results": [
       "STEP_NOT_COMPLETED",
-      "STEP_NOT_COMPLETED",
-      "STEP_PROGRESS_RECORDED"
+      "STEP_NOT_COMPLETED"
     ],
     "repair_history_chain_step_ids": [
-      "restore_readiness_truth",
       "restore_readiness_truth",
       "restore_readiness_truth"
     ],
     "repair_termination_status": "TERMINATE",
     "repair_termination_reason": "NO_PROGRESS_DETECTED",
-    "repair_attempt_count": 3,
+    "repair_attempt_count": 2,
     "repair_max_attempts": 3,
     "repair_no_progress_window": 2,
     "repair_stalled_step_id": "restore_readiness_truth",
     "repair_termination_next_action": "stop retrying the same repair step without new evidence or inputs",
-    "repair_receipt_last_operator_focus": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there",
+    "repair_receipt_last_operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
     "repair_receipt_next_step_required_inputs": [
       "prompt_identity",
       "task_identity"
@@ -87,32 +85,30 @@
   "repair_history": {
     "available": true,
     "from_state": "DOCTOR_BLOCKED",
-    "last_result": "STEP_PROGRESS_RECORDED",
+    "last_result": "STEP_NOT_COMPLETED",
     "last_completed_step_id": "",
     "current_step_id": "restore_readiness_truth",
     "waiting_step_ids": [
       "rerun_closure"
     ],
     "completed_step_ids": [],
-    "chain_length": 3,
+    "chain_length": 2,
     "chain_results": [
       "STEP_NOT_COMPLETED",
-      "STEP_NOT_COMPLETED",
-      "STEP_PROGRESS_RECORDED"
+      "STEP_NOT_COMPLETED"
     ],
     "chain_step_ids": [
-      "restore_readiness_truth",
       "restore_readiness_truth",
       "restore_readiness_truth"
     ],
     "termination_status": "TERMINATE",
     "termination_reason": "NO_PROGRESS_DETECTED",
-    "attempt_count": 3,
+    "attempt_count": 2,
     "max_attempts": 3,
     "no_progress_window": 2,
     "stalled_step_id": "restore_readiness_truth",
     "termination_next_action": "stop retrying the same repair step without new evidence or inputs",
-    "last_operator_focus": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there",
+    "last_operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
     "next_step_required_inputs": [
       "prompt_identity",
       "task_identity"

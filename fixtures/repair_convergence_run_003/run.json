@@ -5,7 +5,7 @@
   "report": {
     "result": "BLOCKED",
     "stopping_stage": "resume",
-    "reason": "NO_PROGRESS_DETECTED",
+    "reason": "MAX_REPAIR_ATTEMPTS",
     "doctor_verdict": "",
     "resume_applied": true,
     "resume_from_state": "DOCTOR_BLOCKED",
@@ -23,9 +23,9 @@
     "refresh_applied": false,
     "comparison_applied": false,
     "blockers": [
-      "NO_PROGRESS_DETECTED"
+      "MAX_REPAIR_ATTEMPTS"
     ],
-    "dominant_blocker": "NO_PROGRESS_DETECTED",
+    "dominant_blocker": "MAX_REPAIR_ATTEMPTS",
     "resumability_status": "REPAIRABLE",
     "resumability_family": "REPAIRABLE_DOCTOR_BLOCKED",
     "resumability_active_pressures": [
@@ -49,18 +49,18 @@
       "task_identity_record"
     ],
     "resulting_state": "DOCTOR_BLOCKED",
-    "next_safe_step": "stop retrying the same repair step without new evidence or inputs"
+    "next_safe_step": "stop this repair loop and start a new run or manual recovery path"
   },
   "resulting_state": {
     "state": "DOCTOR_BLOCKED",
     "closure_status": "CLAIMED_NOT_ACCEPTED",
-    "blocking_reason": "NO_PROGRESS_DETECTED",
-    "next_safe_step": "stop retrying the same repair step without new evidence or inputs"
+    "blocking_reason": "MAX_REPAIR_ATTEMPTS",
+    "next_safe_step": "stop this repair loop and start a new run or manual recovery path"
   },
   "worked_envelope": {
     "resulting_state": "DOCTOR_BLOCKED",
     "current_closure_status": "CLAIMED_NOT_ACCEPTED",
-    "next_safe_step": "stop retrying the same repair step without new evidence or inputs"
+    "next_safe_step": "stop this repair loop and start a new run or manual recovery path"
   },
   "repair_packet": {
     "emitted": true,
@@ -93,22 +93,24 @@
     "repair_history_waiting_step_ids": [
       "rerun_closure"
     ],
-    "repair_history_chain_length": 2,
+    "repair_history_chain_length": 3,
     "repair_history_chain_results": [
       "STEP_NOT_COMPLETED",
-      "STEP_NOT_COMPLETED"
+      "STEP_NOT_COMPLETED",
+      "STEP_PROGRESS_RECORDED"
     ],
     "repair_history_chain_step_ids": [
       "restore_readiness_truth",
-      "restore_readiness_truth"
+      "restore_readiness_truth",
+      "rerun_closure"
     ],
     "repair_termination_status": "TERMINATE",
-    "repair_termination_reason": "NO_PROGRESS_DETECTED",
-    "repair_attempt_count": 2,
+    "repair_termination_reason": "MAX_REPAIR_ATTEMPTS",
+    "repair_attempt_count": 3,
     "repair_max_attempts": 3,
     "repair_no_progress_window": 2,
     "repair_stalled_step_id": "restore_readiness_truth",
-    "repair_termination_next_action": "stop retrying the same repair step without new evidence or inputs",
+    "repair_termination_next_action": "stop this repair loop and start a new run or manual recovery path",
     "repair_receipt_last_operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
     "repair_receipt_next_step_required_inputs": [
       "prompt_identity",
@@ -138,22 +140,24 @@
       "rerun_closure"
     ],
     "completed_step_ids": [],
-    "chain_length": 2,
+    "chain_length": 3,
     "chain_results": [
       "STEP_NOT_COMPLETED",
-      "STEP_NOT_COMPLETED"
+      "STEP_NOT_COMPLETED",
+      "STEP_PROGRESS_RECORDED"
     ],
     "chain_step_ids": [
       "restore_readiness_truth",
-      "restore_readiness_truth"
+      "restore_readiness_truth",
+      "rerun_closure"
     ],
     "termination_status": "TERMINATE",
-    "termination_reason": "NO_PROGRESS_DETECTED",
-    "attempt_count": 2,
+    "termination_reason": "MAX_REPAIR_ATTEMPTS",
+    "attempt_count": 3,
     "max_attempts": 3,
     "no_progress_window": 2,
     "stalled_step_id": "restore_readiness_truth",
-    "termination_next_action": "stop retrying the same repair step without new evidence or inputs",
+    "termination_next_action": "stop this repair loop and start a new run or manual recovery path",
     "last_operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
     "next_step_required_inputs": [
       "prompt_identity",

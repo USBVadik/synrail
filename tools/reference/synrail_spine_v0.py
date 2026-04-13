@@ -510,6 +510,8 @@ def maybe_emit_repair_receipt(
 ) -> dict | None:
     if not starting_repair_packet:
         return None
+    if report.get("stopping_stage") == "resume" and report.get("repair_termination_status") == "TERMINATE":
+        return None
     receipt = build_artifact_repair_receipt(
         starting_packet=starting_repair_packet,
         resulting_state=state,
@@ -1328,6 +1330,7 @@ def finalize_runtime_outputs(
         state=state,
         report=report,
     )
+    effective_repair_receipt = emitted_repair_receipt or previous_repair_receipt
     repair_packet = maybe_emit_repair_packet(
         args,
         state=state,
@@ -1335,7 +1338,7 @@ def finalize_runtime_outputs(
         repair_handoff=current_handoff,
         selection_receipt=selection_receipt,
         preparation_receipt=preparation_receipt,
-        repair_receipt=emitted_repair_receipt,
+        repair_receipt=effective_repair_receipt,
     )
     emit_requested_artifacts(
         args,
@@ -1369,7 +1372,7 @@ def finalize_runtime_outputs(
             state=state,
             report=report,
             repair_packet=repair_packet,
-            repair_receipt=emitted_repair_receipt,
+            repair_receipt=effective_repair_receipt,
             refresh_report=refresh_report,
             output_files={key: value for key, value in output_files.items() if value},
         )
@@ -1517,6 +1520,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                 previous_repair_receipt = dict(starting_repair_packet["repair_receipt"])
             repair_termination = dict(starting_repair_packet.get("repair_termination") or {})
             if repair_termination.get("status") == "TERMINATE" and repair_termination.get("reason") in {
+                "NON_RESUMABLE",
                 "MAX_REPAIR_ATTEMPTS",
                 "NO_PROGRESS_DETECTED",
             }:

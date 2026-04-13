@@ -79,6 +79,12 @@ At minimum the packet-facing truth must record:
 
 If the packet already says `TERMINATE`, then `resume` must stop before starting another repair attempt.
 
+That runtime stop now applies to all first-class termination reasons:
+
+- `NON_RESUMABLE`
+- `MAX_REPAIR_ATTEMPTS`
+- `NO_PROGRESS_DETECTED`
+
 That stop must be machine-readable and operator-visible.
 
 ## Why this matters

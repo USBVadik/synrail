@@ -1,0 +1,70 @@
+{
+  "schema_version": "observability_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+  "task_class": "bounded_router_trigger_fix",
+  "resulting_state": "DOCTOR_BLOCKED",
+  "report_summary": {
+    "result": "BLOCKED",
+    "stopping_stage": "resume",
+    "reason": "MAX_REPAIR_ATTEMPTS",
+    "next_safe_step": "stop this repair loop and start a new run or manual recovery path"
+  },
+  "event_counts": {
+    "transition_count": 1,
+    "repair_attempt_count": 3,
+    "rejection_count": 1
+  },
+  "state_transition_log": [
+    {
+      "transition_id": 1,
+      "from_state": "DOCTOR_BLOCKED",
+      "to_state": "DOCTOR_BLOCKED",
+      "trigger": "resume",
+      "outcome": "BLOCKED",
+      "why": "MAX_REPAIR_ATTEMPTS"
+    }
+  ],
+  "repair_attempt_log": [
+    {
+      "attempt_number": 1,
+      "step_id": "restore_readiness_truth",
+      "result": "STEP_NOT_COMPLETED"
+    },
+    {
+      "attempt_number": 2,
+      "step_id": "restore_readiness_truth",
+      "result": "STEP_NOT_COMPLETED"
+    },
+    {
+      "attempt_number": 3,
+      "step_id": "rerun_closure",
+      "result": "STEP_PROGRESS_RECORDED"
+    }
+  ],
+  "rejection_log": [
+    {
+      "stage": "resume",
+      "reason": "MAX_REPAIR_ATTEMPTS",
+      "dominant_blocker": "MAX_REPAIR_ATTEMPTS",
+      "next_safe_step": "stop this repair loop and start a new run or manual recovery path"
+    }
+  ],
+  "sanitized_session_export": {
+    "sensitive_values_redacted": true,
+    "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+    "task_class": "bounded_router_trigger_fix",
+    "state": "DOCTOR_BLOCKED",
+    "result": "BLOCKED",
+    "reason": "MAX_REPAIR_ATTEMPTS",
+    "next_safe_step": "stop this repair loop and start a new run or manual recovery path",
+    "resumability_family": "REPAIRABLE_DOCTOR_BLOCKED",
+    "repair_current_step_id": "restore_readiness_truth",
+    "repair_last_result": "STEP_NOT_COMPLETED",
+    "artifact_files": [
+      "final_repair_packet.json",
+      "stage1_report.json",
+      "starting_refresh.json",
+      "starting_state.json"
+    ]
+  }
+}

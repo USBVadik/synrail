@@ -92,6 +92,7 @@ Final packet truth stays aligned with that stop:
 
 - `repair_termination.status = TERMINATE`
 - `repair_termination.reason = NO_PROGRESS_DETECTED`
+- `repair_history.history_chain_length = 2`
 
 ## Why this matters
 
@@ -106,4 +107,5 @@ That matters because a disciplined-looking loop can still be a bad loop if it ke
 The shortest honest reading is:
 
 - `Synrail` can now preserve repair-history chain and still stop before the next useless retry
+- early termination no longer synthesizes one phantom repair attempt after the stop
 - repair termination is now part of kernel behavior, not just a descriptive future rule
