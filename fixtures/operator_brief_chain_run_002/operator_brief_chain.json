@@ -1,0 +1,88 @@
+{
+  "schema_version": "operator_brief_chain_record_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "task_class": "bounded_router_trigger_fix",
+  "stage_count": 3,
+  "source_briefs": [
+    {
+      "path": "fixtures/operator_brief_chain_run_002/stage0_operator_brief.json",
+      "stage_id": "stage0",
+      "primary_action": "REPAIR_CURRENT_STEP"
+    },
+    {
+      "path": "fixtures/operator_brief_chain_run_002/stage1_operator_brief.json",
+      "stage_id": "stage1",
+      "primary_action": "REPAIR_CURRENT_STEP"
+    },
+    {
+      "path": "fixtures/operator_brief_chain_run_002/stage2_operator_brief.json",
+      "stage_id": "stage2",
+      "primary_action": "STOP_AND_START_NEW_RUN"
+    }
+  ],
+  "action_counts": {
+    "REPAIR_CURRENT_STEP": 2,
+    "STOP_AND_START_NEW_RUN": 1
+  },
+  "repairable_stage_ids": [
+    "stage0",
+    "stage1",
+    "stage2"
+  ],
+  "continue_stage_ids": [
+    "stage0",
+    "stage1"
+  ],
+  "stop_stage_ids": [
+    "stage2"
+  ],
+  "final_action": "STOP_AND_START_NEW_RUN",
+  "final_next_safe_step": "restore the trusted baseline and expected target-surface identity",
+  "final_resumability_family": "REPAIRABLE_COMPOUND",
+  "stage_summaries": [
+    {
+      "stage_id": "stage0",
+      "resulting_state": "PROOF_BUNDLE_PARTIAL",
+      "result": "OK",
+      "stopping_stage": "closure",
+      "reason": "MISSING_PROOF_SECTIONS",
+      "primary_action": "REPAIR_CURRENT_STEP",
+      "next_safe_step": "collect readback from changed sections on the attested surface",
+      "current_step_id": "complete_missing_proof_sections",
+      "next_step_required_inputs": [
+        "readback",
+        "scenario_proof"
+      ],
+      "termination_reason": ""
+    },
+    {
+      "stage_id": "stage1",
+      "resulting_state": "DOCTOR_BLOCKED",
+      "result": "BLOCKED",
+      "stopping_stage": "doctor",
+      "reason": "DOCTOR_NOT_GREEN",
+      "primary_action": "REPAIR_CURRENT_STEP",
+      "next_safe_step": "restore the trusted baseline and expected target-surface identity",
+      "current_step_id": "restore_readiness_truth",
+      "next_step_required_inputs": [
+        "target_identity_file"
+      ],
+      "termination_reason": ""
+    },
+    {
+      "stage_id": "stage2",
+      "resulting_state": "DOCTOR_BLOCKED",
+      "result": "BLOCKED",
+      "stopping_stage": "doctor",
+      "reason": "DOCTOR_NOT_GREEN",
+      "primary_action": "STOP_AND_START_NEW_RUN",
+      "next_safe_step": "restore the trusted baseline and expected target-surface identity",
+      "current_step_id": "restore_readiness_truth",
+      "next_step_required_inputs": [
+        "target_identity_file"
+      ],
+      "termination_reason": "MAX_REPAIR_ATTEMPTS"
+    }
+  ],
+  "why": "the operator chain preserves one explicit sequence of repair, continue, and terminal decisions across the multi-stage contour"
+}

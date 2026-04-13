@@ -1,0 +1,62 @@
+{
+  "result": "BLOCKED",
+  "stopping_stage": "doctor",
+  "reason": "DOCTOR_NOT_GREEN",
+  "doctor_verdict": "NOT_ACCEPTABLE_BASELINE_IDENTITY",
+  "resume_applied": true,
+  "resume_from_state": "DOCTOR_BLOCKED",
+  "repair_handoff_applied": true,
+  "repair_handoff_from_state": "DOCTOR_BLOCKED",
+  "repair_handoff_required_inputs": [
+    "target_identity_file"
+  ],
+  "missing_continuation_inputs": [],
+  "selection_applied": false,
+  "selected_mode": "",
+  "selected_with_preparation": false,
+  "preparation_applied": false,
+  "preparation_ready_for_closure": false,
+  "bundle_status": "",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "refresh_applied": false,
+  "comparison_applied": false,
+  "blockers": [
+    "baseline-identity ambiguous"
+  ],
+  "dominant_blocker": "DOCTOR_NOT_GREEN",
+  "resumability_status": "REPAIRABLE",
+  "resumability_family": "REPAIRABLE_COMPOUND",
+  "resumability_active_pressures": [
+    "DOCTOR_BLOCKED",
+    "PARTIAL_PROOF",
+    "RECOVERY_PENDING"
+  ],
+  "resumability_repair_order": [
+    "restore_readiness_truth",
+    "complete_missing_proof_sections",
+    "rebuild_proof_bundle",
+    "complete_recovery_reverification",
+    "run_refresh_reconciliation",
+    "rerun_closure"
+  ],
+  "resumability_requires_new_run": false,
+  "resumability_policy_type": "MULTI_STEP_REPAIR",
+  "resumability_policy_next_step": "restore_readiness_truth",
+  "resumability_ready_now_steps": [
+    "restore_readiness_truth"
+  ],
+  "resumability_stale_artifact_ids": [
+    "readiness_surface",
+    "supporting_proof_artifacts",
+    "recovery_reverification_surface"
+  ],
+  "resumability_stale_subsurface_ids": [
+    "target_identity_record",
+    "readback_record",
+    "scenario_proof_record",
+    "recovery_status_record",
+    "reverification_completion_record"
+  ],
+  "resulting_state": "DOCTOR_BLOCKED",
+  "next_safe_step": "restore the trusted baseline and expected target-surface identity"
+}

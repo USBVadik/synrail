@@ -1,0 +1,65 @@
+{
+  "schema_version": "operator_brief_record_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "task_class": "bounded_router_trigger_fix",
+  "entrypoint": "resume",
+  "entry_state": "DOCTOR_BLOCKED",
+  "resulting_state": "DOCTOR_BLOCKED",
+  "result": "BLOCKED",
+  "stopping_stage": "doctor",
+  "reason": "DOCTOR_NOT_GREEN",
+  "doctor_verdict": "NOT_ACCEPTABLE_BASELINE_IDENTITY",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "resumability_family": "REPAIRABLE_COMPOUND",
+  "active_pressures": [
+    "DOCTOR_BLOCKED",
+    "PARTIAL_PROOF",
+    "RECOVERY_PENDING"
+  ],
+  "primary_action": "STOP_AND_START_NEW_RUN",
+  "why_action": "the repair loop already hit a bounded termination rule, so the next move is to stop replaying this contour",
+  "next_safe_step": "restore the trusted baseline and expected target-surface identity",
+  "operator_focus": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there",
+  "current_step_id": "restore_readiness_truth",
+  "ready_now_step_ids": [
+    "restore_readiness_truth"
+  ],
+  "next_step_required_inputs": [
+    "target_identity_file"
+  ],
+  "next_step_subsurface_ids": [
+    "target_identity_record"
+  ],
+  "blockers": [
+    "baseline-identity ambiguous"
+  ],
+  "dominant_blocker": "DOCTOR_NOT_GREEN",
+  "termination_status": "TERMINATE",
+  "termination_reason": "MAX_REPAIR_ATTEMPTS",
+  "attempt_count": 3,
+  "history_chain_length": 3,
+  "completed_step_ids": [
+    "restore_readiness_truth",
+    "complete_missing_proof_sections"
+  ],
+  "stale_artifact_ids": [
+    "readiness_surface",
+    "supporting_proof_artifacts",
+    "recovery_reverification_surface"
+  ],
+  "stale_subsurface_ids": [
+    "target_identity_record",
+    "readback_record",
+    "scenario_proof_record",
+    "recovery_status_record",
+    "reverification_completion_record"
+  ],
+  "entry_artifacts": [
+    "state_file",
+    "repair_packet"
+  ],
+  "suggested_cli": {
+    "command": "NONE",
+    "args": []
+  }
+}

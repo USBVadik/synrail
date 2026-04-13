@@ -101,6 +101,7 @@ Read these next only if you need them:
 - `docs/core/OPERATOR_BRIEF_001.md`
 - `docs/core/OPERATOR_BRIEF_RUN_002.md`
 - `docs/core/OPERATOR_BRIEF_CHAIN_001.md`
+- `docs/core/OPERATOR_BRIEF_CHAIN_RUN_002.md`
 - `docs/boundary/SUBSTITUTE_KILL_TEST_002.md`
 - `docs/boundary/SUBSTITUTE_KILL_TEST_003.md`
 
@@ -236,6 +237,7 @@ Secondary repo-history and hardening context remains available in `docs/boundary
 - the repo now also has one first broader operator-layer slice that compresses runtime truth into one operator brief and, on one ugly repeated-doctor contour, correctly tells the operator to stop replaying the same contour and start a new run instead
 - the repo now also has one second canonical operator-brief slice showing that the same operator layer can preserve honest repairability on a `RECOVERY_PENDING` contour and point directly at the current repair step, required inputs, and next bounded `resume`
 - the repo now also has one first multi-stage operator-brief chain showing the whole repair sequence across an ugly continuation contour, from partial proof to doctor block to recovery repair to terminal accepted boundary
+- the repo now also has one second canonical operator-brief chain showing the complementary ugly ending: repair proof, repair doctor pressure, then stop replaying the contour and start a new run when bounded repair termination is reached
 
 - the repo now also carries one first substitute-kill pressure slice against concrete substitute stacks instead of only one abstract baseline
 - that pressure slice currently shows two substitute-stack wins for Synrail and one still-unclear weak-path comparison

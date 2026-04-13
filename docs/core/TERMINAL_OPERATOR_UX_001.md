@@ -150,6 +150,9 @@ The first broader operator-layer move now also exists:
 - `operator-brief` does not replace the runtime packet or report
 - it compresses them into one smaller actionable surface when the operator needs a quick truthful handoff
 - `operator-brief-chain` extends that same idea across multiple continuation stages when one snapshot is no longer enough to read the contour cleanly
+- it is now proven on both honest endings:
+  - follow the terminal boundary
+  - stop replaying this contour and start a new run
 
 ## Decision rule
 
