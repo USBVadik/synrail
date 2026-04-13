@@ -36,7 +36,7 @@ def build_record(*, second_operator: dict, brief: dict, render_text: str, label:
     )
     verdict = "FOLLOWABLE_WITH_RENDER" if followable else "MIXED"
     why = (
-        "the repeated-doctor contour stays followable when the operator reads the derived render instead of the raw brief alone"
+        "the bounded continuation contour stays followable when the operator reads the derived render instead of the raw brief alone"
         if verdict == "FOLLOWABLE_WITH_RENDER"
         else "the derived render lost one or more required operator markers or the contour was not followable without author intuition"
     )

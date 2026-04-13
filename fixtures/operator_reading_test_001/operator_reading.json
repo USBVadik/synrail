@@ -24,5 +24,5 @@
   ],
   "missing_markers": [],
   "verdict": "FOLLOWABLE_WITH_RENDER",
-  "why": "the repeated-doctor contour stays followable when the operator reads the derived render instead of the raw brief alone"
+  "why": "the bounded continuation contour stays followable when the operator reads the derived render instead of the raw brief alone"
 }
