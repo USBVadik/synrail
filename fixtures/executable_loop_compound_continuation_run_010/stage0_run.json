@@ -1,0 +1,204 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "task_class": "bounded_router_trigger_fix",
+  "report": {
+    "result": "OK",
+    "stopping_stage": "closure",
+    "reason": "MISSING_PROOF_SECTIONS",
+    "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "resume_applied": true,
+    "resume_from_state": "DOCTOR_BLOCKED",
+    "repair_handoff_applied": true,
+    "repair_handoff_from_state": "DOCTOR_BLOCKED",
+    "repair_handoff_required_inputs": [
+      "target_identity_file"
+    ],
+    "missing_continuation_inputs": [],
+    "selection_applied": false,
+    "selected_mode": "",
+    "selected_with_preparation": false,
+    "preparation_applied": true,
+    "preparation_ready_for_closure": false,
+    "bundle_status": "PARTIAL",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": false,
+    "comparison_applied": false,
+    "blockers": [],
+    "dominant_blocker": "",
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "resumability_active_pressures": [
+      "PARTIAL_PROOF",
+      "RECOVERY_PENDING"
+    ],
+    "resumability_repair_order": [
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "resumability_requires_new_run": false,
+    "resumability_policy_type": "MULTI_STEP_REPAIR",
+    "resumability_policy_next_step": "complete_missing_proof_sections",
+    "resumability_ready_now_steps": [
+      "complete_missing_proof_sections"
+    ],
+    "resumability_stale_artifact_ids": [
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ],
+    "resumability_stale_subsurface_ids": [
+      "readback_record",
+      "scenario_proof_record",
+      "recovery_status_record",
+      "reverification_completion_record"
+    ],
+    "resulting_state": "PROOF_BUNDLE_PARTIAL",
+    "next_safe_step": "collect readback from changed sections on the attested surface"
+  },
+  "resulting_state": {
+    "state": "PROOF_BUNDLE_PARTIAL",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "MISSING_PROOF_SECTIONS",
+    "next_safe_step": "collect readback from changed sections on the attested surface"
+  },
+  "worked_envelope": {
+    "resulting_state": "PROOF_BUNDLE_PARTIAL",
+    "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+    "next_safe_step": "collect readback from changed sections on the attested surface"
+  },
+  "repair_packet": {
+    "emitted": true,
+    "from_state": "PROOF_BUNDLE_PARTIAL",
+    "ready_for_resume": false,
+    "missing_inputs": [
+      "readback",
+      "scenario_proof"
+    ],
+    "selected_with_preparation": false,
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "active_pressures": [
+      "PARTIAL_PROOF",
+      "RECOVERY_PENDING"
+    ],
+    "repair_order": [
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "policy_type": "MULTI_STEP_REPAIR",
+    "policy_next_step": "complete_missing_proof_sections",
+    "policy_ready_steps": [
+      "complete_missing_proof_sections"
+    ],
+    "repair_history_applied": true,
+    "repair_history_last_result": "STEP_COMPLETED",
+    "repair_history_last_completed_step_id": "restore_readiness_truth",
+    "repair_history_completed_step_ids": [
+      "restore_readiness_truth"
+    ],
+    "repair_history_current_step_id": "complete_missing_proof_sections",
+    "repair_history_waiting_step_ids": [
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "repair_history_chain_length": 1,
+    "repair_history_chain_results": [
+      "STEP_COMPLETED"
+    ],
+    "repair_history_chain_step_ids": [
+      "restore_readiness_truth"
+    ],
+    "repair_receipt_last_operator_focus": "move to the next repair step and focus only on the remaining stale sub-surfaces there",
+    "repair_receipt_next_step_required_inputs": [
+      "readback",
+      "scenario_proof"
+    ],
+    "repair_receipt_next_step_subsurface_ids": [
+      "readback_record",
+      "scenario_proof_record"
+    ],
+    "stale_artifact_ids": [
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ],
+    "non_resumable_artifact_ids": [],
+    "stale_subsurface_ids": [
+      "readback_record",
+      "scenario_proof_record",
+      "recovery_status_record",
+      "reverification_completion_record"
+    ],
+    "non_resumable_subsurface_ids": []
+  },
+  "repair_history": {
+    "available": true,
+    "from_state": "PROOF_BUNDLE_PARTIAL",
+    "last_result": "STEP_COMPLETED",
+    "last_completed_step_id": "restore_readiness_truth",
+    "current_step_id": "complete_missing_proof_sections",
+    "waiting_step_ids": [
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "completed_step_ids": [
+      "restore_readiness_truth"
+    ],
+    "chain_length": 1,
+    "chain_results": [
+      "STEP_COMPLETED"
+    ],
+    "chain_step_ids": [
+      "restore_readiness_truth"
+    ],
+    "last_operator_focus": "move to the next repair step and focus only on the remaining stale sub-surfaces there",
+    "next_step_required_inputs": [
+      "readback",
+      "scenario_proof"
+    ],
+    "next_step_subsurface_ids": [
+      "readback_record",
+      "scenario_proof_record"
+    ]
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_COMPOUND",
+    "active_pressures": [
+      "PARTIAL_PROOF",
+      "RECOVERY_PENDING"
+    ],
+    "repair_order": [
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "policy_type": "MULTI_STEP_REPAIR",
+    "policy_next_step": "complete_missing_proof_sections",
+    "ready_now_steps": [
+      "complete_missing_proof_sections"
+    ],
+    "stale_artifact_ids": [
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ],
+    "stale_subsurface_ids": [
+      "readback_record",
+      "scenario_proof_record",
+      "recovery_status_record",
+      "reverification_completion_record"
+    ]
+  }
+}

@@ -229,6 +229,7 @@ Guarantees:
 - embeds one runtime output-default set
 - embeds one repair-receipt context when runtime truth already has prior continuation progression
 - embeds one packet-native repair-history chain across multiple continuation stages
+- can now rebuild one later repair packet from one earlier packet instead of forcing a full context replay each time
 - records provided vs missing continuation inputs
 - records whether the current contour is repairable or terminal
 
@@ -258,6 +259,41 @@ Does not guarantee:
 - broad repair orchestration on its own
 - automatic packet synthesis on its own
 - full runtime coordination without the spine
+
+### `synrail_continuation_adoption_v0.py`
+
+Purpose:
+
+- inspect one continuation fixture and emit one compact adoption-friction record
+
+Guarantees:
+
+- records whether the root entry is packet-only
+- records visible continuation side-file count
+- records repeated doctor-block events across staged runs
+- records whether repair history is still visible in the primary artifact
+
+Does not guarantee:
+
+- broad runtime economics
+- substitute comparison on its own
+
+### `synrail_continuation_adoption_delta_v0.py`
+
+Purpose:
+
+- compare two continuation adoption records and emit one compact friction delta
+
+Guarantees:
+
+- records side-file reduction
+- records whether packet-only entry was gained
+- records whether repeated doctor pressure and accepted terminal truth were preserved
+
+Does not guarantee:
+
+- broad usability proof across every continuation family
+- full product economics on its own
 
 ### `synrail_closure_v0.py`
 
@@ -310,6 +346,7 @@ Guarantees:
 - exposes one named `resume` path that now defaults to packet-first continuation through a sibling `repair_packet.json`
 - exposes one named `resume` path that now treats the packet's embedded continuation core as the default continuation contract
 - exposes one named `resume` path that now also supports stage-aware sibling discovery plus one narrow `resume_inputs.json` override file
+- exposes one `repair-packet` path that can now inherit context from one previous packet for lower-replay multi-step continuation
 - exposes one `repair-packet` command that groups continuation contract, continuation plan, repair inputs, output defaults, and current selection/preparation context
 - exposes baseline comparison through the same CLI layer
 

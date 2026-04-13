@@ -1,0 +1,37 @@
+{
+  "schema_version": "proof_bundle_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "task_class": "bounded_router_trigger_fix",
+  "status": "COMPLETE",
+  "final_result": {
+    "present": true,
+    "status": ""
+  },
+  "modified_files": {
+    "present": true,
+    "count": 0
+  },
+  "diff_provenance": {
+    "present": true,
+    "non_empty": true
+  },
+  "readback": {
+    "present": true,
+    "path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_010/stage1_later_readback.txt"
+  },
+  "scenario_proof": {
+    "present": true,
+    "path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_010/stage1_later_scenario.txt"
+  },
+  "artifact_identity": {
+    "baseline_identity": "compound-prepared-surface-010",
+    "execution_surface_identity": "compound-prepared-surface-010",
+    "prompt_identity": "compound-prompt-010",
+    "task_identity": "bounded-router-task-010"
+  },
+  "cleanup_status": {
+    "present": true,
+    "success": true
+  },
+  "missing_sections": []
+}

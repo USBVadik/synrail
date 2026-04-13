@@ -135,6 +135,8 @@ These prove:
 - one low-friction canonical continuation run now proves that `resume` can return from `DOCTOR_BLOCKED` to accepted closure from just:
   - `state.json`
   - `repair_packet.json`
+- repair packets can now also be rebuilt from one previous packet, so later continuation steps no longer need the operator to restate the full runtime context every time
+- one tenth uglier continuation now proves that repeated doctor pressure can survive that packet-chained continuation model and still return to accepted closure
 
 ## Current boundary
 
@@ -152,3 +154,4 @@ The current improvement makes that packet stronger where runtime truth already k
 
 - packet-first continuation now also defaults to fewer root-level side artifacts because the packet can carry the prior receipt and repair-history chain by itself
 - packet-first continuation now also has one smaller embedded core so the packet can stay rich without forcing the runtime to consume all of that richness as the default operator contract
+- packet-first continuation now also lets later repair packets inherit resume context, repair inputs, and history from the previous packet instead of forcing a full context replay at every step

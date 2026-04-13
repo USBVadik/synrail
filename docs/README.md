@@ -15,6 +15,7 @@ Start here when you want the current product wedge rather than the full repo his
 - `boundary/TRIO_READING_001.md`
 - `boundary/COST_OF_CONTROL_001.md`
 - `boundary/HYBRID_STATUS_001.md`
+- `boundary/CONTINUATION_ADOPTION_001.md`
 - `boundary/KILLER_PATH_001.md`
 - `boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `boundary/MINIMUM_UNDENIABLE_CORE_001.md`
@@ -56,6 +57,7 @@ Start here when you want to understand the kernel itself:
 - `core/ARTIFACT_REPAIR_RECEIPT_001.md`
 - `core/MINIMAL_CONTINUATION_CORE_001.md`
 - `core/EXECUTABLE_LOOP_MINIMAL_CONTINUATION_RUN_001.md`
+- `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_007.md`
 - `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_008.md`
 - `core/CLOSURE_ENGINE_001.md`
@@ -135,6 +137,7 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/executable_loop_runtime_resume_run_002/run.json`
 - `../fixtures/executable_loop_runtime_resume_run_003/run.json`
 - `../fixtures/executable_loop_minimal_continuation_run_001/run.json`
+- `../fixtures/executable_loop_compound_continuation_run_010/run.json`
 - `../fixtures/executable_loop_runtime_non_resumable_run_001/run.json`
 - `../fixtures/executable_loop_runtime_non_resumable_run_004/run.json`
 - `../fixtures/repair_packet_run_001/run.json`

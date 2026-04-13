@@ -149,3 +149,4 @@ without turning the CLI into a broad orchestration shell too early.
 
 - packet-first `resume` now leaves fewer default root-level side files behind when the packet already carries enough continuation truth
 - packet-first `resume` now also trusts one compact embedded continuation core inside the packet, so the normal continuation path can start from `state + repair_packet` instead of reopening more side artifacts by default
+- `repair-packet` can now also inherit context from one previous packet, so multi-step continuation no longer has to replay full doctor or execution context at every repair step

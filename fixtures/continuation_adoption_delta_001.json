@@ -1,0 +1,20 @@
+{
+  "schema_version": "continuation_adoption_delta_v0",
+  "before_run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_009",
+  "after_run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "before_label": "packet_first_repeated_doctor_baseline",
+  "after_label": "packet_chained_minimal_core_repeated_doctor",
+  "side_files_reduced": 2,
+  "packet_only_entry_gained": true,
+  "doctor_pressure_preserved": true,
+  "accepted_terminal_truth_preserved": true,
+  "before_repair_history_chain_length": 5,
+  "after_repair_history_chain_length": 4,
+  "before_root_side_files": [
+    "prompt_identity.txt",
+    "task_identity.txt"
+  ],
+  "after_root_side_files": [],
+  "verdict": "FRICTION_REDUCED_WITHOUT_TRUTH_LOSS",
+  "why": "minimal continuation entry now reduces visible continuation side-file tax while still preserving repeated doctor pressure and accepted closure on the ugly contour"
+}

@@ -24,6 +24,69 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
+def scalar_arg(current: str | None, fallback: str) -> str:
+    return current if current not in {None, ""} else fallback
+
+
+def bool_arg(current: bool, fallback: bool) -> bool:
+    return current or fallback
+
+
+def merge_previous_packet_context(args: argparse.Namespace, previous_packet: dict) -> argparse.Namespace:
+    resume_context = dict(previous_packet.get("resume_context", {}))
+    repair_inputs = dict(previous_packet.get("repair_inputs", {}))
+    continuation_plan = dict(previous_packet.get("continuation_plan", {}))
+    output_defaults = dict(previous_packet.get("output_defaults", {}))
+
+    args.doctor_run_id = scalar_arg(args.doctor_run_id, resume_context.get("doctor_run_id", ""))
+    args.doctor_level = scalar_arg(args.doctor_level, resume_context.get("doctor_level", ""))
+    args.target_path = scalar_arg(args.target_path, resume_context.get("target_path", ""))
+    args.target_classification = scalar_arg(args.target_classification, resume_context.get("target_classification", ""))
+    args.baseline_identity = scalar_arg(args.baseline_identity, resume_context.get("baseline_identity", ""))
+    args.intended_run_class = scalar_arg(args.intended_run_class, resume_context.get("intended_run_class", ""))
+    args.execution_surface_identity = scalar_arg(
+        args.execution_surface_identity,
+        resume_context.get("execution_surface_identity", ""),
+    )
+
+    args.final_result = scalar_arg(args.final_result, repair_inputs.get("final_result", ""))
+    args.prompt_identity = scalar_arg(args.prompt_identity, repair_inputs.get("prompt_identity", ""))
+    args.task_identity = scalar_arg(args.task_identity, repair_inputs.get("task_identity", ""))
+    args.readback = scalar_arg(args.readback, repair_inputs.get("readback", ""))
+    args.scenario_proof = scalar_arg(args.scenario_proof, repair_inputs.get("scenario_proof", ""))
+    args.target_identity_file = scalar_arg(args.target_identity_file, repair_inputs.get("target_identity_file", ""))
+    args.artifact_path = scalar_arg(args.artifact_path, repair_inputs.get("artifact_path", ""))
+    args.helper_path = scalar_arg(args.helper_path, repair_inputs.get("helper_path", ""))
+    args.prompt_identity_ok = bool_arg(args.prompt_identity_ok, repair_inputs.get("prompt_identity_ok", False))
+    args.clean_surface = bool_arg(args.clean_surface, repair_inputs.get("clean_surface", False))
+    args.artifact_viable = bool_arg(args.artifact_viable, repair_inputs.get("artifact_viable", False))
+    args.helper_ok = bool_arg(args.helper_ok, repair_inputs.get("helper_ok", False))
+    args.credentials_ok = bool_arg(args.credentials_ok, repair_inputs.get("credentials_ok", False))
+
+    if not args.credential_env:
+        args.credential_env = list(repair_inputs.get("credential_env", []))
+
+    args.refresh_event_type = scalar_arg(args.refresh_event_type, continuation_plan.get("refresh_event_type", ""))
+    args.refresh_recovery_status = scalar_arg(
+        args.refresh_recovery_status,
+        repair_inputs.get("refresh_recovery_status", continuation_plan.get("refresh_recovery_status", "NOT_REQUIRED")),
+    )
+    args.refresh_reverification_complete = bool_arg(
+        args.refresh_reverification_complete,
+        repair_inputs.get(
+            "refresh_reverification_complete",
+            continuation_plan.get("refresh_reverification_complete", False),
+        ),
+    )
+    args.refresh_use_bundle = bool_arg(args.refresh_use_bundle, continuation_plan.get("refresh_use_bundle", False))
+    args.refresh_use_closure = bool_arg(args.refresh_use_closure, continuation_plan.get("refresh_use_closure", False))
+
+    if not getattr(args, "refresh_output", None):
+        args.refresh_output = output_defaults.get("refresh_output", "")
+
+    return args
+
+
 def provided_input_ids(args: argparse.Namespace) -> list[str]:
     provided: list[str] = []
     checks = [
@@ -466,14 +529,36 @@ def build_packet_from_runtime_truth(
 
 def build_packet(args: argparse.Namespace) -> dict:
     state = load_state_json(Path(args.state_file))
+    previous_packet = load_json(Path(args.previous_packet_file)) if getattr(args, "previous_packet_file", None) else None
+    if previous_packet:
+        args = merge_previous_packet_context(args, previous_packet)
+    missing_context = [
+        field
+        for field in [
+            "doctor_run_id",
+            "doctor_level",
+            "target_path",
+            "target_classification",
+            "baseline_identity",
+            "intended_run_class",
+            "execution_surface_identity",
+        ]
+        if getattr(args, field, None) in {None, ""}
+    ]
+    if missing_context:
+        raise ValueError(f"repair packet context incomplete: {', '.join(missing_context)}")
     if args.repair_handoff_file:
         handoff = load_json(Path(args.repair_handoff_file))
     else:
         handoff = build_repair_handoff(state)
 
     selection_receipt = load_json(Path(args.mode_selection_receipt)) if getattr(args, "mode_selection_receipt", None) else None
+    if selection_receipt is None and previous_packet and previous_packet.get("selection_receipt"):
+        selection_receipt = dict(previous_packet["selection_receipt"])
     preparation_receipt = load_json(Path(args.preparation_receipt_file)) if getattr(args, "preparation_receipt_file", None) else None
     repair_receipt = load_json(Path(args.repair_receipt_file)) if getattr(args, "repair_receipt_file", None) else None
+    if repair_receipt is None and previous_packet and previous_packet.get("repair_receipt"):
+        repair_receipt = dict(previous_packet["repair_receipt"])
     report = load_json(Path(args.report_file)) if getattr(args, "report_file", None) else None
 
     return build_packet_from_runtime_truth(
@@ -519,18 +604,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--state-file", required=True)
     parser.add_argument("--artifact-root", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--previous-packet-file")
     parser.add_argument("--repair-handoff-file")
     parser.add_argument("--mode-selection-receipt")
     parser.add_argument("--preparation-receipt-file")
     parser.add_argument("--repair-receipt-file")
     parser.add_argument("--report-file")
-    parser.add_argument("--doctor-run-id", required=True)
-    parser.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
-    parser.add_argument("--target-path", required=True)
-    parser.add_argument("--target-classification", required=True)
-    parser.add_argument("--baseline-identity", required=True)
-    parser.add_argument("--intended-run-class", required=True, choices=["core_probe", "support_run", "exact_retry"])
-    parser.add_argument("--execution-surface-identity", required=True)
+    parser.add_argument("--doctor-run-id")
+    parser.add_argument("--doctor-level", choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
+    parser.add_argument("--target-path")
+    parser.add_argument("--target-classification")
+    parser.add_argument("--baseline-identity")
+    parser.add_argument("--intended-run-class", choices=["core_probe", "support_run", "exact_retry"])
+    parser.add_argument("--execution-surface-identity")
     parser.add_argument("--final-result", default="")
     parser.add_argument("--prompt-identity", default="")
     parser.add_argument("--task-identity", default="")
@@ -557,7 +643,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    packet = build_packet(args)
+    try:
+        packet = build_packet(args)
+    except ValueError as exc:
+        print(json.dumps({"result": "ERROR", "reason": "INVALID_REPAIR_PACKET_CONTEXT", "detail": str(exc)}, ensure_ascii=True))
+        return 2
     save_json(Path(args.output), packet)
     print(
         json.dumps(

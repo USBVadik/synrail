@@ -206,6 +206,8 @@ Secondary repo-history and hardening context remains available in `docs/boundary
 - primary run artifacts now also carry one first-class repair-history summary instead of burying that truth only inside repair packets
 - packet-first continuation now defaults to fewer root-level side artifacts when packet truth is already sufficient
 - the repo now also carries one first low-friction minimal-continuation run proving that one repaired `DOCTOR_BLOCKED` contour can now continue from just `state + repair_packet`
+- the repo now also carries one tenth ugly compound continuation run proving that repeated doctor pressure can now survive packet-chained minimal-core continuation with lower visible side-file tax
+- the repo now also has one continuation-adoption pressure slice showing that this compressed continuation model reduced root side-file tax without losing repeated doctor pressure or accepted closure
 
 - the repo now also carries one first substitute-kill pressure slice against concrete substitute stacks instead of only one abstract baseline
 - that pressure slice currently shows two substitute-stack wins for Synrail and one still-unclear weak-path comparison

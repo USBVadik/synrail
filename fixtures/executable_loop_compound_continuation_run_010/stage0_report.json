@@ -1,0 +1,61 @@
+{
+  "schema_version": "orchestration_report_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "task_class": "bounded_router_trigger_fix",
+  "result": "OK",
+  "stopping_stage": "closure",
+  "reason": "MISSING_PROOF_SECTIONS",
+  "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+  "resume_applied": true,
+  "resume_from_state": "DOCTOR_BLOCKED",
+  "repair_handoff_applied": true,
+  "repair_handoff_from_state": "DOCTOR_BLOCKED",
+  "repair_handoff_required_inputs": [
+    "target_identity_file"
+  ],
+  "missing_continuation_inputs": [],
+  "selection_applied": false,
+  "selected_mode": "",
+  "selected_with_preparation": false,
+  "preparation_applied": true,
+  "preparation_ready_for_closure": false,
+  "bundle_status": "PARTIAL",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "refresh_applied": false,
+  "refresh_resulting_closure_status": "",
+  "comparison_applied": false,
+  "comparison_verdict": "",
+  "blockers": [],
+  "dominant_blocker": "",
+  "resulting_state": "PROOF_BUNDLE_PARTIAL",
+  "next_safe_step": "collect readback from changed sections on the attested surface",
+  "resumability_status": "REPAIRABLE",
+  "resumability_family": "REPAIRABLE_COMPOUND",
+  "resumability_active_pressures": [
+    "PARTIAL_PROOF",
+    "RECOVERY_PENDING"
+  ],
+  "resumability_repair_order": [
+    "complete_missing_proof_sections",
+    "rebuild_proof_bundle",
+    "complete_recovery_reverification",
+    "run_refresh_reconciliation",
+    "rerun_closure"
+  ],
+  "resumability_requires_new_run": false,
+  "resumability_policy_type": "MULTI_STEP_REPAIR",
+  "resumability_policy_next_step": "complete_missing_proof_sections",
+  "resumability_ready_now_steps": [
+    "complete_missing_proof_sections"
+  ],
+  "resumability_stale_artifact_ids": [
+    "supporting_proof_artifacts",
+    "recovery_reverification_surface"
+  ],
+  "resumability_stale_subsurface_ids": [
+    "readback_record",
+    "scenario_proof_record",
+    "recovery_status_record",
+    "reverification_completion_record"
+  ]
+}

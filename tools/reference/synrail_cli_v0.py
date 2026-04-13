@@ -305,18 +305,19 @@ def cmd_repair_packet(args: argparse.Namespace) -> int:
         "--state-file", args.state_file,
         "--artifact-root", args.artifact_root,
         "--output", args.output,
-        "--doctor-run-id", args.doctor_run_id,
-        "--doctor-level", args.doctor_level,
-        "--target-path", args.target_path,
-        "--target-classification", args.target_classification,
-        "--baseline-identity", args.baseline_identity,
-        "--intended-run-class", args.intended_run_class,
-        "--execution-surface-identity", args.execution_surface_identity,
-        "--final-result", args.final_result,
-        "--prompt-identity", args.prompt_identity,
-        "--task-identity", args.task_identity,
     ]
     for flag, value in [
+        ("--doctor-run-id", getattr(args, "doctor_run_id", None)),
+        ("--doctor-level", getattr(args, "doctor_level", None)),
+        ("--target-path", getattr(args, "target_path", None)),
+        ("--target-classification", getattr(args, "target_classification", None)),
+        ("--baseline-identity", getattr(args, "baseline_identity", None)),
+        ("--intended-run-class", getattr(args, "intended_run_class", None)),
+        ("--execution-surface-identity", getattr(args, "execution_surface_identity", None)),
+        ("--final-result", getattr(args, "final_result", None)),
+        ("--prompt-identity", getattr(args, "prompt_identity", None)),
+        ("--task-identity", getattr(args, "task_identity", None)),
+        ("--previous-packet-file", getattr(args, "previous_packet_file", None)),
         ("--repair-handoff-file", args.repair_handoff_file),
         ("--mode-selection-receipt", args.mode_selection_receipt),
         ("--preparation-receipt-file", args.preparation_receipt_file),
@@ -1036,17 +1037,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_repair_packet.add_argument("--state-file", required=True)
     p_repair_packet.add_argument("--artifact-root", required=True)
     p_repair_packet.add_argument("--output", required=True)
+    p_repair_packet.add_argument("--previous-packet-file")
     p_repair_packet.add_argument("--repair-handoff-file")
     p_repair_packet.add_argument("--mode-selection-receipt")
     p_repair_packet.add_argument("--preparation-receipt-file")
     p_repair_packet.add_argument("--report-file")
-    p_repair_packet.add_argument("--doctor-run-id", required=True)
-    p_repair_packet.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
-    p_repair_packet.add_argument("--target-path", required=True)
-    p_repair_packet.add_argument("--target-classification", required=True)
-    p_repair_packet.add_argument("--baseline-identity", required=True)
-    p_repair_packet.add_argument("--intended-run-class", required=True, choices=["core_probe", "support_run", "exact_retry"])
-    p_repair_packet.add_argument("--execution-surface-identity", required=True)
+    p_repair_packet.add_argument("--doctor-run-id")
+    p_repair_packet.add_argument("--doctor-level", choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
+    p_repair_packet.add_argument("--target-path")
+    p_repair_packet.add_argument("--target-classification")
+    p_repair_packet.add_argument("--baseline-identity")
+    p_repair_packet.add_argument("--intended-run-class", choices=["core_probe", "support_run", "exact_retry"])
+    p_repair_packet.add_argument("--execution-surface-identity")
     p_repair_packet.add_argument("--final-result", default="")
     p_repair_packet.add_argument("--prompt-identity", default="")
     p_repair_packet.add_argument("--task-identity", default="")

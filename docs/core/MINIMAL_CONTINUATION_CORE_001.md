@@ -49,6 +49,7 @@ The operator can still inspect the richer packet when needed, but the runtime ca
 The first canonical proof point is:
 
 - `core/EXECUTABLE_LOOP_MINIMAL_CONTINUATION_RUN_001.md`
+- `core/EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010.md`
 
 That run proves that one `DOCTOR_BLOCKED` contour can now resume back to accepted closure from:
 
@@ -56,3 +57,9 @@ That run proves that one `DOCTOR_BLOCKED` contour can now resume back to accepte
 - `repair_packet.json`
 
 without relying on extra root-level repair handoff, repair receipt, prompt identity, task identity, or resume-input side artifacts.
+
+The newer repeated-doctor proof point now also shows:
+
+- later repair packets can be rebuilt from one previous packet
+- repeated doctor pressure can still return after an intermediate proof repair
+- the root continuation entry can stay visibly lighter while that uglier contour still reaches accepted closure

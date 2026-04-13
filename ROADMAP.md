@@ -137,6 +137,8 @@ Current pressure-tested slice:
 - repair receipts now also carry one packet-native repair-history chain across multiple continuation stages instead of only one last-step marker
 - packet-first `resume` now trusts embedded packet truth strongly enough that normal continuation no longer depends on temporary unpacked selection or repair-handoff side files
 - one further uglier packet-first continuation run now proves that doctor target-identity pressure, partial proof pressure, recovery pressure, and accepted closure can all live on one ordered repair chain
+- one tenth uglier packet-first continuation run now proves that repeated doctor pressure can survive packet-chained minimal-core continuation and still return to accepted closure
+- one continuation-adoption delta now proves that this compressed continuation contour reduced visible root side-file tax without losing repeated doctor pressure or accepted terminal truth
 
 Next likely strengthening moves:
 
