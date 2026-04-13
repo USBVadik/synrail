@@ -21,6 +21,7 @@ Start here when you want the current product wedge rather than the full repo his
 - `boundary/SHORT_EXTERNALITY_PRESSURE_001.md`
 - `boundary/SUBSTITUTE_KILL_TEST_002.md`
 - `boundary/SUBSTITUTE_KILL_TEST_003.md`
+- `boundary/SUBSTITUTE_KILL_TEST_004.md`
 - `boundary/KILLER_PATH_001.md`
 - `boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `boundary/MINIMUM_UNDENIABLE_CORE_001.md`
@@ -185,6 +186,7 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/operator_reading_test_001/operator_reading.json`
 - `../fixtures/operator_reading_test_002/operator_reading.json`
 - `../fixtures/externality_pressure_001/pressure.json`
+- `../fixtures/substitute_kill_test_004/substitute_pressure.json`
 - `../fixtures/artifact_consistency_run_001/consistent.json`
 - `../fixtures/artifact_consistency_run_002/inconsistent.json`
 - `../fixtures/doctor_pressure_test_003/doctor.json`

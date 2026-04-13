@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v2",
+  "system": "synrail",
+  "scenario_id": "SUBSTITUTE_SCENARIO_EXTERNAL_DOCTOR_004",
+  "scenario_class": "externalish_repeated_doctor_contour",
+  "task_class": "bounded_router_trigger_fix",
+  "path_id": "short_externality_repeated_doctor_kernel",
+  "closure_result": "BLOCKED",
+  "blocker_to_closure_cycles": 1,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "MEDIUM",
+  "operator_minutes": 16,
+  "intervention_count": 2,
+  "repair_cycles": 2,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 19,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 92,
+  "notes": "the tightened kernel keeps the same uglier repeated-doctor contour reproducible, packet-followable, and render-followable without hidden author intuition"
+}
