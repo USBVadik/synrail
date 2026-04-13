@@ -75,6 +75,7 @@ Start here when you want to understand the kernel itself:
 - `core/OPERATOR_BRIEF_CHAIN_001.md`
 - `core/OPERATOR_BRIEF_CHAIN_RUN_002.md`
 - `core/OPERATOR_RENDER_001.md`
+- `core/OPERATOR_READING_TEST_001.md`
 - `core/GOVERNED_PATH_PREPARATION_001.md`
 - `core/GOVERNED_PATH_COST_REDUCTION_001.md`
 - `core/REPAIR_HANDOFF_001.md`
@@ -177,7 +178,9 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/operator_brief_chain_run_002/operator_brief_chain.json`
 - `../fixtures/operator_render_run_001/operator_render.md`
 - `../fixtures/operator_render_run_002/operator_render.md`
+- `../fixtures/operator_render_run_003/operator_render.md`
 - `../fixtures/operator_render_adoption/delta.json`
+- `../fixtures/operator_reading_test_001/operator_reading.json`
 - `../fixtures/artifact_consistency_run_001/consistent.json`
 - `../fixtures/artifact_consistency_run_002/inconsistent.json`
 - `../fixtures/doctor_pressure_test_003/doctor.json`

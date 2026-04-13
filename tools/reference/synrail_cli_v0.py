@@ -40,6 +40,7 @@ OPERATOR_BRIEF_CHAIN = HERE / "synrail_operator_brief_chain_v0.py"
 OPERATOR_RENDER = HERE / "synrail_operator_render_v0.py"
 OPERATOR_RENDER_ADOPTION = HERE / "synrail_operator_render_adoption_v0.py"
 OPERATOR_RENDER_ADOPTION_DELTA = HERE / "synrail_operator_render_adoption_delta_v0.py"
+OPERATOR_READING = HERE / "synrail_operator_reading_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -455,6 +456,19 @@ def cmd_operator_render_adoption_delta(args: argparse.Namespace) -> int:
         forwarded.extend(["--record", record])
     forwarded.extend(["--output", args.output])
     return run_python(OPERATOR_RENDER_ADOPTION_DELTA, forwarded)
+
+
+def cmd_operator_reading(args: argparse.Namespace) -> int:
+    return run_python(
+        OPERATOR_READING,
+        [
+            "--second-operator-file", args.second_operator_file,
+            "--brief-file", args.brief_file,
+            "--render-file", args.render_file,
+            "--label", args.label,
+            "--output", args.output,
+        ],
+    )
 
 
 def cmd_repair_handoff(args: argparse.Namespace) -> int:
@@ -1287,6 +1301,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_operator_render_adoption_delta.add_argument("--record", action="append", required=True)
     p_operator_render_adoption_delta.add_argument("--output", required=True)
     p_operator_render_adoption_delta.set_defaults(func=cmd_operator_render_adoption_delta)
+
+    p_operator_reading = sub.add_parser("operator-reading")
+    p_operator_reading.add_argument("--second-operator-file", required=True)
+    p_operator_reading.add_argument("--brief-file", required=True)
+    p_operator_reading.add_argument("--render-file", required=True)
+    p_operator_reading.add_argument("--label", required=True)
+    p_operator_reading.add_argument("--output", required=True)
+    p_operator_reading.set_defaults(func=cmd_operator_reading)
 
     p_repair_handoff = sub.add_parser("repair-handoff")
     p_repair_handoff.add_argument("--state-file", required=True)

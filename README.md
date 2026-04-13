@@ -103,6 +103,7 @@ Read these next only if you need them:
 - `docs/core/OPERATOR_BRIEF_CHAIN_001.md`
 - `docs/core/OPERATOR_BRIEF_CHAIN_RUN_002.md`
 - `docs/core/OPERATOR_RENDER_001.md`
+- `docs/core/OPERATOR_READING_TEST_001.md`
 - `docs/boundary/OPERATOR_RENDER_ADOPTION_001.md`
 - `docs/boundary/SUBSTITUTE_KILL_TEST_002.md`
 - `docs/boundary/SUBSTITUTE_KILL_TEST_003.md`
@@ -242,6 +243,7 @@ Secondary repo-history and hardening context remains available in `docs/boundary
 - the repo now also has one second canonical operator-brief chain showing the complementary ugly ending: repair proof, repair doctor pressure, then stop replaying the contour and start a new run when bounded repair termination is reached
 - the repo now also has one first strictly derived human-readable operator render for both single briefs and chain summaries, so the operator layer is easier to scan without adding a new control surface
 - the repo now also has one first operator-render adoption slice showing that both measured renders are shorter than their source brief surfaces while preserving the key operator markers
+- the repo now also has one first less-curated operator reading slice showing that the derived render still preserves the repeated-doctor stop decision on a contour that a second operator can already follow without author memory
 
 - the repo now also carries one first substitute-kill pressure slice against concrete substitute stacks instead of only one abstract baseline
 - that pressure slice currently shows two substitute-stack wins for Synrail and one still-unclear weak-path comparison

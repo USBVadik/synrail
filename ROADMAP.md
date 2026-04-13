@@ -160,6 +160,7 @@ Current sprint contract:
 - one second canonical operator-brief chain now also proves the complementary ugly ending: bounded repair can end in `STOP_AND_START_NEW_RUN`, not only terminal follow-boundary
 - one first strictly derived operator render now also proves that this layer can become easier to scan for humans without introducing a new control surface
 - one first operator-render adoption slice now also proves that the measured renders are shorter than their source brief surfaces while preserving the key operator markers
+- one first less-curated operator reading slice now also proves that the stop-ending repeated-doctor contour remains followable when the operator reads the derived render
 - that brief must stay derived from:
   - `state`
   - `report`

@@ -78,6 +78,8 @@ The CLI v0 currently exposes:
    - compress multiple operator briefs into one stage-by-stage operator reading for an ugly continuation contour
 25. `operator-render`
    - turn one operator brief or one operator-brief chain into a small human-readable markdown handoff
+26. `operator-reading`
+   - check whether one human-readable operator render still preserves the bounded operator decision on a less-curated contour
 
 The selection layer can now also carry one preparation-aware strong-path recommendation when bounded governed-path cost evidence exists.
 

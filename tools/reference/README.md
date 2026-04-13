@@ -778,3 +778,19 @@ Does not guarantee:
 Purpose:
 
 - aggregate a small set of operator-render adoption records into one bounded reading
+
+### `synrail_operator_reading_v0.py`
+
+Purpose:
+
+- check whether one derived operator render still preserves the operator decision on a less-curated contour that already matters to a second operator
+
+Guarantees:
+
+- compares one `second_operator` reading, one operator brief, and one derived render
+- records whether the render still carries the required stop/repair markers
+
+Does not guarantee:
+
+- broad usability proof across many operators
+- replacement of the second-operator pressure slices
