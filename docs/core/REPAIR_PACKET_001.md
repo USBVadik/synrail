@@ -33,6 +33,7 @@ The packet keeps the existing handoff, but now auto-synthesizes one fuller conti
 9. explicit `ready_for_resume`
 10. embedded `preparation_context`
 11. embedded `runtime_truth`
+12. packet-native `repair_history_chain`
 
 That means the packet can now say both:
 
@@ -95,8 +96,13 @@ Current canonical packet surfaces are:
   - `fixtures/executable_loop_compound_continuation_run_006/stage2_repair_packet.json`
   - `fixtures/executable_loop_compound_continuation_run_006/stage3_repair_packet.json`
 - lower-replay packet-first runtime continuation:
-  - `fixtures/executable_loop_runtime_resume_run_004/repair_packet.json`
+- `fixtures/executable_loop_runtime_resume_run_004/repair_packet.json`
   - `fixtures/executable_loop_runtime_resume_run_004/run.json`
+- packet-native multi-stage repair-history continuation:
+  - `fixtures/executable_loop_compound_continuation_run_008/stage0_repair_packet.json`
+  - `fixtures/executable_loop_compound_continuation_run_008/stage1_repair_packet.json`
+  - `fixtures/executable_loop_compound_continuation_run_008/stage2_repair_packet.json`
+  - `fixtures/executable_loop_compound_continuation_run_008/stage3_repair_packet.json`
 
 These prove:
 
@@ -116,6 +122,14 @@ These prove:
   - the last completed repair step
   - the next exact stale sub-surfaces
   - the next exact required inputs
+- repair packets can now carry one explicit repair-history chain across multiple continuation stages instead of only one last-step receipt snapshot
+- packet-first `resume` no longer needs temporary unpacked selection and repair-handoff files in the normal continuation path
+- one even uglier continuation can now move through:
+  - doctor identity pressure
+  - partial proof pressure
+  - recovery pressure
+  - accepted terminal truth
+  while still keeping that repair-history chain inside the packet surface
 
 ## Current boundary
 

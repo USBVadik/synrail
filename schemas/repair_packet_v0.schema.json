@@ -653,7 +653,30 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "history_chain_length": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "history_chain_results": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "history_chain_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
+      }
+    },
+    "repair_history_chain": {
+      "type": "array",
+      "items": {
+        "type": "object"
       }
     },
     "repair_receipt_context": {
@@ -832,6 +855,12 @@
           }
         },
         "next_step_hints": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "history_chain": {
           "type": "array",
           "items": {
             "type": "object"

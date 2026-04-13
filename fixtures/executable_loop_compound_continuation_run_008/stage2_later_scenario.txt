@@ -1,0 +1,1 @@
+Scenario replay confirms the repaired trigger still routes to the intended bounded path without regression on the attested surface.

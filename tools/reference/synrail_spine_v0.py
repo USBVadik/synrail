@@ -176,6 +176,9 @@ def repair_packet_summary(packet: dict | None, state: dict) -> dict:
             for step in repair_policy.get("ordered_steps", [])
             if step.get("step_id", "") and step.get("step_id", "") != repair_policy.get("next_step_id", "")
         ],
+        "history_chain_length": 0,
+        "history_chain_results": [],
+        "history_chain_step_ids": [],
     }
     artifact_quality_summary = packet.get("artifact_quality_summary", {}) if packet else {
         "stale_artifact_ids": [hint["artifact_id"] for hint in handoff.get("artifact_quality_hints", []) if hint.get("quality") == "STALE"],
@@ -216,6 +219,9 @@ def repair_packet_summary(packet: dict | None, state: dict) -> dict:
         "repair_history_completed_step_ids": list(repair_history.get("completed_step_ids", [])),
         "repair_history_current_step_id": repair_history.get("current_step_id", ""),
         "repair_history_waiting_step_ids": list(repair_history.get("waiting_step_ids", [])),
+        "repair_history_chain_length": repair_history.get("history_chain_length", 0),
+        "repair_history_chain_results": list(repair_history.get("history_chain_results", [])),
+        "repair_history_chain_step_ids": list(repair_history.get("history_chain_step_ids", [])),
         "repair_receipt_last_operator_focus": operator_evidence.get("operator_focus", ""),
         "repair_receipt_next_step_required_inputs": list(operator_evidence.get("next_step_required_inputs", [])),
         "repair_receipt_next_step_subsurface_ids": list(operator_evidence.get("next_step_subsurface_ids", [])),
@@ -364,6 +370,8 @@ def resolve_repair_packet_output(args: argparse.Namespace) -> Path | None:
 def resolve_repair_receipt_output(args: argparse.Namespace) -> Path | None:
     if getattr(args, "repair_receipt_output", None):
         return Path(args.repair_receipt_output)
+    if getattr(args, "resume_from_state", None) and getattr(args, "repair_packet_output", None):
+        return None
     if getattr(args, "report_output", None):
         return Path(args.report_output).with_name("repair_receipt.json")
     return None
@@ -454,8 +462,7 @@ def maybe_emit_repair_receipt(
     state: dict,
     report: dict,
 ) -> dict | None:
-    receipt_output = resolve_repair_receipt_output(args)
-    if not receipt_output or not starting_repair_packet:
+    if not starting_repair_packet:
         return None
     receipt = build_artifact_repair_receipt(
         starting_packet=starting_repair_packet,
@@ -463,7 +470,9 @@ def maybe_emit_repair_receipt(
         report=report,
         previous_receipt=previous_repair_receipt,
     )
-    save_json(receipt_output, receipt)
+    receipt_output = resolve_repair_receipt_output(args)
+    if receipt_output:
+        save_json(receipt_output, receipt)
     return receipt
 
 
@@ -1425,6 +1434,13 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                     previous_repair_receipt=previous_repair_receipt,
                 )
                 return 2
+            if not selection_receipt and starting_repair_packet.get("selection_receipt"):
+                selection_receipt = dict(starting_repair_packet["selection_receipt"])
+                selection_applied = True
+                selected_mode = selection_receipt.get("selected_mode", "")
+                selected_with_preparation = bool(selection_receipt.get("selected_with_preparation", False))
+            if previous_repair_receipt is None and starting_repair_packet.get("repair_receipt"):
+                previous_repair_receipt = dict(starting_repair_packet["repair_receipt"])
         if state["state"] != resume_from_state:
             report = build_error_report(state, reason="RESUME_STATE_MISMATCH", stopping_stage="resume")
             report["resume_applied"] = True
@@ -1542,6 +1558,11 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                     previous_repair_receipt=previous_repair_receipt,
                 )
                 return 2
+        if repair_handoff is None and starting_repair_packet and starting_repair_packet.get("repair_handoff"):
+            candidate_handoff = dict(starting_repair_packet["repair_handoff"])
+            if candidate_handoff.get("run_id") == state["run_id"] and candidate_handoff.get("from_state") == state["state"]:
+                repair_handoff = candidate_handoff
+                repair_handoff_applied = True
         current_resume_handoff = repair_handoff or build_repair_handoff(state)
         repair_handoff = current_resume_handoff
         if not current_resume_handoff.get("continuation_allowed", False):
@@ -1636,6 +1657,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                     repair_handoff=current_resume_handoff,
                     missing_continuation_inputs=continuation_missing_inputs,
                     selection_receipt=selection_receipt,
+                    starting_repair_packet=starting_repair_packet,
+                    previous_repair_receipt=previous_repair_receipt,
                 )
                 print(json.dumps({"result": "BLOCKED", "stopping_stage": "repair_handoff", "reason": "REPAIR_POLICY_STEP_OUT_OF_ORDER"}, ensure_ascii=True))
                 return 0
@@ -1663,6 +1686,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
                 repair_handoff=current_resume_handoff,
                 missing_continuation_inputs=continuation_missing_inputs,
                 selection_receipt=selection_receipt,
+                starting_repair_packet=starting_repair_packet,
+                previous_repair_receipt=previous_repair_receipt,
             )
             print(json.dumps({"result": "BLOCKED", "stopping_stage": "repair_handoff", "reason": "CONTINUATION_INPUTS_MISSING"}, ensure_ascii=True))
             return 0
@@ -1714,6 +1739,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             repair_handoff=repair_handoff,
             missing_continuation_inputs=continuation_missing_inputs,
             selection_receipt=selection_receipt,
+            starting_repair_packet=starting_repair_packet,
+            previous_repair_receipt=previous_repair_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "selection", "reason": "MODE_SELECTION_NOT_GOVERNED"}, ensure_ascii=True))
         return 0
@@ -1758,6 +1785,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             repair_handoff=repair_handoff,
             missing_continuation_inputs=continuation_missing_inputs,
             selection_receipt=selection_receipt,
+            starting_repair_packet=starting_repair_packet,
+            previous_repair_receipt=previous_repair_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "target_surface_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
@@ -1816,6 +1845,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             repair_handoff=repair_handoff,
             missing_continuation_inputs=continuation_missing_inputs,
             selection_receipt=selection_receipt,
+            starting_repair_packet=starting_repair_packet,
+            previous_repair_receipt=previous_repair_receipt,
         )
         return code
 
@@ -1844,6 +1875,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             repair_handoff=repair_handoff,
             missing_continuation_inputs=continuation_missing_inputs,
             selection_receipt=selection_receipt,
+            starting_repair_packet=starting_repair_packet,
+            previous_repair_receipt=previous_repair_receipt,
         )
         print(json.dumps({"result": "ERROR", "stopping_stage": "doctor_apply", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
@@ -2048,6 +2081,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             selection_receipt=selection_receipt,
             preparation_receipt=preparation_receipt,
             bundle=bundle,
+            starting_repair_packet=starting_repair_packet,
+            previous_repair_receipt=previous_repair_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "proof_bundle_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
@@ -2090,6 +2125,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             preparation_receipt=preparation_receipt,
             bundle=bundle,
             closure=closure,
+            starting_repair_packet=starting_repair_packet,
+            previous_repair_receipt=previous_repair_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "closure_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
@@ -2191,6 +2228,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         closure=closure,
         refresh_report=refresh_report,
         comparison=comparison,
+        starting_repair_packet=starting_repair_packet,
+        previous_repair_receipt=previous_repair_receipt,
     )
 
     print(json.dumps({"result": "OK", "closure_status": state["closure"]["status"]}, ensure_ascii=True))

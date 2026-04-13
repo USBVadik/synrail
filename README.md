@@ -140,6 +140,7 @@ The current proof reading is:
 - the repo now also has one first-class artifact repair receipt layer showing which repair step actually completed and which narrower artifact sub-surfaces are still stale afterward
 - the repo now also has one sixth uglier packet-first compound continuation run showing that repair receipts, packet carry-over, explicit step order, and final truthful terminal packet emission can all now live on the same runtime surface
 - the repo now also has one seventh uglier packet-first compound continuation run showing that invalid proof, recovery repair, doctor target-identity pressure, and accepted closure can now all live on the same runtime surface
+- the repo now also has one eighth uglier packet-first compound continuation run showing that doctor target-identity pressure, partial proof pressure, recovery pressure, and accepted closure can now all live on the same runtime surface with one packet-native repair-history chain
 
 The current wedge reading is:
 
@@ -171,6 +172,8 @@ The current executable output reading is:
 - the repo now also carries one fourth canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one fifth canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one sixth canonical ugly compound continuation fixture on that same artifact surface
+- the repo now also carries one seventh canonical ugly compound continuation fixture on that same artifact surface
+- the repo now also carries one eighth canonical ugly compound continuation fixture on that same artifact surface
 - the repo now also carries one canonical hybrid pressure fixture on that same artifact surface
 - the repo now also has one explicit outcome lattice across accepted, partial, degraded, and blocked contours
 - the repo now also has one explicit re-entry reading for blocked-to-accepted, partial-to-accepted, and degraded-to-accepted repair

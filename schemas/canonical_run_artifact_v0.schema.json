@@ -297,6 +297,21 @@
             "type": "string"
           }
         },
+        "repair_history_chain_length": {
+          "type": "integer"
+        },
+        "repair_history_chain_results": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repair_history_chain_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "repair_receipt_last_operator_focus": {
           "type": "string"
         },

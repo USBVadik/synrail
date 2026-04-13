@@ -7,7 +7,6 @@ import argparse
 import json
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 from synrail_repair_packet_v0 import build_packet_from_runtime_truth
@@ -310,8 +309,8 @@ def cmd_repair_packet(args: argparse.Namespace) -> int:
         ("--repair-handoff-file", args.repair_handoff_file),
         ("--mode-selection-receipt", args.mode_selection_receipt),
         ("--preparation-receipt-file", args.preparation_receipt_file),
-        ("--repair-receipt-file", args.repair_receipt_file),
-        ("--report-file", args.report_file),
+        ("--repair-receipt-file", getattr(args, "repair_receipt_file", None)),
+        ("--report-file", getattr(args, "report_file", None)),
         ("--readback", args.readback),
         ("--scenario-proof", args.scenario_proof),
         ("--target-identity-file", args.target_identity_file),
@@ -578,9 +577,7 @@ def apply_resume_output_defaults(args: argparse.Namespace, state: dict) -> None:
         "report_output": str(root / runtime_name("report.json")),
         "worked_artifact_output": str(root / runtime_name("orchestration.json")),
         "run_artifact_output": str(root / runtime_name("run.json")),
-        "repair_handoff_output": str(root / runtime_name("repair_handoff.json")),
         "repair_packet_output": str(root / runtime_name("repair_packet.json")),
-        "repair_receipt_output": str(root / runtime_name("repair_receipt.json")),
         "plan_output": str(root / runtime_name("plan.json")),
         "preparation_receipt_output": str(root / runtime_name("preparation_receipt.json")),
     }
@@ -699,21 +696,6 @@ def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> list[str
     if not args.credential_env:
         args.credential_env = list(repair_inputs["credential_env"])
 
-    selection_receipt = packet.get("selection_receipt")
-    if selection_receipt and not getattr(args, "mode_selection_receipt", None):
-        temp_selection = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
-        json.dump(selection_receipt, temp_selection, indent=2, ensure_ascii=True)
-        temp_selection.write("\n")
-        temp_selection.close()
-        args.mode_selection_receipt = temp_selection.name
-        temp_files.append(temp_selection.name)
-
-    temp_handoff = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
-    json.dump(packet["repair_handoff"], temp_handoff, indent=2, ensure_ascii=True)
-    temp_handoff.write("\n")
-    temp_handoff.close()
-    args.repair_handoff_file = temp_handoff.name
-    temp_files.append(temp_handoff.name)
     return temp_files
 
 

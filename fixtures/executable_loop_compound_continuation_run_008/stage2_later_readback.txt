@@ -1,0 +1,1 @@
+Readback confirms the bounded router trigger now emits the expected strong-path envelope with the repaired identity held constant.

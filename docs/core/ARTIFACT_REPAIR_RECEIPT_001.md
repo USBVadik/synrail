@@ -30,6 +30,7 @@ The current receipt records:
   - which exact stale sub-surfaces still matter next
   - which narrower inputs the operator should focus on now
 - one bounded repair-history record
+- one packet-native repair-history chain across multiple continuation stages
 
 ## Canonical proof points
 
@@ -44,6 +45,11 @@ Current canonical receipt surfaces are:
 - `fixtures/executable_loop_compound_continuation_run_007/stage1_repair_receipt.json`
 - `fixtures/executable_loop_compound_continuation_run_007/stage2_repair_receipt.json`
 - `fixtures/executable_loop_compound_continuation_run_007/stage3_repair_receipt.json`
+- `fixtures/executable_loop_compound_continuation_run_008/repair_receipt.json`
+- `fixtures/executable_loop_compound_continuation_run_008/stage0_repair_packet.json`
+- `fixtures/executable_loop_compound_continuation_run_008/stage1_repair_packet.json`
+- `fixtures/executable_loop_compound_continuation_run_008/stage2_repair_packet.json`
+- `fixtures/executable_loop_compound_continuation_run_008/stage3_repair_packet.json`
 
 These now prove:
 
@@ -54,6 +60,12 @@ These now prove:
 - one fresh-orchestration non-resumable contour can still emit one truthful receipt explaining why `resume` is the wrong entrypoint
 - one uglier mixed contour can now say that recovery completion was supplied, doctor identity still failed, and `target_identity_record` is now the exact next stale sub-surface to repair
 - the next receipt in that same contour can then say that identity repair completed and the runtime crossed into terminal accepted truth
+- one even uglier contour can now keep one explicit repair-history chain across:
+  - doctor identity pressure
+  - partial proof pressure
+  - recovery pressure
+  - accepted terminal boundary
+- and that chain can now live inside the stage repair packets themselves instead of forcing one separate stage-side receipt file every time
 
 ## Why this matters
 
@@ -77,4 +89,5 @@ The shortest honest reading is:
 
 - packet-first continuation now has one first-class repair receipt
 - receipts now make stale artifact truth more precise at sub-surface level
-- and receipts now make multi-step continuation progress machine-readable instead of leaving it implicit between packet snapshots
+- receipts now make multi-step continuation progress machine-readable instead of leaving it implicit between packet snapshots
+- and receipts now also make that progress readable as one packet-native repair-history chain

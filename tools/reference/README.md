@@ -131,6 +131,7 @@ Guarantees:
 - can now absorb one `mode_selection_receipt_v0` so a preparation-aware strong-path choice can enter that bounded contour directly
 - can now emit one machine-readable repair handoff naming the missing continuation inputs and bounded runtime defaults for a non-green state
 - can now auto-synthesize one richer repair packet from current runtime truth and continue from that packet instead of depending only on a long raw flag replay
+- can now trust embedded packet truth strongly enough that selection and repair-handoff replay no longer need temporary unpacked side files in the normal `resume` path
 - can now record one explicit runtime-resume origin so continuation from a non-green state is machine-readable on the same artifact surface
 - can now block continuation explicitly at `repair_handoff` when the supplied continuation inputs are still incomplete
 - can carry one blocked-readiness contour back into accepted closure when the missing identity and proof inputs are repaired
@@ -226,6 +227,7 @@ Guarantees:
 - embeds one repair-input set
 - embeds one runtime output-default set
 - embeds one repair-receipt context when runtime truth already has prior continuation progression
+- embeds one packet-native repair-history chain across multiple continuation stages
 - records provided vs missing continuation inputs
 - records whether the current contour is repairable or terminal
 
@@ -248,6 +250,7 @@ Guarantees:
 - records one operator-facing evidence view naming the next exact stale sub-surfaces and required inputs
 - records whether continuation crossed into one non-resumable boundary
 - records one bounded repair-history progression
+- records one explicit repair-history chain that can live inside later stage repair packets
 
 Does not guarantee:
 

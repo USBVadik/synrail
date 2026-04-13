@@ -27,6 +27,7 @@ The current re-entry lattice is anchored by four canonical repair families, thre
 9. one richer repair-packet layer plus one second uglier compound continuation family through named `resume`
 10. one packet-first continuation family where selection/preparation handoff survives into named `resume`
 11. one richer packet-first continuation family where selection/preparation truth, repairable compound truth, and terminal not-resumable truth now all appear on the same continuation path
+12. one even uglier packet-first continuation family where doctor identity pressure, partial proof pressure, recovery pressure, and accepted terminal truth now all appear in one ordered repair chain
 
 That is still bounded, but it is already materially stronger than one or two repaired contours.
 

@@ -214,6 +214,7 @@ def build_artifact_quality_summary(handoff: dict) -> dict:
 
 def build_repair_history(handoff: dict, repair_receipt: dict | None) -> dict:
     completed_step_ids = list(repair_receipt.get("repair_history", {}).get("completed_step_ids", [])) if repair_receipt else []
+    history_chain = list(repair_receipt.get("repair_history_chain", [])) if repair_receipt else []
     current_step_id = handoff.get("repair_policy", {}).get("next_step_id", "")
     ordered = [step.get("step_id", "") for step in handoff.get("repair_policy", {}).get("ordered_steps", []) if step.get("step_id", "")]
     waiting = [step_id for step_id in ordered if step_id and step_id not in completed_step_ids and step_id != current_step_id]
@@ -224,6 +225,13 @@ def build_repair_history(handoff: dict, repair_receipt: dict | None) -> dict:
         "completed_step_ids": completed_step_ids,
         "current_step_id": current_step_id,
         "waiting_step_ids": waiting,
+        "history_chain_length": len(history_chain),
+        "history_chain_results": [entry.get("result", "") for entry in history_chain[-3:]],
+        "history_chain_step_ids": [
+            entry.get("completed_step_id", "") or entry.get("active_step_id", "")
+            for entry in history_chain[-3:]
+            if entry.get("completed_step_id", "") or entry.get("active_step_id", "")
+        ],
     }
 
 
@@ -242,6 +250,7 @@ def build_receipt_context(repair_receipt: dict | None) -> dict:
             "completed_hints": [],
             "next_step_required_inputs": [],
             "next_step_hints": [],
+            "history_chain": [],
             "operator_evidence": {
                 "completed_step_id": "",
                 "completed_artifact_hints": [],
@@ -266,6 +275,7 @@ def build_receipt_context(repair_receipt: dict | None) -> dict:
         "completed_hints": list(repair_receipt.get("completed_hints", [])),
         "next_step_required_inputs": list(repair_receipt.get("next_step_required_inputs", [])),
         "next_step_hints": list(repair_receipt.get("next_step_hints", [])),
+        "history_chain": list(repair_receipt.get("repair_history_chain", [])),
         "operator_evidence": dict(repair_receipt.get("operator_evidence", {})),
     }
 
@@ -352,6 +362,7 @@ def build_packet_from_runtime_truth(
         "artifact_quality_hints": list(handoff.get("artifact_quality_hints", [])),
         "artifact_quality_summary": build_artifact_quality_summary(handoff),
         "repair_history": build_repair_history(handoff, repair_receipt),
+        "repair_history_chain": list(repair_receipt.get("repair_history_chain", [])) if repair_receipt else [],
         "repair_receipt_context": build_receipt_context(repair_receipt),
         "continuation_plan": build_continuation_plan(packet_args, handoff),
         "resume_context": {

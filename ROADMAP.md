@@ -133,12 +133,15 @@ Current pressure-tested slice:
 - one uglier packet-first continuation run now proves explicit repair order, stale-artifact hints, mid-continuation doctor failure, and return to accepted closure
 - one further packet-first continuation run now proves that repair receipts, explicit step progression, blocked recovery completion, and final truthful terminal packet emission can all live on the same runtime surface
 - one next packet-first continuation run now proves that recovery completion supply, doctor target-identity pressure, richer repair receipts, and accepted closure can all live on the same runtime surface with stage-aware sibling discovery
+- repair receipts now also carry one packet-native repair-history chain across multiple continuation stages instead of only one last-step marker
+- packet-first `resume` now trusts embedded packet truth strongly enough that normal continuation no longer depends on temporary unpacked selection or repair-handoff side files
+- one further uglier packet-first continuation run now proves that doctor target-identity pressure, partial proof pressure, recovery pressure, and accepted closure can all live on one ordered repair chain
 
 Next likely strengthening moves:
 
 - sharpen artifact-quality hints so they name even more precise stale sub-surfaces inside larger artifacts
 - pressure-test more non-resumable families beyond lighter-mode selection and terminal acceptance or rejection
-- keep reducing manual flag replay around packet-first `resume`
+- keep compressing packet-first `resume` so more continuation truth stays inside runtime-owned packet surfaces rather than adjacent side files
 
 ### 6. Sharpen doctor on expensive false-readiness modes
 

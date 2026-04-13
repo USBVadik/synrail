@@ -147,6 +147,54 @@ def build_operator_evidence(*, starting_packet: dict, resulting_handoff: dict, h
     }
 
 
+def build_history_chain_entry(
+    *,
+    step_index: int,
+    starting_packet: dict,
+    resulting_handoff: dict,
+    history: dict,
+    result: str,
+    operator_evidence: dict,
+) -> dict:
+    return {
+        "step_index": step_index,
+        "from_state": starting_packet.get("from_state", ""),
+        "resulting_state": resulting_handoff.get("from_state", ""),
+        "result": result,
+        "active_step_id": starting_packet.get("repair_policy", {}).get("next_step_id", ""),
+        "completed_step_id": history.get("last_completed_step_id", ""),
+        "next_step_id": resulting_handoff.get("repair_policy", {}).get("next_step_id", ""),
+        "completed_subsurface_ids": list(operator_evidence.get("completed_subsurface_ids", [])),
+        "next_step_subsurface_ids": list(operator_evidence.get("next_step_subsurface_ids", [])),
+        "remaining_stale_subsurface_ids": stale_ids(resulting_handoff, quality="STALE", kind="subsurface"),
+        "remaining_non_resumable_subsurface_ids": stale_ids(resulting_handoff, quality="NON_RESUMABLE", kind="subsurface"),
+        "operator_focus": operator_evidence.get("operator_focus", ""),
+    }
+
+
+def build_repair_history_chain(
+    *,
+    previous_receipt: dict | None,
+    starting_packet: dict,
+    resulting_handoff: dict,
+    history: dict,
+    result: str,
+    operator_evidence: dict,
+) -> list[dict]:
+    chain = list(previous_receipt.get("repair_history_chain", [])) if previous_receipt else []
+    chain.append(
+        build_history_chain_entry(
+            step_index=len(chain) + 1,
+            starting_packet=starting_packet,
+            resulting_handoff=resulting_handoff,
+            history=history,
+            result=result,
+            operator_evidence=operator_evidence,
+        )
+    )
+    return chain
+
+
 def build_repair_history(packet: dict, previous_receipt: dict | None, resulting_handoff: dict) -> dict:
     prior_completed = list(previous_receipt.get("repair_history", {}).get("completed_step_ids", [])) if previous_receipt else []
     prior_current = packet.get("repair_history", {}).get("current_step_id", "")
@@ -198,6 +246,14 @@ def build_receipt(*, starting_packet: dict, resulting_state: dict, report: dict,
         history=history,
         result=result,
     )
+    repair_history_chain = build_repair_history_chain(
+        previous_receipt=previous_receipt,
+        starting_packet=starting_packet,
+        resulting_handoff=resulting_handoff,
+        history=history,
+        result=result,
+        operator_evidence=operator_evidence,
+    )
     return {
         "schema_version": "artifact_repair_receipt_v0",
         "run_id": starting_packet["run_id"],
@@ -220,6 +276,7 @@ def build_receipt(*, starting_packet: dict, resulting_state: dict, report: dict,
         "next_step_required_inputs": operator_evidence["next_step_required_inputs"],
         "next_step_hints": operator_evidence["next_step_artifact_hints"],
         "repair_history": history,
+        "repair_history_chain": repair_history_chain,
         "operator_evidence": operator_evidence,
         "resumability": {
             "status": resulting_handoff.get("resumability", {}).get("status", ""),

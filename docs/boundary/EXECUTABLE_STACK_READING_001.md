@@ -34,7 +34,9 @@ The current executable stack can already provide:
 22. one second uglier compound continuation contour that crosses blocked readiness, invalid proof, degraded recovery, and accepted closure through richer repair packets plus named `resume`
 23. one third uglier packet-first continuation contour that crosses selection/preparation handoff, invalid proof, degraded recovery, and accepted closure through named `resume`
 24. one fourth uglier packet-first continuation contour that keeps selection/preparation truth through repair-handoff blocking, recovery repair, and a final explicit terminal not-resumable reading
-25. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
+25. one fifth uglier packet-first continuation contour that crosses invalid proof, recovery pressure, doctor identity pressure, and accepted closure through one packet-first repair chain
+26. one sixth uglier packet-first continuation contour that crosses doctor identity pressure, partial proof pressure, recovery pressure, and accepted closure while keeping one packet-native repair-history chain
+27. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
 
 That is enough to say:
 
@@ -160,6 +162,8 @@ The shortest current output reading is:
 - one ugly compound repair contour now also has a stable canonical repo fixture
 - one third ugly compound continuation contour now also has a stable canonical repo fixture
 - one fourth ugly compound continuation contour now also has a stable canonical repo fixture
+- one fifth ugly compound continuation contour now also has a stable canonical repo fixture
+- one sixth ugly compound continuation contour now also has a stable canonical repo fixture
 - one hybrid pressure contour now also has a stable canonical repo fixture
 - that artifact is a better single entrypoint than reconstructing a run from report, state, and worked envelope separately
 
@@ -218,6 +222,14 @@ The fifth canonical ugly compound continuation reference surface for that output
 The sixth canonical ugly compound continuation reference surface for that output now lives at:
 
 - `fixtures/executable_loop_compound_continuation_run_006/run.json`
+
+The seventh canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_007/run.json`
+
+The eighth canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_008/run.json`
 
 The seventh canonical ugly compound continuation reference surface for that output now lives at:
 
