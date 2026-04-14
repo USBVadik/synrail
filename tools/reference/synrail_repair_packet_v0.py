@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from synrail_repair_handoff_v0 import (
+    DOCTOR_FAILURE_INPUTS,
     build_repair_handoff,
     build_resumability,
     collect_active_pressures,
@@ -110,6 +111,15 @@ def provided_input_ids(args: argparse.Namespace) -> list[str]:
         if present:
             provided.append(input_id)
     return provided
+
+
+def unresolved_doctor_input_ids(state: dict) -> list[str]:
+    unresolved: list[str] = []
+    for failure_class in state.get("doctor", {}).get("blocking_failure_classes", []):
+        for input_id in DOCTOR_FAILURE_INPUTS.get(failure_class, []):
+            if input_id not in unresolved:
+                unresolved.append(input_id)
+    return unresolved
 
 
 def missing_input_ids(handoff: dict, provided_ids: list[str]) -> list[str]:
@@ -503,6 +513,9 @@ def build_packet_from_runtime_truth(
 
     prompt_identity_ok = prompt_identity_ok or bool(prompt_identity.strip() and task_identity.strip())
     provided_ids = provided_input_ids(packet_args)
+    for input_id in unresolved_doctor_input_ids(state):
+        if input_id in provided_ids:
+            provided_ids.remove(input_id)
     missing_ids = missing_input_ids(handoff, provided_ids)
 
     output_defaults = default_output_paths(artifact_root)

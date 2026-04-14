@@ -77,6 +77,8 @@ Start here when you want to understand the kernel itself:
 - `core/DOCTOR_COVERAGE_MAP_001.md`
 - `core/DOCTOR_PRESSURE_TEST_003.md`
 - `core/DOCTOR_PRESSURE_TEST_006.md`
+- `core/DOCTOR_PRESSURE_TEST_007.md`
+- `core/DOCTOR_SCOPE_CONTINUATION_RUN_001.md`
 - `core/OBSERVABILITY_001.md`
 - `core/OBSERVABILITY_RUN_001.md`
 - `core/THIN_OUTPUT_001.md`
@@ -218,6 +220,8 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/artifact_consistency_recovery_run_001/recovery.json`
 - `../fixtures/doctor_pressure_test_003/doctor.json`
 - `../fixtures/doctor_pressure_test_006/doctor.json`
+- `../fixtures/doctor_scope_continuation_run_001/repair_packet.json`
+- `../fixtures/doctor_scope_continuation_run_001/thin_output.json`
 - `../fixtures/observability_run_001/observability.json`
 - `../fixtures/thin_output_consistency_recovery_run_001/thin_output.json`
 - `../fixtures/consistency_recovery_prompt_run_001/reading.json`

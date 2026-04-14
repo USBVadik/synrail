@@ -69,7 +69,7 @@ def non_resumable_forward_boundary(*, report: dict, repair_packet: dict | None) 
     )
 
 
-def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict | None, report: dict, repair_packet: dict | None) -> tuple[str, str]:
+def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict | None, report: dict, repair_packet: dict | None, doctor: dict | None = None) -> tuple[str, str]:
     suffix = " A verified checkpoint is available." if restore_available else ""
     recovery_suffix = ""
     if recovery and recovery.get("primary_action", "") != "KEEP_CURRENT_ARTIFACTS":
@@ -80,6 +80,7 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
             "This contour should not continue through resume.",
             f"Continue through the governed forward path instead of named resume.{suffix}{recovery_suffix}",
         )
+    failure_classes = list((doctor or {}).get("blocking_failure_classes", []))
     messages = {
         "NON_RESUMABLE": (
             "This contour should not continue through resume.",
@@ -103,7 +104,11 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
         ),
         "SCOPE_VIOLATION": (
             "Doctor blocked the contour because scope or target identity is not trustworthy.",
-            f"Restore the trusted baseline or exact target identity before resuming.{recovery_suffix}",
+            (
+                f"Move back to a clean in-scope execution surface before resuming.{suffix}{recovery_suffix}"
+                if "dirty-surface unsafe" in failure_classes
+                else f"Restore the trusted baseline or exact target identity before resuming.{recovery_suffix}"
+            ),
         ),
         "DOCTOR_BLOCKED": (
             "Doctor has not cleared the contour for continuation.",
@@ -144,6 +149,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         recovery=matching,
         report=report,
         repair_packet=repair_packet,
+        doctor=doctor,
     )
     suggested_command = {
         "NON_RESUMABLE": "restore-checkpoint or start a new run",
