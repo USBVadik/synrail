@@ -1,0 +1,23 @@
+{
+  "schema_version": "thin_output_record_v0",
+  "mode": "default",
+  "run_id": "ALPHA_RUN_20260414T173732Z",
+  "task_class": "bounded_change",
+  "outcome_class": "SCOPE_VIOLATION",
+  "status_label": "Working Surface Not Trusted",
+  "summary": "Doctor blocked the contour because scope or target identity is not trustworthy.",
+  "diagnosis": "Move back to a clean in-scope execution surface before continuing this run.",
+  "what_happened": "Doctor blocked the contour because scope or target identity is not trustworthy.",
+  "what_it_means": "Move back to a clean in-scope execution surface before continuing this run.",
+  "what_to_do_next": "Move back to a clean or clearly verified-safe working surface before continuing.",
+  "resume_available": true,
+  "next_command": "synrail next-step",
+  "restore_command": "",
+  "next_step": "move to a clean or explicitly observed-safe execution surface",
+  "restore_available": false,
+  "checkpoint_id": "",
+  "recovery_primary_action": "",
+  "recovery_operator_instructions": [],
+  "suggested_command": "repair the working surface or target, then synrail continue",
+  "technical_lines": []
+}

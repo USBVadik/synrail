@@ -31,7 +31,8 @@ def build_record(*, repair_packet: dict, prompt_bridge: dict, thin_output: dict 
         missing_markers.append("allowed_scope")
     for required_input in expected_required_inputs:
         marker = f"Supply required repair input: {required_input}"
-        if marker not in prompt_bridge.get("must_pass", []):
+        label_markers = [f"Provide required input: {label}" for label in prompt_bridge.get("required_input_labels", [])]
+        if marker not in prompt_bridge.get("must_pass", []) and not any(item in prompt_bridge.get("must_pass", []) for item in label_markers):
             missing_markers.append(f"required_input:{required_input}")
         prompt_mentions = required_input in prompt_text or any(label in prompt_text for label in prompt_bridge.get("required_input_labels", []))
         if not prompt_mentions:

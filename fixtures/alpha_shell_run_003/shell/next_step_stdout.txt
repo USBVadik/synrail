@@ -1,0 +1,26 @@
+The next bounded repair instruction is ready.
+What failed: the working surface is not ready yet
+Current repair task: restore a trustworthy working surface
+Stale artifacts: readiness_surface
+Stale subsurfaces: clean_execution_surface_record
+Allowed scope: the current working surface cleanliness and scope
+Required inputs: confirmation that the working surface is clean and in scope
+Do not touch: Do not broaden scope beyond the current repair step., Do not modify accepted or terminal-state logic., Do not claim closure or acceptance unless the repaired run actually reaches it.
+Must pass:
+- Repair only this task: restore a trustworthy working surface
+- Keep run_id and task_class consistent with the current contour.
+- Do not remove or rewrite existing repair history.
+- Provide required input: confirmation that the working surface is clean and in scope
+- Keep the next safe step aligned with: move to a clean or clearly verified-safe working surface
+After this repair, run: synrail continue
+Prompt for the next agent attempt:
+Repair the current Synrail contour without broadening scope.
+Current repair task: restore a trustworthy working surface. (technical step id: restore_readiness_truth)
+What failed: the working surface is not ready yet. (technical reason: DOCTOR_NOT_GREEN)
+Stale artifacts: readiness_surface
+Stale subsurfaces: clean_execution_surface_record
+Allowed scope: the current working surface cleanliness and scope
+Required inputs: confirmation that the working surface is clean and in scope
+What must be true after repair: move to a clean or clearly verified-safe working surface
+Do not touch unrelated files, state transitions, or acceptance logic.
+Return only the bounded repair needed for this current step and preserve continuity truth.

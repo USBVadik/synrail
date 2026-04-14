@@ -29,7 +29,7 @@ def human_step_label(step_id: str) -> str:
 
 def human_failure_label(reason: str) -> str:
     labels = {
-        "EXACT_TASK_IDENTITY_NOT_CONFIRMED": "the exact task request is not confirmed",
+        "EXACT_TASK_IDENTITY_NOT_CONFIRMED": "the original task request is not confirmed",
         "INVALID_PROOF_BUNDLE": "the final result proof could not be trusted",
         "MISSING_PROOF_SECTIONS": "the proof is still missing required sections",
         "ARTIFACT_BUNDLE_MISSING": "the result bundle is missing required proof files",
@@ -59,7 +59,7 @@ def human_required_input(input_id: str) -> str:
     labels = {
         "clean_surface_confirmation": "confirmation that the working surface is clean and in scope",
         "helper_path": "the blocking helper path",
-        "prompt_identity_file": "the exact task request record",
+        "prompt_identity_file": "the original task request record",
         "target_identity_file": "the trusted target identity record",
         "refresh_recovery_complete": "confirmation that recovery completed",
         "refresh_reverification_complete": "confirmation that reverification completed",
@@ -110,7 +110,7 @@ def next_command(repair_packet: dict, current_step_id: str) -> str:
         resumability.get("status", "") == "REPAIRABLE"
         and termination.get("status", "CONTINUE") != "TERMINATE"
     ):
-        return "synrail resume"
+        return "synrail continue"
     if (
         repair_packet.get("resumability_family", "") == "NOT_RESUMABLE_FRESH_ORCHESTRATION"
         or current_step_id == "continue_forward_orchestration"
@@ -139,19 +139,23 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None) -> dict
     failure_label = human_failure_label(broken_truth)
     continuation_next_step = next_safe_step(repair_packet)
     next_safe_step_label = (
-        "restore the exact task request and target, then run the next bounded check"
+        "restore the original task request and intended target, then run the next bounded check"
         if continuation_next_step == "restore exact prompt and task identity"
-        else continuation_next_step
+        else (
+            "move to a clean or clearly verified-safe working surface"
+            if continuation_next_step == "move to a clean or explicitly observed-safe execution surface"
+            else continuation_next_step
+        )
     )
     must_pass = [
-        f"Repair only the current step: {current_step_id or 'unknown_current_step'}",
+        f"Repair only this task: {current_step_label}",
         "Keep run_id and task_class consistent with the current contour.",
         "Do not remove or rewrite existing repair history.",
     ]
     for input_id in required_inputs:
-        must_pass.append(f"Supply required repair input: {input_id}")
-    if continuation_next_step:
-        must_pass.append(f"Keep the next safe step aligned with: {continuation_next_step}")
+        must_pass.append(f"Provide required input: {human_required_input(input_id)}")
+    if next_safe_step_label:
+        must_pass.append(f"Keep the next safe step aligned with: {next_safe_step_label}")
     acceptance_criteria = list(must_pass)
     checkpoint_hint = checkpoint_note(checkpoint, repair_packet=repair_packet)
     prompt_lines = [

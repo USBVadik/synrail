@@ -243,7 +243,7 @@ def telemetry_flag_names(argv: list[str]) -> list[str]:
 
 def should_capture_alpha_telemetry(args: argparse.Namespace) -> bool:
     path = command_path_from_args(args)
-    return path[0] in {"init", "check", "generate-prompt", "next-step", "restore", "resume", "checkpoint"}
+    return path[0] in {"init", "check", "generate-prompt", "next-step", "restore", "resume", "continue", "checkpoint"}
 
 
 def maybe_capture_alpha_telemetry(
@@ -2560,7 +2560,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_orchestration_args(p_orchestrate, include_resume_from_state=True)
     p_orchestrate.set_defaults(func=cmd_orchestrate)
 
-    p_resume = sub.add_parser("resume")
+    p_resume = sub.add_parser("resume", aliases=["continue"])
     add_orchestration_args(p_resume, include_resume_from_state=False, relaxed_runtime=True)
     p_resume.add_argument("--mode", default="default", choices=["default", "dev"])
     p_resume.set_defaults(func=cmd_resume)

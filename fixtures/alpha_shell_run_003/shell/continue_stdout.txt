@@ -1,0 +1,5 @@
+Status: Needs Review
+What happened: The runtime is still in a non-green outcome.
+What it means: Read the next safe step and repair only the current blocker.
+What to do next: move to a clean or clearly verified-safe working surface
+Next command: synrail next-step

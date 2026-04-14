@@ -50,6 +50,8 @@ synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT"
 # after the agent writes final_result.json or final_result.txt:
 synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail next-step --artifact-root "$ARTIFACT_ROOT"
+# after applying only that bounded repair:
+synrail continue --artifact-root "$ARTIFACT_ROOT"
 synrail restore --artifact-root "$ARTIFACT_ROOT"
 ```
 
@@ -69,6 +71,7 @@ This shell is intentionally thin:
 - it auto-detects one sane project profile for the current project root
 - it defaults the alpha safe-point checkpoint id to `working`
 - it exposes `synrail next-step` as a thin human-facing alias for the existing prompt bridge
+- it exposes `synrail continue` as a thin human-facing alias for the existing `resume` path
 - it keeps the existing dev/runtime helpers underneath
 - it does not introduce a new runtime semantics branch
 
