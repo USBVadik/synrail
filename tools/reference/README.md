@@ -51,6 +51,7 @@ synrail check --artifact-root "$ARTIFACT_ROOT"
 # after applying only that bounded repair:
 synrail retry --artifact-root "$ARTIFACT_ROOT"
 synrail restore --artifact-root "$ARTIFACT_ROOT"
+synrail session-export --artifact-root "$ARTIFACT_ROOT"
 ```
 
 The current fresh first-run contour is smaller:
@@ -72,6 +73,7 @@ This shell is intentionally thin:
 - it exposes `synrail confirm-restore` as the preferred human-facing alias for explicit restore-point confirmation
 - it exposes `synrail repair-step` as the preferred human-facing alias for the existing prompt bridge
 - it exposes `synrail retry` as the preferred human-facing alias for the existing `resume` path
+- it exposes `synrail session-export` as the preferred packet-first export for second-operator replay and issue handoff
 - it keeps `synrail continue` as a compatibility alias for the same path
 - it keeps the existing dev/runtime helpers underneath
 - it does not introduce a new runtime semantics branch

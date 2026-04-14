@@ -101,6 +101,7 @@ ALPHA_FILE_NAMES = {
     "repair_handoff": "repair_handoff.json",
     "repair_receipt": "repair_receipt.json",
     "observability": "observability.json",
+    "session_export": "session_export.json",
     "artifact_consistency": "artifact_consistency.json",
     "consistency_recovery": "consistency_recovery.json",
     "plan": "plan.json",
@@ -257,7 +258,7 @@ def telemetry_flag_names(argv: list[str]) -> list[str]:
 
 def should_capture_alpha_telemetry(args: argparse.Namespace) -> bool:
     path = command_path_from_args(args)
-    return path[0] in {"init", "check", "generate-prompt", "next-step", "repair-step", "restore", "resume", "continue", "checkpoint"}
+    return path[0] in {"init", "check", "generate-prompt", "next-step", "repair-step", "restore", "resume", "continue", "checkpoint", "session-export"}
 
 
 def maybe_capture_alpha_telemetry(
@@ -1507,6 +1508,27 @@ def cmd_observability(args: argparse.Namespace) -> int:
     return run_python(OBSERVABILITY, forwarded)
 
 
+def cmd_session_export(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args)
+    if root:
+        if not getattr(args, "state_file", None):
+            args.state_file = maybe_existing_alpha_file(root, "state")
+        if not getattr(args, "report_file", None):
+            args.report_file = maybe_existing_alpha_file(root, "report")
+        if not getattr(args, "repair_packet_file", None):
+            args.repair_packet_file = maybe_existing_alpha_file(root, "repair_packet")
+        if not getattr(args, "repair_receipt_file", None):
+            args.repair_receipt_file = maybe_existing_alpha_file(root, "repair_receipt")
+        if not getattr(args, "refresh_file", None):
+            args.refresh_file = maybe_existing_alpha_file(root, "refresh")
+        if not getattr(args, "output", None):
+            args.output = str(alpha_file(root, "session_export"))
+    if not getattr(args, "state_file", None) or not getattr(args, "report_file", None):
+        print(json.dumps({"result": "ERROR", "reason": "STATE_AND_REPORT_REQUIRED"}, ensure_ascii=True))
+        return 2
+    return cmd_observability(args)
+
+
 def cmd_reproducibility(args: argparse.Namespace) -> int:
     return run_python(
         REPRODUCIBILITY,
@@ -2602,6 +2624,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_observability.add_argument("--repair-receipt-file")
     p_observability.add_argument("--refresh-file")
     p_observability.set_defaults(func=cmd_observability)
+
+    p_session_export = sub.add_parser("session-export")
+    p_session_export.add_argument("--artifact-root")
+    p_session_export.add_argument("--state-file")
+    p_session_export.add_argument("--report-file")
+    p_session_export.add_argument("--output")
+    p_session_export.add_argument("--repair-packet-file")
+    p_session_export.add_argument("--repair-receipt-file")
+    p_session_export.add_argument("--refresh-file")
+    p_session_export.set_defaults(func=cmd_session_export)
 
     p_thin_output = sub.add_parser("thin-output")
     p_thin_output.add_argument("--artifact-root")

@@ -19,6 +19,7 @@ def save_json(path: Path, payload: dict) -> None:
 
 def build_record(*, state: dict, packet: dict, run_artifact: dict) -> dict:
     core = packet.get("continuation_core", {})
+    source_of_truth = packet.get("source_of_truth", {})
     report = run_artifact.get("report", {})
     repair_packet = run_artifact.get("repair_packet", {})
     visible_entry_artifacts = ["state_file", "repair_packet"]
@@ -27,11 +28,17 @@ def build_record(*, state: dict, packet: dict, run_artifact: dict) -> dict:
     has_explicit_required_inputs = bool(core.get("next_step_required_inputs", []))
     no_input_boundary = resumability_status == "NOT_RESUMABLE" and not core.get("next_step_required_inputs", [])
     has_explicit_focus = bool(core.get("operator_focus", ""))
+    has_explicit_precedence = bool(
+        core.get("source_of_truth_precedence", []) or source_of_truth.get("precedence_order", [])
+    )
+    packet_replay_ready = bool(core.get("packet_replay_ready", False) or source_of_truth.get("packet_replay_ready", False))
     packet_only_entry = visible_entry_artifacts == ["state_file", "repair_packet"]
     requires_author_intuition = not (
         has_explicit_next_step
         and has_explicit_focus
         and (has_explicit_required_inputs or no_input_boundary)
+        and has_explicit_precedence
+        and packet_replay_ready
     )
     verdict = "FOLLOWABLE_BY_SECOND_OPERATOR" if packet_only_entry and not requires_author_intuition else "AUTHOR_INTUITION_STILL_REQUIRED"
     return {
@@ -45,6 +52,8 @@ def build_record(*, state: dict, packet: dict, run_artifact: dict) -> dict:
         "has_explicit_next_step": has_explicit_next_step,
         "has_explicit_required_inputs": has_explicit_required_inputs,
         "has_explicit_operator_focus": has_explicit_focus,
+        "has_explicit_precedence": has_explicit_precedence,
+        "packet_replay_ready": packet_replay_ready,
         "requires_author_intuition": requires_author_intuition,
         "expected_result": report.get("result", ""),
         "expected_reason": report.get("reason", ""),
@@ -52,9 +61,9 @@ def build_record(*, state: dict, packet: dict, run_artifact: dict) -> dict:
         "repair_family": repair_packet.get("resumability_family", core.get("resumability_family", "")),
         "verdict": verdict,
         "why": (
-            "the packet-first continuation path exposes enough next-step and input truth to be followed without author memory"
+            "the packet-first continuation path exposes enough next-step, precedence, and replay truth to be followed without author memory"
             if verdict == "FOLLOWABLE_BY_SECOND_OPERATOR"
-            else "the continuation path still hides too much decision-making in author memory"
+            else "the continuation path still hides too much precedence or replay decision-making in author memory"
         ),
     }
 

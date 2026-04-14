@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "required": ["schema_version","run_id","task_class","entrypoint","entry_state","visible_entry_artifacts","packet_only_entry","has_explicit_next_step","has_explicit_required_inputs","has_explicit_operator_focus","requires_author_intuition","expected_result","expected_reason","expected_next_safe_step","repair_family","verdict","why"],
+  "required": ["schema_version","run_id","task_class","entrypoint","entry_state","visible_entry_artifacts","packet_only_entry","has_explicit_next_step","has_explicit_required_inputs","has_explicit_operator_focus","has_explicit_precedence","packet_replay_ready","requires_author_intuition","expected_result","expected_reason","expected_next_safe_step","repair_family","verdict","why"],
   "properties": {
     "schema_version": {"type": "string", "const": "second_operator_record_v0"},
     "run_id": {"type": "string", "minLength": 1},
@@ -12,6 +12,8 @@
     "has_explicit_next_step": {"type": "boolean"},
     "has_explicit_required_inputs": {"type": "boolean"},
     "has_explicit_operator_focus": {"type": "boolean"},
+    "has_explicit_precedence": {"type": "boolean"},
+    "packet_replay_ready": {"type": "boolean"},
     "requires_author_intuition": {"type": "boolean"},
     "expected_result": {"type": "string"},
     "expected_reason": {"type": "string"},

@@ -89,6 +89,9 @@ def build_sanitized_session_export(
     repair_receipt: dict | None,
     output_files: dict | None,
 ) -> dict:
+    packet = repair_packet or {}
+    source_of_truth = packet.get("source_of_truth", {})
+    core = packet.get("continuation_core", {})
     return {
         "sensitive_values_redacted": True,
         "run_id": state["run_id"],
@@ -98,8 +101,12 @@ def build_sanitized_session_export(
         "reason": report.get("reason", ""),
         "next_safe_step": report.get("next_safe_step", ""),
         "resumability_family": report.get("resumability_family", ""),
-        "repair_current_step_id": (repair_packet or {}).get("repair_policy", {}).get("next_step_id", ""),
+        "repair_current_step_id": packet.get("repair_policy", {}).get("next_step_id", ""),
         "repair_last_result": (repair_receipt or {}).get("result", ""),
+        "entry_artifacts": list(core.get("authoritative_entry_artifacts", []) or source_of_truth.get("authoritative_entry_artifacts", [])),
+        "source_of_truth_precedence": list(core.get("source_of_truth_precedence", []) or source_of_truth.get("precedence_order", [])),
+        "packet_replay_ready": bool(core.get("packet_replay_ready", False) or source_of_truth.get("packet_replay_ready", False)),
+        "latest_repair_receipt_available": bool(source_of_truth.get("latest_repair_receipt_available", False)),
         "artifact_files": sorted(output_files.values()) if output_files else [],
     }
 

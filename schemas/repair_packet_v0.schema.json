@@ -19,6 +19,7 @@
     "repair_inputs",
     "selection_context",
     "preparation_context",
+    "source_of_truth",
     "runtime_truth",
     "output_defaults",
     "provided_inputs",
@@ -934,7 +935,10 @@
         "packet_supplies_resume_context",
         "packet_supplies_repair_inputs",
         "packet_supplies_output_defaults",
-        "requires_sibling_discovery"
+        "requires_sibling_discovery",
+        "authoritative_entry_artifacts",
+        "source_of_truth_precedence",
+        "packet_replay_ready"
       ],
       "properties": {
         "contract_version": {
@@ -1012,6 +1016,25 @@
           "type": "boolean"
         },
         "requires_sibling_discovery": {
+          "type": "boolean"
+        },
+        "authoritative_entry_artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 2
+        },
+        "source_of_truth_precedence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 2
+        },
+        "packet_replay_ready": {
           "type": "boolean"
         }
       }
@@ -1321,6 +1344,55 @@
         "planned_required_sections_present_count": {
           "type": "integer"
         }
+      }
+    },
+    "source_of_truth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authoritative_entry_artifacts",
+        "precedence_order",
+        "artifact_roles",
+        "freshness_rule",
+        "contradiction_rule",
+        "latest_repair_receipt_available",
+        "embedded_history_chain_length",
+        "packet_replay_ready",
+        "packet_replay_why"
+      ],
+      "properties": {
+        "authoritative_entry_artifacts": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "minItems": 2
+        },
+        "precedence_order": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "minItems": 2
+        },
+        "artifact_roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state_file",
+            "repair_packet",
+            "repair_receipt",
+            "repair_history_chain"
+          ],
+          "properties": {
+            "state_file": {"type": "string", "minLength": 1},
+            "repair_packet": {"type": "string", "minLength": 1},
+            "repair_receipt": {"type": "string", "minLength": 1},
+            "repair_history_chain": {"type": "string", "minLength": 1}
+          }
+        },
+        "freshness_rule": {"type": "string", "minLength": 1},
+        "contradiction_rule": {"type": "string", "minLength": 1},
+        "latest_repair_receipt_available": {"type": "boolean"},
+        "embedded_history_chain_length": {"type": "integer", "minimum": 0},
+        "packet_replay_ready": {"type": "boolean"},
+        "packet_replay_why": {"type": "string", "minLength": 1}
       }
     },
     "runtime_truth": {

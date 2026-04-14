@@ -18,6 +18,12 @@ from synrail_repair_handoff_v0 import (
 
 MAX_REPAIR_ATTEMPTS = 3
 NO_PROGRESS_WINDOW = 2
+SOURCE_OF_TRUTH_PRECEDENCE = [
+    "state_file",
+    "repair_packet",
+    "repair_receipt",
+    "repair_history_chain",
+]
 
 
 def save_json(path: Path, payload: dict) -> None:
@@ -288,6 +294,29 @@ def build_artifact_quality_summary(handoff: dict) -> dict:
     }
 
 
+def build_source_of_truth(repair_receipt: dict | None) -> dict:
+    history_chain = list(repair_receipt.get("repair_history_chain", [])) if repair_receipt else []
+    latest_receipt_available = bool(repair_receipt)
+    return {
+        "authoritative_entry_artifacts": ["state_file", "repair_packet"],
+        "precedence_order": list(SOURCE_OF_TRUTH_PRECEDENCE),
+        "artifact_roles": {
+            "state_file": "authoritative current run state",
+            "repair_packet": "authoritative continuation contract, required inputs, and output defaults",
+            "repair_receipt": "authoritative latest repair-step progress only when it matches the same contour",
+            "repair_history_chain": "supporting chronology embedded for replay, not a stronger state source than the packet or state file",
+        },
+        "freshness_rule": "prefer the fresher stricter lower-level artifact when derived continuation surfaces disagree",
+        "contradiction_rule": "state_file anchors current state; repair_packet anchors continuation contract; repair_receipt can refine latest step progress but must not soften stricter state truth",
+        "latest_repair_receipt_available": latest_receipt_available,
+        "embedded_history_chain_length": len(history_chain),
+        "packet_replay_ready": True,
+        "packet_replay_why": (
+            "state_file and repair_packet are enough for packet-first continuation, with any latest repair receipt and history embedded for replay"
+        ),
+    }
+
+
 def build_repair_history(handoff: dict, repair_receipt: dict | None) -> dict:
     completed_step_ids = list(repair_receipt.get("repair_history", {}).get("completed_step_ids", [])) if repair_receipt else []
     history_chain = list(repair_receipt.get("repair_history_chain", [])) if repair_receipt else []
@@ -420,6 +449,7 @@ def build_continuation_core(
     selection_context: dict,
     missing_ids: list[str],
     repair_termination: dict,
+    source_of_truth: dict,
 ) -> dict:
     operator_evidence = dict(receipt_context.get("operator_evidence", {}))
     required_inputs = [item.get("input_id", "") for item in handoff.get("required_inputs", []) if item.get("input_id", "")]
@@ -449,6 +479,9 @@ def build_continuation_core(
         "packet_supplies_repair_inputs": True,
         "packet_supplies_output_defaults": True,
         "requires_sibling_discovery": False,
+        "authoritative_entry_artifacts": list(source_of_truth.get("authoritative_entry_artifacts", [])),
+        "source_of_truth_precedence": list(source_of_truth.get("precedence_order", [])),
+        "packet_replay_ready": source_of_truth.get("packet_replay_ready", False),
     }
 
 
@@ -528,6 +561,7 @@ def build_packet_from_runtime_truth(
     artifact_quality_summary = build_artifact_quality_summary(handoff)
     repair_history = build_repair_history(handoff, repair_receipt)
     receipt_context = build_receipt_context(repair_receipt)
+    source_of_truth = build_source_of_truth(repair_receipt)
     repair_termination = build_repair_termination(
         resumability=resumability,
         repair_history=repair_history,
@@ -581,6 +615,7 @@ def build_packet_from_runtime_truth(
         },
         "selection_context": selection_context,
         "preparation_context": build_preparation_context(preparation_receipt),
+        "source_of_truth": source_of_truth,
         "runtime_truth": build_runtime_truth(state, report),
         "output_defaults": output_defaults,
         "provided_inputs": provided_ids,
@@ -597,6 +632,7 @@ def build_packet_from_runtime_truth(
         selection_context=selection_context,
         missing_ids=missing_ids,
         repair_termination=repair_termination,
+        source_of_truth=source_of_truth,
     )
     if selection_receipt:
         packet["selection_receipt"] = selection_receipt

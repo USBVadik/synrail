@@ -261,6 +261,7 @@ def build_issue_body(record: dict) -> str:
         f"- component error class: `{record['component_error_class']}`",
         f"- repair attempt count: `{record['repair_attempt_count']}`",
         f"- next safe step: `{record['next_safe_step']}`",
+        f"- packet replay ready: `{record['continuation_summary']['packet_replay_ready']}`",
         "",
         "## Command Sequence",
     ]
@@ -291,6 +292,7 @@ def export_session_replay(root: Path, output: Path, issue_output: Path | None = 
     report = snapshot["report"] or {}
     repair_packet = snapshot["repair_packet"] or {}
     observability = snapshot["observability"] or {}
+    observability_export = observability.get("sanitized_session_export", {}) if isinstance(observability, dict) else {}
     events = load_command_events(root)
     record = {
         "schema_version": "alpha_session_replay_record_v0",
@@ -318,6 +320,23 @@ def export_session_replay(root: Path, output: Path, issue_output: Path | None = 
             "transition_count": (observability.get("event_counts") or {}).get("transition_count", 0),
             "repair_attempt_count": (observability.get("event_counts") or {}).get("repair_attempt_count", 0),
             "rejection_count": (observability.get("event_counts") or {}).get("rejection_count", 0),
+        },
+        "continuation_summary": {
+            "entry_artifacts": list(
+                observability_export.get("entry_artifacts", [])
+                or (repair_packet.get("continuation_core", {}) or {}).get("authoritative_entry_artifacts", [])
+                or (repair_packet.get("source_of_truth", {}) or {}).get("authoritative_entry_artifacts", [])
+            ),
+            "source_of_truth_precedence": list(
+                observability_export.get("source_of_truth_precedence", [])
+                or (repair_packet.get("continuation_core", {}) or {}).get("source_of_truth_precedence", [])
+                or (repair_packet.get("source_of_truth", {}) or {}).get("precedence_order", [])
+            ),
+            "packet_replay_ready": bool(
+                observability_export.get("packet_replay_ready", False)
+                or (repair_packet.get("continuation_core", {}) or {}).get("packet_replay_ready", False)
+                or (repair_packet.get("source_of_truth", {}) or {}).get("packet_replay_ready", False)
+            ),
         },
     }
     record["issue_title"] = build_issue_title(record)

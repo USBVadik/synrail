@@ -78,6 +78,7 @@ synrail check --artifact-root "$ARTIFACT_ROOT"
 # after applying only that bounded repair:
 synrail retry --artifact-root "$ARTIFACT_ROOT"
 synrail restore --artifact-root "$ARTIFACT_ROOT"
+synrail session-export --artifact-root "$ARTIFACT_ROOT"
 ```
 
 Fresh first-run contour:
@@ -102,6 +103,8 @@ Current shell proof surfaces:
   - [thin_output_run_accepted_003](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_003)
 - blocked retry translation:
   - [retry_stdout.txt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_008/shell/retry_stdout.txt)
+- continuation autonomy hardening:
+  - [CONTINUATION_AUTONOMY_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/CONTINUATION_AUTONOMY_001.md)
 
 Read [ALPHA_LANE_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md) for the current verified contour and the canonical smoke artifacts behind it.
 

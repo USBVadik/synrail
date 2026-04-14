@@ -19,6 +19,7 @@
     "command_sequence",
     "state_at_error",
     "observability_summary",
+    "continuation_summary",
     "issue_title",
     "issue_body"
   ],
@@ -100,6 +101,22 @@
         "transition_count": {"type": "integer", "minimum": 0},
         "repair_attempt_count": {"type": "integer", "minimum": 0},
         "rejection_count": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "continuation_summary": {
+      "type": "object",
+      "required": ["entry_artifacts", "source_of_truth_precedence", "packet_replay_ready"],
+      "properties": {
+        "entry_artifacts": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "source_of_truth_precedence": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "packet_replay_ready": {"type": "boolean"}
       },
       "additionalProperties": false
     },
