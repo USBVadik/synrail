@@ -12,6 +12,7 @@
     "trusted_baseline",
     "intended_run_class",
     "gate_results",
+    "coverage",
     "blocking_failure_classes",
     "final_verdict",
     "recommended_next_safe_step"
@@ -69,6 +70,40 @@
         "credential_surface": {"$ref": "#/$defs/gate"},
         "artifact_viability": {"$ref": "#/$defs/gate"},
         "prompt_task_identity": {"$ref": "#/$defs/gate"}
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "doctor_version",
+        "coverage_threshold_policy",
+        "critical_fail_modes",
+        "covered_fail_modes",
+        "partial_fail_modes",
+        "uncovered_fail_modes",
+        "critical_fail_mode_count",
+        "critical_covered_count",
+        "critical_missing_fail_modes",
+        "threshold_met",
+        "gate_status",
+        "gate_reason"
+      ],
+      "properties": {
+        "schema_version": {"type": "string", "const": "doctor_coverage_record_v0"},
+        "doctor_version": {"type": "string"},
+        "coverage_threshold_policy": {"type": "string"},
+        "critical_fail_modes": {"type": "array", "items": {"type": "string"}},
+        "covered_fail_modes": {"type": "array", "items": {"type": "string"}},
+        "partial_fail_modes": {"type": "array", "items": {"type": "string"}},
+        "uncovered_fail_modes": {"type": "array", "items": {"type": "string"}},
+        "critical_fail_mode_count": {"type": "integer"},
+        "critical_covered_count": {"type": "integer"},
+        "critical_missing_fail_modes": {"type": "array", "items": {"type": "string"}},
+        "threshold_met": {"type": "boolean"},
+        "gate_status": {"type": "string", "enum": ["PASS", "BLOCKED"]},
+        "gate_reason": {"type": "string"}
       }
     },
     "blocking_failure_classes": {

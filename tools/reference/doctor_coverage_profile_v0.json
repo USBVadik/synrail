@@ -1,0 +1,47 @@
+{
+  "schema_version": "doctor_coverage_profile_v0",
+  "doctor_version": "synrail_doctor_v1",
+  "critical_fail_modes": [
+    "wrong_target_identity_mismatch",
+    "dirty_execution_surface_under_git",
+    "out_of_scope_modified_files_on_observed_safe_surface",
+    "helper_entrypoint_missing",
+    "helper_entrypoint_syntax_invalid",
+    "helper_entrypoint_missing_module_import",
+    "credential_env_missing",
+    "credential_env_placeholder_value",
+    "credential_path_missing",
+    "credential_json_malformed",
+    "artifact_path_parent_missing",
+    "exact_prompt_or_task_identity_missing"
+  ],
+  "covered_fail_modes": [
+    "baseline_identity_missing",
+    "wrong_target_identity_mismatch",
+    "dirty_execution_surface_under_git",
+    "out_of_scope_modified_files_on_observed_safe_surface",
+    "artifact_path_parent_missing",
+    "credential_env_missing",
+    "credential_path_missing",
+    "credential_env_placeholder_value",
+    "exact_prompt_or_task_identity_missing",
+    "exact_prompt_or_task_identity_mismatched",
+    "helper_entrypoint_missing",
+    "helper_entrypoint_syntax_invalid",
+    "helper_entrypoint_missing_module_import",
+    "credential_json_malformed"
+  ],
+  "partial_fail_modes": [
+    "non_git_clean_surface_truth",
+    "helper_runtime_import_graph_truth",
+    "credential_auth_validity"
+  ],
+  "uncovered_fail_modes": [
+    "deep_config_graph_validity",
+    "runtime_library_import_drift_beyond_helper_entrypoint",
+    "hidden_side_effects_inside_parsing_helper",
+    "semantic_intent_drift_inside_in_scope_file",
+    "broad_environment_truth_beyond_expensive_fail_modes"
+  ],
+  "coverage_threshold_policy": "ALL_CRITICAL_FAIL_MODES_COVERED"
+}

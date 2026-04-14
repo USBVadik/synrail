@@ -46,6 +46,10 @@ def human_failure_label(reason: str) -> str:
     return labels.get(reason, humanize_token(reason) or "unknown blocker")
 
 
+def doctor_coverage_block(doctor: dict | None) -> bool:
+    return "doctor-coverage incomplete" in list((doctor or {}).get("blocking_failure_classes", []))
+
+
 def human_scope_label(scope_id: str) -> str:
     labels = {
         "current_repair_step_only": "only the current bounded repair step",
@@ -122,7 +126,7 @@ def next_command(repair_packet: dict, current_step_id: str) -> str:
     return ""
 
 
-def build_record(*, repair_packet: dict, checkpoint: dict | None = None) -> dict:
+def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor: dict | None = None) -> dict:
     continuation = repair_packet.get("continuation_core", {})
     required_inputs = list(continuation.get("next_step_required_inputs", []) or continuation.get("required_inputs", []))
     artifact_quality = repair_packet.get("artifact_quality_summary", {})
@@ -139,7 +143,7 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None) -> dict
         "Do not claim closure or acceptance unless the repaired run actually reaches it.",
     ]
     broken_truth = failure_reason(repair_packet)
-    failure_label = human_failure_label(broken_truth)
+    failure_label = "the doctor coverage gate is still blocking trust in readiness" if doctor_coverage_block(doctor) else human_failure_label(broken_truth)
     continuation_next_step = next_safe_step(repair_packet)
     next_safe_step_label = (
         "restore the original task request and intended task target, then run the next bounded check"
@@ -203,6 +207,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repair-packet-file", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--checkpoint-record-file")
+    parser.add_argument("--doctor-file")
     return parser
 
 
@@ -212,6 +217,7 @@ def main() -> int:
     record = build_record(
         repair_packet=load_json(Path(args.repair_packet_file)),
         checkpoint=load_json(Path(args.checkpoint_record_file)) if args.checkpoint_record_file else None,
+        doctor=load_json(Path(args.doctor_file)) if args.doctor_file else None,
     )
     save_json(Path(args.output), record)
     print(json.dumps({"result": "OK", "current_step_id": record["current_step_id"]}, ensure_ascii=True))

@@ -1218,6 +1218,10 @@ def cmd_generate_prompt(args: argparse.Namespace) -> int:
     root = alpha_root_from_args(args)
     if root and not getattr(args, "repair_packet_file", None):
         args.repair_packet_file = str(alpha_file(root, "repair_packet"))
+    if root and not getattr(args, "doctor_file", None):
+        existing = maybe_existing_alpha_file(root, "doctor")
+        if existing:
+            args.doctor_file = existing
     if root and not getattr(args, "output", None):
         args.output = str(alpha_file(root, "prompt"))
     if root and not getattr(args, "checkpoint_record_file", None):
@@ -1239,6 +1243,8 @@ def cmd_generate_prompt(args: argparse.Namespace) -> int:
     ]
     if args.checkpoint_record_file:
         forwarded.extend(["--checkpoint-record-file", args.checkpoint_record_file])
+    if getattr(args, "doctor_file", None):
+        forwarded.extend(["--doctor-file", args.doctor_file])
     if args.mode == "dev":
         return run_python(PROMPT_BRIDGE, forwarded)
     completed = run_python_capture(PROMPT_BRIDGE, forwarded)
@@ -1395,6 +1401,8 @@ def cmd_check(args: argparse.Namespace) -> int:
             ]
             if getattr(args, "checkpoint_record_file", None):
                 forwarded.extend(["--checkpoint-record-file", args.checkpoint_record_file])
+            if getattr(args, "doctor_file", None):
+                forwarded.extend(["--doctor-file", args.doctor_file])
             prompt_completed = run_python_capture(PROMPT_BRIDGE, forwarded)
             if prompt_completed.returncode == 0:
                 print("")
@@ -2615,6 +2623,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_generate_prompt.add_argument("--output")
     p_generate_prompt.add_argument("--checkpoint-id")
     p_generate_prompt.add_argument("--checkpoint-record-file")
+    p_generate_prompt.add_argument("--doctor-file")
     p_generate_prompt.set_defaults(func=cmd_generate_prompt)
 
     p_thin_output_reading = sub.add_parser("thin-output-reading")

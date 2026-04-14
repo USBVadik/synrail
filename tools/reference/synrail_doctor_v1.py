@@ -12,6 +12,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_doctor_coverage_v0 import build_coverage_record, load_profile as load_coverage_profile
+except ImportError:
+    from synrail_doctor_coverage_v0 import build_coverage_record, load_profile as load_coverage_profile
+
 
 VERDICTS = {
     "baseline_identity": "NOT_ACCEPTABLE_BASELINE_IDENTITY",
@@ -20,6 +25,7 @@ VERDICTS = {
     "credential_surface": "NOT_ACCEPTABLE_CREDENTIAL_SURFACE",
     "artifact_viability": "NOT_ACCEPTABLE_ARTIFACT_PATH",
     "prompt_task_identity": "NOT_ACCEPTABLE_EXACT_PROMPT_MISSING",
+    "doctor_coverage": "NOT_ACCEPTABLE_DOCTOR_COVERAGE",
 }
 
 PASS_VERDICT = {
@@ -35,6 +41,7 @@ FAILURE_CLASSES = {
     "credential_surface": "credential-surface missing",
     "artifact_viability": "artifact-viability missing",
     "prompt_task_identity": "exact-prompt-artifact-missing",
+    "doctor_coverage": "doctor-coverage incomplete",
 }
 
 NEXT_STEPS = {
@@ -44,6 +51,7 @@ NEXT_STEPS = {
     "credential_surface": "restore required provider credentials",
     "artifact_viability": "restore a reliable machine-readable artifact path",
     "prompt_task_identity": "restore the exact prompt and task identity artifacts",
+    "doctor_coverage": "close the agreed critical doctor fail-mode coverage before trusting readiness",
 }
 
 
@@ -361,6 +369,7 @@ def build_record(args: argparse.Namespace) -> dict:
         "credential_surface": probe_credential_surface(args),
         "prompt_task_identity": probe_prompt_task_identity(args),
     }
+    coverage = build_coverage_record(load_coverage_profile(Path(args.coverage_profile_file)) if args.coverage_profile_file else load_coverage_profile())
 
     blocking_failure_classes = []
     final_verdict = PASS_VERDICT[args.doctor_level]
@@ -372,6 +381,11 @@ def build_record(args: argparse.Namespace) -> dict:
             final_verdict = VERDICTS[key]
             next_safe_step = NEXT_STEPS[key]
             break
+
+    if final_verdict.startswith("ACCEPTABLE_") and not coverage["threshold_met"]:
+        blocking_failure_classes.append(FAILURE_CLASSES["doctor_coverage"])
+        final_verdict = VERDICTS["doctor_coverage"]
+        next_safe_step = NEXT_STEPS["doctor_coverage"]
 
     return {
         "schema_version": "doctor_record_v0",
@@ -388,6 +402,7 @@ def build_record(args: argparse.Namespace) -> dict:
         },
         "intended_run_class": args.intended_run_class,
         "gate_results": gates,
+        "coverage": coverage,
         "blocking_failure_classes": blocking_failure_classes,
         "final_verdict": final_verdict,
         "recommended_next_safe_step": next_safe_step,
@@ -434,6 +449,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--expected-target-identity")
     parser.add_argument("--changed-file", action="append", default=[])
     parser.add_argument("--allowed-scope-path", action="append", default=[])
+    parser.add_argument("--coverage-profile-file")
     return parser
 
 

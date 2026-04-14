@@ -41,6 +41,11 @@ def human_reason(report: dict, repair_packet: dict | None = None) -> str:
     return labels.get(raw, humanize_token(raw))
 
 
+def has_doctor_coverage_block(doctor: dict | None) -> bool:
+    failure_classes = list((doctor or {}).get("blocking_failure_classes", []))
+    return "doctor-coverage incomplete" in failure_classes
+
+
 def human_safe_step_text(value: str) -> str:
     labels = {
         "restore exact prompt and task identity": "restore the original task request and intended target",
@@ -150,6 +155,11 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
         return (
             "The acceptance rules for this run are not trustworthy yet.",
             "Refresh the acceptance rules for the current project state before trusting closure again.",
+        )
+    if outcome_class == "DOCTOR_BLOCKED" and has_doctor_coverage_block(doctor):
+        return (
+            "Doctor coverage is not complete enough to trust readiness yet.",
+            "Do not treat this doctor as fully reliable until the agreed critical fail modes are covered.",
         )
     failure_classes = list((doctor or {}).get("blocking_failure_classes", []))
     messages = {
@@ -271,6 +281,8 @@ def human_next_step(
             return "Move back to a clean or clearly verified-safe workspace before continuing."
         return "Restore the original task request or target before continuing."
     if outcome_class == "DOCTOR_BLOCKED":
+        if has_doctor_coverage_block(doctor):
+            return "Close the agreed critical doctor fail-mode coverage before trusting readiness."
         return "Repair readiness first, then retry only the current bounded step."
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTINUATION_INPUTS_MISSING":
         return "Finish the current bounded repair from synrail repair-step, then run synrail retry."
@@ -313,6 +325,8 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         suggested_command = "run synrail repair-step, finish only that repair, then synrail retry"
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
         suggested_command = "refresh the acceptance rules, then rerun synrail check"
+    if outcome_class == "DOCTOR_BLOCKED" and has_doctor_coverage_block(doctor):
+        suggested_command = "close the agreed critical doctor fail-mode coverage before trusting readiness"
     next_step = report.get("next_safe_step", "") or state.get("next_safe_step", "")
     if outcome_class == "ACCEPTED":
         next_step = "No repair step is required."
