@@ -498,11 +498,27 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
     if not record_file.exists():
         return
     payload = load_json(record_file)
+
+    def human_safe_point_class(value: str) -> str:
+        mapping = {
+            "VERIFIED_WORKING_STATE": "Verified working state",
+            "VERIFIED_ACCEPTED_STATE": "Verified accepted state",
+            "NOT_SAFE_POINT": "Not a verified safe point",
+        }
+        return mapping.get(value, value)
+
+    def human_checkpoint_step(text: str) -> str:
+        mapping = {
+            "checkpoint verified; restore is now allowed": "This safe point is ready to use for restore.",
+            "inspect or continue from the restored checkpoint state": "Inspect the restored state or continue from it.",
+        }
+        return mapping.get(text, text)
+
     lines = []
     if action == "create":
         lines = [
             f"Safe point saved: {payload.get('checkpoint_id', '')}",
-            f"Safe point type: {payload.get('safe_point_class', '')}",
+            f"Safe point type: {human_safe_point_class(payload.get('safe_point_class', ''))}",
             "What to do next: verify this safe point before depending on it for restore.",
             "Next command: " + (
                 shell_command(root, "checkpoint", "verify")
@@ -512,15 +528,15 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
         ]
     elif action == "verify":
         lines = [
-            f"Checkpoint verification: {payload.get('verification', {}).get('status', '')}",
-            payload.get("next_safe_step", ""),
+            f"Safe point check: {payload.get('verification', {}).get('status', '')}",
+            human_checkpoint_step(payload.get("next_safe_step", "")),
         ]
     elif action == "restore":
         restore = payload.get("restore", {})
         rollback = payload.get("rollback", {})
         lines = [
             f"Restore status: {restore.get('status', '')}",
-            payload.get("next_safe_step", ""),
+            human_checkpoint_step(payload.get("next_safe_step", "")),
         ]
         if rollback.get("status", "") == "ROLLED_BACK":
             lines.append("Restore rollback was applied because verification failed.")
@@ -897,7 +913,7 @@ def cmd_verify_checkpoint(args: argparse.Namespace) -> int:
         if args.mode == "dev":
             print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
         else:
-            print("Synrail could not find a checkpoint to verify.")
+            print("Synrail could not find a safe point to confirm.")
             if root:
                 print("What to do next: create one while the project is in a verified working state.")
                 print("Next command: " + shell_command(root, "save"))
@@ -937,7 +953,7 @@ def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
         if args.mode == "dev":
             print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
         else:
-            print("Synrail could not find a verified checkpoint to restore.")
+            print("Synrail could not find a verified safe point to restore.")
             if root:
                 print("What to do next: create one while the project is in a verified working state.")
                 print("Next command: " + shell_command(root, "save"))

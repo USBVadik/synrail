@@ -37,6 +37,8 @@ python3 -m venv .venv
 .venv/bin/python setup.py install
 ```
 
+This is still the trusted local install path on the current toolchain. Editable `pip install -e .` remains blocked here by a local wheel-toolchain seam, so it is not treated as part of the verified alpha lane yet.
+
 The reference smoke for this document was run through the installed `synrail` console script, not by calling helper files directly.
 
 `pip install . --no-build-isolation` is not yet the trusted local alpha path on the current toolchain because the local venv lacked `bdist_wheel` during smoke.
@@ -81,13 +83,13 @@ synrail next-step --artifact-root "$ARTIFACT_ROOT"
 
 That fresh contour does not yet guarantee `restore_available`, because no verified checkpoint exists yet.
 
-On the current onboarding smoke in [alpha_onboarding_run_004](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_004):
+On the current onboarding smoke in [alpha_onboarding_run_005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_005):
 
 - `next-step` before any `check` now returns one bounded human-readable next step instead of a raw missing-artifact failure
 - `restore` without any checkpoint now says how to create the safe point first through `synrail save`
 - `checkpoint verify` without any checkpoint now returns bounded guidance instead of a traceback and points to `synrail save`
 
-On the current shell smoke in [alpha_shell_run_004](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_004):
+On the current shell smoke in [alpha_shell_run_005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_005):
 
 - `init` auto-detects `project_type = python`
 - `check` runs without explicit identity flags once one `final_result.txt` appears under the artifact root
@@ -96,6 +98,7 @@ On the current shell smoke in [alpha_shell_run_004](/Users/usbdick/Documents/New
 - `next-step` now says `After this repair, run: synrail continue`
 - `continue` is now a thin human-facing alias for the existing `resume` path
 - `init` now surfaces the default safe-point action as `synrail save`
+- `check` now says `Workspace Not Trusted` instead of leaking `Working Surface` wording
 - `prompt-followup` confirms that the generated next-agent instruction preserves the bounded current step
 
 ## What This Lane Returns
@@ -127,19 +130,27 @@ On the current accepted default output smoke in [thin_output_run_accepted_003](/
 - it explains that the run reached accepted closure
 - it makes clear that no repair step is required
 
+On the current continuation-blocked output smoke in [thin_output_continue_run_002](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_continue_run_002):
+
+- default mode says `Current Repair Step Still Incomplete`
+- it tells the operator to finish only the current bounded repair before `synrail continue`
+- it no longer falls back to the generic `Needs Review` bucket for this contour
+
 Canonical artifacts:
 
-- [shell init output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_004/shell/init_stdout.txt)
-- [shell check output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_004/shell/check_stdout.txt)
-- [shell next-step output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_004/shell/next_step_stdout.txt)
-- [shell continue output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_004/shell/continue_stdout.txt)
-- [shell project profile](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_004/lane/project_profile.json)
-- [shell thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_004/lane/thin_output.json)
-- [shell prompt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_004/lane/prompt.json)
-- [shell prompt followup](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_004/lane/followup.json)
-- [onboarding next-step-before-check output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_004/shell/next_step_before_check_stdout.txt)
-- [onboarding restore-without-checkpoint output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_004/shell/restore_without_checkpoint_stdout.txt)
-- [onboarding checkpoint-verify-without-checkpoint output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_004/shell/checkpoint_verify_without_checkpoint_stdout.txt)
+- [shell init output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_005/shell/init_stdout.txt)
+- [shell check output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_005/shell/check_stdout.txt)
+- [shell next-step output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_005/shell/next_step_stdout.txt)
+- [shell continue output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_005/shell/continue_stdout.txt)
+- [shell project profile](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_005/lane/project_profile.json)
+- [shell thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_005/lane/thin_output.json)
+- [shell prompt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_005/lane/prompt.json)
+- [shell prompt followup](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_005/lane/followup.json)
+- [onboarding next-step-before-check output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_005/shell/next_step_before_check_stdout.txt)
+- [onboarding restore-without-checkpoint output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_005/shell/restore_without_checkpoint_stdout.txt)
+- [onboarding checkpoint-verify-without-checkpoint output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_005/shell/checkpoint_verify_without_checkpoint_stdout.txt)
+- [safe point save output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_safe_point_run_001/shell/save_stdout.txt)
+- [continuation-blocked thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_continue_run_002/thin_output.json)
 - [init state](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/init/state.json)
 - [working checkpoint verify](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/lane/checkpoints/working/checkpoint_verify.json)
 - [thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/lane/thin_output.json)

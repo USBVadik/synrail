@@ -76,6 +76,15 @@ This shell is intentionally thin:
 - it keeps the existing dev/runtime helpers underneath
 - it does not introduce a new runtime semantics branch
 
+The current trusted local install path is still:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python setup.py install
+```
+
+Editable `pip install -e .` is not yet treated as a trusted alpha path on this local toolchain.
+
 Optional alpha telemetry now sits on the same artifact root:
 
 ```bash

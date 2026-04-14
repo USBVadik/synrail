@@ -63,6 +63,8 @@ python3 -m venv .venv
 .venv/bin/python setup.py install
 ```
 
+This is still the trusted local install path on the current toolchain. Editable `pip install -e .` is not yet treated as a trusted alpha path here.
+
 Then the smallest usable path depends on whether you already have one verified working state.
 
 Verified-working contour:
@@ -93,11 +95,13 @@ synrail next-step --artifact-root "$ARTIFACT_ROOT"
 Current shell proof surfaces:
 
 - first-run onboarding errors:
-  - [alpha_onboarding_run_004](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_004)
+  - [alpha_onboarding_run_005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_005)
 - zero-config-ish first run:
-  - [alpha_shell_run_004](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_004)
+  - [alpha_shell_run_005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_005)
 - accepted default-mode translation:
   - [thin_output_run_accepted_003](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_003)
+- continuation-blocked translation:
+  - [thin_output_continue_run_002](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_continue_run_002)
 
 Read [ALPHA_LANE_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md) for the current verified contour and the canonical smoke artifacts behind it.
 

@@ -19,7 +19,7 @@ def human_step_label(step_id: str) -> str:
     labels = {
         "continue_forward_orchestration": "prepare the next bounded attempt",
         "repair_final_result_artifact": "repair the final result artifact",
-        "restore_readiness_truth": "restore a trustworthy working surface",
+        "restore_readiness_truth": "restore a trustworthy workspace",
         "complete_missing_proof_sections": "fill in the missing proof sections",
         "complete_recovery_reverification": "finish recovery reverification",
         "start_new_run": "start a new bounded run",
@@ -33,7 +33,7 @@ def human_failure_label(reason: str) -> str:
         "INVALID_PROOF_BUNDLE": "the final result proof could not be trusted",
         "MISSING_PROOF_SECTIONS": "the proof is still missing required sections",
         "ARTIFACT_BUNDLE_MISSING": "the result bundle is missing required proof files",
-        "DOCTOR_NOT_GREEN": "the working surface is not ready yet",
+        "DOCTOR_NOT_GREEN": "the current workspace is not ready yet",
         "CONTINUATION_INPUTS_MISSING": "the next repair step is still missing required inputs",
         "RECOVERY_REVERIFICATION_INCOMPLETE": "recovery reverification is still incomplete",
         "MAX_REPAIR_ATTEMPTS": "the bounded repair limit was reached",
@@ -48,7 +48,7 @@ def human_scope_label(scope_id: str) -> str:
     labels = {
         "current_repair_step_only": "only the current bounded repair step",
         "helper_entrypoint_record": "the helper entrypoint that is blocking readiness",
-        "clean_execution_surface_record": "the current working surface cleanliness and scope",
+        "clean_execution_surface_record": "the current workspace cleanliness and scope",
         "proof_bundle_surface": "the proof bundle for this run",
         "final_result_artifact": "the final result artifact for this run",
     }
@@ -57,10 +57,10 @@ def human_scope_label(scope_id: str) -> str:
 
 def human_required_input(input_id: str) -> str:
     labels = {
-        "clean_surface_confirmation": "confirmation that the working surface is clean and in scope",
+        "clean_surface_confirmation": "confirmation that the current workspace is clean and in scope",
         "helper_path": "the blocking helper path",
         "prompt_identity_file": "the original task request record",
-        "target_identity_file": "the trusted target identity record",
+        "target_identity_file": "the original task target record",
         "refresh_recovery_complete": "confirmation that recovery completed",
         "refresh_reverification_complete": "confirmation that reverification completed",
     }
@@ -85,7 +85,7 @@ def checkpoint_note(checkpoint: dict | None, *, repair_packet: dict) -> str:
         and checkpoint.get("run_id", "") == repair_packet.get("run_id", "")
         and checkpoint.get("task_class", "") == repair_packet.get("task_class", "")
     ):
-        return "A verified checkpoint is available if this repair path becomes unsafe."
+        return "A verified safe point is available if this repair path becomes unsafe."
     return ""
 
 
@@ -142,7 +142,7 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None) -> dict
         "restore the original task request and intended target, then run the next bounded check"
         if continuation_next_step == "restore exact prompt and task identity"
         else (
-            "move to a clean or clearly verified-safe working surface"
+            "move back to a clean or clearly verified-safe workspace"
             if continuation_next_step == "move to a clean or explicitly observed-safe execution surface"
             else continuation_next_step
         )

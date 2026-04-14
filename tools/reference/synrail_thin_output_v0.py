@@ -26,7 +26,7 @@ def human_reason(report: dict, repair_packet: dict | None = None) -> str:
         "INVALID_PROOF_BUNDLE": "the final result proof could not be trusted",
         "MISSING_PROOF_SECTIONS": "the proof is still missing required sections",
         "ARTIFACT_BUNDLE_MISSING": "the result bundle is missing required proof files",
-        "DOCTOR_NOT_GREEN": "the working surface is not ready yet",
+        "DOCTOR_NOT_GREEN": "the current workspace is not ready yet",
         "STATE_NOT_RESUMABLE": "this run cannot safely continue from the current state",
         "TERMINAL_STATE_NOT_RESUMABLE": "this run cannot safely continue from the current state",
         "NON_RESUMABLE": "this run cannot safely continue from the current state",
@@ -42,7 +42,7 @@ def human_reason(report: dict, repair_packet: dict | None = None) -> str:
 def human_safe_step_text(value: str) -> str:
     labels = {
         "restore exact prompt and task identity": "restore the original task request and intended target",
-        "move to a clean or explicitly observed-safe execution surface": "move to a clean or clearly verified-safe working surface",
+        "move to a clean or explicitly observed-safe execution surface": "move back to a clean or clearly verified-safe workspace",
     }
     return labels.get(value, value)
 
@@ -171,15 +171,15 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
             f"Stop replaying this contour and start a new run or restore a verified safe point.{suffix}{recovery_suffix}",
         ),
         "SCOPE_VIOLATION": (
-            "Doctor blocked the contour because scope or target identity is not trustworthy.",
+            "Doctor blocked this run because the workspace or requested target is not trustworthy.",
             (
-                f"Move back to a clean in-scope execution surface before continuing this run.{suffix}{recovery_suffix}"
+                f"Move back to a clean in-scope workspace before continuing this run.{suffix}{recovery_suffix}"
                 if "dirty-surface unsafe" in failure_classes
-                else f"Restore the trusted baseline or exact target identity before continuing this run.{recovery_suffix}"
+                else f"Restore the original task target before continuing this run.{recovery_suffix}"
             ),
         ),
         "DOCTOR_BLOCKED": (
-            "Doctor has not cleared the contour for continuation.",
+            "Doctor has not cleared this workspace for continuation yet.",
             f"Repair readiness before continuing this run.{recovery_suffix}",
         ),
         "NON_GREEN": (
@@ -224,9 +224,9 @@ def status_label(outcome_class: str, *, report: dict, repair_packet: dict | None
     if outcome_class == "REPAIR_STOP":
         return "Repair Stopped"
     if outcome_class == "SCOPE_VIOLATION":
-        return "Working Surface Not Trusted"
+        return "Workspace Not Trusted"
     if outcome_class == "DOCTOR_BLOCKED":
-        return "Working Surface Not Ready"
+        return "Workspace Not Ready"
     if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
         return "Not Ready For The Next Attempt"
     if outcome_class == "NON_RESUMABLE":
@@ -259,8 +259,8 @@ def human_next_step(
         return "Stop replaying this contour. Restore a verified checkpoint or start a new run."
     if outcome_class == "SCOPE_VIOLATION":
         if "dirty-surface unsafe" in failure_classes:
-            return "Move back to a clean or clearly verified-safe working surface before continuing."
-        return "Restore the trusted task request or target before continuing."
+            return "Move back to a clean or clearly verified-safe workspace before continuing."
+        return "Restore the original task request or target before continuing."
     if outcome_class == "DOCTOR_BLOCKED":
         return "Repair readiness first, then continue only the current bounded step."
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTINUATION_INPUTS_MISSING":
@@ -288,7 +288,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "PROOF_INVALID": "run synrail next-step, apply only that repair, then synrail continue",
         "PROOF_PARTIAL": "run synrail next-step, supply only the missing proof inputs, then synrail continue",
         "REPAIR_STOP": "restore-checkpoint or start a new run",
-        "SCOPE_VIOLATION": "repair the working surface or target, then synrail continue",
+        "SCOPE_VIOLATION": "repair the workspace or requested target, then synrail continue",
         "DOCTOR_BLOCKED": "repair readiness, then synrail continue",
         "NON_GREEN": "inspect the blocker, then continue the bounded repair step",
     }[outcome_class]

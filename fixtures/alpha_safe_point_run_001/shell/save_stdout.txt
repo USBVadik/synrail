@@ -1,0 +1,4 @@
+Safe point saved: working
+Safe point type: Verified working state
+What to do next: verify this safe point before depending on it for restore.
+Next command: synrail checkpoint verify --artifact-root '/Users/usbdick/Documents/New project/synrail/fixtures/alpha_lane_run_003/lane'
