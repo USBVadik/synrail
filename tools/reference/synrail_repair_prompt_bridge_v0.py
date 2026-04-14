@@ -34,6 +34,8 @@ def human_failure_label(reason: str) -> str:
         "MISSING_PROOF_SECTIONS": "the proof is still missing required sections",
         "ARTIFACT_BUNDLE_MISSING": "the result bundle is missing required proof files",
         "DOCTOR_NOT_GREEN": "the current workspace is not ready yet",
+        "ACCEPTANCE_CRITERIA_STALE": "the acceptance rules no longer match this project state",
+        "ACCEPTANCE_CRITERIA_INVALID": "the acceptance rules could not be trusted",
         "CONTINUATION_INPUTS_MISSING": "the next repair step is still missing required inputs",
         "RECOVERY_REVERIFICATION_INCOMPLETE": "recovery reverification is still incomplete",
         "MAX_REPAIR_ATTEMPTS": "the bounded repair limit was reached",

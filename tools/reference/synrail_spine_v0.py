@@ -23,6 +23,7 @@ HERE = Path(__file__).resolve().parent
 DOCTOR = HERE / "synrail_doctor_v1.py"
 BUNDLE = HERE / "synrail_bundle_v0.py"
 CLOSURE = HERE / "synrail_closure_v0.py"
+ACCEPTANCE_CRITERIA = HERE / "synrail_acceptance_criteria_v0.py"
 REFRESH = HERE / "synrail_refresh_v0.py"
 HARNESS_V0 = HERE / "synrail_baseline_harness_v0.py"
 HARNESS_V1 = HERE / "synrail_baseline_harness_v1.py"
@@ -2259,7 +2260,23 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         return 0
     save_state(state_path, state)
 
-    code, _ = run_python_capture(CLOSURE, ["--state-file", args.state_file, "--bundle-file", args.bundle_output, "--output", args.closure_output])
+    closure_args = ["--state-file", args.state_file, "--bundle-file", args.bundle_output, "--output", args.closure_output]
+    if args.acceptance_criteria_file and args.acceptance_validation_output and args.project_profile_file:
+        code, _ = run_python_capture(
+            ACCEPTANCE_CRITERIA,
+            [
+                "validate",
+                "--criteria-file", args.acceptance_criteria_file,
+                "--state-file", args.state_file,
+                "--project-profile-file", args.project_profile_file,
+                "--output", args.acceptance_validation_output,
+            ],
+        )
+        if code != 0:
+            return code
+        closure_args.extend(["--acceptance-validation-file", args.acceptance_validation_output])
+
+    code, _ = run_python_capture(CLOSURE, closure_args)
     if code != 0:
         return code
 
@@ -2496,6 +2513,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--prompt-identity-file")
     p_orchestrate.add_argument("--target-identity-file")
     p_orchestrate.add_argument("--expected-target-identity")
+    p_orchestrate.add_argument("--acceptance-criteria-file")
+    p_orchestrate.add_argument("--acceptance-validation-output")
+    p_orchestrate.add_argument("--project-profile-file")
     p_orchestrate.set_defaults(func=cmd_orchestrate)
 
     return parser

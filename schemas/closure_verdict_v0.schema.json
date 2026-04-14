@@ -42,6 +42,15 @@
     "narrow_next_safe_step": {
       "type": "string"
     },
+    "acceptance_criteria_revision_id": {
+      "type": "string"
+    },
+    "acceptance_criteria_status": {
+      "type": "string"
+    },
+    "acceptance_criteria_reason": {
+      "type": "string"
+    },
     "missing_sections": {
       "type": "array",
       "items": {

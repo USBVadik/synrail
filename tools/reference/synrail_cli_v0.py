@@ -75,6 +75,7 @@ PROMPT_BRIDGE = HERE / "synrail_repair_prompt_bridge_v0.py"
 THIN_OUTPUT_READING = HERE / "synrail_thin_output_reading_v0.py"
 PROMPT_FOLLOWUP = HERE / "synrail_prompt_followup_v0.py"
 PROMPT_RETRY_GUARD = HERE / "synrail_prompt_retry_guard_v0.py"
+ACCEPTANCE_CRITERIA = HERE / "synrail_acceptance_criteria_v0.py"
 CONSISTENCY_RECOVERY = HERE / "synrail_consistency_recovery_v0.py"
 CHECKPOINT_OPERATOR_READING = HERE / "synrail_checkpoint_operator_reading_v0.py"
 CONSISTENCY_RECOVERY_PROMPT = HERE / "synrail_consistency_recovery_prompt_v0.py"
@@ -87,6 +88,8 @@ DEFAULT_ALPHA_TASK_CLASS = "bounded_change"
 ALPHA_FILE_NAMES = {
     "state": "state.json",
     "project_profile": "project_profile.json",
+    "acceptance_criteria": "acceptance_criteria.json",
+    "acceptance_validation": "acceptance_validation.json",
     "doctor": "doctor.json",
     "bundle": "bundle.json",
     "closure": "closure.json",
@@ -156,6 +159,17 @@ def default_alpha_run_id() -> str:
 
 def project_profile_file(root: Path) -> Path:
     return root / PROJECT_PROFILE_BASENAME
+
+
+def write_acceptance_criteria(root: Path) -> subprocess.CompletedProcess[str]:
+    return run_python_capture(
+        ACCEPTANCE_CRITERIA,
+        [
+            "build",
+            "--project-profile-file", str(project_profile_file(root)),
+            "--output", str(alpha_file(root, "acceptance_criteria")),
+        ],
+    )
 
 
 def save_project_profile(root: Path, payload: dict) -> None:
@@ -398,6 +412,7 @@ def apply_alpha_runtime_file_defaults(args: argparse.Namespace) -> None:
         ("repair_packet_output", "repair_packet"),
         ("repair_handoff_output", "repair_handoff"),
         ("repair_receipt_output", "repair_receipt"),
+        ("acceptance_validation_output", "acceptance_validation"),
         ("observability_output", "observability"),
         ("artifact_consistency_output", "artifact_consistency"),
         ("plan_output", "plan"),
@@ -409,6 +424,14 @@ def apply_alpha_runtime_file_defaults(args: argparse.Namespace) -> None:
         existing = maybe_existing_alpha_file(root, "repair_packet")
         if existing:
             args.repair_packet_file = existing
+    if not getattr(args, "acceptance_criteria_file", None):
+        existing = maybe_existing_alpha_file(root, "acceptance_criteria")
+        if existing:
+            args.acceptance_criteria_file = existing
+    if not getattr(args, "project_profile_file", None):
+        profile = project_profile_file(root)
+        if profile.exists():
+            args.project_profile_file = str(profile)
 
 
 def sync_restored_checkpoint_artifacts(target_root: Path) -> list[str]:
@@ -616,6 +639,9 @@ def cmd_init(args: argparse.Namespace) -> int:
         code = run_python(SPINE, forwarded)
         if code == 0 and root:
             save_project_profile(root, build_project_profile(project_root=Path.cwd().resolve(), root=root, task_class=args.task_class))
+            criteria_completed = write_acceptance_criteria(root)
+            if criteria_completed.returncode != 0:
+                return criteria_completed.returncode
         return code
     completed = run_python_capture(SPINE, forwarded)
     if completed.returncode != 0:
@@ -626,6 +652,13 @@ def cmd_init(args: argparse.Namespace) -> int:
         return completed.returncode
     if root:
         save_project_profile(root, build_project_profile(project_root=Path.cwd().resolve(), root=root, task_class=args.task_class))
+        criteria_completed = write_acceptance_criteria(root)
+        if criteria_completed.returncode != 0:
+            if criteria_completed.stderr.strip():
+                print(criteria_completed.stderr.strip(), file=sys.stderr)
+            if criteria_completed.stdout.strip():
+                print(criteria_completed.stdout.strip())
+            return criteria_completed.returncode
         print_init_summary(root=root, state_file=Path(args.output))
     return 0
 
@@ -1244,6 +1277,21 @@ def cmd_check(args: argparse.Namespace) -> int:
         if discovered:
             args.checkpoint_record_file = discovered
     apply_alpha_profile_defaults(args, root=root)
+    if root and project_profile_file(root).exists():
+        criteria_completed = write_acceptance_criteria(root)
+        if criteria_completed.returncode != 0:
+            if args.mode == "dev":
+                if criteria_completed.stderr.strip():
+                    print(criteria_completed.stderr.strip(), file=sys.stderr)
+                if criteria_completed.stdout.strip():
+                    print(criteria_completed.stdout.strip())
+            else:
+                print("Synrail could not refresh the acceptance rules for this project yet.")
+                print("What to do next: rerun synrail init or inspect the project profile in the artifact root.")
+            return criteria_completed.returncode
+        args.acceptance_criteria_file = str(alpha_file(root, "acceptance_criteria"))
+        args.acceptance_validation_output = str(alpha_file(root, "acceptance_validation"))
+        args.project_profile_file = str(project_profile_file(root))
 
     runtime_requested = all(
         [
@@ -2035,6 +2083,9 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ("--prompt-identity-file", args.prompt_identity_file),
         ("--target-identity-file", args.target_identity_file),
         ("--expected-target-identity", args.execution_surface_identity),
+        ("--acceptance-criteria-file", getattr(args, "acceptance_criteria_file", None)),
+        ("--acceptance-validation-output", getattr(args, "acceptance_validation_output", None)),
+        ("--project-profile-file", getattr(args, "project_profile_file", None)),
     ]:
         if value:
             forwarded.extend([flag, value])
@@ -2191,6 +2242,9 @@ def add_orchestration_args(
     parser.add_argument("--credential-env", action="append", default=[])
     parser.add_argument("--prompt-identity-file")
     parser.add_argument("--target-identity-file")
+    parser.add_argument("--acceptance-criteria-file")
+    parser.add_argument("--acceptance-validation-output")
+    parser.add_argument("--project-profile-file")
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -35,10 +35,11 @@ def first_missing_step(missing_sections: list[str]) -> str:
     return "complete the missing proof sections"
 
 
-def build_verdict(state: dict, bundle: dict) -> dict:
+def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = None) -> dict:
     missing_sections = list(bundle.get("missing_sections", []))
     run_id = state.get("run_id", bundle.get("run_id", ""))
     task_class = state.get("task_class", bundle.get("task_class", ""))
+    criteria_validation = criteria_validation or {}
 
     verdict = {
         "schema_version": "closure_verdict_v0",
@@ -49,7 +50,22 @@ def build_verdict(state: dict, bundle: dict) -> dict:
         "next_allowed_transition": "",
         "narrow_next_safe_step": "",
         "missing_sections": missing_sections,
+        "acceptance_criteria_revision_id": criteria_validation.get("criteria_revision_id", ""),
+        "acceptance_criteria_status": criteria_validation.get("status", ""),
+        "acceptance_criteria_reason": criteria_validation.get("reason", ""),
     }
+
+    criteria_status = criteria_validation.get("status", "")
+    if criteria_status == "STALE":
+        verdict["blocking_reason"] = "ACCEPTANCE_CRITERIA_STALE"
+        verdict["next_allowed_transition"] = "ACCEPTANCE_CRITERIA_REFRESH"
+        verdict["narrow_next_safe_step"] = "refresh the acceptance criteria for the current project state"
+        return verdict
+    if criteria_status == "INVALID":
+        verdict["blocking_reason"] = "ACCEPTANCE_CRITERIA_INVALID"
+        verdict["next_allowed_transition"] = "ACCEPTANCE_CRITERIA_REPAIR"
+        verdict["narrow_next_safe_step"] = "repair or rebuild the acceptance criteria before trusting closure"
+        return verdict
 
     if state["target_surface"]["status"] != "ATTESTED":
         verdict["blocking_reason"] = "TARGET_SURFACE_NOT_ATTESTED"
@@ -127,6 +143,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--state-file", required=True)
     parser.add_argument("--bundle-file", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--acceptance-validation-file")
     parser.add_argument("--update-state", action="store_true")
     return parser
 
@@ -141,7 +158,11 @@ def main() -> int:
 
     state = load_json(state_path)
     bundle = load_json(bundle_path)
-    verdict = build_verdict(state, bundle)
+    verdict = build_verdict(
+        state,
+        bundle,
+        load_json(Path(args.acceptance_validation_file)) if args.acceptance_validation_file else None,
+    )
     save_json(output_path, verdict)
 
     if args.update_state:

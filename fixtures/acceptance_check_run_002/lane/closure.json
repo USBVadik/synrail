@@ -1,0 +1,15 @@
+{
+  "schema_version": "closure_verdict_v0",
+  "run_id": "EXECUTABLE_LOOP_SELECTED_PREPARED_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+  "next_allowed_transition": "INTEGRITY_RECONFIRMATION",
+  "narrow_next_safe_step": "reconfirm exact task, prompt, and run-class identity",
+  "missing_sections": [
+    "artifact_identity"
+  ],
+  "acceptance_criteria_revision_id": "acceptance_criteria_v0:7358e00fea15",
+  "acceptance_criteria_status": "VALID",
+  "acceptance_criteria_reason": "CRITERIA_VALID"
+}

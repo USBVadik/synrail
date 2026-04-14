@@ -27,6 +27,8 @@ def human_reason(report: dict, repair_packet: dict | None = None) -> str:
         "MISSING_PROOF_SECTIONS": "the proof is still missing required sections",
         "ARTIFACT_BUNDLE_MISSING": "the result bundle is missing required proof files",
         "DOCTOR_NOT_GREEN": "the current workspace is not ready yet",
+        "ACCEPTANCE_CRITERIA_STALE": "the acceptance rules no longer match this project state",
+        "ACCEPTANCE_CRITERIA_INVALID": "the acceptance rules could not be trusted",
         "STATE_NOT_RESUMABLE": "this run cannot safely continue from the current state",
         "TERMINAL_STATE_NOT_RESUMABLE": "this run cannot safely continue from the current state",
         "NON_RESUMABLE": "this run cannot safely continue from the current state",
@@ -144,6 +146,11 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
             "The current repair step is still incomplete.",
             f"Finish only the current bounded repair step before trying synrail retry again.{recovery_suffix}",
         )
+    if outcome_class == "NON_GREEN" and reason in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
+        return (
+            "The acceptance rules for this run are not trustworthy yet.",
+            "Refresh the acceptance rules for the current project state before trusting closure again.",
+        )
     failure_classes = list((doctor or {}).get("blocking_failure_classes", []))
     messages = {
         "ACCEPTED": (
@@ -233,6 +240,8 @@ def status_label(outcome_class: str, *, report: dict, repair_packet: dict | None
         return "Cannot Continue This Run"
     if outcome_class == "NON_GREEN" and reason == "CONTINUATION_INPUTS_MISSING":
         return "Finish This Repair First"
+    if outcome_class == "NON_GREEN" and reason in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
+        return "Acceptance Rules Need Refresh"
     return "Needs Review"
 
 
@@ -265,6 +274,8 @@ def human_next_step(
         return "Repair readiness first, then retry only the current bounded step."
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTINUATION_INPUTS_MISSING":
         return "Finish the current bounded repair from synrail repair-step, then run synrail retry."
+    if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
+        return "Refresh the acceptance rules for this project state, then rerun synrail check."
     return human_safe_step_text(raw_next_step)
 
 
@@ -300,6 +311,8 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
             suggested_command = "synrail restore or move to a clean in-scope surface, then synrail retry"
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTINUATION_INPUTS_MISSING":
         suggested_command = "run synrail repair-step, finish only that repair, then synrail retry"
+    if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
+        suggested_command = "refresh the acceptance rules, then rerun synrail check"
     next_step = report.get("next_safe_step", "") or state.get("next_safe_step", "")
     if outcome_class == "ACCEPTED":
         next_step = "No repair step is required."

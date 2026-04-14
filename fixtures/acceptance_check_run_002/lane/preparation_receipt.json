@@ -1,0 +1,18 @@
+{
+  "schema_version": "governed_path_preparation_receipt_v0",
+  "plan_file": "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_check_run_002/lane/plan.json",
+  "bundle_file": "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_check_run_002/lane/bundle.json",
+  "run_id": "EXECUTABLE_LOOP_SELECTED_PREPARED_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "bundle_run_matches_plan": true,
+  "bundle_task_class_matches_plan": true,
+  "planned_required_sections_count": 7,
+  "planned_required_sections_present_count": 6,
+  "bundle_status": "PARTIAL",
+  "missing_required_sections": [
+    "artifact_identity"
+  ],
+  "complete_on_first_bundle_pass": false,
+  "ready_for_closure": false,
+  "next_safe_step": "collect the missing planned proof sections and rebuild the bundle"
+}

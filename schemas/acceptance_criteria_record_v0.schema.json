@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/acceptance_criteria_record_v0.schema.json",
+  "title": "Synrail Acceptance Criteria Record v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "criteria_standard_id",
+    "criteria_owner",
+    "criteria_revision_id",
+    "task_class",
+    "project_type",
+    "target_classification",
+    "intended_run_class",
+    "required_gate_ids",
+    "required_bundle_sections",
+    "acceptance_rules"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "acceptance_criteria_record_v0"},
+    "criteria_standard_id": {"type": "string", "minLength": 1},
+    "criteria_owner": {"type": "string", "minLength": 1},
+    "criteria_revision_id": {"type": "string", "minLength": 1},
+    "task_class": {"type": "string", "minLength": 1},
+    "project_type": {"type": "string", "minLength": 1},
+    "target_classification": {"type": "string", "minLength": 1},
+    "intended_run_class": {"type": "string", "minLength": 1},
+    "required_gate_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "required_bundle_sections": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "acceptance_rules": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  }
+}

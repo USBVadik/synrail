@@ -1,0 +1,13 @@
+{
+  "schema_version": "closure_verdict_v0",
+  "run_id": "EXECUTABLE_LOOP_SELECTED_PREPARED_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "ACCEPTANCE_CRITERIA_STALE",
+  "next_allowed_transition": "ACCEPTANCE_CRITERIA_REFRESH",
+  "narrow_next_safe_step": "refresh the acceptance criteria for the current project state",
+  "missing_sections": [],
+  "acceptance_criteria_revision_id": "acceptance_criteria_v0:7358e00fea15",
+  "acceptance_criteria_status": "STALE",
+  "acceptance_criteria_reason": "CRITERIA_TASK_CLASS_STALE"
+}
