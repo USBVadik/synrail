@@ -445,6 +445,10 @@ def print_thin_output_summary(output_file: Path) -> None:
 
 
 def print_prompt_summary(output_file: Path) -> None:
+    print_prompt_summary_compact(output_file, include_prompt=True)
+
+
+def print_prompt_summary_compact(output_file: Path, *, include_prompt: bool = False) -> None:
     if not output_file.exists():
         return
     payload = load_json(output_file)
@@ -472,7 +476,7 @@ def print_prompt_summary(output_file: Path) -> None:
     if next_command:
         lines.append(f"After this repair, run: {next_command}")
     prompt = payload.get("prompt", "")
-    if prompt:
+    if include_prompt and prompt:
         lines.append("")
         lines.append("Prompt for the next agent attempt:")
         lines.append(prompt)
@@ -494,18 +498,19 @@ def print_init_summary(*, root: Path, state_file: Path) -> None:
     print("\n".join(lines))
 
 
+def human_safe_point_class(value: str) -> str:
+    mapping = {
+        "VERIFIED_WORKING_STATE": "Verified working state",
+        "VERIFIED_ACCEPTED_STATE": "Verified accepted state",
+        "NOT_SAFE_POINT": "Not a verified safe point",
+    }
+    return mapping.get(value, value)
+
+
 def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | None = None) -> None:
     if not record_file.exists():
         return
     payload = load_json(record_file)
-
-    def human_safe_point_class(value: str) -> str:
-        mapping = {
-            "VERIFIED_WORKING_STATE": "Verified working state",
-            "VERIFIED_ACCEPTED_STATE": "Verified accepted state",
-            "NOT_SAFE_POINT": "Not a verified safe point",
-        }
-        return mapping.get(value, value)
 
     def human_checkpoint_step(text: str) -> str:
         mapping = {
@@ -540,6 +545,38 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
         ]
         if rollback.get("status", "") == "ROLLED_BACK":
             lines.append("Restore rollback was applied because verification failed.")
+    print("\n".join(line for line in lines if line))
+
+
+def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | None = None) -> None:
+    if not verify_file.exists():
+        print_checkpoint_summary(record_file, action="create", root=root)
+        return
+    record = load_json(record_file) if record_file.exists() else {}
+    verify = load_json(verify_file)
+    verification = verify.get("verification", {})
+    lines = [
+        f"Safe point ready: {verify.get('checkpoint_id', record.get('checkpoint_id', ''))}",
+        f"Safe point type: {human_safe_point_class(record.get('safe_point_class', verify.get('safe_point_class', '')))}",
+    ]
+    if verification.get("status") == "PASSED":
+        lines.extend(
+            [
+                "What it means: You now have a trusted fallback you can restore if this run goes non-green.",
+                "What to do next: continue the current workflow. Restore is ready if you need it.",
+            ]
+        )
+        if root:
+            lines.append("Restore command: " + shell_command(root, "restore"))
+    else:
+        lines.extend(
+            [
+                "What happened: Synrail saved the safe point but could not fully confirm it yet.",
+                "What to do next: inspect the save and rerun explicit verification before depending on restore.",
+            ]
+        )
+        if root:
+            lines.append("Next command: " + shell_command(root, "checkpoint", "verify"))
     print("\n".join(line for line in lines if line))
 
 
@@ -900,6 +937,77 @@ def cmd_create_checkpoint(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_save(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args, ensure=True)
+    if args.mode == "dev":
+        return cmd_create_checkpoint(args)
+    checkpoint_id = getattr(args, "checkpoint_id", None) or "working"
+    record_output = Path(getattr(args, "output", "") or checkpoint_record_file(root, checkpoint_id))
+    record_root = Path(getattr(args, "checkpoint_root", "") or checkpoint_root(root, checkpoint_id))
+    state_file = Path(getattr(args, "state_file", "") or alpha_file(root, "state"))
+    create_forwarded = [
+        "create",
+        "--checkpoint-id", checkpoint_id,
+        "--checkpoint-root", str(record_root),
+        "--state-file", str(state_file),
+        "--output", str(record_output),
+    ]
+    for attr, flag in [
+        ("report_file", "--report-file"),
+        ("orchestration_file", "--orchestration-file"),
+        ("bundle_file", "--bundle-file"),
+        ("closure_file", "--closure-file"),
+        ("refresh_file", "--refresh-file"),
+        ("selection_file", "--selection-file"),
+        ("preparation_file", "--preparation-file"),
+        ("repair_packet_file", "--repair-packet-file"),
+        ("repair_handoff_file", "--repair-handoff-file"),
+        ("repair_receipt_file", "--repair-receipt-file"),
+    ]:
+        value = getattr(args, attr, None)
+        if not value and root:
+            file_id = {
+                "report_file": "report",
+                "orchestration_file": "orchestration",
+                "bundle_file": "bundle",
+                "closure_file": "closure",
+                "refresh_file": "refresh",
+                "selection_file": "selection_receipt",
+                "preparation_file": "preparation_receipt",
+                "repair_packet_file": "repair_packet",
+                "repair_handoff_file": "repair_handoff",
+                "repair_receipt_file": "repair_receipt",
+            }[attr]
+            value = maybe_existing_alpha_file(root, file_id)
+        if value:
+            create_forwarded.extend([flag, value])
+    created = run_python_capture(CHECKPOINT, create_forwarded)
+    if created.returncode != 0:
+        if created.stderr.strip():
+            print(created.stderr.strip(), file=sys.stderr)
+        if created.stdout.strip():
+            print(created.stdout.strip())
+        return created.returncode
+    verify_output = Path(checkpoint_verify_file(root, checkpoint_id))
+    verified = run_python_capture(
+        CHECKPOINT,
+        [
+            "verify",
+            "--checkpoint-record-file", str(record_output),
+            "--output", str(verify_output),
+        ],
+    )
+    if verified.returncode != 0:
+        if verified.stderr.strip():
+            print(verified.stderr.strip(), file=sys.stderr)
+        if verified.stdout.strip():
+            print(verified.stdout.strip())
+        print_checkpoint_summary(record_output, action="create", root=root)
+        return verified.returncode
+    print_save_summary(record_output, verify_output, root=root)
+    return 0
+
+
 def cmd_verify_checkpoint(args: argparse.Namespace) -> int:
     root = alpha_root_from_args(args)
     if root and not getattr(args, "checkpoint_record_file", None):
@@ -1229,6 +1337,21 @@ def cmd_check(args: argparse.Namespace) -> int:
     thin_code = cmd_thin_output(args)
     if thin_code == 0 and args.mode == "default":
         print_thin_output_summary(Path(args.output))
+        thin_payload = load_json(Path(args.output)) if Path(args.output).exists() else {}
+        outcome_class = thin_payload.get("outcome_class", "")
+        if outcome_class not in {"ACCEPTED", ""} and getattr(args, "repair_packet_file", None):
+            prompt_output = str(alpha_file(root, "prompt")) if root else str(Path(args.output).with_name("prompt.json"))
+            forwarded = [
+                "--repair-packet-file", args.repair_packet_file,
+                "--output", prompt_output,
+            ]
+            if getattr(args, "checkpoint_record_file", None):
+                forwarded.extend(["--checkpoint-record-file", args.checkpoint_record_file])
+            prompt_completed = run_python_capture(PROMPT_BRIDGE, forwarded)
+            if prompt_completed.returncode == 0:
+                print("")
+                print("Bounded repair summary:")
+                print_prompt_summary_compact(Path(prompt_output), include_prompt=False)
     return thin_code
 
 
@@ -2316,7 +2439,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_save.add_argument("--repair-receipt-file")
     p_save.add_argument("--mode", default="default", choices=["default", "dev"])
     p_save.add_argument("--output")
-    p_save.set_defaults(func=cmd_create_checkpoint)
+    p_save.set_defaults(func=cmd_save)
 
     p_checkpoint_verify = sub.add_parser("verify-checkpoint")
     p_checkpoint_verify.add_argument("--artifact-root")

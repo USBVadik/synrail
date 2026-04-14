@@ -74,9 +74,7 @@ ARTIFACT_ROOT="$(pwd)/.synrail"
 synrail init --artifact-root "$ARTIFACT_ROOT"
 # once this root reflects one verified working state:
 synrail save --artifact-root "$ARTIFACT_ROOT"
-synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT"
 synrail check --artifact-root "$ARTIFACT_ROOT"
-synrail next-step --artifact-root "$ARTIFACT_ROOT"
 # after applying only that bounded repair:
 synrail continue --artifact-root "$ARTIFACT_ROOT"
 synrail restore --artifact-root "$ARTIFACT_ROOT"
@@ -96,8 +94,10 @@ Current shell proof surfaces:
 
 - first-run onboarding errors:
   - [alpha_onboarding_run_005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_005)
+- self-contained safe point:
+  - [alpha_safe_point_run_002](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_safe_point_run_002)
 - zero-config-ish first run:
-  - [alpha_shell_run_005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_005)
+  - [alpha_shell_run_006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_006)
 - accepted default-mode translation:
   - [thin_output_run_accepted_003](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_003)
 - continuation-blocked translation:
