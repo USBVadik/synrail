@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import ast
+import importlib.util
 import json
 import os
 import subprocess
@@ -191,6 +193,9 @@ def probe_helper_integrity(args: argparse.Namespace) -> dict:
             )
             if completed.returncode != 0:
                 return gate("FAIL", "helper entrypoint exists but python syntax is invalid")
+            import_failure = probe_python_helper_import_drift(helper)
+            if import_failure:
+                return gate("FAIL", import_failure)
         elif helper.suffix in {".sh", ""}:
             completed = subprocess.run(
                 ["bash", "-n", str(helper)],
@@ -202,6 +207,57 @@ def probe_helper_integrity(args: argparse.Namespace) -> dict:
                 return gate("FAIL", "helper entrypoint exists but shell syntax is invalid")
         return gate("PASS", "helper entrypoint exists and parses successfully")
     return gate("FAIL", "helper entrypoint is missing")
+
+
+def local_module_exists(module_name: str, *, base: Path) -> bool:
+    candidate_file = base / f"{module_name}.py"
+    candidate_pkg = base / module_name / "__init__.py"
+    return candidate_file.exists() or candidate_pkg.exists()
+
+
+def relative_module_exists(module_name: str | None, *, helper: Path, level: int) -> bool:
+    base = helper.parent
+    for _ in range(max(level - 1, 0)):
+        base = base.parent
+    if not module_name:
+        return True
+    parts = module_name.split(".")
+    candidate_file = base.joinpath(*parts).with_suffix(".py")
+    candidate_pkg = base.joinpath(*parts, "__init__.py")
+    return candidate_file.exists() or candidate_pkg.exists()
+
+
+def probe_python_helper_import_drift(helper: Path) -> str:
+    try:
+        tree = ast.parse(helper.read_text(), filename=str(helper))
+    except SyntaxError:
+        return ""
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            module_names = [alias.name for alias in node.names]
+            level = 0
+        elif isinstance(node, ast.ImportFrom):
+            module_names = [node.module] if node.module else [None]
+            level = node.level
+        else:
+            continue
+
+        for module_name in module_names:
+            if level > 0:
+                if not relative_module_exists(module_name, helper=helper, level=level):
+                    target = module_name or "."
+                    return f"helper entrypoint imports a missing relative module: {target}"
+                continue
+
+            if not module_name:
+                continue
+            root = module_name.split(".")[0]
+            if local_module_exists(root, base=helper.parent):
+                continue
+            if importlib.util.find_spec(root) is None:
+                return f"helper entrypoint imports a missing module: {root}"
+    return ""
 
 
 def probe_credential_surface(args: argparse.Namespace) -> dict:

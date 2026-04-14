@@ -46,6 +46,7 @@ EXTERNALITY_PRESSURE = HERE / "synrail_externality_pressure_v0.py"
 THIN_OUTPUT = HERE / "synrail_thin_output_v0.py"
 PROMPT_BRIDGE = HERE / "synrail_repair_prompt_bridge_v0.py"
 THIN_OUTPUT_READING = HERE / "synrail_thin_output_reading_v0.py"
+PROMPT_FOLLOWUP = HERE / "synrail_prompt_followup_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -421,6 +422,17 @@ def cmd_thin_output_reading(args: argparse.Namespace) -> int:
             "--output", args.output,
         ],
     )
+
+
+def cmd_prompt_followup(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--repair-packet-file", args.repair_packet_file,
+        "--prompt-bridge-file", args.prompt_bridge_file,
+        "--output", args.output,
+    ]
+    if args.thin_output_file:
+        forwarded.extend(["--thin-output-file", args.thin_output_file])
+    return run_python(PROMPT_FOLLOWUP, forwarded)
 
 
 def cmd_observability(args: argparse.Namespace) -> int:
@@ -1354,6 +1366,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_thin_output_reading.add_argument("--repair-packet-file", required=True)
     p_thin_output_reading.add_argument("--output", required=True)
     p_thin_output_reading.set_defaults(func=cmd_thin_output_reading)
+
+    p_prompt_followup = sub.add_parser("prompt-followup")
+    p_prompt_followup.add_argument("--repair-packet-file", required=True)
+    p_prompt_followup.add_argument("--prompt-bridge-file", required=True)
+    p_prompt_followup.add_argument("--output", required=True)
+    p_prompt_followup.add_argument("--thin-output-file")
+    p_prompt_followup.set_defaults(func=cmd_prompt_followup)
 
     p_reproducibility = sub.add_parser("reproducibility")
     p_reproducibility.add_argument("--run-a", required=True)

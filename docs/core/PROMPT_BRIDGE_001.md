@@ -19,3 +19,4 @@ The goal is to turn the current repair packet into one bounded follow-up prompt 
 
 - the repair packet can now drive one bounded next-agent prompt directly
 - this is one bridge from tightened core truth into the next repair attempt, not a broader UX shell
+- the bridge is only useful if it preserves current-step scope on the next repair step, which is now pressure-tested separately

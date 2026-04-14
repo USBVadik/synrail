@@ -16,6 +16,7 @@ Map what the current bounded doctor does, what it only partially covers, and wha
 - exact prompt/task identity missing or mismatched
 - helper entrypoint missing
 - helper entrypoint exists but is syntactically broken for bounded Python and shell entrypoints
+- helper entrypoint parses but imports a missing module
 - credential JSON path exists but is already malformed
 
 ## Partial
@@ -38,6 +39,7 @@ The targeted fix in this tranche is:
 - `helper exists` no longer counts as enough readiness truth when the entrypoint is already syntactically broken
 - `credential path exists` no longer counts as enough readiness truth when the JSON surface is already malformed
 - `credential env is present` no longer counts as enough readiness truth when the env still contains an obvious placeholder like `CHANGE_ME`
+- `helper parses` no longer counts as enough readiness truth when the helper already imports a missing module
 
 This matters because that kind of false green is cheap to miss and expensive to discover only after execution begins.
 
