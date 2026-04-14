@@ -59,12 +59,27 @@ def classify_outcome(*, state: dict, report: dict, repair_packet: dict | None, d
     return "NON_GREEN"
 
 
-def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict | None) -> tuple[str, str]:
+def non_resumable_forward_boundary(*, report: dict, repair_packet: dict | None) -> bool:
+    packet = repair_packet or {}
+    return (
+        report.get("resumability_policy_next_step", "") == "continue_forward_orchestration"
+        or report.get("resumability_family", "") == "NOT_RESUMABLE_FRESH_ORCHESTRATION"
+        or packet.get("resumability_family", "") == "NOT_RESUMABLE_FRESH_ORCHESTRATION"
+        or packet.get("current_step_id", "") == "continue_forward_orchestration"
+    )
+
+
+def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict | None, report: dict, repair_packet: dict | None) -> tuple[str, str]:
     suffix = " A verified checkpoint is available." if restore_available else ""
     recovery_suffix = ""
     if recovery and recovery.get("primary_action", "") != "KEEP_CURRENT_ARTIFACTS":
         instructions = "; ".join(recovery.get("operator_instructions", [])[:2])
         recovery_suffix = f" Recovery path: {instructions}."
+    if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
+        return (
+            "This contour should not continue through resume.",
+            f"Continue through the governed forward path instead of named resume.{suffix}{recovery_suffix}",
+        )
     messages = {
         "NON_RESUMABLE": (
             "This contour should not continue through resume.",
@@ -123,7 +138,13 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
     restore_available = checkpoint_restore_available(checkpoint, state=state)
     matching = matching_recovery(recovery, state=state)
     outcome_class = classify_outcome(state=state, report=report, repair_packet=repair_packet, doctor=doctor)
-    summary, diagnosis = summary_for(outcome_class, restore_available=restore_available, recovery=matching)
+    summary, diagnosis = summary_for(
+        outcome_class,
+        restore_available=restore_available,
+        recovery=matching,
+        report=report,
+        repair_packet=repair_packet,
+    )
     suggested_command = {
         "NON_RESUMABLE": "restore-checkpoint or start a new run",
         "CLOSURE_REJECTED": "restore-checkpoint or repair and rerun closure",
@@ -134,6 +155,8 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "DOCTOR_BLOCKED": "repair readiness, then resume",
         "NON_GREEN": "inspect report and repair packet, then resume",
     }[outcome_class]
+    if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
+        suggested_command = "continue governed forward path, not resume"
     return {
         "schema_version": "thin_output_record_v0",
         "mode": mode,

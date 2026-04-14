@@ -1,0 +1,13 @@
+{
+  "schema_version": "checkpoint_operator_reading_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "repair_family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
+  "outcome_class": "NON_RESUMABLE",
+  "next_step": "continue through the governed forward path instead of named resume",
+  "restore_available": true,
+  "suggested_command": "continue governed forward path, not resume",
+  "missing_markers": [],
+  "verdict": "FOLLOWABLE_WITHOUT_OPERATOR_AMBIGUITY",
+  "why": "the restored contour stays followable and the operator-facing output names the fresh forward boundary without suggesting resume"
+}

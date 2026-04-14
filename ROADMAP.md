@@ -124,6 +124,20 @@ Current sprint contract:
   - rejection log
   - sanitized session export
 - one runtime-emitted observability run now proves that blocked continuation can be inspected without reconstructing the whole contour by hand
+- one mixed corrupt/stale consistency pressure-run now also proves that corrupt derived artifacts and stale derived artifacts lead to different explicit recovery actions
+- doctor now also blocks one more cheap-but-expensive false-green:
+  - placeholder credential values
+  - helper import drift on bounded Python helper surfaces
+- one thin output bridge now exists in:
+  - `default` mode for human-readable diagnosis plus next step
+  - `dev` mode for compact technical truth
+- one prompt bridge now exists from the repair packet so the next agent call can stay bounded to the current repair step
+- one checkpoint-plus-thin-output pressure run now also proves that restore availability is surfaced only when the verified checkpoint matches the same run and task contour
+- one doctor-plus-continuation pressure run now also proves that helper import drift now flows honestly into `DOCTOR_BLOCKED` continuation state instead of lingering as one isolated doctor observation
+- one artifact-consistency recovery bridge now also proves that mixed corrupt/stale derived artifacts can lead to one explicit restore-or-reemit plan without operator ambiguity
+- one checkpoint-plus-continuation pressure run now also proves that restoring a verified working contour rebuilds honest fresh forward-orchestration truth instead of a fake repair loop
+- one thin-output-plus-consistency-recovery pressure run now also proves that the operator-facing non-green surface can name the concrete restore-or-reemit path instead of only exposing a raw consistency record
+- one prompt retry guard now also proves that repeated helper-drift retries do not broaden the continuation prompt beyond the original bounded repair scope
 
 ### 0.95. Add short externality pressure on the tightened kernel
 
@@ -152,6 +166,9 @@ Current sprint contract:
   - one fresh-orchestration non-resumable boundary
   - one selected prepared multi-step repair chain
   while the weak path still remains non-decisive
+- one sixth substitute-kill slice now also proves that the minimal identity-repair continuation contour beats one simple manual checklist baseline
+- one seventh substitute-kill slice now also proves that verified checkpoint restore plus immediate continuation truth beats one simple manual verified-restore checklist
+- one eighth substitute-kill slice now also proves that the bounded helper-drift retry stop beats one simple manual keep-trying substitute that has no explicit no-progress cutoff
 
 ### 1.0. Open the operator layer carefully
 

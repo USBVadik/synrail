@@ -1,0 +1,21 @@
+{
+  "schema_version": "consistency_recovery_prompt_record_v0",
+  "run_id": "EXECUTABLE_LOOP_MINIMAL_CONTINUATION_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "primary_action": "RESTORE_CORRUPT_AND_REEMIT_STALE",
+  "allowed_scope": [
+    "report",
+    "repair_packet"
+  ],
+  "forbidden_scope": [
+    "Do not modify state_file.",
+    "Do not broaden scope beyond the listed artifact recovery actions.",
+    "Do not claim readiness, closure, or acceptance from artifact recovery alone."
+  ],
+  "must_pass": [
+    "restore report from the verified checkpoint",
+    "re-emit repair_packet from state_file",
+    "Preserve the current non-green contour while restoring or re-emitting derived artifacts."
+  ],
+  "prompt": "Repair the derived artifact surface without broadening scope.\nPrimary action: RESTORE_CORRUPT_AND_REEMIT_STALE\nAllowed scope: report, repair_packet\nOperator instructions:\n- restore report from the verified checkpoint\n- re-emit repair_packet from state_file\nCurrent diagnosis: Repair readiness before continuing this run. Recovery path: restore report from the verified checkpoint; re-emit repair_packet from state_file.\nDo not modify state_file or claim the contour is repaired beyond these artifact actions."
+}

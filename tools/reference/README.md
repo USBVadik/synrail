@@ -349,6 +349,108 @@ Does not guarantee:
 - a real user study on its own
 - broad usability proof across every continuation family
 
+### `synrail_thin_output_v0.py`
+
+Purpose:
+
+- compress one non-green runtime contour into one smaller operator-facing diagnosis without replacing state, report, or packet truth
+
+Guarantees:
+
+- emits one bounded `default` surface with summary, diagnosis, next step, and suggested command
+- emits one bounded `dev` surface with compact technical lines from the same contour
+- can now surface one verified matching checkpoint as a restore hint only when it belongs to the same run and task contour
+- can now surface one concrete consistency-recovery action when the non-green contour already has an explicit restore-or-reemit plan
+
+Does not guarantee:
+
+- a broad interactive shell
+- replacement of the underlying runtime artifacts as sources of truth
+
+### `synrail_repair_prompt_bridge_v0.py`
+
+Purpose:
+
+- build one bounded next-agent prompt from the current repair packet
+
+Guarantees:
+
+- records current repair step, required inputs, allowed scope, forbidden scope, and must-pass checks
+- keeps the follow-up prompt anchored to the packet-owned repair truth instead of a looser narrative summary
+
+Does not guarantee:
+
+- broad planning across multiple future repair steps
+- semantic completion on its own
+
+### `synrail_checkpoint_operator_reading_v0.py`
+
+Purpose:
+
+- check whether one restored verified-working contour stays readable without operator ambiguity once second-operator and thin-output surfaces are combined
+
+Guarantees:
+
+- verifies that the contour stays followable by a second operator
+- verifies that the operator-facing output names the fresh forward boundary instead of suggesting named `resume`
+- emits one bounded combined-reading verdict
+
+Does not guarantee:
+
+- a broad usability study across every fresh-orchestration contour
+- replacement of the underlying second-operator or thin-output artifacts
+
+### `synrail_consistency_recovery_v0.py`
+
+Purpose:
+
+- translate one artifact-consistency failure plus one optional verified checkpoint into one concrete restore-or-reemit recovery plan
+
+Guarantees:
+
+- records which artifact ids should be restored from checkpoint
+- records which artifact ids should be re-emitted from `state_file`
+- emits one explicit primary action when the mixed corrupt/stale derived surface is recoverable without operator ambiguity
+
+Does not guarantee:
+
+- broad artifact repair planning across every future artifact family
+- recovery of the source `state_file` itself
+
+### `synrail_consistency_recovery_prompt_v0.py`
+
+Purpose:
+
+- build one bounded next-agent prompt from one explicit restore-or-reemit recovery plan
+
+Guarantees:
+
+- records allowed scope directly from the listed restore and re-emit artifact ids
+- records forbidden scope that explicitly keeps `state_file` out of bounds
+- carries operator instructions into both the prompt body and must-pass list
+
+Does not guarantee:
+
+- broad remediation planning outside the current artifact recovery set
+- semantic readiness or closure on its own
+
+### `synrail_consistency_recovery_prompt_reading_v0.py`
+
+Purpose:
+
+- verify that one consistency-recovery prompt stays bounded to the listed restore-or-reemit plan
+
+Guarantees:
+
+- checks allowed scope against the recovery action set
+- checks that recovery instructions survive into the prompt and must-pass lists
+- emits one bounded prompt-drift verdict
+
+Does not guarantee:
+
+- broad prompt-quality proof across unrelated continuation families
+- replacement of the recovery plan as the source of truth
+
 ### `synrail_operator_brief_v0.py`
 
 Purpose:

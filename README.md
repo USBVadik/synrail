@@ -89,11 +89,19 @@ Read these next only if you need them:
 - `docs/core/CHECKPOINT_001.md`
 - `docs/core/CHECKPOINT_RUN_001.md`
 - `docs/core/CHECKPOINT_RUN_002.md`
+- `docs/core/CHECKPOINT_RUN_004.md`
 - `docs/core/REPAIR_TERMINATION_001.md`
 - `docs/core/REPAIR_CONVERGENCE_RUN_001.md`
 - `docs/core/ARTIFACT_CONSISTENCY_001.md`
 - `docs/core/DOCTOR_COVERAGE_MAP_001.md`
 - `docs/core/OBSERVABILITY_001.md`
+- `docs/core/THIN_OUTPUT_001.md`
+- `docs/core/PROMPT_BRIDGE_001.md`
+- `docs/core/CHECKPOINT_CONTINUATION_RUN_001.md`
+- `docs/core/CHECKPOINT_OPERATOR_READING_001.md`
+- `docs/core/THIN_OUTPUT_CONSISTENCY_RECOVERY_001.md`
+- `docs/core/CONSISTENCY_RECOVERY_PROMPT_001.md`
+- `docs/core/PROMPT_RETRY_GUARD_001.md`
 - `docs/core/REPRODUCIBILITY_TEST_001.md`
 - `docs/core/SECOND_OPERATOR_TEST_001.md`
 - `docs/core/REPRODUCIBILITY_TEST_002.md`
@@ -112,6 +120,9 @@ Read these next only if you need them:
 - `docs/boundary/SUBSTITUTE_KILL_TEST_003.md`
 - `docs/boundary/SUBSTITUTE_KILL_TEST_004.md`
 - `docs/boundary/SUBSTITUTE_KILL_TEST_005.md`
+- `docs/boundary/SUBSTITUTE_KILL_TEST_006.md`
+- `docs/boundary/SUBSTITUTE_KILL_TEST_007.md`
+- `docs/boundary/SUBSTITUTE_KILL_TEST_008.md`
 
 ## Current State
 
