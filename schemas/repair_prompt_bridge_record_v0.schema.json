@@ -15,9 +15,14 @@
     "run_id": {"type": "string", "minLength": 1},
     "task_class": {"type": "string", "minLength": 1},
     "current_step_id": {"type": "string"},
+    "failure_reason": {"type": "string"},
+    "stale_artifact_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "stale_subsurface_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "allowed_scope": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "forbidden_scope": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "must_pass": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "acceptance_criteria": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "next_command": {"type": "string"},
     "prompt": {"type": "string", "minLength": 1}
   },
   "additionalProperties": false

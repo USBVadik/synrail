@@ -1,0 +1,5 @@
+Status: NON_RESUMABLE
+What happened: This contour should not continue through resume.
+What it means: Continue through the governed forward path instead of named resume.
+What to do next: Restore the exact task prompt and task identity, then start the next bounded attempt through synrail check.
+Next command: synrail generate-prompt

@@ -6,10 +6,11 @@ It is intentionally one contour, not a broad product shell:
 
 1. install one local `synrail` command
 2. initialize one artifact root
-3. create and verify one working checkpoint when a verified working state exists
-4. run one bounded change/check contour
-5. generate one bounded follow-up prompt
-6. restore the verified working state if the contour is blocked
+3. let `Synrail` auto-detect one sane project profile
+4. create and verify one working checkpoint when a verified working state exists
+5. run one bounded change/check contour
+6. generate one bounded follow-up prompt
+7. restore the verified working state if the contour is blocked
 
 The lane exists to prove one user value clearly:
 
@@ -54,18 +55,11 @@ This is the currently verified restore-capable alpha lane:
 
 ```bash
 synrail init --artifact-root "$ARTIFACT_ROOT"
+# once this root reflects one verified working state:
 synrail checkpoint create --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
 synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
-synrail check --artifact-root "$ARTIFACT_ROOT" \
-  --target-path "$ARTIFACT_ROOT/final_result.txt" \
-  --baseline-identity trusted_clean \
-  --execution-surface-identity clean-clone \
-  --final-result "$ARTIFACT_ROOT/final_result.txt" \
-  --clean-surface \
-  --artifact-viable \
-  --helper-ok \
-  --credentials-ok \
-  --prompt-identity-ok
+# after the agent writes final_result.json or final_result.txt:
+synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
 synrail restore --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
 ```
@@ -78,11 +72,19 @@ On a fresh `init`, `Synrail` can still give bounded value immediately:
 
 ```bash
 synrail init --artifact-root "$ARTIFACT_ROOT"
-synrail check --artifact-root "$ARTIFACT_ROOT" ...
+# write final_result.json or final_result.txt under the artifact root or project root
+synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
 ```
 
 That fresh contour does not yet guarantee `restore_available`, because no verified checkpoint exists yet.
+
+On the current shell smoke in [alpha_shell_run_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001):
+
+- `init` auto-detects `project_type = python`
+- `check` runs without explicit identity flags once one `final_result.txt` appears under the artifact root
+- `generate-prompt` produces one bounded next-agent instruction without asking the operator to reconstruct packet internals by hand
+- `prompt-followup` confirms that the generated next-agent instruction preserves the bounded current step
 
 ## What This Lane Returns
 
@@ -107,13 +109,27 @@ On the current fresh external contour in [ALPHA_EXTERNAL_RUN_001.md](/Users/usbd
 - `generate-prompt` stays bounded to `repair_final_result_artifact`
 - `restore_available = false`, which is the correct reading for a fresh contour without one verified checkpoint
 
+On the current accepted default output smoke in [thin_output_run_accepted_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_001):
+
+- default mode says `ACCEPTED`
+- it explains that the run reached accepted closure
+- it makes clear that no repair step is required
+
 Canonical artifacts:
 
+- [shell init output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/shell/init_stdout.txt)
+- [shell check output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/shell/check_stdout.txt)
+- [shell prompt output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/shell/generate_prompt_stdout.txt)
+- [shell project profile](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/lane/project_profile.json)
+- [shell thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/lane/thin_output.json)
+- [shell prompt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/lane/prompt.json)
+- [shell prompt followup](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/lane/followup.json)
 - [init state](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/init/state.json)
 - [working checkpoint verify](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/lane/checkpoints/working/checkpoint_verify.json)
 - [thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/lane/thin_output.json)
 - [prompt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/lane/prompt.json)
 - [restore result](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/lane/checkpoint_restore.json)
+- [accepted thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_001/thin_output.json)
 
 ## Alpha Rules
 

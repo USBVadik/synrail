@@ -1,0 +1,31 @@
+{
+  "schema_version": "repair_prompt_bridge_record_v0",
+  "run_id": "ALPHA_RUN_20260414T132954Z",
+  "task_class": "bounded_change",
+  "current_step_id": "continue_forward_orchestration",
+  "failure_reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+  "stale_artifact_ids": [],
+  "stale_subsurface_ids": [],
+  "allowed_scope": [
+    "current_repair_step_only"
+  ],
+  "forbidden_scope": [
+    "Do not broaden scope beyond the current repair step.",
+    "Do not modify accepted or terminal-state logic.",
+    "Do not claim closure or acceptance unless the repaired run actually reaches it."
+  ],
+  "must_pass": [
+    "Repair only the current step: continue_forward_orchestration",
+    "Keep run_id and task_class consistent with the current contour.",
+    "Do not remove or rewrite existing repair history.",
+    "Keep the next safe step aligned with: restore exact prompt and task identity"
+  ],
+  "acceptance_criteria": [
+    "Repair only the current step: continue_forward_orchestration",
+    "Keep run_id and task_class consistent with the current contour.",
+    "Do not remove or rewrite existing repair history.",
+    "Keep the next safe step aligned with: restore exact prompt and task identity"
+  ],
+  "next_command": "synrail check",
+  "prompt": "Repair the current Synrail contour without broadening scope.\nCurrent step: continue_forward_orchestration\nBroken truth: EXACT_TASK_IDENTITY_NOT_CONFIRMED\nStale artifacts: none\nStale subsurfaces: none\nAllowed scope: current_repair_step_only\nRequired inputs: none\nNext safe step: restore exact prompt and task identity\nDo not touch unrelated files, state transitions, or acceptance logic.\nReturn only the bounded repair needed for this current step and preserve continuity truth."
+}

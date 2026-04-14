@@ -31,10 +31,42 @@ def checkpoint_note(checkpoint: dict | None, *, repair_packet: dict) -> str:
     return ""
 
 
+def failure_reason(repair_packet: dict) -> str:
+    return (
+        repair_packet.get("runtime_truth", {}).get("report_reason", "")
+        or repair_packet.get("repair_termination", {}).get("reason", "")
+    )
+
+
+def next_safe_step(repair_packet: dict) -> str:
+    return (
+        repair_packet.get("runtime_truth", {}).get("next_safe_step", "")
+        or repair_packet.get("continuation_core", {}).get("next_safe_step", "")
+    )
+
+
+def next_command(repair_packet: dict, current_step_id: str) -> str:
+    resumability = repair_packet.get("resumability", {})
+    termination = repair_packet.get("repair_termination", {})
+    if (
+        resumability.get("status", "") == "REPAIRABLE"
+        and termination.get("status", "CONTINUE") != "TERMINATE"
+    ):
+        return "synrail resume"
+    if (
+        repair_packet.get("resumability_family", "") == "NOT_RESUMABLE_FRESH_ORCHESTRATION"
+        or current_step_id == "continue_forward_orchestration"
+    ):
+        return "synrail check"
+    return ""
+
+
 def build_record(*, repair_packet: dict, checkpoint: dict | None = None) -> dict:
     continuation = repair_packet.get("continuation_core", {})
     required_inputs = list(continuation.get("next_step_required_inputs", []) or continuation.get("required_inputs", []))
-    stale_subsurfaces = list(continuation.get("next_step_subsurface_ids", []) or repair_packet.get("artifact_quality_summary", {}).get("stale_subsurface_ids", []))
+    artifact_quality = repair_packet.get("artifact_quality_summary", {})
+    stale_subsurfaces = list(continuation.get("next_step_subsurface_ids", []) or artifact_quality.get("stale_subsurface_ids", []))
+    stale_artifacts = list(artifact_quality.get("stale_artifact_ids", []))
     current_step_id = continuation.get("current_step_id", "") or repair_packet.get("repair_history", {}).get("current_step_id", "")
     allowed_scope = stale_subsurfaces or ["current_repair_step_only"]
     forbidden_scope = [
@@ -42,6 +74,8 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None) -> dict
         "Do not modify accepted or terminal-state logic.",
         "Do not claim closure or acceptance unless the repaired run actually reaches it.",
     ]
+    broken_truth = failure_reason(repair_packet)
+    continuation_next_step = next_safe_step(repair_packet)
     must_pass = [
         f"Repair only the current step: {current_step_id or 'unknown_current_step'}",
         "Keep run_id and task_class consistent with the current contour.",
@@ -49,14 +83,19 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None) -> dict
     ]
     for input_id in required_inputs:
         must_pass.append(f"Supply required repair input: {input_id}")
+    if continuation_next_step:
+        must_pass.append(f"Keep the next safe step aligned with: {continuation_next_step}")
+    acceptance_criteria = list(must_pass)
     checkpoint_hint = checkpoint_note(checkpoint, repair_packet=repair_packet)
     prompt_lines = [
         "Repair the current Synrail contour without broadening scope.",
         f"Current step: {current_step_id or 'unknown_current_step'}",
-        f"Broken truth: {repair_packet.get('runtime_truth', {}).get('report_reason', '') or repair_packet.get('repair_termination', {}).get('reason', '')}",
+        f"Broken truth: {broken_truth}",
+        f"Stale artifacts: {', '.join(stale_artifacts) if stale_artifacts else 'none'}",
+        f"Stale subsurfaces: {', '.join(stale_subsurfaces) if stale_subsurfaces else 'none'}",
         f"Allowed scope: {', '.join(allowed_scope)}",
         f"Required inputs: {', '.join(required_inputs) if required_inputs else 'none'}",
-        f"Next safe step: {repair_packet.get('runtime_truth', {}).get('next_safe_step', '') or repair_packet.get('continuation_core', {}).get('next_safe_step', '')}",
+        f"Next safe step: {continuation_next_step}",
         "Do not touch unrelated files, state transitions, or acceptance logic.",
         "Return only the bounded repair needed for this current step and preserve continuity truth.",
     ]
@@ -67,9 +106,14 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None) -> dict
         "run_id": repair_packet["run_id"],
         "task_class": repair_packet["task_class"],
         "current_step_id": current_step_id,
+        "failure_reason": broken_truth,
+        "stale_artifact_ids": stale_artifacts,
+        "stale_subsurface_ids": stale_subsurfaces,
         "allowed_scope": allowed_scope,
         "forbidden_scope": forbidden_scope,
         "must_pass": must_pass,
+        "acceptance_criteria": acceptance_criteria,
+        "next_command": next_command(repair_packet, current_step_id),
         "prompt": "\n".join(prompt_lines),
     }
 

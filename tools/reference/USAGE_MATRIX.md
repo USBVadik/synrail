@@ -11,7 +11,7 @@ Use this page when you need the fastest answer to:
 
 | Helper | Use it when | Typical inputs | Main output | Does not prove |
 | --- | --- | --- | --- | --- |
-| `synrail` | You want the current alpha lane through one installable command instead of calling individual helpers by hand | one `artifact-root`, bounded check inputs, optional checkpoint id | standardized state, checkpoint, thin output, prompt, and restore artifacts under one root | broad product coverage, domain correctness without bounded inputs, every future install path |
+| `synrail` | You want the current alpha lane through one installable command instead of calling individual helpers by hand | one `artifact-root`, optional checkpoint id, and usually one `final_result.json` or `final_result.txt` under the artifact root or project root | standardized state, checkpoint, thin output, prompt, and restore artifacts under one root | broad product coverage, domain correctness without bounded inputs, every future install path |
 | `synrail telemetry export` | You finished one alpha run and want one bounded replay plus one issue-ready summary without copying artifact contents by hand | one telemetry-enabled `artifact-root` | sanitized command sequence, state-at-error snapshot, issue-ready markdown body | hosted telemetry, automatic upload, sensitive-content capture |
 | `attest_target_surface.sh` | You need to know whether the intended target surface is actually the one being inspected | controller/target surface details, target repo path, optional runtime pattern | attestation facts plus `PASS` or `FAIL` | patch correctness, target health, repaired behavior |
 | `require_attested_target_surface.sh` | You want to gate the next step on successful target-surface attestation | same attestation inputs, usually via env/defaults | hard gate on `attested_target_surface=PASS` | diagnosis quality, test quality, deploy success |
@@ -42,4 +42,4 @@ These helpers are here to make truth and gating behavior clearer.
 
 They are not here to hide judgment or replace proof.
 
-For the concrete installable contour, read [ALPHA_LANE_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md).
+For the concrete installable contour, read [ALPHA_LANE_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md) and inspect [alpha_shell_run_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001).

@@ -1,0 +1,22 @@
+{
+  "schema_version": "thin_output_record_v0",
+  "mode": "default",
+  "run_id": "ALPHA_RUN_20260414T132954Z",
+  "task_class": "bounded_change",
+  "outcome_class": "NON_RESUMABLE",
+  "summary": "This contour should not continue through resume.",
+  "diagnosis": "Continue through the governed forward path instead of named resume.",
+  "what_happened": "This contour should not continue through resume.",
+  "what_it_means": "Continue through the governed forward path instead of named resume.",
+  "what_to_do_next": "Restore the exact task prompt and task identity, then start the next bounded attempt through synrail check.",
+  "resume_available": false,
+  "next_command": "synrail generate-prompt",
+  "restore_command": "",
+  "next_step": "restore exact prompt and task identity",
+  "restore_available": false,
+  "checkpoint_id": "",
+  "recovery_primary_action": "",
+  "recovery_operator_instructions": [],
+  "suggested_command": "continue governed forward path, not resume",
+  "technical_lines": []
+}

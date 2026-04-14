@@ -70,9 +70,10 @@ Verified-working contour:
 ```bash
 ARTIFACT_ROOT="$(pwd)/.synrail"
 synrail init --artifact-root "$ARTIFACT_ROOT"
+# once this root reflects one verified working state:
 synrail checkpoint create --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
 synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
-synrail check --artifact-root "$ARTIFACT_ROOT" ...
+synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
 synrail restore --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
 ```
@@ -82,9 +83,17 @@ Fresh first-run contour:
 ```bash
 ARTIFACT_ROOT="$(pwd)/.synrail"
 synrail init --artifact-root "$ARTIFACT_ROOT"
-synrail check --artifact-root "$ARTIFACT_ROOT" ...
+# write final_result.json or final_result.txt under $ARTIFACT_ROOT or the project root
+synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
 ```
+
+Current shell proof surfaces:
+
+- zero-config-ish first run:
+  - [alpha_shell_run_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001)
+- accepted default-mode translation:
+  - [thin_output_run_accepted_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_001)
 
 Read [ALPHA_LANE_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md) for the current verified contour and the canonical smoke artifacts behind it.
 

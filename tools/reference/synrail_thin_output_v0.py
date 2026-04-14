@@ -41,6 +41,8 @@ def matching_recovery(recovery: dict | None, *, state: dict) -> dict | None:
 
 def classify_outcome(*, state: dict, report: dict, repair_packet: dict | None, doctor: dict | None) -> str:
     termination_reason = report.get("repair_termination_reason", "") or (repair_packet or {}).get("repair_termination", {}).get("reason", "")
+    if state.get("state", "") == "CLOSURE_ACCEPTED" or report.get("closure_status", "") == "ACCEPTED":
+        return "ACCEPTED"
     if termination_reason == "NON_RESUMABLE" or report.get("reason", "") in {"NON_RESUMABLE", "STATE_NOT_RESUMABLE", "TERMINAL_STATE_NOT_RESUMABLE"}:
         return "NON_RESUMABLE"
     if state.get("closure", {}).get("status", "") == "REJECTED" or report.get("closure_status", "") == "REJECTED":
@@ -57,6 +59,20 @@ def classify_outcome(*, state: dict, report: dict, repair_packet: dict | None, d
             return "SCOPE_VIOLATION"
         return "DOCTOR_BLOCKED"
     return "NON_GREEN"
+
+
+def resume_available(report: dict, repair_packet: dict | None) -> bool:
+    packet = repair_packet or {}
+    continuation = packet.get("continuation_core", {})
+    termination = packet.get("repair_termination", {})
+    resumability = packet.get("resumability", {})
+    current_step = continuation.get("current_step_id", "") or packet.get("repair_policy", {}).get("next_step_id", "")
+    return (
+        resumability.get("status", "") == "REPAIRABLE"
+        and termination.get("status", "CONTINUE") != "TERMINATE"
+        and bool(current_step)
+        and report.get("reason", "") not in {"NON_RESUMABLE", "STATE_NOT_RESUMABLE", "TERMINAL_STATE_NOT_RESUMABLE"}
+    )
 
 
 def non_resumable_forward_boundary(*, report: dict, repair_packet: dict | None) -> bool:
@@ -82,6 +98,10 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
         )
     failure_classes = list((doctor or {}).get("blocking_failure_classes", []))
     messages = {
+        "ACCEPTED": (
+            "The run reached accepted closure.",
+            "Synrail accepted the result based on the current proof and closure surfaces.",
+        ),
         "NON_RESUMABLE": (
             "This contour should not continue through resume.",
             f"Follow the named non-resumable boundary or start a new run.{suffix}{recovery_suffix}",
@@ -139,10 +159,41 @@ def technical_lines(*, state: dict, report: dict, repair_packet: dict | None, ch
     ]
 
 
+def human_next_step(
+    *,
+    outcome_class: str,
+    raw_next_step: str,
+    report: dict,
+    repair_packet: dict | None,
+    doctor: dict | None,
+) -> str:
+    failure_classes = list((doctor or {}).get("blocking_failure_classes", []))
+    if outcome_class == "ACCEPTED":
+        return "No repair step is required."
+    if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
+        if report.get("reason", "") == "EXACT_TASK_IDENTITY_NOT_CONFIRMED":
+            return "Restore the exact task prompt and task identity, then start the next bounded attempt through synrail check."
+        return "Continue through the next bounded forward attempt instead of named resume."
+    if outcome_class == "PROOF_INVALID":
+        return "Replace the broken final result or proof inputs, then ask Synrail for the next bounded repair step."
+    if outcome_class == "PROOF_PARTIAL":
+        return "Add the missing proof inputs, then ask Synrail for the next bounded repair step."
+    if outcome_class == "REPAIR_STOP":
+        return "Stop replaying this contour. Restore a verified checkpoint or start a new run."
+    if outcome_class == "SCOPE_VIOLATION":
+        if "dirty-surface unsafe" in failure_classes:
+            return "Move back to a clean in-scope working surface before continuing."
+        return "Restore the trusted target identity before continuing."
+    if outcome_class == "DOCTOR_BLOCKED":
+        return "Repair readiness first, then continue only the current bounded step."
+    return raw_next_step
+
+
 def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | None = None, doctor: dict | None = None, checkpoint: dict | None = None, recovery: dict | None = None) -> dict:
     restore_available = checkpoint_restore_available(checkpoint, state=state)
     matching = matching_recovery(recovery, state=state)
     outcome_class = classify_outcome(state=state, report=report, repair_packet=repair_packet, doctor=doctor)
+    can_resume = resume_available(report, repair_packet)
     summary, diagnosis = summary_for(
         outcome_class,
         restore_available=restore_available,
@@ -152,6 +203,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         doctor=doctor,
     )
     suggested_command = {
+        "ACCEPTED": "no next command required",
         "NON_RESUMABLE": "restore-checkpoint or start a new run",
         "CLOSURE_REJECTED": "restore-checkpoint or repair and rerun closure",
         "PROOF_INVALID": "generate-prompt then resume after proof repair",
@@ -167,6 +219,24 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         failure_classes = list((doctor or {}).get("blocking_failure_classes", []))
         if "dirty-surface unsafe" in failure_classes:
             suggested_command = "restore-checkpoint or move to a clean in-scope surface, then resume"
+    next_step = report.get("next_safe_step", "") or state.get("next_safe_step", "")
+    if outcome_class == "ACCEPTED":
+        next_step = "No repair step is required."
+    what_to_do_next = human_next_step(
+        outcome_class=outcome_class,
+        raw_next_step=next_step,
+        report=report,
+        repair_packet=repair_packet,
+        doctor=doctor,
+    )
+    next_command = ""
+    restore_command = ""
+    if outcome_class in {"PROOF_INVALID", "PROOF_PARTIAL", "DOCTOR_BLOCKED", "NON_GREEN"} and can_resume:
+        next_command = "synrail generate-prompt"
+    if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
+        next_command = "synrail generate-prompt"
+    if outcome_class in {"NON_RESUMABLE", "CLOSURE_REJECTED", "REPAIR_STOP", "SCOPE_VIOLATION"} and restore_available:
+        restore_command = "synrail restore"
     return {
         "schema_version": "thin_output_record_v0",
         "mode": mode,
@@ -175,7 +245,13 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "outcome_class": outcome_class,
         "summary": summary,
         "diagnosis": diagnosis,
-        "next_step": report.get("next_safe_step", "") or state.get("next_safe_step", ""),
+        "what_happened": summary,
+        "what_it_means": diagnosis,
+        "what_to_do_next": what_to_do_next,
+        "resume_available": can_resume,
+        "next_command": next_command,
+        "restore_command": restore_command,
+        "next_step": next_step,
         "restore_available": restore_available,
         "checkpoint_id": checkpoint.get("checkpoint_id", "") if checkpoint else "",
         "recovery_primary_action": matching.get("primary_action", "") if matching else "",

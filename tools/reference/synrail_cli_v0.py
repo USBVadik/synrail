@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import shlex
 import shutil
 import subprocess
 import sys
@@ -85,6 +86,7 @@ DEFAULT_ALPHA_ARTIFACT_ROOT = ".synrail"
 DEFAULT_ALPHA_TASK_CLASS = "bounded_change"
 ALPHA_FILE_NAMES = {
     "state": "state.json",
+    "project_profile": "project_profile.json",
     "doctor": "doctor.json",
     "bundle": "bundle.json",
     "closure": "closure.json",
@@ -107,6 +109,7 @@ ALPHA_FILE_NAMES = {
 }
 CHECKPOINT_RECORD_BASENAME = "checkpoint_record.json"
 CHECKPOINT_VERIFY_BASENAME = "checkpoint_verify.json"
+PROJECT_PROFILE_BASENAME = "project_profile.json"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -115,6 +118,14 @@ def run_python(script: Path, args: list[str]) -> int:
     else:
         cmd = [sys.executable, str(script), *args]
     return subprocess.run(cmd, check=False).returncode
+
+
+def run_python_capture(script: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+    if __package__:
+        cmd = [sys.executable, "-m", REFERENCE_RUNNER_MODULE, script.stem, *args]
+    else:
+        cmd = [sys.executable, str(script), *args]
+    return subprocess.run(cmd, check=False, capture_output=True, text=True)
 
 
 def load_json(path: Path) -> dict:
@@ -141,6 +152,80 @@ def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path
 def default_alpha_run_id() -> str:
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     return f"ALPHA_RUN_{stamp}"
+
+
+def project_profile_file(root: Path) -> Path:
+    return root / PROJECT_PROFILE_BASENAME
+
+
+def save_project_profile(root: Path, payload: dict) -> None:
+    project_profile_file(root).write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+
+
+def load_project_profile(root: Path | None) -> dict | None:
+    if not root:
+        return None
+    profile_path = project_profile_file(root)
+    if not profile_path.exists():
+        return None
+    return load_json(profile_path)
+
+
+def detect_project_type(project_root: Path) -> str:
+    markers = [
+        ("package.json", "node"),
+        ("pyproject.toml", "python"),
+        ("requirements.txt", "python"),
+        ("go.mod", "go"),
+        ("Cargo.toml", "rust"),
+        ("Gemfile", "ruby"),
+        ("composer.json", "php"),
+    ]
+    for marker, project_type in markers:
+        if (project_root / marker).exists():
+            return project_type
+    return "generic"
+
+
+def candidate_paths(project_root: Path, root: Path, names: list[str]) -> list[str]:
+    ordered: list[Path] = []
+    for base in [root, project_root]:
+        for name in names:
+            candidate = (base / name).resolve()
+            if candidate not in ordered:
+                ordered.append(candidate)
+    return [str(path) for path in ordered]
+
+
+def build_project_profile(*, project_root: Path, root: Path, task_class: str) -> dict:
+    project_type = detect_project_type(project_root)
+    return {
+        "schema_version": "alpha_project_profile_v0",
+        "project_root": str(project_root),
+        "project_type": project_type,
+        "task_class": task_class,
+        "target_path": str(project_root),
+        "target_classification": "trusted_worktree",
+        "intended_run_class": "core_probe",
+        "baseline_identity": f"autodetected_{project_type}_baseline",
+        "execution_surface_identity": f"autodetected_{project_type}_worktree",
+        "artifact_path": str((root / "final_result.json").resolve()),
+        "final_result_candidates": candidate_paths(project_root, root, ["final_result.json", "final_result.txt", "result.json", "result.txt"]),
+        "readback_candidates": candidate_paths(project_root, root, ["readback.json", "readback.txt"]),
+        "scenario_proof_candidates": candidate_paths(project_root, root, ["scenario_proof.json", "scenario_proof.md", "scenario_proof.txt"]),
+    }
+
+
+def discover_candidate_file(candidates: list[str]) -> str | None:
+    for value in candidates:
+        candidate = Path(value)
+        if candidate.exists() and candidate.is_file():
+            return str(candidate)
+    return None
+
+
+def shell_command(root: Path, *parts: str) -> str:
+    return " ".join(shlex.quote(part) for part in ["synrail", *parts, "--artifact-root", str(root)])
 
 
 def command_path_from_args(args: argparse.Namespace) -> list[str]:
@@ -203,6 +288,50 @@ def maybe_existing_alpha_file(root: Path | None, file_id: str) -> str | None:
     if candidate.exists():
         return str(candidate)
     return None
+
+
+def apply_alpha_profile_defaults(args: argparse.Namespace, *, root: Path | None) -> None:
+    profile = load_project_profile(root)
+    if not profile:
+        return
+    profile_artifact_path = profile.get("artifact_path", "")
+    for field in [
+        "target_path",
+        "target_classification",
+        "baseline_identity",
+        "execution_surface_identity",
+        "artifact_path",
+        "intended_run_class",
+    ]:
+        if not getattr(args, field, None):
+            value = profile.get(field)
+            if value:
+                setattr(args, field, value)
+    if not getattr(args, "final_result", None):
+        discovered = discover_candidate_file(list(profile.get("final_result_candidates", [])))
+        if discovered:
+            args.final_result = discovered
+            current_artifact_path = getattr(args, "artifact_path", None)
+            if (
+                not current_artifact_path
+                or (
+                    root is not None
+                    and current_artifact_path == profile_artifact_path
+                    and Path(current_artifact_path).resolve() == (root / "final_result.json").resolve()
+                )
+            ):
+                args.artifact_path = discovered
+                if root is not None and profile.get("artifact_path", "") != discovered:
+                    profile["artifact_path"] = discovered
+                    save_project_profile(root, profile)
+    if not getattr(args, "readback", None):
+        discovered = discover_candidate_file(list(profile.get("readback_candidates", [])))
+        if discovered:
+            args.readback = discovered
+    if not getattr(args, "scenario_proof", None):
+        discovered = discover_candidate_file(list(profile.get("scenario_proof_candidates", [])))
+        if discovered:
+            args.scenario_proof = discovered
 
 
 def checkpoint_root(root: Path, checkpoint_id: str) -> Path:
@@ -293,14 +422,19 @@ def print_thin_output_summary(output_file: Path) -> None:
         return
     payload = load_json(output_file)
     lines = [
-        f"Outcome: {payload.get('outcome_class', '')}",
-        payload.get("summary", ""),
-        payload.get("diagnosis", ""),
-        f"Next step: {payload.get('next_step', '')}",
+        f"Status: {payload.get('outcome_class', '')}",
+        f"What happened: {payload.get('what_happened', payload.get('summary', ''))}",
+        f"What it means: {payload.get('what_it_means', payload.get('diagnosis', ''))}",
+        f"What to do next: {payload.get('what_to_do_next', payload.get('next_step', ''))}",
     ]
-    suggested = payload.get("suggested_command", "")
-    if suggested:
-        lines.append(f"Suggested command: {suggested}")
+    next_command = payload.get("next_command", "")
+    restore_command = payload.get("restore_command", "")
+    if next_command:
+        lines.append(f"Next command: {next_command}")
+    elif payload.get("suggested_command", ""):
+        lines.append(f"Next command: {payload.get('suggested_command', '')}")
+    if restore_command:
+        lines.append(f"Restore option: {restore_command}")
     print("\n".join(line for line in lines if line))
 
 
@@ -308,9 +442,79 @@ def print_prompt_summary(output_file: Path) -> None:
     if not output_file.exists():
         return
     payload = load_json(output_file)
+    stale_artifacts = list(payload.get("stale_artifact_ids", []))
+    stale_subsurfaces = list(payload.get("stale_subsurface_ids", []))
+    allowed_scope = list(payload.get("allowed_scope", []))
+    forbidden_scope = list(payload.get("forbidden_scope", []))
+    lines = [
+        "Next-agent prompt is ready.",
+        f"What failed: {payload.get('failure_reason', '')}",
+        f"Current step: {payload.get('current_step_id', '')}",
+        f"Stale artifacts: {', '.join(stale_artifacts) if stale_artifacts else 'none'}",
+        f"Stale subsurfaces: {', '.join(stale_subsurfaces) if stale_subsurfaces else 'none'}",
+        f"Allowed scope: {', '.join(allowed_scope) if allowed_scope else 'current repair step only'}",
+        f"Do not touch: {', '.join(forbidden_scope) if forbidden_scope else 'unrelated files or acceptance logic'}",
+    ]
+    acceptance = payload.get("acceptance_criteria", [])
+    if acceptance:
+        lines.append("Must pass:")
+        lines.extend([f"- {item}" for item in acceptance])
+    next_command = payload.get("next_command", "")
+    if next_command:
+        lines.append(f"Next command after repair: {next_command}")
     prompt = payload.get("prompt", "")
     if prompt:
-        print(prompt)
+        lines.append("")
+        lines.append("Prompt:")
+        lines.append(prompt)
+    print("\n".join(line for line in lines if line))
+
+
+def print_init_summary(*, root: Path, state_file: Path) -> None:
+    state = load_json(state_file)
+    profile = load_project_profile(root) or {}
+    artifact_hint = "Drop final_result.json or final_result.txt under the artifact root or project root, then run: "
+    lines = [
+        "Synrail initialized.",
+        f"Artifact root: {root}",
+        f"Detected project type: {profile.get('project_type', 'generic')}",
+        artifact_hint + shell_command(root, "check"),
+    ]
+    checkpoint_suggestion = shell_command(root, "checkpoint", "create", "--checkpoint-id", "working")
+    lines.append(f"Optional safe point: {checkpoint_suggestion}")
+    print("\n".join(lines))
+
+
+def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | None = None) -> None:
+    if not record_file.exists():
+        return
+    payload = load_json(record_file)
+    lines = []
+    if action == "create":
+        lines = [
+            f"Checkpoint saved: {payload.get('checkpoint_id', '')}",
+            f"Safe point class: {payload.get('safe_point_class', '')}",
+            "Next command: " + (
+                shell_command(root, "checkpoint", "verify", "--checkpoint-id", payload.get("checkpoint_id", ""))
+                if root
+                else payload.get("next_safe_step", "")
+            ),
+        ]
+    elif action == "verify":
+        lines = [
+            f"Checkpoint verification: {payload.get('verification', {}).get('status', '')}",
+            payload.get("next_safe_step", ""),
+        ]
+    elif action == "restore":
+        restore = payload.get("restore", {})
+        rollback = payload.get("rollback", {})
+        lines = [
+            f"Restore status: {restore.get('status', '')}",
+            payload.get("next_safe_step", ""),
+        ]
+        if rollback.get("status", "") == "ROLLED_BACK":
+            lines.append("Restore rollback was applied because verification failed.")
+    print("\n".join(line for line in lines if line))
 
 
 def cmd_status(args: argparse.Namespace) -> int:
@@ -345,7 +549,22 @@ def cmd_init(args: argparse.Namespace) -> int:
         "--task-class", args.task_class,
         "--output", args.output,
     ]
-    return run_python(SPINE, forwarded)
+    if args.mode == "dev":
+        code = run_python(SPINE, forwarded)
+        if code == 0 and root:
+            save_project_profile(root, build_project_profile(project_root=Path.cwd().resolve(), root=root, task_class=args.task_class))
+        return code
+    completed = run_python_capture(SPINE, forwarded)
+    if completed.returncode != 0:
+        if completed.stderr.strip():
+            print(completed.stderr.strip(), file=sys.stderr)
+        if completed.stdout.strip():
+            print(completed.stdout.strip())
+        return completed.returncode
+    if root:
+        save_project_profile(root, build_project_profile(project_root=Path.cwd().resolve(), root=root, task_class=args.task_class))
+        print_init_summary(root=root, state_file=Path(args.output))
+    return 0
 
 
 def cmd_telemetry_enable(args: argparse.Namespace) -> int:
@@ -642,7 +861,17 @@ def cmd_create_checkpoint(args: argparse.Namespace) -> int:
     for flag, value in optional_pairs:
         if value:
             forwarded.extend([flag, value])
-    return run_python(CHECKPOINT, forwarded)
+    if args.mode == "dev":
+        return run_python(CHECKPOINT, forwarded)
+    completed = run_python_capture(CHECKPOINT, forwarded)
+    if completed.returncode != 0:
+        if completed.stderr.strip():
+            print(completed.stderr.strip(), file=sys.stderr)
+        if completed.stdout.strip():
+            print(completed.stdout.strip())
+        return completed.returncode
+    print_checkpoint_summary(Path(args.output), action="create", root=root)
+    return 0
 
 
 def cmd_verify_checkpoint(args: argparse.Namespace) -> int:
@@ -660,14 +889,22 @@ def cmd_verify_checkpoint(args: argparse.Namespace) -> int:
     if not getattr(args, "output", None):
         print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_VERIFY_OUTPUT_REQUIRED"}, ensure_ascii=True))
         return 2
-    return run_python(
-        CHECKPOINT,
-        [
-            "verify",
-            "--checkpoint-record-file", args.checkpoint_record_file,
-            "--output", args.output,
-        ],
-    )
+    forwarded = [
+        "verify",
+        "--checkpoint-record-file", args.checkpoint_record_file,
+        "--output", args.output,
+    ]
+    if args.mode == "dev":
+        return run_python(CHECKPOINT, forwarded)
+    completed = run_python_capture(CHECKPOINT, forwarded)
+    if completed.returncode != 0:
+        if completed.stderr.strip():
+            print(completed.stderr.strip(), file=sys.stderr)
+        if completed.stdout.strip():
+            print(completed.stdout.strip())
+        return completed.returncode
+    print_checkpoint_summary(Path(args.output), action="verify", root=root)
+    return 0
 
 
 def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
@@ -680,17 +917,27 @@ def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
         args.target_root = str(root)
     if root and not getattr(args, "output", None):
         args.output = str(alpha_file(root, "checkpoint_restore"))
-    code = run_python(
-        CHECKPOINT,
-        [
-            "restore",
-            "--checkpoint-record-file", args.checkpoint_record_file,
-            "--target-root", args.target_root,
-            "--output", args.output,
-        ],
-    )
+    forwarded = [
+        "restore",
+        "--checkpoint-record-file", args.checkpoint_record_file,
+        "--target-root", args.target_root,
+        "--output", args.output,
+    ]
+    if args.mode == "dev":
+        code = run_python(CHECKPOINT, forwarded)
+    else:
+        completed = run_python_capture(CHECKPOINT, forwarded)
+        if completed.returncode != 0:
+            if completed.stderr.strip():
+                print(completed.stderr.strip(), file=sys.stderr)
+            if completed.stdout.strip():
+                print(completed.stdout.strip())
+            return completed.returncode
+        code = 0
     if code == 0:
         sync_restored_checkpoint_artifacts(Path(args.target_root))
+        if args.mode != "dev":
+            print_checkpoint_summary(Path(args.output), action="restore", root=root)
     return code
 
 
@@ -772,7 +1019,17 @@ def cmd_thin_output(args: argparse.Namespace) -> int:
     ]:
         if value:
             forwarded.extend([flag, value])
-    return run_python(THIN_OUTPUT, forwarded)
+    if args.mode == "dev":
+        return run_python(THIN_OUTPUT, forwarded)
+    completed = run_python_capture(THIN_OUTPUT, forwarded)
+    if completed.returncode != 0:
+        if completed.stderr.strip():
+            print(completed.stderr.strip(), file=sys.stderr)
+        if completed.stdout.strip():
+            print(completed.stdout.strip())
+    elif not getattr(args, "_suppress_summary", False):
+        print_thin_output_summary(Path(args.output))
+    return completed.returncode
 
 
 def cmd_generate_prompt(args: argparse.Namespace) -> int:
@@ -791,10 +1048,17 @@ def cmd_generate_prompt(args: argparse.Namespace) -> int:
     ]
     if args.checkpoint_record_file:
         forwarded.extend(["--checkpoint-record-file", args.checkpoint_record_file])
-    code = run_python(PROMPT_BRIDGE, forwarded)
-    if code == 0:
-        print_prompt_summary(Path(args.output))
-    return code
+    if args.mode == "dev":
+        return run_python(PROMPT_BRIDGE, forwarded)
+    completed = run_python_capture(PROMPT_BRIDGE, forwarded)
+    if completed.returncode != 0:
+        if completed.stderr.strip():
+            print(completed.stderr.strip(), file=sys.stderr)
+        if completed.stdout.strip():
+            print(completed.stdout.strip())
+        return completed.returncode
+    print_prompt_summary(Path(args.output))
+    return 0
 
 
 def cmd_check(args: argparse.Namespace) -> int:
@@ -821,6 +1085,7 @@ def cmd_check(args: argparse.Namespace) -> int:
         discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
         if discovered:
             args.checkpoint_record_file = discovered
+    apply_alpha_profile_defaults(args, root=root)
 
     runtime_requested = all(
         [
@@ -888,16 +1153,31 @@ def cmd_check(args: argparse.Namespace) -> int:
             credential_env=list(getattr(args, "credential_env", [])),
             prompt_identity_file=getattr(args, "prompt_identity_file", None),
             target_identity_file=getattr(args, "target_identity_file", None),
+            _capture_output=(args.mode == "default"),
         )
         orchestrate_code = cmd_orchestrate(orchestrate_args)
         if orchestrate_code != 0 and not Path(args.report_file).exists():
             return orchestrate_code
     elif not Path(args.report_file).exists():
-        print(json.dumps({"result": "ERROR", "reason": "CHECK_CONTEXT_INCOMPLETE", "detail": "report file is missing and runtime check inputs were not supplied"}, ensure_ascii=True))
+        if args.mode == "dev":
+            print(json.dumps({"result": "ERROR", "reason": "CHECK_CONTEXT_INCOMPLETE", "detail": "report file is missing and runtime check inputs were not supplied"}, ensure_ascii=True))
+        else:
+            print("Synrail could not start the check yet.")
+            if not getattr(args, "final_result", None):
+                profile = load_project_profile(root)
+                candidates = (profile or {}).get("final_result_candidates", [])
+                print("What is missing: no result artifact was found for this run.")
+                if candidates:
+                    print("What to do next: pass --final-result or place one result artifact at one of these paths:")
+                    for candidate in candidates[:4]:
+                        print(f"- {candidate}")
+            else:
+                print("What to do next: provide the missing runtime context or rerun with --mode dev for full technical detail.")
         return 2
 
+    args._suppress_summary = True
     thin_code = cmd_thin_output(args)
-    if thin_code == 0:
+    if thin_code == 0 and args.mode == "default":
         print_thin_output_summary(Path(args.output))
     return thin_code
 
@@ -1599,6 +1879,14 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             forwarded.append(flag)
     for env_name in args.credential_env:
         forwarded.extend(["--credential-env", env_name])
+    if getattr(args, "_capture_output", False):
+        completed = run_python_capture(SPINE, ["orchestrate", *forwarded])
+        if completed.returncode != 0:
+            if completed.stderr.strip():
+                print(completed.stderr.strip(), file=sys.stderr)
+            if completed.stdout.strip():
+                print(completed.stdout.strip())
+        return completed.returncode
     return run_python(SPINE, ["orchestrate", *forwarded])
 
 
@@ -1636,7 +1924,34 @@ def cmd_resume(args: argparse.Namespace) -> int:
             return 2
 
     try:
-        return cmd_orchestrate(args)
+        args._capture_output = args.mode == "default"
+        code = cmd_orchestrate(args)
+        if code == 0 and args.mode == "default":
+            root = alpha_root_from_args(args)
+            if getattr(args, "output", None):
+                thin_output_path = str(Path(args.output))
+            elif root:
+                thin_output_path = str(alpha_file(root, "thin_output"))
+            else:
+                thin_output_path = str(Path(args.report_output).with_name("thin_output.json"))
+            thin_args = argparse.Namespace(
+                artifact_root=args.artifact_root,
+                state_file=args.state_file,
+                report_file=args.report_output,
+                mode="default",
+                output=thin_output_path,
+                repair_packet_file=getattr(args, "repair_packet_file", None),
+                doctor_file=getattr(args, "doctor_output", None),
+                checkpoint_id=getattr(args, "checkpoint_id", None),
+                checkpoint_record_file=getattr(args, "checkpoint_record_file", None),
+                consistency_recovery_file=getattr(args, "consistency_recovery_file", None),
+                _suppress_summary=True,
+            )
+            thin_code = cmd_thin_output(thin_args)
+            if thin_code == 0:
+                print_thin_output_summary(Path(thin_args.output))
+            return thin_code
+        return code
     finally:
         for temp_path in temp_runtime_files:
             Path(temp_path).unlink(missing_ok=True)
@@ -1715,6 +2030,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_init.add_argument("--telemetry-opt-in", action="store_true")
     p_init.add_argument("--tester-id", default="alpha_tester")
+    p_init.add_argument("--mode", default="default", choices=["default", "dev"])
     p_init.add_argument("--output")
     p_init.set_defaults(func=cmd_init)
 
@@ -1929,6 +2245,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_create.add_argument("--repair-packet-file")
     p_checkpoint_create.add_argument("--repair-handoff-file")
     p_checkpoint_create.add_argument("--repair-receipt-file")
+    p_checkpoint_create.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_create.add_argument("--output")
     p_checkpoint_create.set_defaults(func=cmd_create_checkpoint)
 
@@ -1936,6 +2253,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_verify.add_argument("--artifact-root")
     p_checkpoint_verify.add_argument("--checkpoint-id")
     p_checkpoint_verify.add_argument("--checkpoint-record-file")
+    p_checkpoint_verify.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_verify.add_argument("--output")
     p_checkpoint_verify.set_defaults(func=cmd_verify_checkpoint)
 
@@ -1944,6 +2262,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_restore.add_argument("--checkpoint-id")
     p_checkpoint_restore.add_argument("--checkpoint-record-file")
     p_checkpoint_restore.add_argument("--target-root")
+    p_checkpoint_restore.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_restore.add_argument("--output")
     p_checkpoint_restore.set_defaults(func=cmd_restore_checkpoint)
 
@@ -1965,6 +2284,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_nested_create.add_argument("--repair-packet-file")
     p_checkpoint_nested_create.add_argument("--repair-handoff-file")
     p_checkpoint_nested_create.add_argument("--repair-receipt-file")
+    p_checkpoint_nested_create.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_nested_create.add_argument("--output")
     p_checkpoint_nested_create.set_defaults(func=cmd_create_checkpoint)
 
@@ -1972,6 +2292,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_nested_verify.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_checkpoint_nested_verify.add_argument("--checkpoint-id")
     p_checkpoint_nested_verify.add_argument("--checkpoint-record-file")
+    p_checkpoint_nested_verify.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_nested_verify.add_argument("--output")
     p_checkpoint_nested_verify.set_defaults(func=cmd_verify_checkpoint)
 
@@ -1980,6 +2301,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_nested_restore.add_argument("--checkpoint-id")
     p_checkpoint_nested_restore.add_argument("--checkpoint-record-file")
     p_checkpoint_nested_restore.add_argument("--target-root")
+    p_checkpoint_nested_restore.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_nested_restore.add_argument("--output")
     p_checkpoint_nested_restore.set_defaults(func=cmd_restore_checkpoint)
 
@@ -1988,6 +2310,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_restore.add_argument("--checkpoint-id")
     p_restore.add_argument("--checkpoint-record-file")
     p_restore.add_argument("--target-root")
+    p_restore.add_argument("--mode", default="default", choices=["default", "dev"])
     p_restore.add_argument("--output")
     p_restore.set_defaults(func=cmd_restore)
 
@@ -2042,6 +2365,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_generate_prompt = sub.add_parser("generate-prompt")
     p_generate_prompt.add_argument("--artifact-root")
     p_generate_prompt.add_argument("--repair-packet-file")
+    p_generate_prompt.add_argument("--mode", default="default", choices=["default", "dev"])
     p_generate_prompt.add_argument("--output")
     p_generate_prompt.add_argument("--checkpoint-id")
     p_generate_prompt.add_argument("--checkpoint-record-file")
@@ -2205,6 +2529,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_resume = sub.add_parser("resume")
     add_orchestration_args(p_resume, include_resume_from_state=False, relaxed_runtime=True)
+    p_resume.add_argument("--mode", default="default", choices=["default", "dev"])
     p_resume.set_defaults(func=cmd_resume)
 
     return parser

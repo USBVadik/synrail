@@ -235,6 +235,12 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/alpha_lane_run_003/lane/thin_output.json`
 - `../fixtures/alpha_lane_run_003/lane/prompt.json`
 - `../fixtures/alpha_lane_run_003/lane/checkpoint_restore.json`
+- `../fixtures/alpha_shell_run_001/shell/check_stdout.txt`
+- `../fixtures/alpha_shell_run_001/lane/project_profile.json`
+- `../fixtures/alpha_shell_run_001/lane/thin_output.json`
+- `../fixtures/alpha_shell_run_001/lane/prompt.json`
+- `../fixtures/alpha_shell_run_001/lane/followup.json`
+- `../fixtures/thin_output_run_accepted_001/thin_output.json`
 - `../fixtures/alpha_second_operator_run_001/second_operator.json`
 - `../fixtures/alpha_second_operator_run_001/reading.json`
 - `../fixtures/alpha_external_run_001/thin_output.json`

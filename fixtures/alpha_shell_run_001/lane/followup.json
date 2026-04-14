@@ -1,0 +1,11 @@
+{
+  "schema_version": "prompt_followup_record_v0",
+  "run_id": "ALPHA_RUN_20260414T132954Z",
+  "task_class": "bounded_change",
+  "current_step_id": "continue_forward_orchestration",
+  "required_inputs": [],
+  "allowed_scope": [],
+  "missing_markers": [],
+  "verdict": "FOLLOWUP_SCOPE_PRESERVED",
+  "why": "the generated prompt preserves the bounded repair step, scope, and must-pass constraints for the next agent call"
+}

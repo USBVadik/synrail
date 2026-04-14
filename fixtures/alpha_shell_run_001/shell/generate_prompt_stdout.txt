@@ -1,0 +1,24 @@
+Next-agent prompt is ready.
+What failed: EXACT_TASK_IDENTITY_NOT_CONFIRMED
+Current step: continue_forward_orchestration
+Stale artifacts: none
+Stale subsurfaces: none
+Allowed scope: current_repair_step_only
+Do not touch: Do not broaden scope beyond the current repair step., Do not modify accepted or terminal-state logic., Do not claim closure or acceptance unless the repaired run actually reaches it.
+Must pass:
+- Repair only the current step: continue_forward_orchestration
+- Keep run_id and task_class consistent with the current contour.
+- Do not remove or rewrite existing repair history.
+- Keep the next safe step aligned with: restore exact prompt and task identity
+Next command after repair: synrail check
+Prompt:
+Repair the current Synrail contour without broadening scope.
+Current step: continue_forward_orchestration
+Broken truth: EXACT_TASK_IDENTITY_NOT_CONFIRMED
+Stale artifacts: none
+Stale subsurfaces: none
+Allowed scope: current_repair_step_only
+Required inputs: none
+Next safe step: restore exact prompt and task identity
+Do not touch unrelated files, state transitions, or acceptance logic.
+Return only the bounded repair needed for this current step and preserve continuity truth.
