@@ -514,7 +514,7 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
 
     def human_checkpoint_step(text: str) -> str:
         mapping = {
-            "checkpoint verified; restore is now allowed": "This restore point is ready to use for restore.",
+            "checkpoint verified; restore is now allowed": "This restore point is ready. You can use synrail restore if you need it.",
             "inspect or continue from the restored checkpoint state": "Inspect the restored state or continue from it.",
         }
         return mapping.get(text, text)
@@ -533,14 +533,14 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
         ]
     elif action == "verify":
         lines = [
-            f"Restore point check: {payload.get('verification', {}).get('status', '')}",
+            f"Restore point verification: {payload.get('verification', {}).get('status', '')}",
             human_checkpoint_step(payload.get("next_safe_step", "")),
         ]
     elif action == "restore":
         restore = payload.get("restore", {})
         rollback = payload.get("rollback", {})
         lines = [
-            f"Restore status: {restore.get('status', '')}",
+            f"Restore result: {restore.get('status', '')}",
             human_checkpoint_step(payload.get("next_safe_step", "")),
         ]
         if rollback.get("status", "") == "ROLLED_BACK":
@@ -572,7 +572,7 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
         lines.extend(
             [
                 "What happened: Synrail saved the restore point but could not fully confirm it yet.",
-                "What to do next: inspect the save and rerun explicit verification before depending on restore.",
+                "What to do next: inspect the save and rerun restore-point verification before depending on restore.",
             ]
         )
         if root:
@@ -2719,7 +2719,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_orchestration_args(p_orchestrate, include_resume_from_state=True)
     p_orchestrate.set_defaults(func=cmd_orchestrate)
 
-    p_resume = sub.add_parser("resume", aliases=["continue"])
+    p_resume = sub.add_parser("resume", aliases=["continue", "retry"])
     add_orchestration_args(p_resume, include_resume_from_state=False, relaxed_runtime=True)
     p_resume.add_argument("--mode", default="default", choices=["default", "dev"])
     p_resume.set_defaults(func=cmd_resume)

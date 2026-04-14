@@ -111,7 +111,7 @@ def next_command(repair_packet: dict, current_step_id: str) -> str:
         resumability.get("status", "") == "REPAIRABLE"
         and termination.get("status", "CONTINUE") != "TERMINATE"
     ):
-        return "synrail continue"
+        return "synrail retry"
     if (
         repair_packet.get("resumability_family", "") == "NOT_RESUMABLE_FRESH_ORCHESTRATION"
         or current_step_id == "continue_forward_orchestration"

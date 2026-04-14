@@ -42,4 +42,4 @@ These helpers are here to make truth and gating behavior clearer.
 
 They are not here to hide judgment or replace proof.
 
-For the concrete installable contour, read [ALPHA_LANE_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md) and inspect [alpha_shell_run_007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_007).
+For the concrete installable contour, read [ALPHA_LANE_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md) and inspect [alpha_shell_run_008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_008).
