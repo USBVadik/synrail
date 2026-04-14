@@ -11,6 +11,7 @@ Use this page when you need the fastest answer to:
 
 | Helper | Use it when | Typical inputs | Main output | Does not prove |
 | --- | --- | --- | --- | --- |
+| `synrail` | You want the current alpha lane through one installable command instead of calling individual helpers by hand | one `artifact-root`, bounded check inputs, optional checkpoint id | standardized state, checkpoint, thin output, prompt, and restore artifacts under one root | broad product coverage, domain correctness without bounded inputs, every future install path |
 | `attest_target_surface.sh` | You need to know whether the intended target surface is actually the one being inspected | controller/target surface details, target repo path, optional runtime pattern | attestation facts plus `PASS` or `FAIL` | patch correctness, target health, repaired behavior |
 | `require_attested_target_surface.sh` | You want to gate the next step on successful target-surface attestation | same attestation inputs, usually via env/defaults | hard gate on `attested_target_surface=PASS` | diagnosis quality, test quality, deploy success |
 | `intake_incident_hypothesis.sh` | A user or operator gives one narrow runtime clue and you want to reduce search space safely | incident id, target surface, bounded hypothesis text, search reduction, output path | bounded incident-hypothesis artifact | diagnosis truth, fix truth, runtime confirmation |
@@ -39,3 +40,5 @@ If you are unsure whether a helper belongs in a step, prefer the narrower interp
 These helpers are here to make truth and gating behavior clearer.
 
 They are not here to hide judgment or replace proof.
+
+For the concrete installable contour, read [ALPHA_LANE_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md).

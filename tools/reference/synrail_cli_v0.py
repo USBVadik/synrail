@@ -4,12 +4,17 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from synrail_repair_packet_v0 import build_packet_from_runtime_truth
+try:
+    from .synrail_repair_packet_v0 import build_packet_from_runtime_truth
+except ImportError:
+    from synrail_repair_packet_v0 import build_packet_from_runtime_truth
 
 
 HERE = Path(__file__).resolve().parent
@@ -52,10 +57,41 @@ CONSISTENCY_RECOVERY = HERE / "synrail_consistency_recovery_v0.py"
 CHECKPOINT_OPERATOR_READING = HERE / "synrail_checkpoint_operator_reading_v0.py"
 CONSISTENCY_RECOVERY_PROMPT = HERE / "synrail_consistency_recovery_prompt_v0.py"
 CONSISTENCY_RECOVERY_PROMPT_READING = HERE / "synrail_consistency_recovery_prompt_reading_v0.py"
+REFERENCE_RUNNER_MODULE = "synrail.reference_runner"
+
+DEFAULT_ALPHA_ARTIFACT_ROOT = ".synrail"
+DEFAULT_ALPHA_TASK_CLASS = "bounded_change"
+ALPHA_FILE_NAMES = {
+    "state": "state.json",
+    "doctor": "doctor.json",
+    "bundle": "bundle.json",
+    "closure": "closure.json",
+    "refresh": "refresh.json",
+    "report": "report.json",
+    "orchestration": "orchestration.json",
+    "run": "run.json",
+    "repair_packet": "repair_packet.json",
+    "repair_handoff": "repair_handoff.json",
+    "repair_receipt": "repair_receipt.json",
+    "observability": "observability.json",
+    "artifact_consistency": "artifact_consistency.json",
+    "consistency_recovery": "consistency_recovery.json",
+    "plan": "plan.json",
+    "preparation_receipt": "preparation_receipt.json",
+    "selection_receipt": "selection_receipt.json",
+    "thin_output": "thin_output.json",
+    "prompt": "prompt.json",
+    "checkpoint_restore": "checkpoint_restore.json",
+}
+CHECKPOINT_RECORD_BASENAME = "checkpoint_record.json"
+CHECKPOINT_VERIFY_BASENAME = "checkpoint_verify.json"
 
 
 def run_python(script: Path, args: list[str]) -> int:
-    cmd = [sys.executable, str(script), *args]
+    if __package__:
+        cmd = [sys.executable, "-m", REFERENCE_RUNNER_MODULE, script.stem, *args]
+    else:
+        cmd = [sys.executable, str(script), *args]
     return subprocess.run(cmd, check=False).returncode
 
 
@@ -80,6 +116,142 @@ def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path
     return HARNESS_V0
 
 
+def default_alpha_run_id() -> str:
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return f"ALPHA_RUN_{stamp}"
+
+
+def alpha_root_from_args(args: argparse.Namespace, *, ensure: bool = False) -> Path | None:
+    value = getattr(args, "artifact_root", None)
+    if not value:
+        return None
+    root = Path(value).expanduser().resolve()
+    if ensure:
+        root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def alpha_file(root: Path, file_id: str) -> Path:
+    return root / ALPHA_FILE_NAMES[file_id]
+
+
+def maybe_existing_alpha_file(root: Path | None, file_id: str) -> str | None:
+    if not root:
+        return None
+    candidate = alpha_file(root, file_id)
+    if candidate.exists():
+        return str(candidate)
+    return None
+
+
+def checkpoint_root(root: Path, checkpoint_id: str) -> Path:
+    return root / "checkpoints" / checkpoint_id
+
+
+def checkpoint_record_file(root: Path, checkpoint_id: str) -> Path:
+    return checkpoint_root(root, checkpoint_id) / CHECKPOINT_RECORD_BASENAME
+
+
+def checkpoint_verify_file(root: Path, checkpoint_id: str) -> Path:
+    return checkpoint_root(root, checkpoint_id) / CHECKPOINT_VERIFY_BASENAME
+
+
+def discover_checkpoint_record(root: Path, checkpoint_id: str | None) -> str | None:
+    checkpoints_root = root / "checkpoints"
+    if checkpoint_id:
+        verified = checkpoint_verify_file(root, checkpoint_id)
+        if verified.exists():
+            return str(verified)
+        created = checkpoint_record_file(root, checkpoint_id)
+        if created.exists():
+            return str(created)
+        return None
+    if not checkpoints_root.exists():
+        return None
+    verified_candidates = sorted(
+        list(checkpoints_root.glob("*/checkpoint_verify.json")),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    if verified_candidates:
+        return str(verified_candidates[0])
+    created_candidates = sorted(
+        list(checkpoints_root.glob("*/checkpoint_record.json")),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    if not created_candidates:
+        return None
+    return str(created_candidates[0])
+
+
+def apply_alpha_runtime_file_defaults(args: argparse.Namespace) -> None:
+    root = alpha_root_from_args(args, ensure=True)
+    if not root:
+        return
+    if not getattr(args, "state_file", None):
+        args.state_file = str(alpha_file(root, "state"))
+    for attr, file_id in [
+        ("doctor_output", "doctor"),
+        ("bundle_output", "bundle"),
+        ("closure_output", "closure"),
+        ("refresh_output", "refresh"),
+        ("report_output", "report"),
+        ("worked_artifact_output", "orchestration"),
+        ("run_artifact_output", "run"),
+        ("repair_packet_output", "repair_packet"),
+        ("repair_handoff_output", "repair_handoff"),
+        ("repair_receipt_output", "repair_receipt"),
+        ("observability_output", "observability"),
+        ("artifact_consistency_output", "artifact_consistency"),
+        ("plan_output", "plan"),
+        ("preparation_receipt_output", "preparation_receipt"),
+    ]:
+        if not getattr(args, attr, None):
+            setattr(args, attr, str(alpha_file(root, file_id)))
+    if not getattr(args, "repair_packet_file", None):
+        existing = maybe_existing_alpha_file(root, "repair_packet")
+        if existing:
+            args.repair_packet_file = existing
+
+
+def sync_restored_checkpoint_artifacts(target_root: Path) -> list[str]:
+    restored_root = target_root / "artifacts"
+    if not restored_root.exists():
+        return []
+    synced: list[str] = []
+    for artifact in sorted(restored_root.glob("*.json")):
+        destination = target_root / artifact.name
+        shutil.copy2(artifact, destination)
+        synced.append(destination.name)
+    return synced
+
+
+def print_thin_output_summary(output_file: Path) -> None:
+    if not output_file.exists():
+        return
+    payload = load_json(output_file)
+    lines = [
+        f"Outcome: {payload.get('outcome_class', '')}",
+        payload.get("summary", ""),
+        payload.get("diagnosis", ""),
+        f"Next step: {payload.get('next_step', '')}",
+    ]
+    suggested = payload.get("suggested_command", "")
+    if suggested:
+        lines.append(f"Suggested command: {suggested}")
+    print("\n".join(line for line in lines if line))
+
+
+def print_prompt_summary(output_file: Path) -> None:
+    if not output_file.exists():
+        return
+    payload = load_json(output_file)
+    prompt = payload.get("prompt", "")
+    if prompt:
+        print(prompt)
+
+
 def cmd_status(args: argparse.Namespace) -> int:
     state = load_json(Path(args.state_file))
     summary = {
@@ -97,6 +269,15 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_init(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args, ensure=True)
+    if not getattr(args, "run_id", None):
+        args.run_id = default_alpha_run_id()
+    if not getattr(args, "task_class", None):
+        args.task_class = DEFAULT_ALPHA_TASK_CLASS
+    if not getattr(args, "output", None):
+        if not root:
+            raise ValueError("output or artifact root is required")
+        args.output = str(alpha_file(root, "state"))
     forwarded = [
         "init",
         "--run-id", args.run_id,
@@ -327,6 +508,32 @@ def cmd_governed_cost(args: argparse.Namespace) -> int:
 
 
 def cmd_create_checkpoint(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args, ensure=True)
+    if root and not getattr(args, "checkpoint_id", None):
+        args.checkpoint_id = "latest"
+    if root and not getattr(args, "checkpoint_root", None):
+        args.checkpoint_root = str(checkpoint_root(root, args.checkpoint_id))
+    if root and not getattr(args, "state_file", None):
+        args.state_file = str(alpha_file(root, "state"))
+    if root and not getattr(args, "output", None):
+        args.output = str(checkpoint_record_file(root, args.checkpoint_id))
+    if root:
+        for attr, file_id in [
+            ("report_file", "report"),
+            ("orchestration_file", "orchestration"),
+            ("bundle_file", "bundle"),
+            ("closure_file", "closure"),
+            ("refresh_file", "refresh"),
+            ("selection_file", "selection_receipt"),
+            ("preparation_file", "preparation_receipt"),
+            ("repair_packet_file", "repair_packet"),
+            ("repair_handoff_file", "repair_handoff"),
+            ("repair_receipt_file", "repair_receipt"),
+        ]:
+            if not getattr(args, attr, None):
+                existing = maybe_existing_alpha_file(root, file_id)
+                if existing:
+                    setattr(args, attr, existing)
     forwarded = [
         "create",
         "--checkpoint-id", args.checkpoint_id,
@@ -353,6 +560,20 @@ def cmd_create_checkpoint(args: argparse.Namespace) -> int:
 
 
 def cmd_verify_checkpoint(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args)
+    if root and not getattr(args, "checkpoint_record_file", None):
+        discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
+        if discovered:
+            args.checkpoint_record_file = discovered
+    if root and not getattr(args, "output", None):
+        checkpoint_id = getattr(args, "checkpoint_id", None) or Path(args.checkpoint_record_file).parent.name
+        args.output = str(checkpoint_verify_file(root, checkpoint_id))
+    if not getattr(args, "checkpoint_record_file", None):
+        print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
+        return 2
+    if not getattr(args, "output", None):
+        print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_VERIFY_OUTPUT_REQUIRED"}, ensure_ascii=True))
+        return 2
     return run_python(
         CHECKPOINT,
         [
@@ -364,7 +585,16 @@ def cmd_verify_checkpoint(args: argparse.Namespace) -> int:
 
 
 def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
-    return run_python(
+    root = alpha_root_from_args(args, ensure=True)
+    if root and not getattr(args, "checkpoint_record_file", None):
+        discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
+        if discovered:
+            args.checkpoint_record_file = discovered
+    if root and not getattr(args, "target_root", None):
+        args.target_root = str(root)
+    if root and not getattr(args, "output", None):
+        args.output = str(alpha_file(root, "checkpoint_restore"))
+    code = run_python(
         CHECKPOINT,
         [
             "restore",
@@ -373,9 +603,34 @@ def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
             "--output", args.output,
         ],
     )
+    if code == 0:
+        sync_restored_checkpoint_artifacts(Path(args.target_root))
+    return code
+
+
+def cmd_restore(args: argparse.Namespace) -> int:
+    return cmd_restore_checkpoint(args)
 
 
 def cmd_artifact_consistency(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args)
+    if root and not getattr(args, "state_file", None):
+        args.state_file = str(alpha_file(root, "state"))
+    if root and not getattr(args, "output", None):
+        args.output = str(alpha_file(root, "artifact_consistency"))
+    if root:
+        for attr, file_id in [
+            ("report_file", "report"),
+            ("orchestration_file", "orchestration"),
+            ("run_file", "run"),
+            ("repair_packet_file", "repair_packet"),
+            ("repair_handoff_file", "repair_handoff"),
+            ("repair_receipt_file", "repair_receipt"),
+        ]:
+            if not getattr(args, attr, None):
+                existing = maybe_existing_alpha_file(root, file_id)
+                if existing:
+                    setattr(args, attr, existing)
     forwarded = [
         "--state-file", args.state_file,
         "--output", args.output,
@@ -394,6 +649,29 @@ def cmd_artifact_consistency(args: argparse.Namespace) -> int:
 
 
 def cmd_thin_output(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args)
+    if root and not getattr(args, "state_file", None):
+        args.state_file = str(alpha_file(root, "state"))
+    if root and not getattr(args, "report_file", None):
+        args.report_file = str(alpha_file(root, "report"))
+    if root and not getattr(args, "output", None):
+        args.output = str(alpha_file(root, "thin_output"))
+    if root and not getattr(args, "repair_packet_file", None):
+        existing = maybe_existing_alpha_file(root, "repair_packet")
+        if existing:
+            args.repair_packet_file = existing
+    if root and not getattr(args, "doctor_file", None):
+        existing = maybe_existing_alpha_file(root, "doctor")
+        if existing:
+            args.doctor_file = existing
+    if root and not getattr(args, "consistency_recovery_file", None):
+        existing = maybe_existing_alpha_file(root, "consistency_recovery")
+        if existing:
+            args.consistency_recovery_file = existing
+    if root and not getattr(args, "checkpoint_record_file", None):
+        discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
+        if discovered:
+            args.checkpoint_record_file = discovered
     forwarded = [
         "--state-file", args.state_file,
         "--report-file", args.report_file,
@@ -412,13 +690,130 @@ def cmd_thin_output(args: argparse.Namespace) -> int:
 
 
 def cmd_generate_prompt(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args)
+    if root and not getattr(args, "repair_packet_file", None):
+        args.repair_packet_file = str(alpha_file(root, "repair_packet"))
+    if root and not getattr(args, "output", None):
+        args.output = str(alpha_file(root, "prompt"))
+    if root and not getattr(args, "checkpoint_record_file", None):
+        discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
+        if discovered:
+            args.checkpoint_record_file = discovered
     forwarded = [
         "--repair-packet-file", args.repair_packet_file,
         "--output", args.output,
     ]
     if args.checkpoint_record_file:
         forwarded.extend(["--checkpoint-record-file", args.checkpoint_record_file])
-    return run_python(PROMPT_BRIDGE, forwarded)
+    code = run_python(PROMPT_BRIDGE, forwarded)
+    if code == 0:
+        print_prompt_summary(Path(args.output))
+    return code
+
+
+def cmd_check(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args, ensure=True)
+    if root and not getattr(args, "state_file", None):
+        args.state_file = str(alpha_file(root, "state"))
+    if root and not getattr(args, "report_file", None):
+        args.report_file = str(alpha_file(root, "report"))
+    if root and not getattr(args, "output", None):
+        args.output = str(alpha_file(root, "thin_output"))
+    if root and not getattr(args, "doctor_file", None):
+        existing = maybe_existing_alpha_file(root, "doctor")
+        if existing:
+            args.doctor_file = existing
+    if root and not getattr(args, "repair_packet_file", None):
+        existing = maybe_existing_alpha_file(root, "repair_packet")
+        if existing:
+            args.repair_packet_file = existing
+    if root and not getattr(args, "consistency_recovery_file", None):
+        existing = maybe_existing_alpha_file(root, "consistency_recovery")
+        if existing:
+            args.consistency_recovery_file = existing
+    if root and not getattr(args, "checkpoint_record_file", None):
+        discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
+        if discovered:
+            args.checkpoint_record_file = discovered
+
+    runtime_requested = all(
+        [
+            getattr(args, "target_path", None),
+            getattr(args, "baseline_identity", None),
+            getattr(args, "execution_surface_identity", None),
+            getattr(args, "final_result", None),
+        ]
+    )
+
+    if runtime_requested:
+        state = load_json(Path(args.state_file))
+        orchestrate_args = argparse.Namespace(
+            artifact_root=args.artifact_root,
+            state_file=args.state_file,
+            resume_from_state="",
+            repair_handoff_file=getattr(args, "repair_handoff_file", None),
+            repair_handoff_output=getattr(args, "repair_handoff_output", None),
+            repair_packet_file=getattr(args, "repair_packet_file", None),
+            repair_packet_output=getattr(args, "repair_packet_output", None),
+            repair_receipt_file=getattr(args, "repair_receipt_file", None),
+            repair_receipt_output=getattr(args, "repair_receipt_output", None),
+            mode_selection_receipt=getattr(args, "mode_selection_receipt", None),
+            doctor_run_id=args.doctor_run_id or state["run_id"],
+            doctor_level=args.doctor_level,
+            target_path=args.target_path,
+            target_classification=args.target_classification,
+            baseline_identity=args.baseline_identity,
+            intended_run_class=args.intended_run_class,
+            doctor_output=getattr(args, "doctor_output", None),
+            final_result=args.final_result,
+            task_class=state["task_class"],
+            bundle_output=getattr(args, "bundle_output", None),
+            closure_output=getattr(args, "closure_output", None),
+            report_output=args.report_file,
+            execution_surface_identity=args.execution_surface_identity,
+            prompt_identity=args.prompt_identity or "",
+            task_identity=args.task_identity or "",
+            readback=getattr(args, "readback", None),
+            scenario_proof=getattr(args, "scenario_proof", None),
+            plan_output=getattr(args, "plan_output", None),
+            preparation_receipt_output=getattr(args, "preparation_receipt_output", None),
+            preparation_artifact_root=getattr(args, "preparation_artifact_root", None),
+            refresh_output=getattr(args, "refresh_output", None),
+            observability_output=getattr(args, "observability_output", None),
+            artifact_consistency_output=getattr(args, "artifact_consistency_output", None),
+            refresh_event_type=getattr(args, "refresh_event_type", None),
+            refresh_doctor_status=getattr(args, "refresh_doctor_status", None),
+            refresh_recovery_status=getattr(args, "refresh_recovery_status", None),
+            refresh_reverification_complete=getattr(args, "refresh_reverification_complete", False),
+            refresh_use_bundle=getattr(args, "refresh_use_bundle", False),
+            refresh_use_closure=getattr(args, "refresh_use_closure", False),
+            baseline_file=getattr(args, "baseline_file", None),
+            synrail_file=getattr(args, "synrail_file", None),
+            comparison_output=getattr(args, "comparison_output", None),
+            worked_artifact_output=getattr(args, "worked_artifact_output", None),
+            run_artifact_output=getattr(args, "run_artifact_output", None),
+            clean_surface=getattr(args, "clean_surface", False),
+            artifact_viable=getattr(args, "artifact_viable", False),
+            helper_ok=getattr(args, "helper_ok", False),
+            credentials_ok=getattr(args, "credentials_ok", False),
+            prompt_identity_ok=getattr(args, "prompt_identity_ok", False),
+            artifact_path=getattr(args, "artifact_path", None),
+            helper_path=getattr(args, "helper_path", None),
+            credential_env=list(getattr(args, "credential_env", [])),
+            prompt_identity_file=getattr(args, "prompt_identity_file", None),
+            target_identity_file=getattr(args, "target_identity_file", None),
+        )
+        orchestrate_code = cmd_orchestrate(orchestrate_args)
+        if orchestrate_code != 0 and not Path(args.report_file).exists():
+            return orchestrate_code
+    elif not Path(args.report_file).exists():
+        print(json.dumps({"result": "ERROR", "reason": "CHECK_CONTEXT_INCOMPLETE", "detail": "report file is missing and runtime check inputs were not supplied"}, ensure_ascii=True))
+        return 2
+
+    thin_code = cmd_thin_output(args)
+    if thin_code == 0:
+        print_thin_output_summary(Path(args.output))
+    return thin_code
 
 
 def cmd_thin_output_reading(args: argparse.Namespace) -> int:
@@ -1046,6 +1441,10 @@ def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> list[str
 
 
 def cmd_orchestrate(args: argparse.Namespace) -> int:
+    apply_alpha_runtime_file_defaults(args)
+    if not getattr(args, "state_file", None):
+        print(json.dumps({"result": "ERROR", "reason": "STATE_FILE_REQUIRED"}, ensure_ascii=True))
+        return 2
     forwarded = [
         "--state-file", args.state_file,
         "--doctor-run-id", args.doctor_run_id,
@@ -1118,6 +1517,10 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
 
 
 def cmd_resume(args: argparse.Namespace) -> int:
+    apply_alpha_runtime_file_defaults(args)
+    if not getattr(args, "state_file", None):
+        print(json.dumps({"result": "ERROR", "reason": "STATE_FILE_REQUIRED"}, ensure_ascii=True))
+        return 2
     state = load_json(Path(args.state_file))
     args.resume_from_state = state["state"]
     apply_resume_output_defaults(args, state)
@@ -1159,7 +1562,8 @@ def add_orchestration_args(
     include_resume_from_state: bool,
     relaxed_runtime: bool = False,
 ) -> None:
-    parser.add_argument("--state-file", required=True)
+    parser.add_argument("--state-file")
+    parser.add_argument("--artifact-root")
     if include_resume_from_state:
         parser.add_argument("--resume-from-state")
     parser.add_argument("--repair-handoff-file")
@@ -1220,10 +1624,69 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_init = sub.add_parser("init")
-    p_init.add_argument("--run-id", required=True)
-    p_init.add_argument("--task-class", required=True)
-    p_init.add_argument("--output", required=True)
+    p_init.add_argument("--run-id")
+    p_init.add_argument("--task-class", default=DEFAULT_ALPHA_TASK_CLASS)
+    p_init.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_init.add_argument("--output")
     p_init.set_defaults(func=cmd_init)
+
+    p_check = sub.add_parser("check")
+    p_check.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_check.add_argument("--state-file")
+    p_check.add_argument("--report-file")
+    p_check.add_argument("--doctor-file")
+    p_check.add_argument("--repair-packet-file")
+    p_check.add_argument("--repair-handoff-file")
+    p_check.add_argument("--repair-handoff-output")
+    p_check.add_argument("--repair-packet-output")
+    p_check.add_argument("--repair-receipt-file")
+    p_check.add_argument("--repair-receipt-output")
+    p_check.add_argument("--mode-selection-receipt")
+    p_check.add_argument("--checkpoint-id")
+    p_check.add_argument("--checkpoint-record-file")
+    p_check.add_argument("--consistency-recovery-file")
+    p_check.add_argument("--mode", default="default", choices=["default", "dev"])
+    p_check.add_argument("--output")
+    p_check.add_argument("--doctor-run-id")
+    p_check.add_argument("--doctor-level", default="CORE_DOCTOR", choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
+    p_check.add_argument("--target-path")
+    p_check.add_argument("--target-classification", default="trusted_worktree")
+    p_check.add_argument("--baseline-identity")
+    p_check.add_argument("--intended-run-class", default="core_probe", choices=["core_probe", "support_run", "exact_retry"])
+    p_check.add_argument("--final-result")
+    p_check.add_argument("--execution-surface-identity")
+    p_check.add_argument("--prompt-identity", default="")
+    p_check.add_argument("--task-identity", default="")
+    p_check.add_argument("--readback")
+    p_check.add_argument("--scenario-proof")
+    p_check.add_argument("--plan-output")
+    p_check.add_argument("--preparation-receipt-output")
+    p_check.add_argument("--preparation-artifact-root")
+    p_check.add_argument("--refresh-output")
+    p_check.add_argument("--observability-output")
+    p_check.add_argument("--artifact-consistency-output")
+    p_check.add_argument("--refresh-event-type")
+    p_check.add_argument("--refresh-doctor-status", choices=["PASS", "FAIL"])
+    p_check.add_argument("--refresh-recovery-status", choices=["NOT_REQUIRED", "PENDING", "COMPLETE"])
+    p_check.add_argument("--refresh-reverification-complete", action="store_true")
+    p_check.add_argument("--refresh-use-bundle", action="store_true")
+    p_check.add_argument("--refresh-use-closure", action="store_true")
+    p_check.add_argument("--baseline-file")
+    p_check.add_argument("--synrail-file")
+    p_check.add_argument("--comparison-output")
+    p_check.add_argument("--worked-artifact-output")
+    p_check.add_argument("--run-artifact-output")
+    p_check.add_argument("--clean-surface", action="store_true")
+    p_check.add_argument("--artifact-viable", action="store_true")
+    p_check.add_argument("--helper-ok", action="store_true")
+    p_check.add_argument("--credentials-ok", action="store_true")
+    p_check.add_argument("--prompt-identity-ok", action="store_true")
+    p_check.add_argument("--artifact-path")
+    p_check.add_argument("--helper-path")
+    p_check.add_argument("--credential-env", action="append", default=[])
+    p_check.add_argument("--prompt-identity-file")
+    p_check.add_argument("--target-identity-file")
+    p_check.set_defaults(func=cmd_check)
 
     p_status = sub.add_parser("status")
     p_status.add_argument("state_file")
@@ -1364,9 +1827,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_governed_cost.set_defaults(func=cmd_governed_cost)
 
     p_checkpoint_create = sub.add_parser("create-checkpoint")
-    p_checkpoint_create.add_argument("--checkpoint-id", required=True)
-    p_checkpoint_create.add_argument("--checkpoint-root", required=True)
-    p_checkpoint_create.add_argument("--state-file", required=True)
+    p_checkpoint_create.add_argument("--checkpoint-id")
+    p_checkpoint_create.add_argument("--artifact-root")
+    p_checkpoint_create.add_argument("--checkpoint-root")
+    p_checkpoint_create.add_argument("--state-file")
     p_checkpoint_create.add_argument("--report-file")
     p_checkpoint_create.add_argument("--orchestration-file")
     p_checkpoint_create.add_argument("--bundle-file")
@@ -1377,23 +1841,72 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_create.add_argument("--repair-packet-file")
     p_checkpoint_create.add_argument("--repair-handoff-file")
     p_checkpoint_create.add_argument("--repair-receipt-file")
-    p_checkpoint_create.add_argument("--output", required=True)
+    p_checkpoint_create.add_argument("--output")
     p_checkpoint_create.set_defaults(func=cmd_create_checkpoint)
 
     p_checkpoint_verify = sub.add_parser("verify-checkpoint")
-    p_checkpoint_verify.add_argument("--checkpoint-record-file", required=True)
-    p_checkpoint_verify.add_argument("--output", required=True)
+    p_checkpoint_verify.add_argument("--artifact-root")
+    p_checkpoint_verify.add_argument("--checkpoint-id")
+    p_checkpoint_verify.add_argument("--checkpoint-record-file")
+    p_checkpoint_verify.add_argument("--output")
     p_checkpoint_verify.set_defaults(func=cmd_verify_checkpoint)
 
     p_checkpoint_restore = sub.add_parser("restore-checkpoint")
-    p_checkpoint_restore.add_argument("--checkpoint-record-file", required=True)
-    p_checkpoint_restore.add_argument("--target-root", required=True)
-    p_checkpoint_restore.add_argument("--output", required=True)
+    p_checkpoint_restore.add_argument("--artifact-root")
+    p_checkpoint_restore.add_argument("--checkpoint-id")
+    p_checkpoint_restore.add_argument("--checkpoint-record-file")
+    p_checkpoint_restore.add_argument("--target-root")
+    p_checkpoint_restore.add_argument("--output")
     p_checkpoint_restore.set_defaults(func=cmd_restore_checkpoint)
 
+    p_checkpoint = sub.add_parser("checkpoint")
+    checkpoint_sub = p_checkpoint.add_subparsers(dest="checkpoint_cmd", required=True)
+
+    p_checkpoint_nested_create = checkpoint_sub.add_parser("create")
+    p_checkpoint_nested_create.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_checkpoint_nested_create.add_argument("--checkpoint-id", default="latest")
+    p_checkpoint_nested_create.add_argument("--checkpoint-root")
+    p_checkpoint_nested_create.add_argument("--state-file")
+    p_checkpoint_nested_create.add_argument("--report-file")
+    p_checkpoint_nested_create.add_argument("--orchestration-file")
+    p_checkpoint_nested_create.add_argument("--bundle-file")
+    p_checkpoint_nested_create.add_argument("--closure-file")
+    p_checkpoint_nested_create.add_argument("--refresh-file")
+    p_checkpoint_nested_create.add_argument("--selection-file")
+    p_checkpoint_nested_create.add_argument("--preparation-file")
+    p_checkpoint_nested_create.add_argument("--repair-packet-file")
+    p_checkpoint_nested_create.add_argument("--repair-handoff-file")
+    p_checkpoint_nested_create.add_argument("--repair-receipt-file")
+    p_checkpoint_nested_create.add_argument("--output")
+    p_checkpoint_nested_create.set_defaults(func=cmd_create_checkpoint)
+
+    p_checkpoint_nested_verify = checkpoint_sub.add_parser("verify")
+    p_checkpoint_nested_verify.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_checkpoint_nested_verify.add_argument("--checkpoint-id")
+    p_checkpoint_nested_verify.add_argument("--checkpoint-record-file")
+    p_checkpoint_nested_verify.add_argument("--output")
+    p_checkpoint_nested_verify.set_defaults(func=cmd_verify_checkpoint)
+
+    p_checkpoint_nested_restore = checkpoint_sub.add_parser("restore")
+    p_checkpoint_nested_restore.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_checkpoint_nested_restore.add_argument("--checkpoint-id")
+    p_checkpoint_nested_restore.add_argument("--checkpoint-record-file")
+    p_checkpoint_nested_restore.add_argument("--target-root")
+    p_checkpoint_nested_restore.add_argument("--output")
+    p_checkpoint_nested_restore.set_defaults(func=cmd_restore_checkpoint)
+
+    p_restore = sub.add_parser("restore")
+    p_restore.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_restore.add_argument("--checkpoint-id")
+    p_restore.add_argument("--checkpoint-record-file")
+    p_restore.add_argument("--target-root")
+    p_restore.add_argument("--output")
+    p_restore.set_defaults(func=cmd_restore)
+
     p_artifact_consistency = sub.add_parser("artifact-consistency")
-    p_artifact_consistency.add_argument("--state-file", required=True)
-    p_artifact_consistency.add_argument("--output", required=True)
+    p_artifact_consistency.add_argument("--artifact-root")
+    p_artifact_consistency.add_argument("--state-file")
+    p_artifact_consistency.add_argument("--output")
     p_artifact_consistency.add_argument("--report-file")
     p_artifact_consistency.add_argument("--orchestration-file")
     p_artifact_consistency.add_argument("--run-file")
@@ -1412,19 +1925,23 @@ def build_parser() -> argparse.ArgumentParser:
     p_observability.set_defaults(func=cmd_observability)
 
     p_thin_output = sub.add_parser("thin-output")
-    p_thin_output.add_argument("--state-file", required=True)
-    p_thin_output.add_argument("--report-file", required=True)
+    p_thin_output.add_argument("--artifact-root")
+    p_thin_output.add_argument("--state-file")
+    p_thin_output.add_argument("--report-file")
     p_thin_output.add_argument("--mode", required=True, choices=["default", "dev"])
-    p_thin_output.add_argument("--output", required=True)
+    p_thin_output.add_argument("--output")
     p_thin_output.add_argument("--repair-packet-file")
     p_thin_output.add_argument("--doctor-file")
+    p_thin_output.add_argument("--checkpoint-id")
     p_thin_output.add_argument("--checkpoint-record-file")
     p_thin_output.add_argument("--consistency-recovery-file")
     p_thin_output.set_defaults(func=cmd_thin_output)
 
     p_generate_prompt = sub.add_parser("generate-prompt")
-    p_generate_prompt.add_argument("--repair-packet-file", required=True)
-    p_generate_prompt.add_argument("--output", required=True)
+    p_generate_prompt.add_argument("--artifact-root")
+    p_generate_prompt.add_argument("--repair-packet-file")
+    p_generate_prompt.add_argument("--output")
+    p_generate_prompt.add_argument("--checkpoint-id")
     p_generate_prompt.add_argument("--checkpoint-record-file")
     p_generate_prompt.set_defaults(func=cmd_generate_prompt)
 

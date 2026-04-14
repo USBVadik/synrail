@@ -10,6 +10,10 @@ For the quickest helper-selection view, start with:
 
 - `USAGE_MATRIX.md`
 
+For the current installable alpha path, start with:
+
+- [`docs/core/ALPHA_LANE_001.md`](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md)
+
 ## What these helpers are for
 
 Use them as:
@@ -23,6 +27,35 @@ Do not treat them as:
 - the full product
 - a complete deployment system
 - a generic automation framework
+
+## Installable Alpha Shell
+
+The repo now carries one thin installable `synrail` entrypoint on top of the existing reference helpers.
+
+The current verified local install path is:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python setup.py install
+```
+
+The current verified alpha lane is:
+
+```bash
+ARTIFACT_ROOT="$(pwd)/.synrail"
+synrail init --artifact-root "$ARTIFACT_ROOT"
+synrail checkpoint create --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
+synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
+synrail check --artifact-root "$ARTIFACT_ROOT" ...
+synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
+synrail restore --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
+```
+
+This shell is intentionally thin:
+
+- it auto-discovers the standard artifact files under one artifact root
+- it keeps the existing dev/runtime helpers underneath
+- it does not introduce a new runtime semantics branch
 
 ## Included helpers
 

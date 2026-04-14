@@ -1,0 +1,51 @@
+{
+  "schema_version": "checkpoint_record_v0",
+  "checkpoint_id": "working",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "event_type": "RESTORE",
+  "result": "OK",
+  "checkpoint_root": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_lane_run_003/lane/checkpoints/working",
+  "source_state": "READY",
+  "source_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "source_doctor_status": "PASS",
+  "source_target_surface_status": "ATTESTED",
+  "source_integrity_status": "PASS",
+  "source_resumability_status": "NOT_RESUMABLE",
+  "source_resumability_family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
+  "safe_point_class": "VERIFIED_WORKING_STATE",
+  "safe_point_eligible": true,
+  "artifact_manifest": [
+    {
+      "artifact_id": "state",
+      "path": "artifacts/state.json",
+      "required": true,
+      "kind": "STATE"
+    }
+  ],
+  "verification": {
+    "status": "PASSED",
+    "safe_point_eligible": true,
+    "required_artifacts_present": true,
+    "schema_validation_passed": true,
+    "state_consistency_passed": true,
+    "stale_artifacts_detected": [],
+    "failure_reasons": []
+  },
+  "restore": {
+    "status": "RESTORED",
+    "target_root": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_lane_run_003/lane",
+    "restore_verification_required": true,
+    "restored_artifact_ids": [
+      "state"
+    ],
+    "failure_reasons": []
+  },
+  "rollback": {
+    "status": "NOT_NEEDED",
+    "trigger": "NONE",
+    "rolled_back_artifact_ids": [],
+    "failure_reasons": []
+  },
+  "next_safe_step": "inspect or continue from the restored checkpoint state"
+}

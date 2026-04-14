@@ -46,6 +46,10 @@ Then, if you want the practical “when should we actually use this?” rule, re
 - `boundary/HYBRID_SUBSET_001.md`
 - `boundary/HYBRID_STATUS_001.md`
 
+For the current installable alpha contour, read:
+
+- `core/ALPHA_LANE_001.md`
+
 ## 2. Core
 
 Start here when you want to understand the kernel itself:
@@ -62,6 +66,7 @@ Start here when you want to understand the kernel itself:
 - `core/EXECUTION_SPINE_001.md`
 - `core/GATE_SET_001.md`
 - `core/PROOF_BUNDLE_ASSEMBLER_001.md`
+- `core/ALPHA_LANE_001.md`
 - `core/CHECKPOINT_001.md`
 - `core/CHECKPOINT_RUN_001.md`
 - `core/CHECKPOINT_RUN_002.md`
@@ -216,6 +221,9 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/substitute_kill_test_006/substitute_pressure.json`
 - `../fixtures/substitute_kill_test_007/substitute_pressure.json`
 - `../fixtures/substitute_kill_test_008/substitute_pressure.json`
+- `../fixtures/alpha_lane_run_003/lane/thin_output.json`
+- `../fixtures/alpha_lane_run_003/lane/prompt.json`
+- `../fixtures/alpha_lane_run_003/lane/checkpoint_restore.json`
 - `../fixtures/artifact_consistency_run_001/consistent.json`
 - `../fixtures/artifact_consistency_run_002/inconsistent.json`
 - `../fixtures/artifact_consistency_run_004/mixed.json`
