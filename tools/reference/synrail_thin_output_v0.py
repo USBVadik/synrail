@@ -29,6 +29,16 @@ def checkpoint_restore_available(checkpoint: dict | None, *, state: dict) -> boo
     )
 
 
+def matching_recovery(recovery: dict | None, *, state: dict) -> dict | None:
+    if not recovery:
+        return None
+    if recovery.get("run_id", "") != state.get("run_id", ""):
+        return None
+    if recovery.get("task_class", "") != state.get("task_class", ""):
+        return None
+    return recovery
+
+
 def classify_outcome(*, state: dict, report: dict, repair_packet: dict | None, doctor: dict | None) -> str:
     termination_reason = report.get("repair_termination_reason", "") or (repair_packet or {}).get("repair_termination", {}).get("reason", "")
     if termination_reason == "NON_RESUMABLE" or report.get("reason", "") in {"NON_RESUMABLE", "STATE_NOT_RESUMABLE", "TERMINAL_STATE_NOT_RESUMABLE"}:
@@ -49,40 +59,44 @@ def classify_outcome(*, state: dict, report: dict, repair_packet: dict | None, d
     return "NON_GREEN"
 
 
-def summary_for(outcome_class: str, *, restore_available: bool) -> tuple[str, str]:
+def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict | None) -> tuple[str, str]:
     suffix = " A verified checkpoint is available." if restore_available else ""
+    recovery_suffix = ""
+    if recovery and recovery.get("primary_action", "") != "KEEP_CURRENT_ARTIFACTS":
+        instructions = "; ".join(recovery.get("operator_instructions", [])[:2])
+        recovery_suffix = f" Recovery path: {instructions}."
     messages = {
         "NON_RESUMABLE": (
             "This contour should not continue through resume.",
-            f"Follow the named non-resumable boundary or start a new run.{suffix}",
+            f"Follow the named non-resumable boundary or start a new run.{suffix}{recovery_suffix}",
         ),
         "CLOSURE_REJECTED": (
             "Closure was rejected and cannot be treated as accepted work.",
-            f"Inspect the closure blocker and repair or restart from a verified safe point.{suffix}",
+            f"Inspect the closure blocker and repair or restart from a verified safe point.{suffix}{recovery_suffix}",
         ),
         "PROOF_INVALID": (
             "The proof bundle is invalid, so closure is not trustworthy.",
-            "Repair the proof surface before attempting closure again.",
+            f"Repair the proof surface before attempting closure again.{recovery_suffix}",
         ),
         "PROOF_PARTIAL": (
             "The proof bundle is still incomplete.",
-            "Supply the missing proof sections and resume only the current repair step.",
+            f"Supply the missing proof sections and resume only the current repair step.{recovery_suffix}",
         ),
         "REPAIR_STOP": (
             "The repair loop has reached a bounded stop condition.",
-            f"Stop replaying this contour and start a new run or restore a verified safe point.{suffix}",
+            f"Stop replaying this contour and start a new run or restore a verified safe point.{suffix}{recovery_suffix}",
         ),
         "SCOPE_VIOLATION": (
             "Doctor blocked the contour because scope or target identity is not trustworthy.",
-            "Restore the trusted baseline or exact target identity before resuming.",
+            f"Restore the trusted baseline or exact target identity before resuming.{recovery_suffix}",
         ),
         "DOCTOR_BLOCKED": (
             "Doctor has not cleared the contour for continuation.",
-            "Repair readiness before continuing this run.",
+            f"Repair readiness before continuing this run.{recovery_suffix}",
         ),
         "NON_GREEN": (
             "The runtime is still in a non-green outcome.",
-            "Read the next safe step and repair only the current blocker.",
+            f"Read the next safe step and repair only the current blocker.{recovery_suffix}",
         ),
     }
     return messages[outcome_class]
@@ -105,10 +119,11 @@ def technical_lines(*, state: dict, report: dict, repair_packet: dict | None, ch
     ]
 
 
-def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | None = None, doctor: dict | None = None, checkpoint: dict | None = None) -> dict:
+def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | None = None, doctor: dict | None = None, checkpoint: dict | None = None, recovery: dict | None = None) -> dict:
     restore_available = checkpoint_restore_available(checkpoint, state=state)
+    matching = matching_recovery(recovery, state=state)
     outcome_class = classify_outcome(state=state, report=report, repair_packet=repair_packet, doctor=doctor)
-    summary, diagnosis = summary_for(outcome_class, restore_available=restore_available)
+    summary, diagnosis = summary_for(outcome_class, restore_available=restore_available, recovery=matching)
     suggested_command = {
         "NON_RESUMABLE": "restore-checkpoint or start a new run",
         "CLOSURE_REJECTED": "restore-checkpoint or repair and rerun closure",
@@ -130,6 +145,8 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "next_step": report.get("next_safe_step", "") or state.get("next_safe_step", ""),
         "restore_available": restore_available,
         "checkpoint_id": checkpoint.get("checkpoint_id", "") if checkpoint else "",
+        "recovery_primary_action": matching.get("primary_action", "") if matching else "",
+        "recovery_operator_instructions": list(matching.get("operator_instructions", [])) if matching else [],
         "suggested_command": suggested_command,
         "technical_lines": technical_lines(state=state, report=report, repair_packet=repair_packet, checkpoint=checkpoint) if mode == "dev" else [],
     }
@@ -144,6 +161,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repair-packet-file")
     parser.add_argument("--doctor-file")
     parser.add_argument("--checkpoint-record-file")
+    parser.add_argument("--consistency-recovery-file")
     return parser
 
 
@@ -157,6 +175,7 @@ def main() -> int:
         repair_packet=load_json(Path(args.repair_packet_file)) if args.repair_packet_file else None,
         doctor=load_json(Path(args.doctor_file)) if args.doctor_file else None,
         checkpoint=load_json(Path(args.checkpoint_record_file)) if args.checkpoint_record_file else None,
+        recovery=load_json(Path(args.consistency_recovery_file)) if args.consistency_recovery_file else None,
     )
     save_json(Path(args.output), record)
     print(json.dumps({"result": "OK", "outcome_class": record["outcome_class"], "restore_available": record["restore_available"]}, ensure_ascii=True))

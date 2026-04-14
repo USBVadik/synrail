@@ -11,6 +11,8 @@
     "next_step",
     "restore_available",
     "checkpoint_id",
+    "recovery_primary_action",
+    "recovery_operator_instructions",
     "suggested_command",
     "technical_lines"
   ],
@@ -25,6 +27,8 @@
     "next_step": {"type": "string", "minLength": 1},
     "restore_available": {"type": "boolean"},
     "checkpoint_id": {"type": "string"},
+    "recovery_primary_action": {"type": "string"},
+    "recovery_operator_instructions": {"type": "array", "items": {"type": "string"}},
     "suggested_command": {"type": "string", "minLength": 1},
     "technical_lines": {"type": "array", "items": {"type": "string"}}
   },

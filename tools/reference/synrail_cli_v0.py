@@ -47,6 +47,7 @@ THIN_OUTPUT = HERE / "synrail_thin_output_v0.py"
 PROMPT_BRIDGE = HERE / "synrail_repair_prompt_bridge_v0.py"
 THIN_OUTPUT_READING = HERE / "synrail_thin_output_reading_v0.py"
 PROMPT_FOLLOWUP = HERE / "synrail_prompt_followup_v0.py"
+PROMPT_RETRY_GUARD = HERE / "synrail_prompt_retry_guard_v0.py"
 CONSISTENCY_RECOVERY = HERE / "synrail_consistency_recovery_v0.py"
 
 
@@ -396,6 +397,7 @@ def cmd_thin_output(args: argparse.Namespace) -> int:
         ("--repair-packet-file", args.repair_packet_file),
         ("--doctor-file", args.doctor_file),
         ("--checkpoint-record-file", args.checkpoint_record_file),
+        ("--consistency-recovery-file", args.consistency_recovery_file),
     ]:
         if value:
             forwarded.extend([flag, value])
@@ -434,6 +436,19 @@ def cmd_prompt_followup(args: argparse.Namespace) -> int:
     if args.thin_output_file:
         forwarded.extend(["--thin-output-file", args.thin_output_file])
     return run_python(PROMPT_FOLLOWUP, forwarded)
+
+
+def cmd_prompt_retry_guard(args: argparse.Namespace) -> int:
+    return run_python(
+        PROMPT_RETRY_GUARD,
+        [
+            "--packet-a-file", args.packet_a_file,
+            "--prompt-a-file", args.prompt_a_file,
+            "--packet-b-file", args.packet_b_file,
+            "--prompt-b-file", args.prompt_b_file,
+            "--output", args.output,
+        ],
+    )
 
 
 def cmd_consistency_recovery(args: argparse.Namespace) -> int:
@@ -1362,6 +1377,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_thin_output.add_argument("--repair-packet-file")
     p_thin_output.add_argument("--doctor-file")
     p_thin_output.add_argument("--checkpoint-record-file")
+    p_thin_output.add_argument("--consistency-recovery-file")
     p_thin_output.set_defaults(func=cmd_thin_output)
 
     p_generate_prompt = sub.add_parser("generate-prompt")
@@ -1384,6 +1400,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_prompt_followup.add_argument("--output", required=True)
     p_prompt_followup.add_argument("--thin-output-file")
     p_prompt_followup.set_defaults(func=cmd_prompt_followup)
+
+    p_prompt_retry_guard = sub.add_parser("prompt-retry-guard")
+    p_prompt_retry_guard.add_argument("--packet-a-file", required=True)
+    p_prompt_retry_guard.add_argument("--prompt-a-file", required=True)
+    p_prompt_retry_guard.add_argument("--packet-b-file", required=True)
+    p_prompt_retry_guard.add_argument("--prompt-b-file", required=True)
+    p_prompt_retry_guard.add_argument("--output", required=True)
+    p_prompt_retry_guard.set_defaults(func=cmd_prompt_retry_guard)
 
     p_consistency_recovery = sub.add_parser("consistency-recovery")
     p_consistency_recovery.add_argument("--consistency-file", required=True)
