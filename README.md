@@ -59,11 +59,11 @@ The current repo focus is one narrow alpha lane, not a broader shell.
 Verified install path today:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python setup.py install
+python3 -m venv --system-site-packages .venv
+.venv/bin/python -m pip install -e . --no-build-isolation
 ```
 
-This is still the trusted local install path on the current toolchain. Editable `pip install -e .` is not yet treated as a trusted alpha path here.
+This is now the trusted local install path on the current toolchain. The older `setup.py install` route still works as a compatibility fallback, but the verified alpha lane now runs through editable install.
 
 Then the smallest usable path depends on whether you already have one verified working state.
 

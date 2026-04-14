@@ -33,15 +33,15 @@ That replay stays bounded to command sequence, error class, and next safe step.
 The currently verified alpha install path is:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python setup.py install
+python3 -m venv --system-site-packages .venv
+.venv/bin/python -m pip install -e . --no-build-isolation
 ```
 
-This is still the trusted local install path on the current toolchain. Editable `pip install -e .` remains blocked here by a local wheel-toolchain seam, so it is not treated as part of the verified alpha lane yet.
+This is now the trusted local install path on the current toolchain. The older `setup.py install` route still works as a compatibility fallback, but the verified alpha lane now uses editable install.
 
 The reference smoke for this document was run through the installed `synrail` console script, not by calling helper files directly.
 
-`pip install . --no-build-isolation` is not yet the trusted local alpha path on the current toolchain because the local venv lacked `bdist_wheel` during smoke.
+`pip install . --no-build-isolation` is still not the trusted local alpha path here. The verified local route is editable install with `--system-site-packages` and `--no-build-isolation`.
 
 ## Verified Contours
 

@@ -80,7 +80,7 @@ CHECKPOINT_OPERATOR_READING = HERE / "synrail_checkpoint_operator_reading_v0.py"
 CONSISTENCY_RECOVERY_PROMPT = HERE / "synrail_consistency_recovery_prompt_v0.py"
 CONSISTENCY_RECOVERY_PROMPT_READING = HERE / "synrail_consistency_recovery_prompt_reading_v0.py"
 ALPHA_TELEMETRY = HERE / "synrail_alpha_telemetry_v0.py"
-REFERENCE_RUNNER_MODULE = "synrail.reference_runner"
+REFERENCE_RUNNER_MODULE = "reference_runner"
 
 DEFAULT_ALPHA_ARTIFACT_ROOT = ".synrail"
 DEFAULT_ALPHA_TASK_CLASS = "bounded_change"

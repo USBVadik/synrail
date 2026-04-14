@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,7 +10,10 @@ readme = "README.md"
 requires-python = ">=3.9"
 
 [project.scripts]
-synrail = "synrail.alpha:main"
+synrail = "alpha:main"
+
+[tool.setuptools]
+py-modules = ["alpha", "reference_runner"]
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -35,8 +35,8 @@ The repo now carries one thin installable `synrail` entrypoint on top of the exi
 The current verified local install path is:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python setup.py install
+python3 -m venv --system-site-packages .venv
+.venv/bin/python -m pip install -e . --no-build-isolation
 ```
 
 The current verified restore-capable alpha lane is:
@@ -76,14 +76,14 @@ This shell is intentionally thin:
 - it keeps the existing dev/runtime helpers underneath
 - it does not introduce a new runtime semantics branch
 
-The current trusted local install path is still:
+The current trusted local install path is now:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python setup.py install
+python3 -m venv --system-site-packages .venv
+.venv/bin/python -m pip install -e . --no-build-isolation
 ```
 
-Editable `pip install -e .` is not yet treated as a trusted alpha path on this local toolchain.
+The older `setup.py install` route still works as a compatibility fallback, but editable install is now the verified alpha path on this local toolchain.
 
 Optional alpha telemetry now sits on the same artifact root:
 
