@@ -61,6 +61,7 @@ REPAIR_PACKET = HERE / "synrail_repair_packet_v0.py"
 CHECKPOINT = HERE / "synrail_checkpoint_v0.py"
 ARTIFACT_CONSISTENCY = HERE / "synrail_artifact_consistency_v0.py"
 OBSERVABILITY = HERE / "synrail_observability_v0.py"
+BUG_PACKET = HERE / "synrail_bug_packet_v0.py"
 REPRODUCIBILITY = HERE / "synrail_reproducibility_v0.py"
 SECOND_OPERATOR = HERE / "synrail_second_operator_v0.py"
 OPERATOR_BRIEF = HERE / "synrail_operator_brief_v0.py"
@@ -101,6 +102,7 @@ ALPHA_FILE_NAMES = {
     "repair_handoff": "repair_handoff.json",
     "repair_receipt": "repair_receipt.json",
     "observability": "observability.json",
+    "bug_packet": "bug_packet.json",
     "session_export": "session_export.json",
     "artifact_consistency": "artifact_consistency.json",
     "consistency_recovery": "consistency_recovery.json",
@@ -258,7 +260,7 @@ def telemetry_flag_names(argv: list[str]) -> list[str]:
 
 def should_capture_alpha_telemetry(args: argparse.Namespace) -> bool:
     path = command_path_from_args(args)
-    return path[0] in {"init", "check", "generate-prompt", "next-step", "repair-step", "restore", "resume", "continue", "checkpoint", "session-export"}
+    return path[0] in {"init", "check", "generate-prompt", "next-step", "repair-step", "restore", "resume", "continue", "checkpoint", "session-export", "bug-packet"}
 
 
 def maybe_capture_alpha_telemetry(
@@ -1529,6 +1531,51 @@ def cmd_session_export(args: argparse.Namespace) -> int:
     return cmd_observability(args)
 
 
+def cmd_bug_packet(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args)
+    if root:
+        for attr, file_id in [
+            ("state_file", "state"),
+            ("report_file", "report"),
+            ("doctor_file", "doctor"),
+            ("acceptance_validation_file", "acceptance_validation"),
+            ("repair_packet_file", "repair_packet"),
+            ("observability_file", "observability"),
+            ("thin_output_file", "thin_output"),
+        ]:
+            if not getattr(args, attr, None):
+                value = maybe_existing_alpha_file(root, file_id)
+                if value:
+                    setattr(args, attr, value)
+        if not getattr(args, "observability_file", None):
+            session_export = maybe_existing_alpha_file(root, "session_export")
+            if session_export:
+                args.observability_file = session_export
+        if not getattr(args, "output", None):
+            args.output = str(alpha_file(root, "bug_packet"))
+        if not getattr(args, "issue_output", None):
+            args.issue_output = str(root / "bug_packet_issue.md")
+    if not getattr(args, "state_file", None) or not getattr(args, "report_file", None):
+        print(json.dumps({"result": "ERROR", "reason": "STATE_AND_REPORT_REQUIRED"}, ensure_ascii=True))
+        return 2
+    forwarded = [
+        "--state-file", args.state_file,
+        "--report-file", args.report_file,
+        "--output", args.output,
+    ]
+    for flag, value in [
+        ("--doctor-file", args.doctor_file),
+        ("--acceptance-validation-file", args.acceptance_validation_file),
+        ("--repair-packet-file", args.repair_packet_file),
+        ("--observability-file", args.observability_file),
+        ("--thin-output-file", args.thin_output_file),
+        ("--issue-output", args.issue_output),
+    ]:
+        if value:
+            forwarded.extend([flag, value])
+    return run_python(BUG_PACKET, forwarded)
+
+
 def cmd_reproducibility(args: argparse.Namespace) -> int:
     return run_python(
         REPRODUCIBILITY,
@@ -2634,6 +2681,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_session_export.add_argument("--repair-receipt-file")
     p_session_export.add_argument("--refresh-file")
     p_session_export.set_defaults(func=cmd_session_export)
+
+    p_bug_packet = sub.add_parser("bug-packet")
+    p_bug_packet.add_argument("--artifact-root")
+    p_bug_packet.add_argument("--state-file")
+    p_bug_packet.add_argument("--report-file")
+    p_bug_packet.add_argument("--output")
+    p_bug_packet.add_argument("--doctor-file")
+    p_bug_packet.add_argument("--acceptance-validation-file")
+    p_bug_packet.add_argument("--repair-packet-file")
+    p_bug_packet.add_argument("--observability-file")
+    p_bug_packet.add_argument("--thin-output-file")
+    p_bug_packet.add_argument("--issue-output")
+    p_bug_packet.set_defaults(func=cmd_bug_packet)
 
     p_thin_output = sub.add_parser("thin-output")
     p_thin_output.add_argument("--artifact-root")

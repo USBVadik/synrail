@@ -89,6 +89,7 @@ synrail init --artifact-root "$ARTIFACT_ROOT"
 # write final_result.json or final_result.txt under $ARTIFACT_ROOT or the project root
 synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail repair-step --artifact-root "$ARTIFACT_ROOT"
+synrail bug-packet --artifact-root "$ARTIFACT_ROOT"
 ```
 
 Current shell proof surfaces:
@@ -105,6 +106,8 @@ Current shell proof surfaces:
   - [retry_stdout.txt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_008/shell/retry_stdout.txt)
 - continuation autonomy hardening:
   - [CONTINUATION_AUTONOMY_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/CONTINUATION_AUTONOMY_001.md)
+- observability bug-packet hardening:
+  - [OBSERVABILITY_BUG_PACKET_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/OBSERVABILITY_BUG_PACKET_001.md)
 
 Read [ALPHA_LANE_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md) for the current verified contour and the canonical smoke artifacts behind it.
 

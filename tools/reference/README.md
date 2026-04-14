@@ -62,6 +62,7 @@ synrail init --artifact-root "$ARTIFACT_ROOT"
 # write final_result.json or final_result.txt under $ARTIFACT_ROOT or the project root
 synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail repair-step --artifact-root "$ARTIFACT_ROOT"
+synrail bug-packet --artifact-root "$ARTIFACT_ROOT"
 ```
 
 This shell is intentionally thin:
@@ -74,6 +75,7 @@ This shell is intentionally thin:
 - it exposes `synrail repair-step` as the preferred human-facing alias for the existing prompt bridge
 - it exposes `synrail retry` as the preferred human-facing alias for the existing `resume` path
 - it exposes `synrail session-export` as the preferred packet-first export for second-operator replay and issue handoff
+- it exposes `synrail bug-packet` as one compact failure export for issue filing and runtime debugging
 - it keeps `synrail continue` as a compatibility alias for the same path
 - it keeps the existing dev/runtime helpers underneath
 - it does not introduce a new runtime semantics branch
