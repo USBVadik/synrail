@@ -69,6 +69,26 @@ def read_non_empty_text(path: Path) -> str:
     return path.read_text().strip()
 
 
+def normalize_scope_path(value: str) -> str:
+    return value.strip().replace("\\", "/").strip("/")
+
+
+def detect_out_of_scope_changes(changed_files: list[str], allowed_scope_paths: list[str]) -> list[str]:
+    normalized_allowed = [normalize_scope_path(value) for value in allowed_scope_paths if normalize_scope_path(value)]
+    if not normalized_allowed:
+        return []
+
+    out_of_scope: list[str] = []
+    for value in changed_files:
+        normalized = normalize_scope_path(value)
+        if not normalized:
+            continue
+        if any(normalized == allowed or normalized.startswith(f"{allowed}/") for allowed in normalized_allowed):
+            continue
+        out_of_scope.append(value)
+    return out_of_scope
+
+
 def env_value_looks_path_like(name: str, value: str) -> bool:
     upper_name = name.upper()
     if upper_name in {"GOOGLE_APPLICATION_CREDENTIALS", "AWS_SHARED_CREDENTIALS_FILE", "AWS_CONFIG_FILE", "AZURE_CONFIG_DIR"}:
@@ -131,7 +151,16 @@ def probe_baseline_identity(args: argparse.Namespace) -> tuple[dict, str, str]:
 
 
 def probe_clean_execution_surface(args: argparse.Namespace) -> dict:
+    out_of_scope = detect_out_of_scope_changes(args.changed_file, args.allowed_scope_path)
+    if out_of_scope:
+        preview = ", ".join(out_of_scope[:3])
+        if len(out_of_scope) > 3:
+            preview = f"{preview}, +{len(out_of_scope) - 3} more"
+        return gate("FAIL", f"execution surface has out-of-scope modifications: {preview}")
+
     if args.clean_surface:
+        if args.changed_file and args.allowed_scope_path:
+            return gate("PASS", "execution surface is explicitly observed and changed files stay within the allowed scope")
         return gate("PASS", "execution surface is acceptable")
 
     target = Path(args.target_path)
@@ -403,6 +432,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--expected-task-identity")
     parser.add_argument("--target-identity-file")
     parser.add_argument("--expected-target-identity")
+    parser.add_argument("--changed-file", action="append", default=[])
+    parser.add_argument("--allowed-scope-path", action="append", default=[])
     return parser
 
 

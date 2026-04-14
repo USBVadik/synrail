@@ -211,6 +211,10 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     for flag, value in optional_pairs:
         if value:
             forwarded.extend([flag, value])
+    for changed_file in args.changed_file:
+        forwarded.extend(["--changed-file", changed_file])
+    for allowed_scope_path in args.allowed_scope_path:
+        forwarded.extend(["--allowed-scope-path", allowed_scope_path])
     for env_name in args.credential_env:
         forwarded.extend(["--credential-env", env_name])
     return run_python(DOCTOR, forwarded)
@@ -1294,6 +1298,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_doctor.add_argument("--expected-task-identity")
     p_doctor.add_argument("--target-identity-file")
     p_doctor.add_argument("--expected-target-identity")
+    p_doctor.add_argument("--changed-file", action="append", default=[])
+    p_doctor.add_argument("--allowed-scope-path", action="append", default=[])
     p_doctor.set_defaults(func=cmd_doctor)
 
     p_compare = sub.add_parser("compare")
