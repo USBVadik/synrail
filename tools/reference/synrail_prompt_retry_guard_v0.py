@@ -57,10 +57,12 @@ def build_record(*, packet_a: dict, prompt_a: dict, packet_b: dict, prompt_b: di
         missing_markers.append("forbidden_scope_changed")
 
     prompt_b_text = prompt_b.get("prompt", "")
-    if initial_step and initial_step not in prompt_b_text:
+    current_step_label = prompt_b.get("current_step_label", "")
+    if initial_step and initial_step not in prompt_b_text and current_step_label not in prompt_b_text:
         missing_markers.append("retry_prompt_missing_current_step")
+    required_input_labels = list(prompt_b.get("required_input_labels", []))
     for input_id in retry_inputs:
-        if input_id not in prompt_b_text:
+        if input_id not in prompt_b_text and not any(label in prompt_b_text for label in required_input_labels):
             missing_markers.append(f"retry_prompt_missing_input:{input_id}")
 
     verdict = "RETRY_SCOPE_STABLE" if not missing_markers else "RETRY_SCOPE_BROADENED"

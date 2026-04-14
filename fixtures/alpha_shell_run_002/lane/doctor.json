@@ -1,0 +1,46 @@
+{
+  "schema_version": "doctor_record_v0",
+  "doctor_run_id": "ALPHA_RUN_20260414T172032Z",
+  "doctor_level": "CORE_DOCTOR",
+  "target_execution_surface": {
+    "path": "/Users/usbdick/Documents/New project/synrail",
+    "classification": "trusted_worktree",
+    "observed_identity": "",
+    "expected_identity": "autodetected_python_worktree"
+  },
+  "trusted_baseline": {
+    "identity": "autodetected_python_baseline"
+  },
+  "intended_run_class": "core_probe",
+  "gate_results": {
+    "baseline_identity": {
+      "status": "PASS",
+      "note": "trusted baseline identity is present"
+    },
+    "clean_execution_surface": {
+      "status": "FAIL",
+      "note": "execution surface has uncommitted changes"
+    },
+    "artifact_viability": {
+      "status": "PASS",
+      "note": "artifact path parent exists and is writable by convention"
+    },
+    "helper_integrity": {
+      "status": "NOT_APPLICABLE",
+      "note": "helper integrity not required for this level"
+    },
+    "credential_surface": {
+      "status": "NOT_APPLICABLE",
+      "note": "credential surface not required for this level"
+    },
+    "prompt_task_identity": {
+      "status": "NOT_APPLICABLE",
+      "note": "prompt/task identity not required for this level"
+    }
+  },
+  "blocking_failure_classes": [
+    "dirty-surface unsafe"
+  ],
+  "final_verdict": "NOT_ACCEPTABLE_DIRTY_SURFACE",
+  "recommended_next_safe_step": "move to a clean or explicitly observed-safe execution surface"
+}

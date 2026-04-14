@@ -33,14 +33,18 @@ def build_record(*, repair_packet: dict, prompt_bridge: dict, thin_output: dict 
         marker = f"Supply required repair input: {required_input}"
         if marker not in prompt_bridge.get("must_pass", []):
             missing_markers.append(f"required_input:{required_input}")
-        if required_input not in prompt_text:
+        prompt_mentions = required_input in prompt_text or any(label in prompt_text for label in prompt_bridge.get("required_input_labels", []))
+        if not prompt_mentions:
             missing_markers.append(f"prompt_mentions:{required_input}")
-    if expected_current_step and expected_current_step not in prompt_text:
+    current_step_label = prompt_bridge.get("current_step_label", "")
+    if expected_current_step and expected_current_step not in prompt_text and current_step_label not in prompt_text:
         missing_markers.append("prompt_mentions_current_step")
     if "Do not touch unrelated files, state transitions, or acceptance logic." not in prompt_text:
         missing_markers.append("forbidden_scope_guardrail")
-    if thin_output and thin_output.get("next_step", "") and thin_output["next_step"] not in prompt_text:
-        missing_markers.append("prompt_mentions_next_step")
+    if thin_output and thin_output.get("next_step", ""):
+        next_safe_step_label = prompt_bridge.get("next_safe_step_label", "")
+        if thin_output["next_step"] not in prompt_text and next_safe_step_label not in prompt_text:
+            missing_markers.append("prompt_mentions_next_step")
 
     verdict = "FOLLOWUP_SCOPE_PRESERVED" if not missing_markers else "FOLLOWUP_SCOPE_DRIFT"
     return {

@@ -243,7 +243,7 @@ def telemetry_flag_names(argv: list[str]) -> list[str]:
 
 def should_capture_alpha_telemetry(args: argparse.Namespace) -> bool:
     path = command_path_from_args(args)
-    return path[0] in {"init", "check", "generate-prompt", "restore", "resume", "checkpoint"}
+    return path[0] in {"init", "check", "generate-prompt", "next-step", "restore", "resume", "checkpoint"}
 
 
 def maybe_capture_alpha_telemetry(
@@ -437,8 +437,8 @@ def print_thin_output_summary(output_file: Path) -> None:
     restore_command = payload.get("restore_command", "")
     if next_command:
         lines.append(f"Next command: {next_command}")
-    elif payload.get("suggested_command", ""):
-        lines.append(f"Next command: {payload.get('suggested_command', '')}")
+    elif payload.get("suggested_command", "") and payload.get("suggested_command", "") != "no next command required":
+        lines.append(f"Suggested path: {payload.get('suggested_command', '')}")
     if restore_command:
         lines.append(f"Restore option: {restore_command}")
     print("\n".join(line for line in lines if line))
@@ -451,14 +451,17 @@ def print_prompt_summary(output_file: Path) -> None:
     stale_artifacts = list(payload.get("stale_artifact_ids", []))
     stale_subsurfaces = list(payload.get("stale_subsurface_ids", []))
     allowed_scope = list(payload.get("allowed_scope", []))
+    allowed_scope_labels = list(payload.get("allowed_scope_labels", []))
+    required_input_labels = list(payload.get("required_input_labels", []))
     forbidden_scope = list(payload.get("forbidden_scope", []))
     lines = [
-        "Next-agent prompt is ready.",
-        f"What failed: {payload.get('failure_reason', '')}",
-        f"Current step: {payload.get('current_step_id', '')}",
+        "The next bounded repair instruction is ready.",
+        f"What failed: {payload.get('failure_label', payload.get('failure_reason', ''))}",
+        f"Current repair task: {payload.get('current_step_label', payload.get('current_step_id', ''))}",
         f"Stale artifacts: {', '.join(stale_artifacts) if stale_artifacts else 'none'}",
         f"Stale subsurfaces: {', '.join(stale_subsurfaces) if stale_subsurfaces else 'none'}",
-        f"Allowed scope: {', '.join(allowed_scope) if allowed_scope else 'current repair step only'}",
+        f"Allowed scope: {', '.join(allowed_scope_labels) if allowed_scope_labels else (', '.join(allowed_scope) if allowed_scope else 'current repair step only')}",
+        f"Required inputs: {', '.join(required_input_labels) if required_input_labels else 'none'}",
         f"Do not touch: {', '.join(forbidden_scope) if forbidden_scope else 'unrelated files or acceptance logic'}",
     ]
     acceptance = payload.get("acceptance_criteria", [])
@@ -467,11 +470,11 @@ def print_prompt_summary(output_file: Path) -> None:
         lines.extend([f"- {item}" for item in acceptance])
     next_command = payload.get("next_command", "")
     if next_command:
-        lines.append(f"Next command after repair: {next_command}")
+        lines.append(f"After this repair, run: {next_command}")
     prompt = payload.get("prompt", "")
     if prompt:
         lines.append("")
-        lines.append("Prompt:")
+        lines.append("Prompt for the next agent attempt:")
         lines.append(prompt)
     print("\n".join(line for line in lines if line))
 
@@ -479,7 +482,7 @@ def print_prompt_summary(output_file: Path) -> None:
 def print_init_summary(*, root: Path, state_file: Path) -> None:
     state = load_json(state_file)
     profile = load_project_profile(root) or {}
-    artifact_hint = "Drop final_result.json or final_result.txt under the artifact root or project root, then run: "
+    artifact_hint = "After the agent leaves final_result.json or final_result.txt, run: "
     lines = [
         "Synrail initialized.",
         f"Artifact root: {root}",
@@ -1067,7 +1070,7 @@ def cmd_generate_prompt(args: argparse.Namespace) -> int:
         if args.mode == "dev":
             print(json.dumps({"result": "ERROR", "reason": "REPAIR_PACKET_REQUIRED"}, ensure_ascii=True))
         else:
-            print("Synrail does not have repair guidance to turn into a prompt yet.")
+            print("Synrail does not have the next bounded repair instruction yet.")
             if root:
                 print("What to do next: run one check first so Synrail can build the bounded next step.")
                 print("Next command: " + shell_command(root, "check"))
@@ -1196,9 +1199,9 @@ def cmd_check(args: argparse.Namespace) -> int:
             if not getattr(args, "final_result", None):
                 profile = load_project_profile(root)
                 candidates = (profile or {}).get("final_result_candidates", [])
-                print("What is missing: no result artifact was found for this run.")
+                print("What is missing: Synrail could not find the agent's final result yet.")
                 if candidates:
-                    print("What to do next: pass --final-result or place one result artifact at one of these paths:")
+                    print("What to do next: pass --final-result or place one result file at one of these paths:")
                     for candidate in candidates[:4]:
                         print(f"- {candidate}")
             else:
@@ -2392,7 +2395,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_thin_output.add_argument("--consistency-recovery-file")
     p_thin_output.set_defaults(func=cmd_thin_output)
 
-    p_generate_prompt = sub.add_parser("generate-prompt")
+    p_generate_prompt = sub.add_parser("generate-prompt", aliases=["next-step"])
     p_generate_prompt.add_argument("--artifact-root")
     p_generate_prompt.add_argument("--repair-packet-file")
     p_generate_prompt.add_argument("--mode", default="default", choices=["default", "dev"])

@@ -35,9 +35,9 @@ def build_record(*, second_operator: dict, thin_output: dict, repair_packet: dic
     if repair_family == "NOT_RESUMABLE_FRESH_ORCHESTRATION":
         if outcome_class != "NON_RESUMABLE":
             missing_markers.append("outcome_class")
-        if "governed forward path" not in diagnosis:
+        if "bounded attempt" not in diagnosis:
             missing_markers.append("diagnosis_forward_boundary")
-        if suggested_command != "continue governed forward path, not resume":
+        if suggested_command != "run synrail check for the next bounded attempt after restoring the exact task request":
             missing_markers.append("suggested_command")
     elif repair_family == "REPAIRABLE_DOCTOR_BLOCKED":
         if outcome_class != "SCOPE_VIOLATION":

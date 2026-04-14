@@ -74,7 +74,7 @@ synrail init --artifact-root "$ARTIFACT_ROOT"
 synrail checkpoint create --artifact-root "$ARTIFACT_ROOT"
 synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT"
 synrail check --artifact-root "$ARTIFACT_ROOT"
-synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
+synrail next-step --artifact-root "$ARTIFACT_ROOT"
 synrail restore --artifact-root "$ARTIFACT_ROOT"
 ```
 
@@ -85,17 +85,17 @@ ARTIFACT_ROOT="$(pwd)/.synrail"
 synrail init --artifact-root "$ARTIFACT_ROOT"
 # write final_result.json or final_result.txt under $ARTIFACT_ROOT or the project root
 synrail check --artifact-root "$ARTIFACT_ROOT"
-synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
+synrail next-step --artifact-root "$ARTIFACT_ROOT"
 ```
 
 Current shell proof surfaces:
 
 - first-run onboarding errors:
-  - [alpha_onboarding_run_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_001)
+  - [alpha_onboarding_run_002](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_002)
 - zero-config-ish first run:
-  - [alpha_shell_run_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001)
+  - [alpha_shell_run_002](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_002)
 - accepted default-mode translation:
-  - [thin_output_run_accepted_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_001)
+  - [thin_output_run_accepted_002](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_002)
 
 Read [ALPHA_LANE_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md) for the current verified contour and the canonical smoke artifacts behind it.
 

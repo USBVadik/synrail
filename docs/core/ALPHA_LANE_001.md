@@ -60,7 +60,7 @@ synrail checkpoint create --artifact-root "$ARTIFACT_ROOT"
 synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT"
 # after the agent writes final_result.json or final_result.txt:
 synrail check --artifact-root "$ARTIFACT_ROOT"
-synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
+synrail next-step --artifact-root "$ARTIFACT_ROOT"
 synrail restore --artifact-root "$ARTIFACT_ROOT"
 ```
 
@@ -74,22 +74,23 @@ On a fresh `init`, `Synrail` can still give bounded value immediately:
 synrail init --artifact-root "$ARTIFACT_ROOT"
 # write final_result.json or final_result.txt under the artifact root or project root
 synrail check --artifact-root "$ARTIFACT_ROOT"
-synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
+synrail next-step --artifact-root "$ARTIFACT_ROOT"
 ```
 
 That fresh contour does not yet guarantee `restore_available`, because no verified checkpoint exists yet.
 
-On the current onboarding smoke in [alpha_onboarding_run_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_001):
+On the current onboarding smoke in [alpha_onboarding_run_002](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_002):
 
-- `generate-prompt` before any `check` now returns one bounded human-readable next step instead of a raw missing-artifact failure
+- `next-step` before any `check` now returns one bounded human-readable next step instead of a raw missing-artifact failure
 - `restore` without any checkpoint now says how to create the safe point first
 - `checkpoint verify` without any checkpoint now returns bounded guidance instead of a traceback
 
-On the current shell smoke in [alpha_shell_run_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001):
+On the current shell smoke in [alpha_shell_run_002](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_002):
 
 - `init` auto-detects `project_type = python`
 - `check` runs without explicit identity flags once one `final_result.txt` appears under the artifact root
-- `generate-prompt` produces one bounded next-agent instruction without asking the operator to reconstruct packet internals by hand
+- `check` now names one explicit next command: `synrail next-step`
+- `next-step` produces one bounded next-agent instruction without asking the operator to reconstruct packet internals by hand
 - `prompt-followup` confirms that the generated next-agent instruction preserves the bounded current step
 
 ## What This Lane Returns
@@ -103,8 +104,8 @@ On the current verified smoke contour in [alpha_lane_run_003](/Users/usbdick/Doc
 - thin output translates that into:
   - `NON_RESUMABLE`
   - verified checkpoint available
-  - continue through governed forward path, not named `resume`
-- `generate-prompt` keeps the next agent step bounded to:
+  - run the next bounded attempt only after restoring the exact task request
+- `next-step` keeps the next agent step bounded to:
   - `continue_forward_orchestration`
   - restore exact prompt and task identity
 - `restore` returns `OK`
@@ -112,10 +113,10 @@ On the current verified smoke contour in [alpha_lane_run_003](/Users/usbdick/Doc
 On the current fresh external contour in [ALPHA_EXTERNAL_RUN_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_EXTERNAL_RUN_001.md):
 
 - `check` returns `PROOF_INVALID`
-- `generate-prompt` stays bounded to `repair_final_result_artifact`
+- `next-step` stays bounded to `repair_final_result_artifact`
 - `restore_available = false`, which is the correct reading for a fresh contour without one verified checkpoint
 
-On the current accepted default output smoke in [thin_output_run_accepted_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_001):
+On the current accepted default output smoke in [thin_output_run_accepted_002](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_002):
 
 - default mode says `ACCEPTED`
 - it explains that the run reached accepted closure
@@ -123,22 +124,22 @@ On the current accepted default output smoke in [thin_output_run_accepted_001](/
 
 Canonical artifacts:
 
-- [shell init output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/shell/init_stdout.txt)
-- [shell check output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/shell/check_stdout.txt)
-- [shell prompt output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/shell/generate_prompt_stdout.txt)
-- [shell project profile](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/lane/project_profile.json)
-- [shell thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/lane/thin_output.json)
-- [shell prompt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/lane/prompt.json)
-- [shell prompt followup](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001/lane/followup.json)
-- [onboarding prompt-before-check output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_001/shell/generate_prompt_before_check_stdout.txt)
-- [onboarding restore-without-checkpoint output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_001/shell/restore_without_checkpoint_stdout.txt)
-- [onboarding checkpoint-verify-without-checkpoint output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_001/shell/checkpoint_verify_without_checkpoint_stdout.txt)
+- [shell init output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_002/shell/init_stdout.txt)
+- [shell check output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_002/shell/check_stdout.txt)
+- [shell next-step output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_002/shell/next_step_stdout.txt)
+- [shell project profile](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_002/lane/project_profile.json)
+- [shell thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_002/lane/thin_output.json)
+- [shell prompt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_002/lane/prompt.json)
+- [shell prompt followup](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_002/lane/followup.json)
+- [onboarding next-step-before-check output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_002/shell/next_step_before_check_stdout.txt)
+- [onboarding restore-without-checkpoint output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_002/shell/restore_without_checkpoint_stdout.txt)
+- [onboarding checkpoint-verify-without-checkpoint output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_002/shell/checkpoint_verify_without_checkpoint_stdout.txt)
 - [init state](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/init/state.json)
 - [working checkpoint verify](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/lane/checkpoints/working/checkpoint_verify.json)
 - [thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/lane/thin_output.json)
 - [prompt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/lane/prompt.json)
 - [restore result](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/lane/checkpoint_restore.json)
-- [accepted thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_001/thin_output.json)
+- [accepted thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_002/thin_output.json)
 
 ## Alpha Rules
 
