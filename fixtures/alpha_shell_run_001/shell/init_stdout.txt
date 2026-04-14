@@ -2,4 +2,4 @@ Synrail initialized.
 Artifact root: /Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane
 Detected project type: python
 Drop final_result.json or final_result.txt under the artifact root or project root, then run: synrail check --artifact-root '/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane'
-Optional safe point: synrail checkpoint create --checkpoint-id working --artifact-root '/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane'
+Optional safe point: synrail checkpoint create --artifact-root '/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane'

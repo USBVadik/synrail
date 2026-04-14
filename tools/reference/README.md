@@ -45,12 +45,12 @@ The current verified restore-capable alpha lane is:
 ARTIFACT_ROOT="$(pwd)/.synrail"
 synrail init --artifact-root "$ARTIFACT_ROOT"
 # once this root reflects one verified working state:
-synrail checkpoint create --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
-synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
+synrail checkpoint create --artifact-root "$ARTIFACT_ROOT"
+synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT"
 # after the agent writes final_result.json or final_result.txt:
 synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
-synrail restore --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
+synrail restore --artifact-root "$ARTIFACT_ROOT"
 ```
 
 The current fresh first-run contour is smaller:
@@ -67,6 +67,7 @@ This shell is intentionally thin:
 
 - it auto-discovers the standard artifact files under one artifact root
 - it auto-detects one sane project profile for the current project root
+- it defaults the alpha safe-point checkpoint id to `working`
 - it keeps the existing dev/runtime helpers underneath
 - it does not introduce a new runtime semantics branch
 

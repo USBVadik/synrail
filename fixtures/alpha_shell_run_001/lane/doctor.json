@@ -1,9 +1,9 @@
 {
   "schema_version": "doctor_record_v0",
-  "doctor_run_id": "ALPHA_RUN_20260414T132954Z",
+  "doctor_run_id": "ALPHA_RUN_20260414T134926Z",
   "doctor_level": "CORE_DOCTOR",
   "target_execution_surface": {
-    "path": "/private/tmp/synrail_alpha_shell_project",
+    "path": "/private/tmp/synrail_alpha_onboarding_project",
     "classification": "trusted_worktree",
     "observed_identity": "",
     "expected_identity": "autodetected_python_worktree"

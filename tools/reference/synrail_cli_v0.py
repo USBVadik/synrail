@@ -358,6 +358,12 @@ def discover_checkpoint_record(root: Path, checkpoint_id: str | None) -> str | N
         return None
     if not checkpoints_root.exists():
         return None
+    working_verified = checkpoint_verify_file(root, "working")
+    if working_verified.exists():
+        return str(working_verified)
+    working_created = checkpoint_record_file(root, "working")
+    if working_created.exists():
+        return str(working_created)
     verified_candidates = sorted(
         list(checkpoints_root.glob("*/checkpoint_verify.json")),
         key=lambda path: path.stat().st_mtime,
@@ -422,7 +428,7 @@ def print_thin_output_summary(output_file: Path) -> None:
         return
     payload = load_json(output_file)
     lines = [
-        f"Status: {payload.get('outcome_class', '')}",
+        f"Status: {payload.get('status_label', payload.get('outcome_class', ''))}",
         f"What happened: {payload.get('what_happened', payload.get('summary', ''))}",
         f"What it means: {payload.get('what_it_means', payload.get('diagnosis', ''))}",
         f"What to do next: {payload.get('what_to_do_next', payload.get('next_step', ''))}",
@@ -480,7 +486,7 @@ def print_init_summary(*, root: Path, state_file: Path) -> None:
         f"Detected project type: {profile.get('project_type', 'generic')}",
         artifact_hint + shell_command(root, "check"),
     ]
-    checkpoint_suggestion = shell_command(root, "checkpoint", "create", "--checkpoint-id", "working")
+    checkpoint_suggestion = shell_command(root, "checkpoint", "create")
     lines.append(f"Optional safe point: {checkpoint_suggestion}")
     print("\n".join(lines))
 
@@ -495,7 +501,7 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
             f"Checkpoint saved: {payload.get('checkpoint_id', '')}",
             f"Safe point class: {payload.get('safe_point_class', '')}",
             "Next command: " + (
-                shell_command(root, "checkpoint", "verify", "--checkpoint-id", payload.get("checkpoint_id", ""))
+                shell_command(root, "checkpoint", "verify")
                 if root
                 else payload.get("next_safe_step", "")
             ),
@@ -815,7 +821,7 @@ def cmd_governed_cost(args: argparse.Namespace) -> int:
 def cmd_create_checkpoint(args: argparse.Namespace) -> int:
     root = alpha_root_from_args(args, ensure=True)
     if root and not getattr(args, "checkpoint_id", None):
-        args.checkpoint_id = "latest"
+        args.checkpoint_id = "working"
     if root and not getattr(args, "checkpoint_root", None):
         args.checkpoint_root = str(checkpoint_root(root, args.checkpoint_id))
     if root and not getattr(args, "state_file", None):
@@ -881,10 +887,16 @@ def cmd_verify_checkpoint(args: argparse.Namespace) -> int:
         if discovered:
             args.checkpoint_record_file = discovered
     if root and not getattr(args, "output", None):
-        checkpoint_id = getattr(args, "checkpoint_id", None) or Path(args.checkpoint_record_file).parent.name
+        checkpoint_id = getattr(args, "checkpoint_id", None) or (Path(args.checkpoint_record_file).parent.name if getattr(args, "checkpoint_record_file", None) else "working")
         args.output = str(checkpoint_verify_file(root, checkpoint_id))
     if not getattr(args, "checkpoint_record_file", None):
-        print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
+        if args.mode == "dev":
+            print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
+        else:
+            print("Synrail could not find a checkpoint to verify.")
+            if root:
+                print("What to do next: create one while the project is in a verified working state.")
+                print("Next command: " + shell_command(root, "checkpoint", "create"))
         return 2
     if not getattr(args, "output", None):
         print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_VERIFY_OUTPUT_REQUIRED"}, ensure_ascii=True))
@@ -917,6 +929,15 @@ def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
         args.target_root = str(root)
     if root and not getattr(args, "output", None):
         args.output = str(alpha_file(root, "checkpoint_restore"))
+    if not getattr(args, "checkpoint_record_file", None):
+        if args.mode == "dev":
+            print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
+        else:
+            print("Synrail could not find a verified checkpoint to restore.")
+            if root:
+                print("What to do next: create one while the project is in a verified working state.")
+                print("Next command: " + shell_command(root, "checkpoint", "create"))
+        return 2
     forwarded = [
         "restore",
         "--checkpoint-record-file", args.checkpoint_record_file,
@@ -1042,6 +1063,15 @@ def cmd_generate_prompt(args: argparse.Namespace) -> int:
         discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
         if discovered:
             args.checkpoint_record_file = discovered
+    if not args.repair_packet_file or not Path(args.repair_packet_file).exists():
+        if args.mode == "dev":
+            print(json.dumps({"result": "ERROR", "reason": "REPAIR_PACKET_REQUIRED"}, ensure_ascii=True))
+        else:
+            print("Synrail does not have repair guidance to turn into a prompt yet.")
+            if root:
+                print("What to do next: run one check first so Synrail can build the bounded next step.")
+                print("Next command: " + shell_command(root, "check"))
+        return 2
     forwarded = [
         "--repair-packet-file", args.repair_packet_file,
         "--output", args.output,
@@ -2271,7 +2301,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_checkpoint_nested_create = checkpoint_sub.add_parser("create")
     p_checkpoint_nested_create.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
-    p_checkpoint_nested_create.add_argument("--checkpoint-id", default="latest")
+    p_checkpoint_nested_create.add_argument("--checkpoint-id", default="working")
     p_checkpoint_nested_create.add_argument("--checkpoint-root")
     p_checkpoint_nested_create.add_argument("--state-file")
     p_checkpoint_nested_create.add_argument("--report-file")

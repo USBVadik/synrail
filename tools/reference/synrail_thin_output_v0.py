@@ -93,8 +93,8 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
         recovery_suffix = f" Recovery path: {instructions}."
     if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
         return (
-            "This contour should not continue through resume.",
-            f"Continue through the governed forward path instead of named resume.{suffix}{recovery_suffix}",
+            "This run is not ready to resume yet.",
+            f"Use synrail check for the next bounded attempt instead of synrail resume.{suffix}{recovery_suffix}",
         )
     failure_classes = list((doctor or {}).get("blocking_failure_classes", []))
     messages = {
@@ -157,6 +157,28 @@ def technical_lines(*, state: dict, report: dict, repair_packet: dict | None, ch
         f"next_safe_step={report.get('next_safe_step', '') or state.get('next_safe_step', '')}",
         f"checkpoint_restore_available={checkpoint_restore_available(checkpoint, state=state)}",
     ]
+
+
+def status_label(outcome_class: str, *, report: dict, repair_packet: dict | None) -> str:
+    if outcome_class == "ACCEPTED":
+        return "Accepted"
+    if outcome_class == "CLOSURE_REJECTED":
+        return "Closure Rejected"
+    if outcome_class == "PROOF_INVALID":
+        return "Proof Invalid"
+    if outcome_class == "PROOF_PARTIAL":
+        return "Proof Incomplete"
+    if outcome_class == "REPAIR_STOP":
+        return "Repair Stopped"
+    if outcome_class == "SCOPE_VIOLATION":
+        return "Scope Or Integrity Blocked"
+    if outcome_class == "DOCTOR_BLOCKED":
+        return "Readiness Blocked"
+    if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
+        return "Not Ready To Resume Yet"
+    if outcome_class == "NON_RESUMABLE":
+        return "Resume Not Available"
+    return "Needs Review"
 
 
 def human_next_step(
@@ -243,6 +265,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "run_id": state["run_id"],
         "task_class": state["task_class"],
         "outcome_class": outcome_class,
+        "status_label": status_label(outcome_class, report=report, repair_packet=repair_packet),
         "summary": summary,
         "diagnosis": diagnosis,
         "what_happened": summary,

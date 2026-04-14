@@ -240,6 +240,9 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/alpha_shell_run_001/lane/thin_output.json`
 - `../fixtures/alpha_shell_run_001/lane/prompt.json`
 - `../fixtures/alpha_shell_run_001/lane/followup.json`
+- `../fixtures/alpha_onboarding_run_001/shell/generate_prompt_before_check_stdout.txt`
+- `../fixtures/alpha_onboarding_run_001/shell/restore_without_checkpoint_stdout.txt`
+- `../fixtures/alpha_onboarding_run_001/shell/checkpoint_verify_without_checkpoint_stdout.txt`
 - `../fixtures/thin_output_run_accepted_001/thin_output.json`
 - `../fixtures/alpha_second_operator_run_001/second_operator.json`
 - `../fixtures/alpha_second_operator_run_001/reading.json`

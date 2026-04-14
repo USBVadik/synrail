@@ -8,27 +8,27 @@
   "intended_run_class": "core_probe",
   "baseline_identity": "autodetected_python_baseline",
   "execution_surface_identity": "autodetected_python_worktree",
-  "artifact_path": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane/final_result.txt",
+  "artifact_path": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_001/lane/final_result.json",
   "final_result_candidates": [
-    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane/final_result.json",
-    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane/final_result.txt",
-    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane/result.json",
-    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane/result.txt",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_001/lane/final_result.json",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_001/lane/final_result.txt",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_001/lane/result.json",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_001/lane/result.txt",
     "/private/tmp/synrail_alpha_onboarding_project/final_result.json",
     "/private/tmp/synrail_alpha_onboarding_project/final_result.txt",
     "/private/tmp/synrail_alpha_onboarding_project/result.json",
     "/private/tmp/synrail_alpha_onboarding_project/result.txt"
   ],
   "readback_candidates": [
-    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane/readback.json",
-    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane/readback.txt",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_001/lane/readback.json",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_001/lane/readback.txt",
     "/private/tmp/synrail_alpha_onboarding_project/readback.json",
     "/private/tmp/synrail_alpha_onboarding_project/readback.txt"
   ],
   "scenario_proof_candidates": [
-    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane/scenario_proof.json",
-    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane/scenario_proof.md",
-    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_001/lane/scenario_proof.txt",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_001/lane/scenario_proof.json",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_001/lane/scenario_proof.md",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_001/lane/scenario_proof.txt",
     "/private/tmp/synrail_alpha_onboarding_project/scenario_proof.json",
     "/private/tmp/synrail_alpha_onboarding_project/scenario_proof.md",
     "/private/tmp/synrail_alpha_onboarding_project/scenario_proof.txt"

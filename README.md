@@ -71,11 +71,11 @@ Verified-working contour:
 ARTIFACT_ROOT="$(pwd)/.synrail"
 synrail init --artifact-root "$ARTIFACT_ROOT"
 # once this root reflects one verified working state:
-synrail checkpoint create --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
-synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
+synrail checkpoint create --artifact-root "$ARTIFACT_ROOT"
+synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT"
 synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
-synrail restore --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
+synrail restore --artifact-root "$ARTIFACT_ROOT"
 ```
 
 Fresh first-run contour:
@@ -90,6 +90,8 @@ synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
 
 Current shell proof surfaces:
 
+- first-run onboarding errors:
+  - [alpha_onboarding_run_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_001)
 - zero-config-ish first run:
   - [alpha_shell_run_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_001)
 - accepted default-mode translation:
