@@ -370,6 +370,7 @@ def apply_record_to_state(state: dict, record: dict) -> dict:
     state["doctor"]["status"] = "PASS" if acceptable else "FAIL"
     state["doctor"]["blocking_failure_classes"] = list(record["blocking_failure_classes"])
     if not acceptable:
+        state["state"] = "DOCTOR_BLOCKED"
         state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
         state["closure"]["blocking_reason"] = "DOCTOR_NOT_GREEN"
         state["closure"]["next_allowed_transition"] = "DOCTOR_READINESS"

@@ -17,11 +17,16 @@ def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
-def checkpoint_restore_available(checkpoint: dict | None) -> bool:
+def checkpoint_restore_available(checkpoint: dict | None, *, state: dict) -> bool:
     if not checkpoint:
         return False
     verification = checkpoint.get("verification", {})
-    return checkpoint.get("safe_point_eligible", False) and verification.get("status", "") == "PASSED"
+    return (
+        checkpoint.get("safe_point_eligible", False)
+        and verification.get("status", "") == "PASSED"
+        and checkpoint.get("run_id", "") == state.get("run_id", "")
+        and checkpoint.get("task_class", "") == state.get("task_class", "")
+    )
 
 
 def classify_outcome(*, state: dict, report: dict, repair_packet: dict | None, doctor: dict | None) -> str:
@@ -96,12 +101,12 @@ def technical_lines(*, state: dict, report: dict, repair_packet: dict | None, ch
         f"repair_termination_reason={report.get('repair_termination_reason', '') or packet.get('repair_termination', {}).get('reason', '')}",
         f"current_step_id={continuation.get('current_step_id', '') or packet.get('repair_history', {}).get('current_step_id', '')}",
         f"next_safe_step={report.get('next_safe_step', '') or state.get('next_safe_step', '')}",
-        f"checkpoint_restore_available={checkpoint_restore_available(checkpoint)}",
+        f"checkpoint_restore_available={checkpoint_restore_available(checkpoint, state=state)}",
     ]
 
 
 def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | None = None, doctor: dict | None = None, checkpoint: dict | None = None) -> dict:
-    restore_available = checkpoint_restore_available(checkpoint)
+    restore_available = checkpoint_restore_available(checkpoint, state=state)
     outcome_class = classify_outcome(state=state, report=report, repair_packet=repair_packet, doctor=doctor)
     summary, diagnosis = summary_for(outcome_class, restore_available=restore_available)
     suggested_command = {

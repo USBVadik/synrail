@@ -63,4 +63,5 @@ The shortest honest reading is:
 - derived runtime artifacts are useful only while they remain consistent with that source state
 - corrupt derived artifacts now also count as first-class consistency failures
 - spine can now emit one runtime-owned artifact-consistency record after writing the derived surface
+- consistency failures can now also feed one explicit restore-or-reemit recovery bridge when a matching verified checkpoint exists
 - artifact richness without consistency is not kernel maturity

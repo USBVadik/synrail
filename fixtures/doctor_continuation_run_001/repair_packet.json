@@ -1,0 +1,377 @@
+{
+  "schema_version": "repair_packet_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "from_state": "DOCTOR_BLOCKED",
+  "continuation_entrypoint": "resume",
+  "repair_handoff": {
+    "schema_version": "repair_handoff_v0",
+    "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+    "task_class": "proof_sensitive_fresh_orchestration_case",
+    "from_state": "DOCTOR_BLOCKED",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "DOCTOR_NOT_GREEN",
+    "continuation_allowed": true,
+    "continuation_entrypoint": "resume",
+    "resumability": {
+      "status": "REPAIRABLE",
+      "family": "REPAIRABLE_DOCTOR_BLOCKED",
+      "active_pressures": [
+        "DOCTOR_BLOCKED"
+      ],
+      "recommended_repair_order": [
+        "restore_readiness_truth",
+        "rerun_closure"
+      ],
+      "requires_new_run": false,
+      "explanation": "readiness failed early, but the contour can resume once the doctor inputs are repaired"
+    },
+    "repair_policy": {
+      "policy_type": "MULTI_STEP_REPAIR",
+      "next_step_id": "restore_readiness_truth",
+      "ready_now_step_ids": [
+        "restore_readiness_truth"
+      ],
+      "ordered_steps": [
+        {
+          "step_id": "restore_readiness_truth",
+          "status": "READY_NOW",
+          "required_inputs": [
+            "helper_path"
+          ],
+          "repairs_artifacts": [
+            "readiness_surface"
+          ],
+          "resolves_pressures": [
+            "DOCTOR_BLOCKED"
+          ],
+          "why": "doctor-blocked truth must be repaired before governed continuation can restart honestly"
+        },
+        {
+          "step_id": "rerun_closure",
+          "status": "WAITING_ON_PREVIOUS_STEP",
+          "required_inputs": [],
+          "repairs_artifacts": [
+            "closure_verdict_surface"
+          ],
+          "resolves_pressures": [
+            "DOCTOR_BLOCKED"
+          ],
+          "why": "closure should be rechecked only after earlier repair steps finish"
+        }
+      ]
+    },
+    "artifact_quality_hints": [
+      {
+        "artifact_id": "readiness_surface",
+        "quality": "STALE",
+        "still_stale_parts": [
+          "helper_entrypoint_record"
+        ],
+        "mapped_inputs": [
+          "helper_path"
+        ],
+        "repair_step": "restore_readiness_truth",
+        "why": "doctor still sees stale readiness evidence: helper-integrity unknown",
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "helper_entrypoint_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "helper_path"
+            ],
+            "why": "the helper entrypoint required for readiness is still unresolved"
+          }
+        ]
+      }
+    ],
+    "required_inputs": [
+      {
+        "input_id": "helper_path",
+        "kind": "file",
+        "cli_flag": "--helper-path",
+        "description": "supply the helper entrypoint needed for readiness verification",
+        "required_value": ""
+      }
+    ],
+    "runtime_defaults": {
+      "refresh_event_type": "",
+      "refresh_use_bundle": false,
+      "refresh_use_closure": false
+    },
+    "next_safe_step": "repair, replace, or safely bypass the helper entrypoint before execution"
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_DOCTOR_BLOCKED",
+    "active_pressures": [
+      "DOCTOR_BLOCKED"
+    ],
+    "recommended_repair_order": [
+      "restore_readiness_truth",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "explanation": "readiness failed early, but the contour can resume once the doctor inputs are repaired"
+  },
+  "repair_policy": {
+    "policy_type": "MULTI_STEP_REPAIR",
+    "next_step_id": "restore_readiness_truth",
+    "ready_now_step_ids": [
+      "restore_readiness_truth"
+    ],
+    "ordered_steps": [
+      {
+        "step_id": "restore_readiness_truth",
+        "status": "READY_NOW",
+        "required_inputs": [
+          "helper_path"
+        ],
+        "repairs_artifacts": [
+          "readiness_surface"
+        ],
+        "resolves_pressures": [
+          "DOCTOR_BLOCKED"
+        ],
+        "why": "doctor-blocked truth must be repaired before governed continuation can restart honestly"
+      },
+      {
+        "step_id": "rerun_closure",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_verdict_surface"
+        ],
+        "resolves_pressures": [
+          "DOCTOR_BLOCKED"
+        ],
+        "why": "closure should be rechecked only after earlier repair steps finish"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "readiness_surface",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "helper_entrypoint_record"
+      ],
+      "mapped_inputs": [
+        "helper_path"
+      ],
+      "repair_step": "restore_readiness_truth",
+      "why": "doctor still sees stale readiness evidence: helper-integrity unknown",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "helper_entrypoint_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "helper_path"
+          ],
+          "why": "the helper entrypoint required for readiness is still unresolved"
+        }
+      ]
+    }
+  ],
+  "artifact_quality_summary": {
+    "artifact_ids": [
+      "readiness_surface"
+    ],
+    "stale_artifact_ids": [
+      "readiness_surface"
+    ],
+    "non_resumable_artifact_ids": [],
+    "stale_subsurface_ids": [
+      "helper_entrypoint_record"
+    ],
+    "non_resumable_subsurface_ids": []
+  },
+  "repair_history": {
+    "applied": false,
+    "last_receipt_result": "",
+    "last_completed_step_id": "",
+    "completed_step_ids": [],
+    "current_step_id": "restore_readiness_truth",
+    "waiting_step_ids": [
+      "rerun_closure"
+    ],
+    "history_chain_length": 0,
+    "history_chain_results": [],
+    "history_chain_step_ids": []
+  },
+  "repair_history_chain": [],
+  "repair_termination": {
+    "status": "CONTINUE",
+    "reason": "",
+    "attempt_count": 0,
+    "max_attempts": 3,
+    "no_progress_window": 2,
+    "stalled_step_id": "",
+    "next_action": "continue with the current repair policy order"
+  },
+  "repair_receipt_context": {
+    "applied": false,
+    "result": "",
+    "completed_step_id": "",
+    "remaining_stale_artifact_ids": [],
+    "remaining_stale_subsurface_ids": [],
+    "remaining_non_resumable_artifact_ids": [],
+    "remaining_non_resumable_subsurface_ids": [],
+    "remaining_stale_hints": [],
+    "remaining_non_resumable_hints": [],
+    "completed_hints": [],
+    "next_step_required_inputs": [],
+    "next_step_hints": [],
+    "history_chain": [],
+    "operator_evidence": {
+      "completed_step_id": "",
+      "completed_artifact_hints": [],
+      "completed_subsurface_ids": [],
+      "next_step_id": "",
+      "next_step_required_inputs": [],
+      "next_step_artifact_hints": [],
+      "next_step_subsurface_ids": [],
+      "operator_focus": ""
+    }
+  },
+  "continuation_plan": {
+    "doctor_required": true,
+    "bundle_required": true,
+    "closure_required": true,
+    "refresh_required": false,
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false,
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "resume_context": {
+    "doctor_run_id": "DOCTOR_CONTINUATION_RUN_001",
+    "doctor_level": "SUPPORT_DOCTOR",
+    "target_path": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_pressure_test_006",
+    "target_classification": "support_surface",
+    "baseline_identity": "trusted-baseline-doctor",
+    "intended_run_class": "support_run",
+    "execution_surface_identity": "helper-drift-surface"
+  },
+  "repair_inputs": {
+    "prompt_identity": "",
+    "task_identity": "",
+    "prompt_identity_ok": false,
+    "target_identity_file": "",
+    "clean_surface": false,
+    "artifact_viable": false,
+    "helper_ok": false,
+    "credentials_ok": false,
+    "artifact_path": "",
+    "helper_path": "",
+    "credential_env": [],
+    "final_result": "",
+    "readback": "",
+    "scenario_proof": "",
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "selection_context": {
+    "applied": false,
+    "scenario_class": "",
+    "recommended_mode": "",
+    "selected_mode": "",
+    "followed_recommendation": false,
+    "governed_preparation_recommended": false,
+    "selected_with_preparation": false,
+    "heavier_contour_entered": false,
+    "estimated_avoided_operator_minutes": 0,
+    "estimated_avoided_interventions": 0,
+    "estimated_avoided_closure_latency_minutes": 0
+  },
+  "preparation_context": {
+    "applied": false,
+    "ready_for_closure": false,
+    "complete_on_first_bundle_pass": false,
+    "bundle_status": "",
+    "planned_required_sections_count": 0,
+    "planned_required_sections_present_count": 0
+  },
+  "runtime_truth": {
+    "report_result": "",
+    "stopping_stage": "",
+    "report_reason": "",
+    "doctor_verdict": "",
+    "bundle_status": "MISSING",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": false,
+    "refresh_resulting_closure_status": "",
+    "resulting_state": "DOCTOR_BLOCKED",
+    "next_safe_step": "repair, replace, or safely bypass the helper entrypoint before execution",
+    "active_pressures": [
+      "DOCTOR_BLOCKED"
+    ],
+    "state_snapshot": {
+      "state": "DOCTOR_BLOCKED",
+      "target_surface_status": "ATTESTED",
+      "doctor_status": "FAIL",
+      "doctor_failure_classes": [
+        "helper-integrity unknown"
+      ],
+      "integrity_status": "PASS",
+      "execution_status": "NOT_RUN",
+      "proof_bundle_status": "MISSING",
+      "proof_missing_sections": [],
+      "closure_status": "CLAIMED_NOT_ACCEPTED",
+      "closure_blocking_reason": "DOCTOR_NOT_GREEN",
+      "recovery_status": "NOT_REQUIRED",
+      "recovery_reverification_complete": false
+    }
+  },
+  "output_defaults": {
+    "artifact_root": "fixtures/doctor_continuation_run_001",
+    "doctor_output": "fixtures/doctor_continuation_run_001/doctor.json",
+    "bundle_output": "fixtures/doctor_continuation_run_001/bundle.json",
+    "closure_output": "fixtures/doctor_continuation_run_001/closure.json",
+    "refresh_output": "fixtures/doctor_continuation_run_001/refresh.json",
+    "report_output": "fixtures/doctor_continuation_run_001/report.json",
+    "worked_artifact_output": "fixtures/doctor_continuation_run_001/orchestration.json",
+    "run_artifact_output": "fixtures/doctor_continuation_run_001/run.json",
+    "repair_handoff_output": "",
+    "repair_packet_output": "fixtures/doctor_continuation_run_001/repair_packet.json",
+    "repair_receipt_output": "",
+    "plan_output": "fixtures/doctor_continuation_run_001/plan.json",
+    "preparation_receipt_output": "fixtures/doctor_continuation_run_001/preparation_receipt.json"
+  },
+  "provided_inputs": [],
+  "missing_inputs": [
+    "helper_path"
+  ],
+  "ready_for_resume": false,
+  "next_safe_step": "repair, replace, or safely bypass the helper entrypoint before execution",
+  "continuation_core": {
+    "contract_version": "continuation_core_v0",
+    "entrypoint": "resume",
+    "ready_for_resume": false,
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_DOCTOR_BLOCKED",
+    "current_step_id": "restore_readiness_truth",
+    "required_inputs": [
+      "helper_path"
+    ],
+    "missing_inputs": [
+      "helper_path"
+    ],
+    "next_step_required_inputs": [
+      "helper_path"
+    ],
+    "next_step_subsurface_ids": [
+      "helper_entrypoint_record"
+    ],
+    "operator_focus": "repair, replace, or safely bypass the helper entrypoint before execution",
+    "next_safe_step": "repair, replace, or safely bypass the helper entrypoint before execution",
+    "history_chain_length": 0,
+    "selection_applied": false,
+    "selected_with_preparation": false,
+    "packet_supplies_resume_context": true,
+    "packet_supplies_repair_inputs": true,
+    "packet_supplies_output_defaults": true,
+    "requires_sibling_discovery": false
+  }
+}

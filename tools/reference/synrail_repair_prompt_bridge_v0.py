@@ -17,11 +17,16 @@ def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
-def checkpoint_note(checkpoint: dict | None) -> str:
+def checkpoint_note(checkpoint: dict | None, *, repair_packet: dict) -> str:
     if not checkpoint:
         return ""
     verification = checkpoint.get("verification", {})
-    if checkpoint.get("safe_point_eligible", False) and verification.get("status", "") == "PASSED":
+    if (
+        checkpoint.get("safe_point_eligible", False)
+        and verification.get("status", "") == "PASSED"
+        and checkpoint.get("run_id", "") == repair_packet.get("run_id", "")
+        and checkpoint.get("task_class", "") == repair_packet.get("task_class", "")
+    ):
         return "A verified checkpoint is available if this repair path becomes unsafe."
     return ""
 
@@ -44,7 +49,7 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None) -> dict
     ]
     for input_id in required_inputs:
         must_pass.append(f"Supply required repair input: {input_id}")
-    checkpoint_hint = checkpoint_note(checkpoint)
+    checkpoint_hint = checkpoint_note(checkpoint, repair_packet=repair_packet)
     prompt_lines = [
         "Repair the current Synrail contour without broadening scope.",
         f"Current step: {current_step_id or 'unknown_current_step'}",

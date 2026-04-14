@@ -24,3 +24,4 @@ It is one smaller operator-facing translation layer over:
 
 - thin output now helps read key non-green outcomes without replacing runtime truth
 - verified checkpoint availability can now also surface in the default diagnosis
+- checkpoint availability only counts when the verified checkpoint matches the same run/task contour

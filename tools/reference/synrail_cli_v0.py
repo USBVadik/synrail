@@ -47,6 +47,7 @@ THIN_OUTPUT = HERE / "synrail_thin_output_v0.py"
 PROMPT_BRIDGE = HERE / "synrail_repair_prompt_bridge_v0.py"
 THIN_OUTPUT_READING = HERE / "synrail_thin_output_reading_v0.py"
 PROMPT_FOLLOWUP = HERE / "synrail_prompt_followup_v0.py"
+CONSISTENCY_RECOVERY = HERE / "synrail_consistency_recovery_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -433,6 +434,16 @@ def cmd_prompt_followup(args: argparse.Namespace) -> int:
     if args.thin_output_file:
         forwarded.extend(["--thin-output-file", args.thin_output_file])
     return run_python(PROMPT_FOLLOWUP, forwarded)
+
+
+def cmd_consistency_recovery(args: argparse.Namespace) -> int:
+    forwarded = [
+        "--consistency-file", args.consistency_file,
+        "--output", args.output,
+    ]
+    if args.checkpoint_record_file:
+        forwarded.extend(["--checkpoint-record-file", args.checkpoint_record_file])
+    return run_python(CONSISTENCY_RECOVERY, forwarded)
 
 
 def cmd_observability(args: argparse.Namespace) -> int:
@@ -1373,6 +1384,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_prompt_followup.add_argument("--output", required=True)
     p_prompt_followup.add_argument("--thin-output-file")
     p_prompt_followup.set_defaults(func=cmd_prompt_followup)
+
+    p_consistency_recovery = sub.add_parser("consistency-recovery")
+    p_consistency_recovery.add_argument("--consistency-file", required=True)
+    p_consistency_recovery.add_argument("--output", required=True)
+    p_consistency_recovery.add_argument("--checkpoint-record-file")
+    p_consistency_recovery.set_defaults(func=cmd_consistency_recovery)
 
     p_reproducibility = sub.add_parser("reproducibility")
     p_reproducibility.add_argument("--run-a", required=True)
