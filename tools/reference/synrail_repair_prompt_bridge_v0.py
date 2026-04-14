@@ -54,20 +54,20 @@ def human_scope_label(scope_id: str) -> str:
     labels = {
         "current_repair_step_only": "only the current bounded repair step",
         "helper_entrypoint_record": "the helper entrypoint that is blocking readiness",
-        "clean_execution_surface_record": "the current workspace cleanliness and scope",
+        "clean_execution_surface_record": "the current workspace for this run",
         "proof_bundle_surface": "the proof bundle for this run",
         "final_result_artifact": "the final result artifact for this run",
-        "target_identity_record": "the intended task target for this run",
+        "target_identity_record": "the task target for this run",
     }
     return labels.get(scope_id, humanize_token(scope_id))
 
 
 def human_required_input(input_id: str) -> str:
     labels = {
-        "clean_surface_confirmation": "confirmation that the current workspace is clean and in scope",
+        "clean_surface_confirmation": "confirmation that the workspace is clean and safe to use",
         "helper_path": "the blocking helper path",
         "prompt_identity_file": "the original task request record",
-        "target_identity_file": "the intended task target record",
+        "target_identity_file": "the task target record",
         "refresh_recovery_complete": "confirmation that recovery completed",
         "refresh_reverification_complete": "confirmation that reverification completed",
     }
@@ -156,8 +156,8 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
     )
     must_pass = [
         f"Repair only this task: {current_step_label}",
-        "Keep run_id and task_class consistent with the current contour.",
-        "Do not remove or rewrite existing repair history.",
+        "Keep this repair on the same run and task.",
+        "Do not rewrite previous repair progress.",
     ]
     for input_id in required_inputs:
         must_pass.append(f"Provide required input: {human_required_input(input_id)}")
@@ -166,16 +166,16 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
     acceptance_criteria = list(must_pass)
     checkpoint_hint = checkpoint_note(checkpoint, repair_packet=repair_packet)
     prompt_lines = [
-        "Repair the current Synrail contour without broadening scope.",
-        f"Current repair task: {current_step_label}. (technical step id: {current_step_id or 'unknown_current_step'})",
-        f"What failed: {failure_label}. (technical reason: {broken_truth or 'unknown_reason'})",
+        "Repair the current run without broadening scope.",
+        f"Current repair task: {current_step_label}.",
+        f"What failed: {failure_label}.",
         f"Stale artifacts: {', '.join(stale_artifacts) if stale_artifacts else 'none'}",
         f"Stale subsurfaces: {', '.join(stale_subsurfaces) if stale_subsurfaces else 'none'}",
         f"Allowed scope: {', '.join(allowed_scope_labels) if allowed_scope_labels else 'only the current bounded repair step'}",
         f"Required inputs: {', '.join(required_input_labels) if required_input_labels else 'none'}",
         f"What must be true after repair: {next_safe_step_label or 'follow the next safe step from the repair packet'}",
         "Do not touch unrelated files, state transitions, or acceptance logic.",
-        "Return only the bounded repair needed for this current step and preserve continuity truth.",
+        "Return only the bounded repair needed for this current step and keep this same repair path intact.",
     ]
     if checkpoint_hint:
         prompt_lines.append(checkpoint_hint)

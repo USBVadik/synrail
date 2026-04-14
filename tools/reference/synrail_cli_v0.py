@@ -520,7 +520,7 @@ def print_init_summary(*, root: Path, state_file: Path) -> None:
         artifact_hint + shell_command(root, "check"),
     ]
     checkpoint_suggestion = shell_command(root, "save")
-    lines.append(f"Optional restore point: {checkpoint_suggestion}")
+    lines.append(f"Optional fallback: {checkpoint_suggestion}")
     print("\n".join(lines))
 
 
@@ -548,9 +548,9 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
     lines = []
     if action == "create":
         lines = [
-            f"Restore point saved: {payload.get('checkpoint_id', '')}",
-            f"Restore point type: {human_safe_point_class(payload.get('safe_point_class', ''))}",
-            "What to do next: confirm this restore point before depending on it for restore.",
+            f"Fallback saved: {payload.get('checkpoint_id', '')}",
+            f"Fallback type: {human_safe_point_class(payload.get('safe_point_class', ''))}",
+            "What to do next: confirm this fallback before depending on restore.",
             "Next command: " + (
                 shell_command(root, "confirm-restore")
                 if root
@@ -582,8 +582,8 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
     verify = load_json(verify_file)
     verification = verify.get("verification", {})
     lines = [
-        f"Restore point ready: {verify.get('checkpoint_id', record.get('checkpoint_id', ''))}",
-        f"Restore point type: {human_safe_point_class(record.get('safe_point_class', verify.get('safe_point_class', '')))}",
+        f"Fallback ready: {verify.get('checkpoint_id', record.get('checkpoint_id', ''))}",
+        f"Fallback type: {human_safe_point_class(record.get('safe_point_class', verify.get('safe_point_class', '')))}",
     ]
     if verification.get("status") == "PASSED":
         lines.extend(
