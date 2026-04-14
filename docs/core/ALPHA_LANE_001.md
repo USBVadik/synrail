@@ -18,6 +18,15 @@ The lane exists to prove one user value clearly:
 - the operator gets one bounded next step
 - one verified working state can be restored without replaying the whole run by hand
 
+Optional alpha telemetry can now be turned on for the same artifact root:
+
+```bash
+synrail init --artifact-root "$ARTIFACT_ROOT" --telemetry-opt-in --tester-id your_name
+synrail telemetry export --artifact-root "$ARTIFACT_ROOT"
+```
+
+That replay stays bounded to command sequence, error class, and next safe step.
+
 ## Verified Install Path
 
 The currently verified alpha install path is:

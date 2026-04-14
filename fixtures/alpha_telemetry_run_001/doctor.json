@@ -1,0 +1,44 @@
+{
+  "schema_version": "doctor_record_v0",
+  "doctor_run_id": "ALPHA_RUN_20260414T112716Z",
+  "doctor_level": "CORE_DOCTOR",
+  "target_execution_surface": {
+    "path": "/tmp/synrail_alpha_telemetry_001/final_result.txt",
+    "classification": "trusted_worktree",
+    "observed_identity": "",
+    "expected_identity": "clean-clone"
+  },
+  "trusted_baseline": {
+    "identity": "trusted_clean"
+  },
+  "intended_run_class": "core_probe",
+  "gate_results": {
+    "baseline_identity": {
+      "status": "PASS",
+      "note": "trusted baseline identity is present"
+    },
+    "clean_execution_surface": {
+      "status": "PASS",
+      "note": "execution surface is acceptable"
+    },
+    "artifact_viability": {
+      "status": "PASS",
+      "note": "machine-readable artifact path is viable"
+    },
+    "helper_integrity": {
+      "status": "PASS",
+      "note": "helper surface is trusted or safely bypassed"
+    },
+    "credential_surface": {
+      "status": "PASS",
+      "note": "credential surface is present"
+    },
+    "prompt_task_identity": {
+      "status": "PASS",
+      "note": "exact prompt and task identity are present"
+    }
+  },
+  "blocking_failure_classes": [],
+  "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+  "recommended_next_safe_step": "run execution"
+}

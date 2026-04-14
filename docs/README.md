@@ -52,6 +52,8 @@ For the current installable alpha contour, read:
 - `core/ALPHA_LANE_001.md`
 - `core/ALPHA_SECOND_OPERATOR_001.md`
 - `core/ALPHA_EXTERNAL_RUN_001.md`
+- `core/ALPHA_TELEMETRY_001.md`
+- `core/ALPHA_TEST_PACK_001.md`
 
 ## 2. Core
 
@@ -72,6 +74,8 @@ Start here when you want to understand the kernel itself:
 - `core/ALPHA_LANE_001.md`
 - `core/ALPHA_SECOND_OPERATOR_001.md`
 - `core/ALPHA_EXTERNAL_RUN_001.md`
+- `core/ALPHA_TELEMETRY_001.md`
+- `core/ALPHA_TEST_PACK_001.md`
 - `core/CHECKPOINT_001.md`
 - `core/CHECKPOINT_RUN_001.md`
 - `core/CHECKPOINT_RUN_002.md`
@@ -206,6 +210,7 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/repair_convergence_run_001/run.json`
 - `../fixtures/repair_convergence_run_002/run.json`
 - `../fixtures/repair_convergence_run_005/run.json`
+- `../fixtures/alpha_telemetry_run_001/telemetry/session_replay.json`
 - `../fixtures/reproducibility_test_001/reproducibility.json`
 - `../fixtures/reproducibility_test_002/reproducibility.json`
 - `../fixtures/second_operator_test_001/second_operator.json`

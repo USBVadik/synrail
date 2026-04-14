@@ -88,6 +88,11 @@ synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
 
 Read [ALPHA_LANE_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md) for the current verified contour and the canonical smoke artifacts behind it.
 
+For alpha feedback collection and tester handoff, also read:
+
+- [ALPHA_TELEMETRY_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_TELEMETRY_001.md)
+- [ALPHA_TEST_PACK_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_TEST_PACK_001.md)
+
 ## First Reference Helpers
 
 - `attest_target_surface.sh`
@@ -126,6 +131,8 @@ Read these next only if you need them:
 - `docs/core/ALPHA_LANE_001.md`
 - `docs/core/ALPHA_SECOND_OPERATOR_001.md`
 - `docs/core/ALPHA_EXTERNAL_RUN_001.md`
+- `docs/core/ALPHA_TELEMETRY_001.md`
+- `docs/core/ALPHA_TEST_PACK_001.md`
 - `docs/core/CHECKPOINT_RUN_001.md`
 - `docs/core/CHECKPOINT_RUN_002.md`
 - `docs/core/CHECKPOINT_RUN_004.md`

@@ -16,6 +16,27 @@ try:
 except ImportError:
     from synrail_repair_packet_v0 import build_packet_from_runtime_truth
 
+try:
+    from .synrail_alpha_telemetry_v0 import (
+        append_command_event,
+        build_command_event,
+        default_issue_body_file,
+        default_session_replay_file,
+        enable_telemetry,
+        export_session_replay,
+        telemetry_enabled,
+    )
+except ImportError:
+    from synrail_alpha_telemetry_v0 import (
+        append_command_event,
+        build_command_event,
+        default_issue_body_file,
+        default_session_replay_file,
+        enable_telemetry,
+        export_session_replay,
+        telemetry_enabled,
+    )
+
 
 HERE = Path(__file__).resolve().parent
 SPINE = HERE / "synrail_spine_v0.py"
@@ -57,6 +78,7 @@ CONSISTENCY_RECOVERY = HERE / "synrail_consistency_recovery_v0.py"
 CHECKPOINT_OPERATOR_READING = HERE / "synrail_checkpoint_operator_reading_v0.py"
 CONSISTENCY_RECOVERY_PROMPT = HERE / "synrail_consistency_recovery_prompt_v0.py"
 CONSISTENCY_RECOVERY_PROMPT_READING = HERE / "synrail_consistency_recovery_prompt_reading_v0.py"
+ALPHA_TELEMETRY = HERE / "synrail_alpha_telemetry_v0.py"
 REFERENCE_RUNNER_MODULE = "synrail.reference_runner"
 
 DEFAULT_ALPHA_ARTIFACT_ROOT = ".synrail"
@@ -119,6 +141,45 @@ def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path
 def default_alpha_run_id() -> str:
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     return f"ALPHA_RUN_{stamp}"
+
+
+def command_path_from_args(args: argparse.Namespace) -> list[str]:
+    path = [args.cmd]
+    if args.cmd == "checkpoint" and getattr(args, "checkpoint_cmd", None):
+        path.append(args.checkpoint_cmd)
+    if args.cmd == "telemetry" and getattr(args, "telemetry_cmd", None):
+        path.append(args.telemetry_cmd)
+    return path
+
+
+def telemetry_flag_names(argv: list[str]) -> list[str]:
+    return [token.split("=", 1)[0] for token in argv if token.startswith("--")]
+
+
+def should_capture_alpha_telemetry(args: argparse.Namespace) -> bool:
+    path = command_path_from_args(args)
+    return path[0] in {"init", "check", "generate-prompt", "restore", "resume", "checkpoint"}
+
+
+def maybe_capture_alpha_telemetry(
+    args: argparse.Namespace,
+    *,
+    exit_code: int,
+    explicit_error_class: str = "",
+) -> None:
+    if not should_capture_alpha_telemetry(args):
+        return
+    root = alpha_root_from_args(args)
+    if not root or not telemetry_enabled(root):
+        return
+    event = build_command_event(
+        root,
+        command_path=command_path_from_args(args),
+        flag_names=telemetry_flag_names(sys.argv[1:]),
+        exit_code=exit_code,
+        explicit_error_class=explicit_error_class,
+    )
+    append_command_event(root, event)
 
 
 def alpha_root_from_args(args: argparse.Namespace, *, ensure: bool = False) -> Path | None:
@@ -285,6 +346,31 @@ def cmd_init(args: argparse.Namespace) -> int:
         "--output", args.output,
     ]
     return run_python(SPINE, forwarded)
+
+
+def cmd_telemetry_enable(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args, ensure=True)
+    config = enable_telemetry(root, args.tester_id)
+    print(json.dumps({"result": "OK", "telemetry_session_id": config["telemetry_session_id"]}, ensure_ascii=True))
+    return 0
+
+
+def cmd_telemetry_export(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args)
+    if not root:
+        print(json.dumps({"result": "ERROR", "reason": "ARTIFACT_ROOT_REQUIRED"}, ensure_ascii=True))
+        return 2
+    if not getattr(args, "output", None):
+        args.output = str(default_session_replay_file(root))
+    if not getattr(args, "issue_output", None):
+        args.issue_output = str(default_issue_body_file(root))
+    try:
+        record = export_session_replay(root, Path(args.output), Path(args.issue_output))
+    except ValueError as exc:
+        print(json.dumps({"result": "ERROR", "reason": "TELEMETRY_NOT_ENABLED", "detail": str(exc)}, ensure_ascii=True))
+        return 2
+    print(json.dumps({"result": "OK", "command_count": record["command_count"], "issue_title": record["issue_title"]}, ensure_ascii=True))
+    return 0
 
 
 def cmd_bundle_check(args: argparse.Namespace) -> int:
@@ -1627,6 +1713,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--run-id")
     p_init.add_argument("--task-class", default=DEFAULT_ALPHA_TASK_CLASS)
     p_init.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_init.add_argument("--telemetry-opt-in", action="store_true")
+    p_init.add_argument("--tester-id", default="alpha_tester")
     p_init.add_argument("--output")
     p_init.set_defaults(func=cmd_init)
 
@@ -1903,6 +1991,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_restore.add_argument("--output")
     p_restore.set_defaults(func=cmd_restore)
 
+    p_telemetry = sub.add_parser("telemetry")
+    telemetry_sub = p_telemetry.add_subparsers(dest="telemetry_cmd", required=True)
+
+    p_telemetry_enable = telemetry_sub.add_parser("enable")
+    p_telemetry_enable.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_telemetry_enable.add_argument("--tester-id", default="alpha_tester")
+    p_telemetry_enable.set_defaults(func=cmd_telemetry_enable)
+
+    p_telemetry_export = telemetry_sub.add_parser("export")
+    p_telemetry_export.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_telemetry_export.add_argument("--output")
+    p_telemetry_export.add_argument("--issue-output")
+    p_telemetry_export.set_defaults(func=cmd_telemetry_export)
+
     p_artifact_consistency = sub.add_parser("artifact-consistency")
     p_artifact_consistency.add_argument("--artifact-root")
     p_artifact_consistency.add_argument("--state-file")
@@ -2111,7 +2213,32 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    return args.func(args)
+    caught: Exception | None = None
+    exit_code = 1
+    try:
+        exit_code = int(args.func(args))
+    except Exception as exc:
+        caught = exc
+    root = alpha_root_from_args(args) if getattr(args, "cmd", None) else None
+    if (
+        caught is None
+        and getattr(args, "cmd", None) == "init"
+        and getattr(args, "telemetry_opt_in", False)
+        and exit_code == 0
+        and root is not None
+    ):
+        enable_telemetry(root, getattr(args, "tester_id", "alpha_tester"))
+    try:
+        maybe_capture_alpha_telemetry(
+            args,
+            exit_code=exit_code,
+            explicit_error_class=caught.__class__.__name__ if caught else "",
+        )
+    except Exception:
+        pass
+    if caught is not None:
+        raise caught
+    return exit_code
 
 
 if __name__ == "__main__":

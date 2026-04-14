@@ -66,6 +66,15 @@ This shell is intentionally thin:
 - it keeps the existing dev/runtime helpers underneath
 - it does not introduce a new runtime semantics branch
 
+Optional alpha telemetry now sits on the same artifact root:
+
+```bash
+synrail init --artifact-root "$ARTIFACT_ROOT" --telemetry-opt-in --tester-id your_name
+synrail telemetry export --artifact-root "$ARTIFACT_ROOT"
+```
+
+That writes one bounded session replay plus one GitHub-Issues-ready markdown body without including file contents.
+
 ## Included helpers
 
 ### `attest_target_surface.sh`
@@ -357,6 +366,24 @@ Does not guarantee:
 
 - hosted telemetry
 - broad tracing across every external system
+
+### `synrail_alpha_telemetry_v0.py`
+
+Purpose:
+
+- record one opt-in alpha command sequence and export one bounded session replay
+
+Guarantees:
+
+- records command names and flag names without file contents
+- records state at error, component error class, repair attempt count, version, and OS
+- emits one GitHub-Issues-ready markdown body beside the replay JSON
+
+Does not guarantee:
+
+- automatic upload
+- hosted dashboards
+- sensitive-content capture
 
 ### `synrail_reproducibility_v0.py`
 
