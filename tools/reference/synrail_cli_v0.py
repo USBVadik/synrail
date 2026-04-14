@@ -489,7 +489,7 @@ def print_init_summary(*, root: Path, state_file: Path) -> None:
         f"Detected project type: {profile.get('project_type', 'generic')}",
         artifact_hint + shell_command(root, "check"),
     ]
-    checkpoint_suggestion = shell_command(root, "checkpoint", "create")
+    checkpoint_suggestion = shell_command(root, "save")
     lines.append(f"Optional safe point: {checkpoint_suggestion}")
     print("\n".join(lines))
 
@@ -501,8 +501,9 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
     lines = []
     if action == "create":
         lines = [
-            f"Checkpoint saved: {payload.get('checkpoint_id', '')}",
-            f"Safe point class: {payload.get('safe_point_class', '')}",
+            f"Safe point saved: {payload.get('checkpoint_id', '')}",
+            f"Safe point type: {payload.get('safe_point_class', '')}",
+            "What to do next: verify this safe point before depending on it for restore.",
             "Next command: " + (
                 shell_command(root, "checkpoint", "verify")
                 if root
@@ -899,7 +900,7 @@ def cmd_verify_checkpoint(args: argparse.Namespace) -> int:
             print("Synrail could not find a checkpoint to verify.")
             if root:
                 print("What to do next: create one while the project is in a verified working state.")
-                print("Next command: " + shell_command(root, "checkpoint", "create"))
+                print("Next command: " + shell_command(root, "save"))
         return 2
     if not getattr(args, "output", None):
         print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_VERIFY_OUTPUT_REQUIRED"}, ensure_ascii=True))
@@ -939,7 +940,7 @@ def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
             print("Synrail could not find a verified checkpoint to restore.")
             if root:
                 print("What to do next: create one while the project is in a verified working state.")
-                print("Next command: " + shell_command(root, "checkpoint", "create"))
+                print("Next command: " + shell_command(root, "save"))
         return 2
     forwarded = [
         "restore",
@@ -2281,6 +2282,25 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_create.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_create.add_argument("--output")
     p_checkpoint_create.set_defaults(func=cmd_create_checkpoint)
+
+    p_save = sub.add_parser("save")
+    p_save.add_argument("--checkpoint-id", default="working")
+    p_save.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_save.add_argument("--checkpoint-root")
+    p_save.add_argument("--state-file")
+    p_save.add_argument("--report-file")
+    p_save.add_argument("--orchestration-file")
+    p_save.add_argument("--bundle-file")
+    p_save.add_argument("--closure-file")
+    p_save.add_argument("--refresh-file")
+    p_save.add_argument("--selection-file")
+    p_save.add_argument("--preparation-file")
+    p_save.add_argument("--repair-packet-file")
+    p_save.add_argument("--repair-handoff-file")
+    p_save.add_argument("--repair-receipt-file")
+    p_save.add_argument("--mode", default="default", choices=["default", "dev"])
+    p_save.add_argument("--output")
+    p_save.set_defaults(func=cmd_create_checkpoint)
 
     p_checkpoint_verify = sub.add_parser("verify-checkpoint")
     p_checkpoint_verify.add_argument("--artifact-root")

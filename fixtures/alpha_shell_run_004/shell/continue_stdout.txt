@@ -1,0 +1,5 @@
+Status: Repair Stopped
+What happened: The repair loop has reached a bounded stop condition.
+What it means: Stop replaying this contour and start a new run or restore a verified safe point.
+What to do next: Stop replaying this contour. Restore a verified checkpoint or start a new run.
+Suggested path: restore-checkpoint or start a new run
