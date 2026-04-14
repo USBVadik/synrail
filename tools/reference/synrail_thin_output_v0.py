@@ -152,11 +152,11 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
         ),
         "NON_RESUMABLE": (
             "This run cannot continue from the current state.",
-            f"Start a new run or restore a verified safe point before trying again.{suffix}{recovery_suffix}",
+            f"Start a new run or restore a verified restore point before trying again.{suffix}{recovery_suffix}",
         ),
         "CLOSURE_REJECTED": (
             "Closure was rejected and cannot be treated as accepted work.",
-            f"Inspect the closure blocker and repair or restart from a verified safe point.{suffix}{recovery_suffix}",
+            f"Inspect the closure blocker and repair or restart from a verified restore point.{suffix}{recovery_suffix}",
         ),
         "PROOF_INVALID": (
             "The proof bundle is invalid, so closure is not trustworthy.",
@@ -168,10 +168,10 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
         ),
         "REPAIR_STOP": (
             "The repair loop has reached a bounded stop condition.",
-            f"Stop replaying this contour and start a new run or restore a verified safe point.{suffix}{recovery_suffix}",
+            f"Stop replaying this contour and start a new run or restore a verified restore point.{suffix}{recovery_suffix}",
         ),
         "SCOPE_VIOLATION": (
-            "Doctor blocked this run because the workspace or requested target is not trustworthy.",
+            "Doctor blocked this run because the workspace or intended task target is not trustworthy.",
             (
                 f"Move back to a clean in-scope workspace before continuing this run.{suffix}{recovery_suffix}"
                 if "dirty-surface unsafe" in failure_classes
@@ -249,7 +249,7 @@ def human_next_step(
         return "No repair step is required."
     if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
         if report.get("reason", "") == "EXACT_TASK_IDENTITY_NOT_CONFIRMED":
-            return "Restore the original task request and intended target, then run synrail check for the next bounded attempt."
+            return "Restore the original task request and intended task target, then run synrail check for the next bounded attempt."
         return "Run the next bounded forward attempt through synrail check."
     if outcome_class == "PROOF_INVALID":
         return "Replace the broken final result or proof inputs, then ask Synrail for the next bounded repair step."
@@ -264,7 +264,7 @@ def human_next_step(
     if outcome_class == "DOCTOR_BLOCKED":
         return "Repair readiness first, then continue only the current bounded step."
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTINUATION_INPUTS_MISSING":
-        return "Finish the current bounded repair from synrail next-step, then run synrail continue."
+        return "Finish the current bounded repair from synrail repair-step, then run synrail continue."
     return human_safe_step_text(raw_next_step)
 
 
@@ -285,10 +285,10 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "ACCEPTED": "no next command required",
         "NON_RESUMABLE": "restore-checkpoint or start a new run",
         "CLOSURE_REJECTED": "restore-checkpoint or repair and rerun closure",
-        "PROOF_INVALID": "run synrail next-step, apply only that repair, then synrail continue",
-        "PROOF_PARTIAL": "run synrail next-step, supply only the missing proof inputs, then synrail continue",
+        "PROOF_INVALID": "run synrail repair-step, apply only that repair, then synrail continue",
+        "PROOF_PARTIAL": "run synrail repair-step, supply only the missing proof inputs, then synrail continue",
         "REPAIR_STOP": "restore-checkpoint or start a new run",
-        "SCOPE_VIOLATION": "repair the workspace or requested target, then synrail continue",
+        "SCOPE_VIOLATION": "repair the workspace or intended task target, then synrail continue",
         "DOCTOR_BLOCKED": "repair readiness, then synrail continue",
         "NON_GREEN": "inspect the blocker, then continue the bounded repair step",
     }[outcome_class]
@@ -299,7 +299,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         if "dirty-surface unsafe" in failure_classes:
             suggested_command = "restore-checkpoint or move to a clean in-scope surface, then synrail continue"
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTINUATION_INPUTS_MISSING":
-        suggested_command = "run synrail next-step, finish only that repair, then synrail continue"
+        suggested_command = "run synrail repair-step, finish only that repair, then synrail continue"
     next_step = report.get("next_safe_step", "") or state.get("next_safe_step", "")
     if outcome_class == "ACCEPTED":
         next_step = "No repair step is required."
@@ -313,9 +313,9 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
     next_command = ""
     restore_command = ""
     if outcome_class in {"PROOF_INVALID", "PROOF_PARTIAL", "SCOPE_VIOLATION", "DOCTOR_BLOCKED", "NON_GREEN"} and can_resume:
-        next_command = "synrail next-step"
+        next_command = "synrail repair-step"
     if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
-        next_command = "synrail next-step"
+        next_command = "synrail repair-step"
     if outcome_class in {"NON_RESUMABLE", "CLOSURE_REJECTED", "REPAIR_STOP", "SCOPE_VIOLATION"} and restore_available:
         restore_command = "synrail restore"
     return {

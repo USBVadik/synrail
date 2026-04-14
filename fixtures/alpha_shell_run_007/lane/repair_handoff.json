@@ -1,0 +1,97 @@
+{
+  "schema_version": "repair_handoff_v0",
+  "run_id": "ALPHA_RUN_20260414T185910Z",
+  "task_class": "bounded_change",
+  "from_state": "DOCTOR_BLOCKED",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "DOCTOR_NOT_GREEN",
+  "continuation_allowed": true,
+  "continuation_entrypoint": "resume",
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_DOCTOR_BLOCKED",
+    "active_pressures": [
+      "DOCTOR_BLOCKED"
+    ],
+    "recommended_repair_order": [
+      "restore_readiness_truth",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "explanation": "readiness failed early, but the contour can resume once the doctor inputs are repaired"
+  },
+  "repair_policy": {
+    "policy_type": "MULTI_STEP_REPAIR",
+    "next_step_id": "restore_readiness_truth",
+    "ready_now_step_ids": [
+      "restore_readiness_truth"
+    ],
+    "ordered_steps": [
+      {
+        "step_id": "restore_readiness_truth",
+        "status": "READY_NOW",
+        "required_inputs": [
+          "clean_surface_confirmation"
+        ],
+        "repairs_artifacts": [
+          "readiness_surface"
+        ],
+        "resolves_pressures": [
+          "DOCTOR_BLOCKED"
+        ],
+        "why": "doctor-blocked truth must be repaired before governed continuation can restart honestly"
+      },
+      {
+        "step_id": "rerun_closure",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_verdict_surface"
+        ],
+        "resolves_pressures": [
+          "DOCTOR_BLOCKED"
+        ],
+        "why": "closure should be rechecked only after earlier repair steps finish"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "readiness_surface",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "clean_execution_surface_record"
+      ],
+      "mapped_inputs": [
+        "clean_surface_confirmation"
+      ],
+      "repair_step": "restore_readiness_truth",
+      "why": "doctor still sees stale readiness evidence: dirty-surface unsafe",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "clean_execution_surface_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "clean_surface_confirmation"
+          ],
+          "why": "the execution surface still looks dirty or not explicitly safe for continuation"
+        }
+      ]
+    }
+  ],
+  "required_inputs": [
+    {
+      "input_id": "clean_surface_confirmation",
+      "kind": "flag",
+      "cli_flag": "--clean-surface",
+      "description": "confirm continuation is running on a clean or explicitly safe execution surface",
+      "required_value": "true"
+    }
+  ],
+  "runtime_defaults": {
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false
+  },
+  "next_safe_step": "move to a clean or explicitly observed-safe execution surface"
+}

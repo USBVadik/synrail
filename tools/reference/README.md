@@ -60,16 +60,16 @@ ARTIFACT_ROOT="$(pwd)/.synrail"
 synrail init --artifact-root "$ARTIFACT_ROOT"
 # write final_result.json or final_result.txt under $ARTIFACT_ROOT or the project root
 synrail check --artifact-root "$ARTIFACT_ROOT"
-synrail next-step --artifact-root "$ARTIFACT_ROOT"
+synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 ```
 
 This shell is intentionally thin:
 
 - it auto-discovers the standard artifact files under one artifact root
 - it auto-detects one sane project profile for the current project root
-- it defaults the alpha safe-point checkpoint id to `working`
-- it exposes `synrail save` as a thin human-facing action that saves and confirms the default working safe point
-- it exposes `synrail next-step` as a thin human-facing alias for the existing prompt bridge
+- it defaults the alpha restore-point checkpoint id to `working`
+- it exposes `synrail save` as a thin human-facing action that saves and confirms the default working restore point
+- it exposes `synrail repair-step` as the preferred human-facing alias for the existing prompt bridge
 - it exposes `synrail continue` as a thin human-facing alias for the existing `resume` path
 - it keeps the existing dev/runtime helpers underneath
 - it does not introduce a new runtime semantics branch
@@ -427,7 +427,7 @@ Purpose:
 Guarantees:
 
 - records whether the visible entry is now only `state_file + repair_packet`
-- records whether next-step, required-input, and operator-focus truth are explicit enough for the continuation path
+- records whether repair-step, required-input, and operator-focus truth are explicit enough for the continuation path
 - emits one bounded second-operator verdict
 
 Does not guarantee:

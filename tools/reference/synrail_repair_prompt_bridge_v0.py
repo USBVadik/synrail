@@ -51,6 +51,7 @@ def human_scope_label(scope_id: str) -> str:
         "clean_execution_surface_record": "the current workspace cleanliness and scope",
         "proof_bundle_surface": "the proof bundle for this run",
         "final_result_artifact": "the final result artifact for this run",
+        "target_identity_record": "the intended task target for this run",
     }
     return labels.get(scope_id, humanize_token(scope_id))
 
@@ -60,7 +61,7 @@ def human_required_input(input_id: str) -> str:
         "clean_surface_confirmation": "confirmation that the current workspace is clean and in scope",
         "helper_path": "the blocking helper path",
         "prompt_identity_file": "the original task request record",
-        "target_identity_file": "the original task target record",
+        "target_identity_file": "the intended task target record",
         "refresh_recovery_complete": "confirmation that recovery completed",
         "refresh_reverification_complete": "confirmation that reverification completed",
     }
@@ -85,7 +86,7 @@ def checkpoint_note(checkpoint: dict | None, *, repair_packet: dict) -> str:
         and checkpoint.get("run_id", "") == repair_packet.get("run_id", "")
         and checkpoint.get("task_class", "") == repair_packet.get("task_class", "")
     ):
-        return "A verified safe point is available if this repair path becomes unsafe."
+        return "A verified restore point is available if this repair path becomes unsafe."
     return ""
 
 
@@ -139,7 +140,7 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None) -> dict
     failure_label = human_failure_label(broken_truth)
     continuation_next_step = next_safe_step(repair_packet)
     next_safe_step_label = (
-        "restore the original task request and intended target, then run the next bounded check"
+        "restore the original task request and intended task target, then run the next bounded check"
         if continuation_next_step == "restore exact prompt and task identity"
         else (
             "move back to a clean or clearly verified-safe workspace"

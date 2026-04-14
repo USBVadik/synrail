@@ -87,17 +87,17 @@ ARTIFACT_ROOT="$(pwd)/.synrail"
 synrail init --artifact-root "$ARTIFACT_ROOT"
 # write final_result.json or final_result.txt under $ARTIFACT_ROOT or the project root
 synrail check --artifact-root "$ARTIFACT_ROOT"
-synrail next-step --artifact-root "$ARTIFACT_ROOT"
+synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 ```
 
 Current shell proof surfaces:
 
 - first-run onboarding errors:
-  - [alpha_onboarding_run_005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_005)
-- self-contained safe point:
-  - [alpha_safe_point_run_002](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_safe_point_run_002)
+  - [alpha_onboarding_run_006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_006)
+- self-contained restore point:
+  - [alpha_safe_point_run_003](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_safe_point_run_003)
 - zero-config-ish first run:
-  - [alpha_shell_run_006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_006)
+  - [alpha_shell_run_007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_007)
 - accepted default-mode translation:
   - [thin_output_run_accepted_003](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_003)
 - continuation-blocked translation:

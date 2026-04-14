@@ -243,7 +243,7 @@ def telemetry_flag_names(argv: list[str]) -> list[str]:
 
 def should_capture_alpha_telemetry(args: argparse.Namespace) -> bool:
     path = command_path_from_args(args)
-    return path[0] in {"init", "check", "generate-prompt", "next-step", "restore", "resume", "continue", "checkpoint"}
+    return path[0] in {"init", "check", "generate-prompt", "next-step", "repair-step", "restore", "resume", "continue", "checkpoint"}
 
 
 def maybe_capture_alpha_telemetry(
@@ -494,7 +494,7 @@ def print_init_summary(*, root: Path, state_file: Path) -> None:
         artifact_hint + shell_command(root, "check"),
     ]
     checkpoint_suggestion = shell_command(root, "save")
-    lines.append(f"Optional safe point: {checkpoint_suggestion}")
+    lines.append(f"Optional restore point: {checkpoint_suggestion}")
     print("\n".join(lines))
 
 
@@ -502,7 +502,7 @@ def human_safe_point_class(value: str) -> str:
     mapping = {
         "VERIFIED_WORKING_STATE": "Verified working state",
         "VERIFIED_ACCEPTED_STATE": "Verified accepted state",
-        "NOT_SAFE_POINT": "Not a verified safe point",
+        "NOT_SAFE_POINT": "Not a verified restore point",
     }
     return mapping.get(value, value)
 
@@ -514,7 +514,7 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
 
     def human_checkpoint_step(text: str) -> str:
         mapping = {
-            "checkpoint verified; restore is now allowed": "This safe point is ready to use for restore.",
+            "checkpoint verified; restore is now allowed": "This restore point is ready to use for restore.",
             "inspect or continue from the restored checkpoint state": "Inspect the restored state or continue from it.",
         }
         return mapping.get(text, text)
@@ -522,9 +522,9 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
     lines = []
     if action == "create":
         lines = [
-            f"Safe point saved: {payload.get('checkpoint_id', '')}",
-            f"Safe point type: {human_safe_point_class(payload.get('safe_point_class', ''))}",
-            "What to do next: verify this safe point before depending on it for restore.",
+            f"Restore point saved: {payload.get('checkpoint_id', '')}",
+            f"Restore point type: {human_safe_point_class(payload.get('safe_point_class', ''))}",
+            "What to do next: verify this restore point before depending on it for restore.",
             "Next command: " + (
                 shell_command(root, "checkpoint", "verify")
                 if root
@@ -533,7 +533,7 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
         ]
     elif action == "verify":
         lines = [
-            f"Safe point check: {payload.get('verification', {}).get('status', '')}",
+            f"Restore point check: {payload.get('verification', {}).get('status', '')}",
             human_checkpoint_step(payload.get("next_safe_step", "")),
         ]
     elif action == "restore":
@@ -556,8 +556,8 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
     verify = load_json(verify_file)
     verification = verify.get("verification", {})
     lines = [
-        f"Safe point ready: {verify.get('checkpoint_id', record.get('checkpoint_id', ''))}",
-        f"Safe point type: {human_safe_point_class(record.get('safe_point_class', verify.get('safe_point_class', '')))}",
+        f"Restore point ready: {verify.get('checkpoint_id', record.get('checkpoint_id', ''))}",
+        f"Restore point type: {human_safe_point_class(record.get('safe_point_class', verify.get('safe_point_class', '')))}",
     ]
     if verification.get("status") == "PASSED":
         lines.extend(
@@ -571,7 +571,7 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
     else:
         lines.extend(
             [
-                "What happened: Synrail saved the safe point but could not fully confirm it yet.",
+                "What happened: Synrail saved the restore point but could not fully confirm it yet.",
                 "What to do next: inspect the save and rerun explicit verification before depending on restore.",
             ]
         )
@@ -1021,7 +1021,7 @@ def cmd_verify_checkpoint(args: argparse.Namespace) -> int:
         if args.mode == "dev":
             print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
         else:
-            print("Synrail could not find a safe point to confirm.")
+            print("Synrail could not find a restore point to confirm.")
             if root:
                 print("What to do next: create one while the project is in a verified working state.")
                 print("Next command: " + shell_command(root, "save"))
@@ -1061,7 +1061,7 @@ def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
         if args.mode == "dev":
             print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
         else:
-            print("Synrail could not find a verified safe point to restore.")
+            print("Synrail could not find a verified restore point to restore.")
             if root:
                 print("What to do next: create one while the project is in a verified working state.")
                 print("Next command: " + shell_command(root, "save"))
@@ -2554,7 +2554,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_thin_output.add_argument("--consistency-recovery-file")
     p_thin_output.set_defaults(func=cmd_thin_output)
 
-    p_generate_prompt = sub.add_parser("generate-prompt", aliases=["next-step"])
+    p_generate_prompt = sub.add_parser("generate-prompt", aliases=["next-step", "repair-step"])
     p_generate_prompt.add_argument("--artifact-root")
     p_generate_prompt.add_argument("--repair-packet-file")
     p_generate_prompt.add_argument("--mode", default="default", choices=["default", "dev"])
