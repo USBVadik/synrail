@@ -20,13 +20,11 @@ def save_json(path: Path, payload: dict) -> None:
 def build_record(*, second_operator: dict, thin_output: dict, repair_packet: dict) -> dict:
     expected_next_step = repair_packet.get("continuation_core", {}).get("next_safe_step", "")
     missing_markers: list[str] = []
+    outcome_class = thin_output.get("outcome_class", "")
+    repair_family = second_operator.get("repair_family", "")
 
     if second_operator.get("verdict", "") != "FOLLOWABLE_BY_SECOND_OPERATOR":
         missing_markers.append("second_operator_followability")
-    if second_operator.get("repair_family", "") != "NOT_RESUMABLE_FRESH_ORCHESTRATION":
-        missing_markers.append("repair_family")
-    if thin_output.get("outcome_class", "") != "NON_RESUMABLE":
-        missing_markers.append("outcome_class")
     if thin_output.get("next_step", "") != expected_next_step:
         missing_markers.append("next_step")
     if not thin_output.get("restore_available", False):
@@ -34,25 +32,37 @@ def build_record(*, second_operator: dict, thin_output: dict, repair_packet: dic
 
     diagnosis = thin_output.get("diagnosis", "")
     suggested_command = thin_output.get("suggested_command", "")
-    if "governed forward path" not in diagnosis:
-        missing_markers.append("diagnosis_forward_boundary")
-    if suggested_command != "continue governed forward path, not resume":
-        missing_markers.append("suggested_command")
+    if repair_family == "NOT_RESUMABLE_FRESH_ORCHESTRATION":
+        if outcome_class != "NON_RESUMABLE":
+            missing_markers.append("outcome_class")
+        if "governed forward path" not in diagnosis:
+            missing_markers.append("diagnosis_forward_boundary")
+        if suggested_command != "continue governed forward path, not resume":
+            missing_markers.append("suggested_command")
+    elif repair_family == "REPAIRABLE_DOCTOR_BLOCKED":
+        if outcome_class != "SCOPE_VIOLATION":
+            missing_markers.append("outcome_class")
+        if "clean in-scope execution surface" not in diagnosis:
+            missing_markers.append("diagnosis_scope_boundary")
+        if suggested_command != "restore-checkpoint or move to a clean in-scope surface, then resume":
+            missing_markers.append("suggested_command")
+    else:
+        missing_markers.append("repair_family")
 
     verdict = "FOLLOWABLE_WITHOUT_OPERATOR_AMBIGUITY" if not missing_markers else "OPERATOR_AMBIGUITY_REMAINS"
     return {
         "schema_version": "checkpoint_operator_reading_record_v0",
         "run_id": second_operator["run_id"],
         "task_class": second_operator["task_class"],
-        "repair_family": second_operator.get("repair_family", ""),
-        "outcome_class": thin_output.get("outcome_class", ""),
+        "repair_family": repair_family,
+        "outcome_class": outcome_class,
         "next_step": thin_output.get("next_step", ""),
         "restore_available": thin_output.get("restore_available", False),
         "suggested_command": suggested_command,
         "missing_markers": missing_markers,
         "verdict": verdict,
         "why": (
-            "the restored contour stays followable and the operator-facing output names the fresh forward boundary without suggesting resume"
+            "the checkpoint-backed contour stays followable and the operator-facing output names the correct recovery boundary without suggesting the wrong next move"
             if verdict == "FOLLOWABLE_WITHOUT_OPERATOR_AMBIGUITY"
             else "the restored contour still leaves one or more operator-facing ambiguities in the combined reading surface"
         ),

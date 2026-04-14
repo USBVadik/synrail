@@ -163,6 +163,10 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
     }[outcome_class]
     if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
         suggested_command = "continue governed forward path, not resume"
+    if outcome_class == "SCOPE_VIOLATION" and restore_available:
+        failure_classes = list((doctor or {}).get("blocking_failure_classes", []))
+        if "dirty-surface unsafe" in failure_classes:
+            suggested_command = "restore-checkpoint or move to a clean in-scope surface, then resume"
     return {
         "schema_version": "thin_output_record_v0",
         "mode": mode,

@@ -68,6 +68,7 @@ Start here when you want to understand the kernel itself:
 - `core/CHECKPOINT_RUN_004.md`
 - `core/CHECKPOINT_CONTINUATION_RUN_001.md`
 - `core/CHECKPOINT_OPERATOR_READING_001.md`
+- `core/CHECKPOINT_SCOPE_VIOLATION_001.md`
 - `core/REPAIR_TERMINATION_001.md`
 - `core/REPAIR_CONVERGENCE_RUN_001.md`
 - `core/ARTIFACT_CONSISTENCY_001.md`
@@ -191,6 +192,7 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/checkpoint_run_004/checkpoint_restore.json`
 - `../fixtures/checkpoint_continuation_run_001/repair_packet.json`
 - `../fixtures/checkpoint_operator_reading_run_001/reading.json`
+- `../fixtures/checkpoint_scope_violation_run_001/reading.json`
 - `../fixtures/repair_convergence_run_001/run.json`
 - `../fixtures/repair_convergence_run_002/run.json`
 - `../fixtures/repair_convergence_run_005/run.json`

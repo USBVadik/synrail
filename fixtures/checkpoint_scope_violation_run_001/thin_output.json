@@ -1,0 +1,16 @@
+{
+  "schema_version": "thin_output_record_v0",
+  "mode": "default",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "outcome_class": "SCOPE_VIOLATION",
+  "summary": "Doctor blocked the contour because scope or target identity is not trustworthy.",
+  "diagnosis": "Move back to a clean in-scope execution surface before resuming. A verified checkpoint is available.",
+  "next_step": "move to a clean or explicitly observed-safe execution surface",
+  "restore_available": true,
+  "checkpoint_id": "CHECKPOINT_RUN_003",
+  "recovery_primary_action": "",
+  "recovery_operator_instructions": [],
+  "suggested_command": "restore-checkpoint or move to a clean in-scope surface, then resume",
+  "technical_lines": []
+}

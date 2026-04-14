@@ -1,0 +1,13 @@
+{
+  "schema_version": "checkpoint_operator_reading_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "repair_family": "REPAIRABLE_DOCTOR_BLOCKED",
+  "outcome_class": "SCOPE_VIOLATION",
+  "next_step": "move to a clean or explicitly observed-safe execution surface",
+  "restore_available": true,
+  "suggested_command": "restore-checkpoint or move to a clean in-scope surface, then resume",
+  "missing_markers": [],
+  "verdict": "FOLLOWABLE_WITHOUT_OPERATOR_AMBIGUITY",
+  "why": "the checkpoint-backed contour stays followable and the operator-facing output names the correct recovery boundary without suggesting the wrong next move"
+}
