@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v2",
+  "system": "synrail",
+  "scenario_id": "SUBSTITUTE_SCENARIO_MINIMAL_CONTINUATION_006",
+  "scenario_class": "minimal_identity_repair_contour",
+  "task_class": "bounded_router_trigger_fix",
+  "path_id": "packet_first_minimal_continuation",
+  "closure_result": "ACCEPTED",
+  "blocker_to_closure_cycles": 1,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "MEDIUM",
+  "operator_minutes": 14,
+  "intervention_count": 1,
+  "repair_cycles": 1,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 14,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 95,
+  "notes": "the minimal packet-first contour restores exact identity artifacts, preserves bounded continuation truth, and reaches accepted closure without manual reconstruction of the repair path"
+}
