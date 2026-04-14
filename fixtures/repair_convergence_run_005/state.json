@@ -1,0 +1,41 @@
+{
+  "schema_version": "run_state_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "state": "DOCTOR_BLOCKED",
+  "target_surface": {
+    "status": "ATTESTED",
+    "identity": "clean-clone",
+    "baseline_relation": "trusted_clean"
+  },
+  "doctor": {
+    "status": "FAIL",
+    "blocking_failure_classes": [
+      "helper-integrity unknown"
+    ]
+  },
+  "integrity": {
+    "status": "PASS",
+    "exact_task_identity_ok": true
+  },
+  "execution": {
+    "status": "NOT_RUN",
+    "artifact_bundle_present": false
+  },
+  "proof_bundle": {
+    "status": "MISSING",
+    "missing_sections": []
+  },
+  "closure": {
+    "status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "NO_PROGRESS_DETECTED",
+    "next_allowed_transition": "NONE",
+    "narrow_next_safe_step": "stop retrying the same repair step without new evidence or inputs",
+    "missing_sections": []
+  },
+  "recovery": {
+    "status": "NOT_REQUIRED",
+    "reverification_complete": false
+  },
+  "next_safe_step": "stop retrying the same repair step without new evidence or inputs"
+}

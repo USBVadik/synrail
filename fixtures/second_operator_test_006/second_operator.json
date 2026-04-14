@@ -1,0 +1,22 @@
+{
+  "schema_version": "second_operator_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "entrypoint": "resume",
+  "entry_state": "READY",
+  "visible_entry_artifacts": [
+    "state_file",
+    "repair_packet"
+  ],
+  "packet_only_entry": true,
+  "has_explicit_next_step": true,
+  "has_explicit_required_inputs": false,
+  "has_explicit_operator_focus": true,
+  "requires_author_intuition": false,
+  "expected_result": "BLOCKED",
+  "expected_reason": "STATE_NOT_RESUMABLE",
+  "expected_next_safe_step": "continue through the governed forward path instead of named resume",
+  "repair_family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
+  "verdict": "FOLLOWABLE_BY_SECOND_OPERATOR",
+  "why": "the packet-first continuation path exposes enough next-step and input truth to be followed without author memory"
+}
