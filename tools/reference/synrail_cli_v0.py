@@ -524,16 +524,16 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
         lines = [
             f"Restore point saved: {payload.get('checkpoint_id', '')}",
             f"Restore point type: {human_safe_point_class(payload.get('safe_point_class', ''))}",
-            "What to do next: verify this restore point before depending on it for restore.",
+            "What to do next: confirm this restore point before depending on it for restore.",
             "Next command: " + (
-                shell_command(root, "checkpoint", "verify")
+                shell_command(root, "confirm-restore")
                 if root
                 else payload.get("next_safe_step", "")
             ),
         ]
     elif action == "verify":
         lines = [
-            f"Restore point verification: {payload.get('verification', {}).get('status', '')}",
+            f"Restore point confirmation: {payload.get('verification', {}).get('status', '')}",
             human_checkpoint_step(payload.get("next_safe_step", "")),
         ]
     elif action == "restore":
@@ -572,11 +572,11 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
         lines.extend(
             [
                 "What happened: Synrail saved the restore point but could not fully confirm it yet.",
-                "What to do next: inspect the save and rerun restore-point verification before depending on restore.",
+                "What to do next: inspect the save and rerun restore-point confirmation before depending on restore.",
             ]
         )
         if root:
-            lines.append("Next command: " + shell_command(root, "checkpoint", "verify"))
+            lines.append("Next command: " + shell_command(root, "confirm-restore"))
     print("\n".join(line for line in lines if line))
 
 
@@ -2441,7 +2441,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_save.add_argument("--output")
     p_save.set_defaults(func=cmd_save)
 
-    p_checkpoint_verify = sub.add_parser("verify-checkpoint")
+    p_checkpoint_verify = sub.add_parser("verify-checkpoint", aliases=["confirm-restore"])
     p_checkpoint_verify.add_argument("--artifact-root")
     p_checkpoint_verify.add_argument("--checkpoint-id")
     p_checkpoint_verify.add_argument("--checkpoint-record-file")

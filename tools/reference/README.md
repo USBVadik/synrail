@@ -69,6 +69,7 @@ This shell is intentionally thin:
 - it auto-detects one sane project profile for the current project root
 - it defaults the alpha restore-point checkpoint id to `working`
 - it exposes `synrail save` as a thin human-facing action that saves and confirms the default working restore point
+- it exposes `synrail confirm-restore` as the preferred human-facing alias for explicit restore-point confirmation
 - it exposes `synrail repair-step` as the preferred human-facing alias for the existing prompt bridge
 - it exposes `synrail retry` as the preferred human-facing alias for the existing `resume` path
 - it keeps `synrail continue` as a compatibility alias for the same path

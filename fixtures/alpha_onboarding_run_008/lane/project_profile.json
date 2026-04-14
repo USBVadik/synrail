@@ -1,0 +1,36 @@
+{
+  "schema_version": "alpha_project_profile_v0",
+  "project_root": "/Users/usbdick/Documents/New project/synrail",
+  "project_type": "python",
+  "task_class": "bounded_change",
+  "target_path": "/Users/usbdick/Documents/New project/synrail",
+  "target_classification": "trusted_worktree",
+  "intended_run_class": "core_probe",
+  "baseline_identity": "autodetected_python_baseline",
+  "execution_surface_identity": "autodetected_python_worktree",
+  "artifact_path": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_008/lane/final_result.json",
+  "final_result_candidates": [
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_008/lane/final_result.json",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_008/lane/final_result.txt",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_008/lane/result.json",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_008/lane/result.txt",
+    "/Users/usbdick/Documents/New project/synrail/final_result.json",
+    "/Users/usbdick/Documents/New project/synrail/final_result.txt",
+    "/Users/usbdick/Documents/New project/synrail/result.json",
+    "/Users/usbdick/Documents/New project/synrail/result.txt"
+  ],
+  "readback_candidates": [
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_008/lane/readback.json",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_008/lane/readback.txt",
+    "/Users/usbdick/Documents/New project/synrail/readback.json",
+    "/Users/usbdick/Documents/New project/synrail/readback.txt"
+  ],
+  "scenario_proof_candidates": [
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_008/lane/scenario_proof.json",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_008/lane/scenario_proof.md",
+    "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_008/lane/scenario_proof.txt",
+    "/Users/usbdick/Documents/New project/synrail/scenario_proof.json",
+    "/Users/usbdick/Documents/New project/synrail/scenario_proof.md",
+    "/Users/usbdick/Documents/New project/synrail/scenario_proof.txt"
+  ]
+}

@@ -85,7 +85,7 @@ On the current onboarding smoke in [alpha_onboarding_run_007](/Users/usbdick/Doc
 
 - `repair-step` before any `check` now returns one bounded human-readable next step instead of a raw missing-artifact failure
 - `restore` without any checkpoint now says how to create the restore point first through `synrail save`
-- `checkpoint verify` without any checkpoint now returns bounded guidance instead of a traceback and points to `synrail save`
+- `confirm-restore` without any checkpoint now returns bounded guidance instead of a traceback and points to `synrail save`
 
 On the current shell smoke in [alpha_shell_run_008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_008):
 
@@ -98,6 +98,7 @@ On the current shell smoke in [alpha_shell_run_008](/Users/usbdick/Documents/New
 - `retry` is now the preferred human-facing alias for the existing `resume` path
 - `continue` remains a compatibility alias for the same path
 - `save` now creates and confirms the default working restore point in one shell action
+- `confirm-restore` is now the preferred human-facing alias for explicit restore-point confirmation
 - `check` now says `Workspace Not Trusted` instead of leaking `Working Surface` wording
 - `prompt-followup` confirms that the generated next-agent instruction preserves the bounded current step
 
@@ -148,8 +149,9 @@ Canonical artifacts:
 - [shell prompt followup](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_008/lane/followup.json)
 - [onboarding repair-step-before-check output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_007/shell/repair_step_before_check_stdout.txt)
 - [onboarding restore-without-checkpoint output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_007/shell/restore_without_checkpoint_stdout.txt)
-- [onboarding checkpoint-verify-without-checkpoint output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_007/shell/checkpoint_verify_without_checkpoint_stdout.txt)
+- [onboarding confirm-restore-without-checkpoint output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_008/shell/confirm_restore_without_checkpoint_stdout.txt)
 - [restore point save output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_safe_point_run_004/shell/save_stdout.txt)
+- [confirm-restore output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_restore_point_confirm_run_001/shell/confirm_restore_stdout.txt)
 - [blocked retry thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_008/lane/thin_output.json)
 - [init state](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/init/state.json)
 - [working checkpoint verify](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/lane/checkpoints/working/checkpoint_verify.json)
