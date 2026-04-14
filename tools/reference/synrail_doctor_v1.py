@@ -82,6 +82,24 @@ def env_value_looks_path_like(name: str, value: str) -> bool:
     return value.endswith(".json")
 
 
+def env_value_is_placeholder(value: str) -> bool:
+    normalized = value.strip().upper()
+    if not normalized:
+        return False
+    placeholders = {
+        "CHANGE_ME",
+        "REPLACE_ME",
+        "PLACEHOLDER",
+        "YOUR_TOKEN_HERE",
+        "YOUR_API_KEY_HERE",
+        "TODO",
+        "TBD",
+        "INSERT_VALUE",
+        "SET_ME",
+    }
+    return normalized in placeholders
+
+
 def probe_baseline_identity(args: argparse.Namespace) -> tuple[dict, str, str]:
     if not non_empty_identity(args.baseline_identity):
         return gate("FAIL", "trusted baseline identity is missing"), "", args.expected_target_identity or ""
@@ -199,6 +217,10 @@ def probe_credential_surface(args: argparse.Namespace) -> dict:
     missing = [name for name in args.credential_env if not os.environ.get(name)]
     if missing:
         return gate("FAIL", f"missing credential env: {', '.join(missing)}")
+
+    placeholder_values = [name for name in args.credential_env if env_value_is_placeholder(os.environ.get(name, ""))]
+    if placeholder_values:
+        return gate("FAIL", f"credential env still uses placeholder values: {', '.join(placeholder_values)}")
 
     invalid_paths = []
     for name in args.credential_env:

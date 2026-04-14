@@ -45,6 +45,7 @@ OPERATOR_READING = HERE / "synrail_operator_reading_v0.py"
 EXTERNALITY_PRESSURE = HERE / "synrail_externality_pressure_v0.py"
 THIN_OUTPUT = HERE / "synrail_thin_output_v0.py"
 PROMPT_BRIDGE = HERE / "synrail_repair_prompt_bridge_v0.py"
+THIN_OUTPUT_READING = HERE / "synrail_thin_output_reading_v0.py"
 
 
 def run_python(script: Path, args: list[str]) -> int:
@@ -407,6 +408,19 @@ def cmd_generate_prompt(args: argparse.Namespace) -> int:
     if args.checkpoint_record_file:
         forwarded.extend(["--checkpoint-record-file", args.checkpoint_record_file])
     return run_python(PROMPT_BRIDGE, forwarded)
+
+
+def cmd_thin_output_reading(args: argparse.Namespace) -> int:
+    return run_python(
+        THIN_OUTPUT_READING,
+        [
+            "--thin-output-file", args.thin_output_file,
+            "--prompt-bridge-file", args.prompt_bridge_file,
+            "--report-file", args.report_file,
+            "--repair-packet-file", args.repair_packet_file,
+            "--output", args.output,
+        ],
+    )
 
 
 def cmd_observability(args: argparse.Namespace) -> int:
@@ -1332,6 +1346,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_generate_prompt.add_argument("--output", required=True)
     p_generate_prompt.add_argument("--checkpoint-record-file")
     p_generate_prompt.set_defaults(func=cmd_generate_prompt)
+
+    p_thin_output_reading = sub.add_parser("thin-output-reading")
+    p_thin_output_reading.add_argument("--thin-output-file", required=True)
+    p_thin_output_reading.add_argument("--prompt-bridge-file", required=True)
+    p_thin_output_reading.add_argument("--report-file", required=True)
+    p_thin_output_reading.add_argument("--repair-packet-file", required=True)
+    p_thin_output_reading.add_argument("--output", required=True)
+    p_thin_output_reading.set_defaults(func=cmd_thin_output_reading)
 
     p_reproducibility = sub.add_parser("reproducibility")
     p_reproducibility.add_argument("--run-a", required=True)

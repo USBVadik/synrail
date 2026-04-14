@@ -1,0 +1,14 @@
+{
+  "schema_version": "thin_output_record_v0",
+  "mode": "default",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+  "task_class": "bounded_router_trigger_fix",
+  "outcome_class": "REPAIR_STOP",
+  "summary": "The repair loop has reached a bounded stop condition.",
+  "diagnosis": "Stop replaying this contour and start a new run or restore a verified safe point.",
+  "next_step": "stop this repair loop and start a new run or manual recovery path",
+  "restore_available": false,
+  "checkpoint_id": "",
+  "suggested_command": "restore-checkpoint or start a new run",
+  "technical_lines": []
+}
