@@ -81,7 +81,7 @@ def build_record(*, state: dict, report: dict, packet: dict, doctor: dict | None
         "run_id": state["run_id"],
         "task_class": state["task_class"],
         "entrypoint": "resume" if report.get("resume_applied", False) else report.get("stopping_stage", "runtime"),
-        "entry_state": report.get("resume_from_state", state.get("state", "")),
+        "entry_state": report.get("resume_from_state") or report.get("entry_state") or state.get("state", ""),
         "resulting_state": state.get("state", ""),
         "result": report.get("result", ""),
         "stopping_stage": report.get("stopping_stage", ""),

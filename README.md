@@ -63,7 +63,9 @@ python3 -m venv .venv
 .venv/bin/python setup.py install
 ```
 
-Then the smallest usable path is:
+Then the smallest usable path depends on whether you already have one verified working state.
+
+Verified-working contour:
 
 ```bash
 ARTIFACT_ROOT="$(pwd)/.synrail"
@@ -73,6 +75,15 @@ synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT" --checkpoint-id worki
 synrail check --artifact-root "$ARTIFACT_ROOT" ...
 synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
 synrail restore --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
+```
+
+Fresh first-run contour:
+
+```bash
+ARTIFACT_ROOT="$(pwd)/.synrail"
+synrail init --artifact-root "$ARTIFACT_ROOT"
+synrail check --artifact-root "$ARTIFACT_ROOT" ...
+synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
 ```
 
 Read [ALPHA_LANE_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md) for the current verified contour and the canonical smoke artifacts behind it.
@@ -113,6 +124,8 @@ Read these next only if you need them:
 - `docs/boundary/CORE_COMPRESSION_PASS_001.md`
 - `docs/core/CHECKPOINT_001.md`
 - `docs/core/ALPHA_LANE_001.md`
+- `docs/core/ALPHA_SECOND_OPERATOR_001.md`
+- `docs/core/ALPHA_EXTERNAL_RUN_001.md`
 - `docs/core/CHECKPOINT_RUN_001.md`
 - `docs/core/CHECKPOINT_RUN_002.md`
 - `docs/core/CHECKPOINT_RUN_004.md`
@@ -149,6 +162,7 @@ Read these next only if you need them:
 - `docs/boundary/SUBSTITUTE_KILL_TEST_006.md`
 - `docs/boundary/SUBSTITUTE_KILL_TEST_007.md`
 - `docs/boundary/SUBSTITUTE_KILL_TEST_008.md`
+- `docs/boundary/SUBSTITUTE_KILL_TEST_009.md`
 
 ## Current State
 

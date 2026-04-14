@@ -6,7 +6,7 @@ It is intentionally one contour, not a broad product shell:
 
 1. install one local `synrail` command
 2. initialize one artifact root
-3. create and verify one working checkpoint
+3. create and verify one working checkpoint when a verified working state exists
 4. run one bounded change/check contour
 5. generate one bounded follow-up prompt
 6. restore the verified working state if the contour is blocked
@@ -31,7 +31,7 @@ The reference smoke for this document was run through the installed `synrail` co
 
 `pip install . --no-build-isolation` is not yet the trusted local alpha path on the current toolchain because the local venv lacked `bdist_wheel` during smoke.
 
-## Verified Contour
+## Verified Contours
 
 Use one artifact root per run:
 
@@ -39,7 +39,9 @@ Use one artifact root per run:
 ARTIFACT_ROOT="$(pwd)/.synrail"
 ```
 
-Then the alpha lane is:
+### Verified-working contour
+
+This is the currently verified restore-capable alpha lane:
 
 ```bash
 synrail init --artifact-root "$ARTIFACT_ROOT"
@@ -59,6 +61,20 @@ synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
 synrail restore --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
 ```
 
+This contour assumes the artifact root already reflects one verified working state.
+
+### Fresh first-run contour
+
+On a fresh `init`, `Synrail` can still give bounded value immediately:
+
+```bash
+synrail init --artifact-root "$ARTIFACT_ROOT"
+synrail check --artifact-root "$ARTIFACT_ROOT" ...
+synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
+```
+
+That fresh contour does not yet guarantee `restore_available`, because no verified checkpoint exists yet.
+
 ## What This Lane Returns
 
 On the current verified smoke contour in [alpha_lane_run_003](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003):
@@ -75,6 +91,12 @@ On the current verified smoke contour in [alpha_lane_run_003](/Users/usbdick/Doc
   - `continue_forward_orchestration`
   - restore exact prompt and task identity
 - `restore` returns `OK`
+
+On the current fresh external contour in [ALPHA_EXTERNAL_RUN_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_EXTERNAL_RUN_001.md):
+
+- `check` returns `PROOF_INVALID`
+- `generate-prompt` stays bounded to `repair_final_result_artifact`
+- `restore_available = false`, which is the correct reading for a fresh contour without one verified checkpoint
 
 Canonical artifacts:
 

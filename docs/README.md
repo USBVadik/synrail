@@ -27,6 +27,7 @@ Start here when you want the current product wedge rather than the full repo his
 - `boundary/SUBSTITUTE_KILL_TEST_006.md`
 - `boundary/SUBSTITUTE_KILL_TEST_007.md`
 - `boundary/SUBSTITUTE_KILL_TEST_008.md`
+- `boundary/SUBSTITUTE_KILL_TEST_009.md`
 - `boundary/KILLER_PATH_001.md`
 - `boundary/BASELINE_COMPARISON_RECORD_001.md`
 - `boundary/MINIMUM_UNDENIABLE_CORE_001.md`
@@ -49,6 +50,8 @@ Then, if you want the practical “when should we actually use this?” rule, re
 For the current installable alpha contour, read:
 
 - `core/ALPHA_LANE_001.md`
+- `core/ALPHA_SECOND_OPERATOR_001.md`
+- `core/ALPHA_EXTERNAL_RUN_001.md`
 
 ## 2. Core
 
@@ -67,6 +70,8 @@ Start here when you want to understand the kernel itself:
 - `core/GATE_SET_001.md`
 - `core/PROOF_BUNDLE_ASSEMBLER_001.md`
 - `core/ALPHA_LANE_001.md`
+- `core/ALPHA_SECOND_OPERATOR_001.md`
+- `core/ALPHA_EXTERNAL_RUN_001.md`
 - `core/CHECKPOINT_001.md`
 - `core/CHECKPOINT_RUN_001.md`
 - `core/CHECKPOINT_RUN_002.md`
@@ -221,9 +226,15 @@ For the cleanest machine-readable entrypoint into the worked runs, start with:
 - `../fixtures/substitute_kill_test_006/substitute_pressure.json`
 - `../fixtures/substitute_kill_test_007/substitute_pressure.json`
 - `../fixtures/substitute_kill_test_008/substitute_pressure.json`
+- `../fixtures/substitute_kill_test_009/substitute_pressure.json`
 - `../fixtures/alpha_lane_run_003/lane/thin_output.json`
 - `../fixtures/alpha_lane_run_003/lane/prompt.json`
 - `../fixtures/alpha_lane_run_003/lane/checkpoint_restore.json`
+- `../fixtures/alpha_second_operator_run_001/second_operator.json`
+- `../fixtures/alpha_second_operator_run_001/reading.json`
+- `../fixtures/alpha_external_run_001/thin_output.json`
+- `../fixtures/alpha_external_run_001/prompt.json`
+- `../fixtures/alpha_externality_run_001/pressure.json`
 - `../fixtures/artifact_consistency_run_001/consistent.json`
 - `../fixtures/artifact_consistency_run_002/inconsistent.json`
 - `../fixtures/artifact_consistency_run_004/mixed.json`

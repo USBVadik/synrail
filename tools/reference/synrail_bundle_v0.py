@@ -24,6 +24,15 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
+def load_json_if_valid(path: Path | None) -> tuple[bool, dict]:
+    if path is None:
+        return False, {}
+    try:
+        return True, load_json(path)
+    except json.JSONDecodeError:
+        return False, {}
+
+
 def file_present(path_str: str | None) -> tuple[bool, str]:
     if not path_str:
         return False, ""
@@ -34,7 +43,7 @@ def file_present(path_str: str | None) -> tuple[bool, str]:
 def build_bundle(args: argparse.Namespace) -> dict:
     final_present, final_path_str = file_present(args.final_result)
     final_path = Path(final_path_str) if final_path_str else None
-    final = load_json(final_path) if final_present else {}
+    final_parseable, final = load_json_if_valid(final_path) if final_present else (False, {})
 
     modified_files = final.get("modified_files", [])
     git_diff = final.get("git_diff", "")
@@ -49,7 +58,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
         "task_class": args.task_class,
         "status": "COMPLETE",
         "final_result": {
-            "present": final_present,
+            "present": final_present and final_parseable,
             "status": final.get("status", ""),
         },
         "modified_files": {
@@ -101,7 +110,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
 
     bundle["missing_sections"] = missing
 
-    if not final_present:
+    if not final_present or not final_parseable:
         bundle["status"] = "INVALID"
     elif missing:
         bundle["status"] = "PARTIAL"

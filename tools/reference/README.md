@@ -39,7 +39,7 @@ python3 -m venv .venv
 .venv/bin/python setup.py install
 ```
 
-The current verified alpha lane is:
+The current verified restore-capable alpha lane is:
 
 ```bash
 ARTIFACT_ROOT="$(pwd)/.synrail"
@@ -49,6 +49,15 @@ synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT" --checkpoint-id worki
 synrail check --artifact-root "$ARTIFACT_ROOT" ...
 synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
 synrail restore --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
+```
+
+The current fresh first-run contour is smaller:
+
+```bash
+ARTIFACT_ROOT="$(pwd)/.synrail"
+synrail init --artifact-root "$ARTIFACT_ROOT"
+synrail check --artifact-root "$ARTIFACT_ROOT" ...
+synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
 ```
 
 This shell is intentionally thin:
