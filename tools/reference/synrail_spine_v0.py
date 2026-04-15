@@ -11,11 +11,18 @@ import sys
 import tempfile
 from pathlib import Path
 
-from synrail_artifact_consistency_v0 import build_record as build_artifact_consistency_record
-from synrail_artifact_repair_receipt_v0 import build_receipt as build_artifact_repair_receipt
-from synrail_observability_v0 import build_record as build_observability_record
-from synrail_repair_handoff_v0 import build_repair_handoff, build_resumability
-from synrail_repair_packet_v0 import build_packet_from_runtime_truth
+try:
+    from .synrail_artifact_consistency_v0 import build_record as build_artifact_consistency_record
+    from .synrail_artifact_repair_receipt_v0 import build_receipt as build_artifact_repair_receipt
+    from .synrail_observability_v0 import build_record as build_observability_record
+    from .synrail_repair_handoff_v0 import build_repair_handoff, build_resumability
+    from .synrail_repair_packet_v0 import build_packet_from_runtime_truth
+except ImportError:
+    from synrail_artifact_consistency_v0 import build_record as build_artifact_consistency_record
+    from synrail_artifact_repair_receipt_v0 import build_receipt as build_artifact_repair_receipt
+    from synrail_observability_v0 import build_record as build_observability_record
+    from synrail_repair_handoff_v0 import build_repair_handoff, build_resumability
+    from synrail_repair_packet_v0 import build_packet_from_runtime_truth
 
 
 TERMINAL_STATES = {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}

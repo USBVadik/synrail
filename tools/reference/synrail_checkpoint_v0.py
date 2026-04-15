@@ -10,8 +10,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-from synrail_repair_handoff_v0 import build_resumability
-from synrail_validate_v0 import load_json as load_json_document, validate_document
+try:
+    from .synrail_repair_handoff_v0 import build_resumability
+    from .synrail_validate_v0 import load_json as load_json_document, validate_document
+except ImportError:
+    from synrail_repair_handoff_v0 import build_resumability
+    from synrail_validate_v0 import load_json as load_json_document, validate_document
 
 
 HERE = Path(__file__).resolve().parent

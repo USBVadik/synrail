@@ -56,14 +56,22 @@ For a quick document map, start with:
 
 The current repo focus is one narrow alpha lane, not a broader shell.
 
-Verified install path today:
+Preferred install path today:
 
 ```bash
-python3 -m venv --system-site-packages .venv
-.venv/bin/python -m pip install -e . --no-build-isolation
+python3 -m venv .venv
+.venv/bin/python -m pip install .
 ```
 
-This is now the trusted local install path on the current toolchain. The older `setup.py install` route still works as a compatibility fallback, but the verified alpha lane now runs through editable install.
+This is now the trusted alpha tester path on the current toolchain.
+
+If you are iterating on Synrail itself, editable install is also supported:
+
+```bash
+.venv/bin/python -m pip install -e .
+```
+
+The older `--system-site-packages` plus `--no-build-isolation` route is now only a compatibility fallback for restricted environments that already have build tooling available.
 
 Then the smallest usable path depends on whether you already have one verified working state.
 

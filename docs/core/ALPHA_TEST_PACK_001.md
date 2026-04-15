@@ -10,11 +10,11 @@ The goal of this pack is simple:
 
 ## Install
 
-Verified local install path:
+Preferred tester install path:
 
 ```bash
-python3 -m venv --system-site-packages .venv
-.venv/bin/python -m pip install -e . --no-build-isolation
+python3 -m venv .venv
+.venv/bin/python -m pip install .
 ```
 
 ## 10-Minute Quickstart

@@ -8,7 +8,10 @@ import json
 import sys
 from pathlib import Path
 
-from synrail_repair_handoff_v0 import build_repair_handoff
+try:
+    from .synrail_repair_handoff_v0 import build_repair_handoff
+except ImportError:
+    from synrail_repair_handoff_v0 import build_repair_handoff
 
 
 def load_json(path: Path) -> dict:

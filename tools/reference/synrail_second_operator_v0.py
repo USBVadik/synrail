@@ -8,7 +8,10 @@ import json
 import sys
 from pathlib import Path
 
-from synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
+try:
+    from .synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
+except ImportError:
+    from synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
 
 
 def load_json(path: Path) -> dict:

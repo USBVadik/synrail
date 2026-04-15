@@ -31,8 +31,8 @@ I want blunt criticism on:
 ## Commands to include
 
 ```bash
-python3 -m venv --system-site-packages .venv
-.venv/bin/python -m pip install -e . --no-build-isolation
+python3 -m venv .venv
+.venv/bin/python -m pip install .
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 

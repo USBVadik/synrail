@@ -14,10 +14,12 @@ synrail = "alpha:main"
 
 [tool.setuptools]
 py-modules = ["alpha", "reference_runner"]
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["synrail*"]
+include = ["tools*", "schemas"]
 
 [tool.setuptools.package-data]
-synrail = ["schemas/*.json", "tools/reference/*.sh"]
+tools = ["reference/*.json", "reference/*.sh"]
+schemas = ["*.json"]

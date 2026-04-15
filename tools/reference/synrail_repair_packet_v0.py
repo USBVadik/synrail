@@ -8,14 +8,24 @@ import json
 import sys
 from pathlib import Path
 
-from synrail_repair_handoff_v0 import (
-    DOCTOR_FAILURE_INPUTS,
-    build_repair_handoff,
-    build_resumability,
-    collect_active_pressures,
-    load_json as load_state_json,
-)
-from synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
+try:
+    from .synrail_repair_handoff_v0 import (
+        DOCTOR_FAILURE_INPUTS,
+        build_repair_handoff,
+        build_resumability,
+        collect_active_pressures,
+        load_json as load_state_json,
+    )
+    from .synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
+except ImportError:
+    from synrail_repair_handoff_v0 import (
+        DOCTOR_FAILURE_INPUTS,
+        build_repair_handoff,
+        build_resumability,
+        collect_active_pressures,
+        load_json as load_state_json,
+    )
+    from synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
 
 MAX_REPAIR_ATTEMPTS = 3
 NO_PROGRESS_WINDOW = 2

@@ -116,8 +116,8 @@ Start here for live runnable and fixture-backed review:
 Install:
 
 ```bash
-python3 -m venv --system-site-packages .venv
-.venv/bin/python -m pip install -e . --no-build-isolation
+python3 -m venv .venv
+.venv/bin/python -m pip install .
 ```
 
 Run the full current test suite:

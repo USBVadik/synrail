@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 
 setup(
@@ -6,10 +6,12 @@ setup(
     version="0.1.0",
     description="Guided control for reliable agent execution.",
     py_modules=["alpha", "reference_runner"],
-    packages=["synrail", "synrail.tools", "synrail.tools.reference"],
-    package_dir={"synrail": "."},
+    packages=find_packages(include=["tools*", "schemas"]),
     include_package_data=True,
-    package_data={"synrail": ["schemas/*.json", "tools/reference/*.sh"]},
+    package_data={
+        "tools": ["reference/*.json", "reference/*.sh"],
+        "schemas": ["*.json"],
+    },
     zip_safe=False,
     entry_points={"console_scripts": ["synrail=alpha:main"]},
 )
