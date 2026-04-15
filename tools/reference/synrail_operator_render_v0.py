@@ -38,7 +38,22 @@ def render_optional(value: str) -> str:
 def render_brief(payload: dict) -> str:
     return f"""# Operator Render
 
-## Summary
+## Do This Now
+
+- {payload.get("current_step_action_instruction", "") or payload["why_action"]}
+- next safe step: `{payload["next_safe_step"]}`
+- suggested CLI: {render_suggested_cli(payload.get("suggested_cli", {}))}
+
+## Current Focus
+
+- current step: `{payload["current_step_id"]}`
+- current subsurface: {render_optional(payload.get("current_step_subsurface_id", ""))}
+- edit target: {render_optional(payload.get("current_step_target_path", ""))}
+- operator focus: {payload["operator_focus"] or "none"}
+- required inputs:
+{render_list(list(payload.get("next_step_required_inputs", [])))}
+
+## Runtime Summary
 
 - run: `{payload["run_id"]}`
 - task class: `{payload["task_class"]}`
@@ -48,23 +63,6 @@ def render_brief(payload: dict) -> str:
 - stopping stage: `{payload["stopping_stage"]}`
 - reason: `{payload["reason"]}`
 - primary action: `{payload["primary_action"]}`
-
-## Why
-
-{payload["why_action"]}
-
-## Current step
-
-- current step: `{payload["current_step_id"]}`
-- current subsurface: {render_optional(payload.get("current_step_subsurface_id", ""))}
-- edit target: {render_optional(payload.get("current_step_target_path", ""))}
-- do this now: {payload.get("current_step_action_instruction", "") or "none"}
-- next safe step: `{payload["next_safe_step"]}`
-- operator focus: {payload["operator_focus"] or "none"}
-
-## Inputs
-
-{render_list(list(payload.get("next_step_required_inputs", [])))}
 
 ## Stale sub-surfaces
 
@@ -76,9 +74,9 @@ def render_brief(payload: dict) -> str:
 - reason: `{payload["termination_reason"] or "NONE"}`
 - attempts: `{payload["attempt_count"]}`
 
-## Suggested CLI
+## Why
 
-{render_suggested_cli(payload.get("suggested_cli", {}))}
+{payload["why_action"]}
 """
 
 
@@ -90,6 +88,8 @@ def render_chain(payload: dict) -> str:
                 [
                     f"### {stage['stage_id']}",
                     "",
+                    f"- do this now: {stage.get('current_step_action_instruction', '') or 'none'}",
+                    f"- next safe step: `{stage['next_safe_step']}`",
                     f"- resulting state: `{stage['resulting_state']}`",
                     f"- result: `{stage['result']}`",
                     f"- stopping stage: `{stage['stopping_stage']}`",
@@ -98,7 +98,6 @@ def render_chain(payload: dict) -> str:
                     f"- current step: `{stage['current_step_id']}`",
                     f"- current subsurface: {render_optional(stage.get('current_step_subsurface_id', ''))}",
                     f"- edit target: {render_optional(stage.get('current_step_target_path', ''))}",
-                    f"- next safe step: `{stage['next_safe_step']}`",
                     "- required inputs:",
                     render_list(list(stage.get("next_step_required_inputs", []))),
                     f"- termination reason: `{stage['termination_reason'] or 'NONE'}`",

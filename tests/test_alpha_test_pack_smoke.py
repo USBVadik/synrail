@@ -235,13 +235,23 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
                 "Update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
                 operator_render_text,
             )
+            self.assertIn("## Do This Now", operator_render_text)
             self.assertEqual("final_result_payload", operator_reading_record["current_step_subsurface_id"])
             self.assertEqual(".synrail/final_result.json", operator_reading_record["current_step_target_path"])
             self.assertEqual("FOLLOWABLE_WITH_RENDER", operator_reading_record["verdict"])
             self.assertEqual("final_result_payload", operator_brief_chain_record["stage_summaries"][0]["current_step_subsurface_id"])
             self.assertEqual(".synrail/final_result.json", operator_brief_chain_record["stage_summaries"][0]["current_step_target_path"])
+            self.assertEqual(
+                "Update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
+                operator_brief_chain_record["stage_summaries"][0]["current_step_action_instruction"],
+            )
             self.assertIn("final_result_payload", operator_chain_render_text)
             self.assertIn(".synrail/final_result.json", operator_chain_render_text)
+            self.assertIn("## Stage sequence", operator_chain_render_text)
+            self.assertIn(
+                "Update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
+                operator_chain_render_text,
+            )
 
 
 if __name__ == "__main__":
