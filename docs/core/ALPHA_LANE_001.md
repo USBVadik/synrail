@@ -69,7 +69,7 @@ This is the currently verified restore-capable alpha lane:
 synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Preserve one verified fallback before a bounded change."
 # once this root reflects one verified working state:
 synrail save --artifact-root "$ARTIFACT_ROOT"
-# after the agent leaves the proof artifacts requested in .synrail/proof_request.json:
+# synrail start already creates starter proof files under $ARTIFACT_ROOT; edit them in place, then:
 synrail check --artifact-root "$ARTIFACT_ROOT"
 # after applying only that bounded repair:
 synrail retry --artifact-root "$ARTIFACT_ROOT"
@@ -85,7 +85,7 @@ On a fresh controlled start, `Synrail` can still give bounded value immediately:
 
 ```bash
 synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
-# follow .synrail/proof_request.json and leave the preferred proof artifacts under the artifact root
+# synrail start already creates starter proof files under the artifact root; edit them in place, then:
 synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 ```

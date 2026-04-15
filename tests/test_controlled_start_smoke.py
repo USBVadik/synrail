@@ -53,10 +53,14 @@ class ControlledStartSmokeTests(unittest.TestCase):
             )
             self.assertEqual(0, start.returncode, start.stdout + start.stderr)
             self.assertIn("Controlled run started.", start.stdout)
+            self.assertIn("Starter proof files are ready for this run.", start.stdout)
             self.assertTrue((artifact_root / "bootstrap.json").exists())
             self.assertTrue((artifact_root / "bootstrap_validation.json").exists())
             self.assertTrue((artifact_root / "proof_request.json").exists())
             self.assertTrue((artifact_root / "target_identity.txt").exists())
+            self.assertTrue((artifact_root / "final_result.json").exists())
+            self.assertTrue((artifact_root / "readback.txt").exists())
+            self.assertTrue((artifact_root / "scenario_proof.txt").exists())
 
             bootstrap = load_json(artifact_root / "bootstrap.json")
             validation = load_json(artifact_root / "bootstrap_validation.json")
@@ -64,7 +68,9 @@ class ControlledStartSmokeTests(unittest.TestCase):
 
             self.assertTrue(bootstrap["controlled_mode"])
             self.assertEqual("VALID", validation["status"])
+            self.assertEqual("edit_in_place", proof_request["starter_mode"])
             self.assertEqual(".synrail/final_result.json", proof_request["preferred_artifacts"]["final_result"])
+            self.assertEqual(64, len(proof_request["starter_hashes"]["final_result"]))
 
     def test_check_after_plain_init_requires_controlled_start(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_bootstrap_block_") as tmpdir:
@@ -117,6 +123,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertIn("waiting for the proof artifacts", check.stdout)
+            self.assertIn("edit the starter proof files already placed", check.stdout)
             self.assertIn("final_result: .synrail/final_result.json", check.stdout)
             self.assertIn("readback: .synrail/readback.txt", check.stdout)
             self.assertIn("scenario_proof: .synrail/scenario_proof.txt", check.stdout)

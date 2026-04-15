@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 from pathlib import Path
 
@@ -25,12 +26,66 @@ def utc_now_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def text_sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
 def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+
+
+def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity: str) -> dict[str, str]:
+    final_result = json.dumps(
+        {
+            "request_id": run_id,
+            "task_class": task_class,
+            "status": "PENDING_PROOF",
+            "summary": "Replace this starter payload with the actual bounded result for this run.",
+            "modified_files": [],
+            "git_diff": "",
+            "cleanup_status": {
+                "success": False,
+                "summary": "Replace this starter payload with the actual cleanup result for this run.",
+            },
+            "_synrail": {
+                "starter_surface": True,
+                "edit_in_place": True,
+                "task_identity": task_identity.strip(),
+            },
+        },
+        indent=2,
+        ensure_ascii=True,
+    ) + "\n"
+    readback = (
+        "Synrail starter surface for readback.\n"
+        "Replace this file with concrete readback from the changed sections on the attested surface.\n"
+        f"Task: {task_identity.strip()}\n"
+    )
+    scenario_proof = (
+        "Synrail starter surface for scenario proof.\n"
+        "Replace this file with the explicit scenario result for this run.\n"
+        f"Task: {task_identity.strip()}\n"
+    )
+    return {
+        "final_result": final_result,
+        "readback": readback,
+        "scenario_proof": scenario_proof,
+    }
+
+
+def write_proof_starter_files(*, artifact_root: Path, starter_contents: dict[str, str]) -> None:
+    artifact_root.mkdir(parents=True, exist_ok=True)
+    mapping = {
+        "final_result": artifact_root / "final_result.json",
+        "readback": artifact_root / "readback.txt",
+        "scenario_proof": artifact_root / "scenario_proof.txt",
+    }
+    for artifact_id, target in mapping.items():
+        target.write_text(starter_contents[artifact_id])
 
 
 def build_bootstrap_record(
@@ -84,6 +139,11 @@ def build_proof_request_record(
     project_root: Path,
     artifact_root: Path,
 ) -> dict:
+    starter_contents = build_proof_starter_contents(
+        run_id=run_id,
+        task_class=task_class,
+        task_identity=task_identity,
+    )
     final_result = artifact_root / "final_result.json"
     readback = artifact_root / "readback.txt"
     scenario_proof = artifact_root / "scenario_proof.txt"
@@ -93,6 +153,11 @@ def build_proof_request_record(
         "task_class": task_class,
         "task_identity": task_identity.strip(),
         "summary": "Synrail is waiting for proof artifacts from this controlled run.",
+        "starter_mode": "edit_in_place",
+        "starter_hashes": {
+            artifact_id: text_sha256(contents)
+            for artifact_id, contents in starter_contents.items()
+        },
         "preferred_artifacts": {
             "final_result": _display_path(final_result, base=project_root),
             "readback": _display_path(readback, base=project_root),
@@ -107,7 +172,7 @@ def build_proof_request_record(
             "artifact_identity",
             "cleanup_status",
         ],
-        "next_safe_step": "Leave the preferred proof artifacts in place, then run synrail check.",
+        "next_safe_step": "Edit the starter proof files in place, then run synrail check.",
     }
 
 

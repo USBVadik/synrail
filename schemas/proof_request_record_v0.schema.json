@@ -7,6 +7,8 @@
     "task_class",
     "task_identity",
     "summary",
+    "starter_mode",
+    "starter_hashes",
     "preferred_artifacts",
     "required_sections",
     "next_safe_step"
@@ -17,6 +19,17 @@
     "task_class": {"type": "string", "minLength": 1},
     "task_identity": {"type": "string", "minLength": 1},
     "summary": {"type": "string", "minLength": 1},
+    "starter_mode": {"const": "edit_in_place"},
+    "starter_hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["final_result", "readback", "scenario_proof"],
+      "properties": {
+        "final_result": {"type": "string", "minLength": 64, "maxLength": 64},
+        "readback": {"type": "string", "minLength": 64, "maxLength": 64},
+        "scenario_proof": {"type": "string", "minLength": 64, "maxLength": 64}
+      }
+    },
     "preferred_artifacts": {
       "type": "object",
       "additionalProperties": false,

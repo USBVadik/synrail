@@ -32,7 +32,11 @@ ARTIFACT_ROOT=".synrail"
 TASK_REQUEST="Reject a plain-text final result and keep the repair bounded."
 
 synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$PROJECT_ROOT" --task-identity "$TASK_REQUEST" --telemetry-opt-in --tester-id your_name
-printf 'Implemented the change and confirmed it locally.\n' > "$ARTIFACT_ROOT/final_result.txt"
+# synrail start already creates starter proof files under $ARTIFACT_ROOT:
+# - $ARTIFACT_ROOT/final_result.json
+# - $ARTIFACT_ROOT/readback.txt
+# - $ARTIFACT_ROOT/scenario_proof.txt
+# edit them in place for a native proof path, or use Wow Scenario A below to see the false-success block
 synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 synrail telemetry export --artifact-root "$ARTIFACT_ROOT"
@@ -86,6 +90,8 @@ Run:
 
 ```bash
 synrail start --artifact-root ".synrail" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
+# synrail already created starter proof files under .synrail/ for the native path
+# this scenario intentionally bypasses that path with a plain-text result:
 printf 'Implemented the change and confirmed it locally.\n' > .synrail/final_result.txt
 synrail check --artifact-root ".synrail"
 synrail repair-step --artifact-root ".synrail"

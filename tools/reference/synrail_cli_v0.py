@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import shlex
 import shutil
@@ -42,17 +43,21 @@ try:
     from .synrail_bootstrap_v0 import (
         build_bootstrap_record,
         build_proof_request_record,
+        build_proof_starter_contents,
         load_json as load_bootstrap_json,
         save_json as save_bootstrap_json,
         validate_bootstrap_record,
+        write_proof_starter_files,
     )
 except ImportError:
     from synrail_bootstrap_v0 import (
         build_bootstrap_record,
         build_proof_request_record,
+        build_proof_starter_contents,
         load_json as load_bootstrap_json,
         save_json as save_bootstrap_json,
         validate_bootstrap_record,
+        write_proof_starter_files,
     )
 
 
@@ -294,9 +299,13 @@ def build_project_profile(*, project_root: Path, root: Path, task_class: str) ->
 
 
 def discover_candidate_file(candidates: list[str]) -> str | None:
+    return discover_candidate_file_filtered(candidates, ignored_paths=set())
+
+
+def discover_candidate_file_filtered(candidates: list[str], *, ignored_paths: set[Path]) -> str | None:
     for value in candidates:
         candidate = Path(value)
-        if candidate.exists() and candidate.is_file():
+        if candidate.exists() and candidate.is_file() and candidate.resolve() not in ignored_paths:
             return str(candidate)
     return None
 
@@ -342,6 +351,28 @@ def preferred_proof_artifact_paths(root: Path) -> dict[str, Path]:
         "readback": root / "readback.txt",
         "scenario_proof": root / "scenario_proof.txt",
     }
+
+
+def file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def untouched_preferred_proof_paths(root: Path | None) -> set[Path]:
+    if not root:
+        return set()
+    proof_request_file = alpha_file(root, "proof_request")
+    if not proof_request_file.exists():
+        return set()
+    proof_request = load_bootstrap_json(proof_request_file)
+    starter_hashes = proof_request.get("starter_hashes", {})
+    if not isinstance(starter_hashes, dict):
+        return set()
+    untouched: set[Path] = set()
+    for artifact_id, path in preferred_proof_artifact_paths(root).items():
+        expected_hash = starter_hashes.get(artifact_id, "")
+        if expected_hash and path.exists() and path.is_file() and file_sha256(path) == expected_hash:
+            untouched.add(path.resolve())
+    return untouched
 
 
 def unsupported_remote_target_reason(*, target_path: str, target_classification: str) -> str:
@@ -422,6 +453,7 @@ def apply_alpha_profile_defaults(args: argparse.Namespace, *, root: Path | None)
     profile = load_project_profile(root)
     if not profile:
         return
+    ignored_paths = untouched_preferred_proof_paths(root)
     profile_artifact_path = profile.get("artifact_path", "")
     for field in [
         "target_path",
@@ -436,7 +468,7 @@ def apply_alpha_profile_defaults(args: argparse.Namespace, *, root: Path | None)
             if value:
                 setattr(args, field, value)
     if not getattr(args, "final_result", None):
-        discovered = discover_candidate_file(list(profile.get("final_result_candidates", [])))
+        discovered = discover_candidate_file_filtered(list(profile.get("final_result_candidates", [])), ignored_paths=ignored_paths)
         if discovered:
             args.final_result = discovered
             current_artifact_path = getattr(args, "artifact_path", None)
@@ -453,11 +485,11 @@ def apply_alpha_profile_defaults(args: argparse.Namespace, *, root: Path | None)
                     profile["artifact_path"] = discovered
                     save_project_profile(root, profile)
     if not getattr(args, "readback", None):
-        discovered = discover_candidate_file(list(profile.get("readback_candidates", [])))
+        discovered = discover_candidate_file_filtered(list(profile.get("readback_candidates", [])), ignored_paths=ignored_paths)
         if discovered:
             args.readback = discovered
     if not getattr(args, "scenario_proof", None):
-        discovered = discover_candidate_file(list(profile.get("scenario_proof_candidates", [])))
+        discovered = discover_candidate_file_filtered(list(profile.get("scenario_proof_candidates", [])), ignored_paths=ignored_paths)
         if discovered:
             args.scenario_proof = discovered
 
@@ -583,6 +615,11 @@ def write_controlled_start_artifacts(
     profile: dict,
     started_via: str,
 ) -> None:
+    starter_contents = build_proof_starter_contents(
+        run_id=run_id,
+        task_class=task_class,
+        task_identity=task_identity,
+    )
     proof_request = build_proof_request_record(
         run_id=run_id,
         task_class=task_class,
@@ -590,6 +627,7 @@ def write_controlled_start_artifacts(
         project_root=project_root,
         artifact_root=root,
     )
+    write_proof_starter_files(artifact_root=root, starter_contents=starter_contents)
     save_alpha_target_identity_file(root, target_identity=profile["execution_surface_identity"])
     bootstrap = build_bootstrap_record(
         run_id=run_id,
@@ -625,8 +663,9 @@ def resolve_start_identities(args: argparse.Namespace, *, root: Path) -> tuple[s
 
 def existing_preferred_proof_artifacts(root: Path) -> list[str]:
     discovered: list[str] = []
+    untouched = untouched_preferred_proof_paths(root)
     for artifact_id, path in preferred_proof_artifact_paths(root).items():
-        if path.exists():
+        if path.exists() and path.resolve() not in untouched:
             discovered.append(f"{artifact_id}:{display_path(path)}")
     return discovered
 
@@ -888,11 +927,11 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
         "Controlled run started.",
         f"Artifact root: {display_path(root)}",
         f"Run id: {state.get('run_id', '')}",
-        "Proof path for this run:",
+        "Starter proof files are ready for this run. Edit them in place:",
         f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
         f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
-        "After the agent leaves those proof artifacts, run: " + shell_command(root, "check"),
+        "After those starter files reflect the run, run: " + shell_command(root, "check"),
         "Optional safety fallback: " + shell_command(root, "save"),
     ]
     print("\n".join(lines))
@@ -1922,7 +1961,7 @@ def cmd_check(args: argparse.Namespace) -> int:
                     proof_request = load_bootstrap_json(proof_request_file)
                     preferred = proof_request.get("preferred_artifacts", {})
                     print("What is missing: Synrail is still waiting for the proof artifacts for this controlled run.")
-                    print("What to do next: leave the preferred proof artifacts in place, then rerun synrail check.")
+                    print("What to do next: edit the starter proof files already placed at these paths, then rerun synrail check.")
                     for label in ["final_result", "readback", "scenario_proof"]:
                         if preferred.get(label, ""):
                             print(f"- {label}: {preferred[label]}")

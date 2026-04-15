@@ -87,7 +87,7 @@ ARTIFACT_ROOT="$(pwd)/.synrail"
 synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Preserve one verified fallback before a bounded change."
 # once this root reflects one verified working state:
 synrail save --artifact-root "$ARTIFACT_ROOT"
-# after the agent leaves the proof artifacts requested in .synrail/proof_request.json:
+# synrail start already creates starter proof files under $ARTIFACT_ROOT; edit them in place, then:
 synrail check --artifact-root "$ARTIFACT_ROOT"
 # after applying only that bounded repair:
 synrail retry --artifact-root "$ARTIFACT_ROOT"
@@ -100,7 +100,7 @@ Fresh first-run contour:
 ```bash
 ARTIFACT_ROOT="$(pwd)/.synrail"
 synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
-# follow .synrail/proof_request.json and leave the preferred proof artifacts under $ARTIFACT_ROOT
+# synrail start already creates starter proof files under $ARTIFACT_ROOT; edit them in place, then:
 synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 synrail bug-packet --artifact-root "$ARTIFACT_ROOT"
