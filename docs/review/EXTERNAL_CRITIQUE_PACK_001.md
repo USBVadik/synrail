@@ -22,7 +22,7 @@ The product tries to make agent work reviewable and recoverable by forcing execu
 - closure acceptance
 - restore and continuation rules
 
-The current product form is one narrow alpha lane over that kernel.
+The current product form is one narrow controlled-start alpha lane over that kernel.
 
 ## What to hand to a critic
 
@@ -74,7 +74,7 @@ Deep technical review path:
 `Synrail` is no longer just a conceptual kernel. It now has:
 
 - one installable alpha shell
-- one narrow first-run workflow
+- one narrow controlled-start workflow
 - explicit acceptance criteria
 - measured doctor coverage gate
 - executable continuation arbiter

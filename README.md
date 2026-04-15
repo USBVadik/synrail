@@ -116,7 +116,7 @@ Current shell proof surfaces:
   - [alpha_onboarding_run_007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_007)
 - accepted default-mode translation:
   - [thin_output_run_accepted_003](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_003)
-- blocked retry translation:
+- secondary blocked-retry contour:
   - [retry_stdout.txt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_008/shell/retry_stdout.txt)
 - continuation autonomy hardening:
   - [CONTINUATION_AUTONOMY_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/CONTINUATION_AUTONOMY_001.md)

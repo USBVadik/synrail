@@ -50,7 +50,7 @@ Current support boundary:
 Current alpha lane:
 
 1. `synrail start`
-2. agent leaves the proof artifacts requested for the run
+2. agent edits only the starter proof artifacts requested for the run
 3. `synrail check`
 4. if non-green: `synrail repair-step`
 5. if repairable: `synrail retry`

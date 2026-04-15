@@ -15,6 +15,7 @@ Completed:
 
 - thin default output layer
 - bounded `repair-step` bridge
+- controlled-start bootstrap and starter proof flow
 - `save / retry / restore / confirm-restore` human-facing shell
 - alpha install path
 - reduced visible artifact choreography

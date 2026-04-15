@@ -47,7 +47,7 @@ Acceptance has to be earned through explicit runtime artifacts and gates.
 
 At the current alpha level, `Synrail` provides one narrow workflow:
 
-1. initialize one artifact root
+1. start one controlled run with `synrail start`
 2. auto-detect a minimal project profile
 3. run doctor and execution checks
 4. evaluate the resulting proof bundle
@@ -82,7 +82,7 @@ It is not currently:
 The current product form is:
 
 - one proof-governed kernel
-- one thin alpha shell on top of that kernel
+- one thin controlled-start alpha shell on top of that kernel
 - one current tester pack for external critique and early alpha pressure
 
 ## Why this matters
@@ -104,7 +104,7 @@ Current support boundary:
 Current first-run alpha lane:
 
 1. `synrail start`
-2. agent leaves the proof artifacts requested for the run
+2. agent edits only the starter proof artifacts requested for the run
 3. `synrail check`
 4. if non-green: `synrail repair-step`
 5. if a trusted fallback exists: `synrail restore`

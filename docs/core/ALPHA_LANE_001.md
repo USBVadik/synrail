@@ -10,7 +10,7 @@ Current support boundary:
 It is intentionally one contour, not a broad product shell:
 
 1. install one local `synrail` command
-2. initialize one artifact root
+2. start one controlled run at one artifact root
 3. let `Synrail` auto-detect one sane project profile
 4. optionally save one verified fallback when a working state already matters
 5. run one bounded change/check contour
@@ -24,7 +24,7 @@ The lane exists to prove one user value clearly:
 - the operator gets one bounded next step
 - one verified working state can be restored without replaying the whole run by hand
 
-Optional alpha feedback export can be turned on for the same artifact root:
+Optional alpha feedback export can be turned on for the same controlled run:
 
 ```bash
 TASK_REQUEST="Reject a plain-text final result and keep the repair bounded."
@@ -55,7 +55,7 @@ The reference smoke for this document was run through the installed `synrail` co
 
 ## Verified Contours
 
-Use one artifact root per run:
+Use one artifact root per controlled run:
 
 ```bash
 ARTIFACT_ROOT="$(pwd)/.synrail"
@@ -109,7 +109,7 @@ On the current canonical first-run pack contour in [`fixtures/alpha_test_pack_ru
 
 ## What This Lane Returns
 
-On the current verified smoke contour in [`fixtures/alpha_lane_run_003/`](../../fixtures/alpha_lane_run_003/):
+On the current verified restore-capable smoke contour in [`fixtures/alpha_lane_run_003/`](../../fixtures/alpha_lane_run_003/):
 
 - `start` returns `INITIALIZED` with controlled bootstrap provenance
 - `save` returns `OK`
@@ -135,7 +135,7 @@ On the current accepted default output smoke in [`fixtures/thin_output_run_accep
 - it explains that the run reached accepted closure
 - it makes clear that no repair step is required
 
-On the current blocked-retry output smoke in [`fixtures/alpha_shell_run_008/`](../../fixtures/alpha_shell_run_008/):
+On the secondary blocked-retry output smoke in [`fixtures/alpha_shell_run_008/`](../../fixtures/alpha_shell_run_008/):
 
 - default mode now says `Repair Stopped` once the bounded retry path reaches its honest stop
 - it tells the operator to restore a verified restore point or start a new run
@@ -147,7 +147,7 @@ Canonical artifacts:
 - [shell check output with bounded repair summary](../../fixtures/alpha_test_pack_run_004/shell/check_stdout.txt)
 - [self-contained restore point output](../../fixtures/alpha_safe_point_run_004/shell/save_stdout.txt)
 - [shell repair-step output](../../fixtures/alpha_test_pack_run_004/shell/repair_step_stdout.txt)
-- [shell retry output](../../fixtures/alpha_shell_run_008/shell/retry_stdout.txt)
+- [secondary blocked-retry output](../../fixtures/alpha_shell_run_008/shell/retry_stdout.txt)
 - [shell thin output](../../fixtures/alpha_test_pack_run_004/lane/thin_output.json)
 - [shell prompt](../../fixtures/alpha_test_pack_run_004/lane/prompt.json)
 - [shell operator render](../../fixtures/alpha_test_pack_run_004/lane/operator_render.md)
@@ -158,7 +158,7 @@ Canonical artifacts:
 - [onboarding confirm-restore-without-checkpoint output](../../fixtures/alpha_onboarding_run_008/shell/confirm_restore_without_checkpoint_stdout.txt)
 - [restore point save output](../../fixtures/alpha_safe_point_run_004/shell/save_stdout.txt)
 - [confirm-restore output](../../fixtures/alpha_restore_point_confirm_run_001/shell/confirm_restore_stdout.txt)
-- [blocked retry thin output](../../fixtures/alpha_shell_run_008/lane/thin_output.json)
+- [secondary blocked-retry thin output](../../fixtures/alpha_shell_run_008/lane/thin_output.json)
 - [init state](../../fixtures/alpha_lane_run_003/init/state.json)
 - [working checkpoint verify](../../fixtures/alpha_lane_run_003/lane/checkpoints/working/checkpoint_verify.json)
 - [thin output](../../fixtures/alpha_lane_run_003/lane/thin_output.json)
