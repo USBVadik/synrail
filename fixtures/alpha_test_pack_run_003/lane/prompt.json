@@ -1,0 +1,62 @@
+{
+  "schema_version": "repair_prompt_bridge_record_v0",
+  "run_id": "ALPHA_RUN_20260415T100127Z",
+  "task_class": "bounded_change",
+  "current_step_id": "repair_final_result_artifact",
+  "current_step_label": "repair the final result artifact",
+  "failure_reason": "INVALID_PROOF_BUNDLE",
+  "failure_label": "the final result proof could not be trusted",
+  "stale_artifact_ids": [
+    "final_result_artifact",
+    "supporting_proof_artifacts"
+  ],
+  "stale_subsurface_ids": [
+    "final_result_payload",
+    "diff_provenance_record",
+    "cleanup_status_record",
+    "readback_record",
+    "scenario_proof_record"
+  ],
+  "allowed_scope": [
+    "final_result_payload",
+    "diff_provenance_record",
+    "cleanup_status_record",
+    "readback_record",
+    "scenario_proof_record"
+  ],
+  "allowed_scope_labels": [
+    "final result payload",
+    "diff provenance record",
+    "cleanup status record",
+    "readback record",
+    "scenario proof record"
+  ],
+  "required_inputs": [
+    "final_result"
+  ],
+  "required_input_labels": [
+    "final result"
+  ],
+  "forbidden_scope": [
+    "Do not broaden scope beyond the current repair step.",
+    "Do not modify accepted or terminal-state logic.",
+    "Do not claim closure or acceptance unless the repaired run actually reaches it."
+  ],
+  "must_pass": [
+    "Repair only this task: repair the final result artifact",
+    "Keep this repair on the same run and task.",
+    "Do not rewrite previous repair progress.",
+    "Provide required input: final result",
+    "Keep the next safe step aligned with: repair the final result artifact and rebuild the proof bundle"
+  ],
+  "acceptance_criteria": [
+    "Repair only this task: repair the final result artifact",
+    "Keep this repair on the same run and task.",
+    "Do not rewrite previous repair progress.",
+    "Provide required input: final result",
+    "Keep the next safe step aligned with: repair the final result artifact and rebuild the proof bundle"
+  ],
+  "next_safe_step_label": "repair the final result artifact and rebuild the proof bundle",
+  "next_command": "synrail retry",
+  "prompt": "Repair the current run without broadening scope.\nCurrent repair task: repair the final result artifact.\nWhat failed: the final result proof could not be trusted.\nStale artifacts: final_result_artifact, supporting_proof_artifacts\nStale subsurfaces: final_result_payload, diff_provenance_record, cleanup_status_record, readback_record, scenario_proof_record\nAllowed scope: final result payload, diff provenance record, cleanup status record, readback record, scenario proof record\nRequired inputs: final result\nWhat must be true after repair: repair the final result artifact and rebuild the proof bundle\nDo not touch unrelated files, state transitions, or acceptance logic.\nReturn only the bounded repair needed for this current step and keep this same repair path intact."
+}

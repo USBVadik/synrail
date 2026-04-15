@@ -42,9 +42,10 @@ The code is part of the review surface.
 
 Fast path, 15-20 minutes:
 
-1. [PRODUCT_MEMO_001.md](./PRODUCT_MEMO_001.md)
-2. [KNOWN_WEAKNESSES_001.md](./KNOWN_WEAKNESSES_001.md)
-3. [PITCH_DECK_001.md](./PITCH_DECK_001.md)
+1. [../core/ALPHA_TEST_PACK_001.md](../core/ALPHA_TEST_PACK_001.md)
+2. [PRODUCT_MEMO_001.md](./PRODUCT_MEMO_001.md)
+3. [KNOWN_WEAKNESSES_001.md](./KNOWN_WEAKNESSES_001.md)
+4. [PITCH_DECK_001.md](./PITCH_DECK_001.md)
 
 Real review path, 45-90 minutes:
 
@@ -100,9 +101,9 @@ We want pressure on:
 
 Start here for live runnable and fixture-backed review:
 
+- [../core/ALPHA_TEST_PACK_001.md](../core/ALPHA_TEST_PACK_001.md)
 - [../core/ALPHA_LANE_001.md](../core/ALPHA_LANE_001.md)
 - [../core/ALPHA_TELEMETRY_001.md](../core/ALPHA_TELEMETRY_001.md)
-- [../core/ALPHA_TEST_PACK_001.md](../core/ALPHA_TEST_PACK_001.md)
 - [../../tests/test_truth_regressions.py](../../tests/test_truth_regressions.py)
 - [../../tests/test_alpha_test_pack_smoke.py](../../tests/test_alpha_test_pack_smoke.py)
 

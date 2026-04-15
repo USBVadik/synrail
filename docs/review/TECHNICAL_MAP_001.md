@@ -322,6 +322,6 @@ Covers current outside-facing first-run contour:
 
 See:
 
-- `fixtures/alpha_test_pack_run_001/`
+- `fixtures/alpha_test_pack_run_003/`
 
 This is the current handoff-quality proof for the outside alpha pack.

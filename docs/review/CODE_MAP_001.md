@@ -77,7 +77,7 @@ Current outside-facing smoke:
 
 ### Current tester-pack contour
 
-- `fixtures/alpha_test_pack_run_001/`
+- `fixtures/alpha_test_pack_run_003/`
 
 ### Current shell contour
 
@@ -117,9 +117,9 @@ python3 -m unittest tests.test_alpha_test_pack_smoke -v
 Validate one exported outward-facing contour:
 
 ```bash
-python3 tools/reference/synrail_validate_v0.py --schema schemas/thin_output_record_v0.schema.json --document fixtures/alpha_test_pack_run_001/lane/thin_output.json
-python3 tools/reference/synrail_validate_v0.py --schema schemas/repair_prompt_bridge_record_v0.schema.json --document fixtures/alpha_test_pack_run_001/lane/prompt.json
-python3 tools/reference/synrail_validate_v0.py --schema schemas/alpha_session_replay_record_v0.schema.json --document fixtures/alpha_test_pack_run_001/lane/telemetry/session_replay.json
+python3 tools/reference/synrail_validate_v0.py --schema schemas/thin_output_record_v0.schema.json --document fixtures/alpha_test_pack_run_003/lane/thin_output.json
+python3 tools/reference/synrail_validate_v0.py --schema schemas/repair_prompt_bridge_record_v0.schema.json --document fixtures/alpha_test_pack_run_003/lane/prompt.json
+python3 tools/reference/synrail_validate_v0.py --schema schemas/alpha_session_replay_record_v0.schema.json --document fixtures/alpha_test_pack_run_003/lane/telemetry/session_replay.json
 ```
 
 ## Reading suggestion by concern

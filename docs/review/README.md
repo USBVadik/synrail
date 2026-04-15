@@ -2,6 +2,7 @@
 
 Start with:
 
+- `../core/ALPHA_TEST_PACK_001.md`
 - `EXTERNAL_CRITIQUE_PACK_001.md`
 
 Supporting docs:

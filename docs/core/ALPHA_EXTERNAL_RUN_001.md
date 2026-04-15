@@ -16,11 +16,11 @@ It asks one narrow question:
 
 Artifacts:
 
-- [external run 001 state](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_001/state.json)
-- [external run 001 report](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_001/report.json)
-- [external run 001 thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_001/thin_output.json)
-- [external run 001 prompt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_001/prompt.json)
-- [externality pressure](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_externality_run_001/pressure.json)
+- [external run 001 state](../../fixtures/alpha_external_run_001/state.json)
+- [external run 001 report](../../fixtures/alpha_external_run_001/report.json)
+- [external run 001 thin output](../../fixtures/alpha_external_run_001/thin_output.json)
+- [external run 001 prompt](../../fixtures/alpha_external_run_001/prompt.json)
+- [externality pressure](../../fixtures/alpha_externality_run_001/pressure.json)
 
 Results:
 

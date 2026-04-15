@@ -9,10 +9,10 @@ This slice asks one narrow question:
 
 Artifacts:
 
-- [second_operator.json](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_second_operator_run_001/second_operator.json)
-- [reading.json](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_second_operator_run_001/reading.json)
-- [alpha lane thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/lane/thin_output.json)
-- [alpha lane repair packet](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_lane_run_003/lane/repair_packet.json)
+- [second_operator.json](../../fixtures/alpha_second_operator_run_001/second_operator.json)
+- [reading.json](../../fixtures/alpha_second_operator_run_001/reading.json)
+- [alpha lane thin output](../../fixtures/alpha_lane_run_003/lane/thin_output.json)
+- [alpha lane repair packet](../../fixtures/alpha_lane_run_003/lane/repair_packet.json)
 
 Results:
 

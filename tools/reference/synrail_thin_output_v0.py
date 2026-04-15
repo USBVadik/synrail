@@ -47,6 +47,11 @@ def has_doctor_coverage_block(doctor: dict | None) -> bool:
     return "doctor-coverage incomplete" in failure_classes
 
 
+def continuation_arbiter_unresolved(repair_packet: dict | None) -> bool:
+    arbiter = (repair_packet or {}).get("continuation_arbiter", {})
+    return arbiter.get("resolution_status", "") == "CONFLICT_UNRESOLVED"
+
+
 def human_safe_step_text(value: str) -> str:
     labels = {
         "restore exact prompt and task identity": "restore the original task request and intended target",
@@ -161,23 +166,28 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
             "The acceptance rules for this run are not trustworthy yet.",
             "Refresh the acceptance rules for the current project state before trusting closure again.",
         )
+    if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
+        return (
+            "Synrail cannot resolve the current continuation path confidently yet.",
+            f"The current continuation inputs still conflict after explicit precedence, so this recovery path still needs operator judgment.{suffix}{recovery_suffix}",
+        )
     if outcome_class == "DOCTOR_BLOCKED" and has_doctor_coverage_block(doctor):
         return (
-            "Doctor coverage is not complete enough to trust readiness yet.",
-            "Do not treat this doctor as fully reliable until the agreed critical fail modes are covered.",
+            "Doctor is still using a bounded fail-mode corpus that does not justify trust yet.",
+            "Do not treat this readiness reading as complete until the agreed critical fail modes are covered.",
         )
     failure_classes = list((doctor or {}).get("blocking_failure_classes", []))
     messages = {
         "ACCEPTED": (
-            "The run reached accepted closure.",
-            "Synrail accepted the result based on the current proof and closure surfaces.",
+            "The run reached accepted closure under the current criteria.",
+            "Synrail accepted the result based on the current acceptance, proof, and closure surfaces.",
         ),
         "NON_RESUMABLE": (
             "This run cannot continue from the current state.",
             f"Start a new run or restore a verified restore point before trying again.{suffix}{recovery_suffix}",
         ),
         "CLOSURE_REJECTED": (
-            "Closure was rejected and cannot be treated as accepted work.",
+            "Closure was rejected and cannot be treated as accepted work under the current criteria.",
             f"Inspect the closure blocker and repair or restart from a verified restore point.{suffix}{recovery_suffix}",
         ),
         "PROOF_INVALID": (
@@ -185,8 +195,8 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
             f"Repair the proof surface before attempting closure again.{recovery_suffix}",
         ),
         "PROOF_THIN": (
-            "The proof bundle is present, but still not strong enough to trust.",
-            f"Strengthen the semantic proof evidence before attempting closure again.{recovery_suffix}",
+            "The proof bundle is present, but still not strong enough under the current proof rules.",
+            f"Strengthen the semantic proof evidence before attempting closure again. This is not enough evidence for accepted closure yet.{recovery_suffix}",
         ),
         "PROOF_PARTIAL": (
             "The proof bundle is still incomplete.",
@@ -205,7 +215,7 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
             ),
         ),
         "DOCTOR_BLOCKED": (
-            "Doctor has not cleared this workspace for continuation yet.",
+            "Doctor has not cleared this workspace under the current readiness checks yet.",
             f"Repair readiness before continuing this run.{recovery_suffix}",
         ),
         "NON_GREEN": (
@@ -255,6 +265,8 @@ def status_label(outcome_class: str, *, report: dict, repair_packet: dict | None
         return "Workspace Not Trusted"
     if outcome_class == "DOCTOR_BLOCKED":
         return "Workspace Not Ready"
+    if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
+        return "Continuation Still Ambiguous"
     if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
         return "Not Ready For The Next Attempt"
     if outcome_class == "NON_RESUMABLE":
@@ -295,8 +307,10 @@ def human_next_step(
         return "Restore the original task request or target before continuing."
     if outcome_class == "DOCTOR_BLOCKED":
         if has_doctor_coverage_block(doctor):
-            return "Close the agreed critical doctor fail-mode coverage before trusting readiness."
+            return "Treat this doctor as bounded for now. Close the agreed missing fail modes before trusting readiness."
         return "Repair readiness first, then retry only the current bounded step."
+    if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
+        return "Do not assume resume is safe yet. Restore a verified fallback or rerun from a clearer starting point."
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTINUATION_INPUTS_MISSING":
         return "Finish the current bounded repair from synrail repair-step, then run synrail retry."
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
@@ -340,7 +354,9 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
         suggested_command = "run synrail refresh-acceptance, then rerun synrail check"
     if outcome_class == "DOCTOR_BLOCKED" and has_doctor_coverage_block(doctor):
-        suggested_command = "close the agreed critical doctor fail-mode coverage before trusting readiness"
+        suggested_command = "treat doctor as bounded, close the agreed missing fail modes, then rerun readiness"
+    if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
+        suggested_command = "use synrail restore or rerun from a clearer starting point before trusting continuation"
     next_step = report.get("next_safe_step", "") or state.get("next_safe_step", "")
     if outcome_class == "ACCEPTED":
         next_step = "No repair step is required."
@@ -359,7 +375,11 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         next_command = "synrail repair-step"
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
         next_command = "synrail refresh-acceptance"
+    if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
+        next_command = ""
     if outcome_class in {"NON_RESUMABLE", "CLOSURE_REJECTED", "REPAIR_STOP", "SCOPE_VIOLATION"} and restore_available:
+        restore_command = "synrail restore"
+    if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet) and restore_available:
         restore_command = "synrail restore"
     return {
         "schema_version": "thin_output_record_v0",

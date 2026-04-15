@@ -264,8 +264,18 @@ def discover_candidate_file(candidates: list[str]) -> str | None:
     return None
 
 
+def display_path(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        relative = resolved.relative_to(Path.cwd().resolve())
+    except ValueError:
+        return str(resolved)
+    text = str(relative)
+    return text or "."
+
+
 def shell_command(root: Path, *parts: str) -> str:
-    return " ".join(shlex.quote(part) for part in ["synrail", *parts, "--artifact-root", str(root)])
+    return " ".join(shlex.quote(part) for part in ["synrail", *parts, "--artifact-root", display_path(root)])
 
 
 def command_path_from_args(args: argparse.Namespace) -> list[str]:
@@ -558,12 +568,12 @@ def print_init_summary(*, root: Path, state_file: Path) -> None:
     artifact_hint = "After the agent leaves final_result.json or final_result.txt, run: "
     lines = [
         "Synrail initialized.",
-        f"Artifact root: {root}",
+        f"Artifact root: {display_path(root)}",
         f"Detected project type: {profile.get('project_type', 'generic')}",
         artifact_hint + shell_command(root, "check"),
     ]
     checkpoint_suggestion = shell_command(root, "save")
-    lines.append(f"Optional fallback: {checkpoint_suggestion}")
+    lines.append(f"Optional safety fallback: {checkpoint_suggestion}")
     print("\n".join(lines))
 
 
@@ -609,7 +619,7 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
         lines = [
             f"Fallback saved: {payload.get('checkpoint_id', '')}",
             f"Fallback type: {human_safe_point_class(payload.get('safe_point_class', ''))}",
-            "What to do next: confirm this fallback before depending on restore.",
+            "What to do next: confirm this fallback only if you want to re-check it explicitly before restore.",
             "Next command: " + (
                 shell_command(root, "confirm-restore")
                 if root
@@ -647,7 +657,7 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
     if verification.get("status") == "PASSED":
         lines.extend(
             [
-                "What it means: You now have a trusted fallback you can restore if this run goes non-green.",
+                "What it means: You now have a trusted fallback if this run goes non-green.",
                 "What to do next: continue the current workflow. Restore is ready if you need it.",
             ]
         )
@@ -798,9 +808,14 @@ def cmd_telemetry_export(args: argparse.Namespace) -> int:
     try:
         record = export_session_replay(root, Path(args.output), Path(args.issue_output))
     except ValueError as exc:
-        print(json.dumps({"result": "ERROR", "reason": "TELEMETRY_NOT_ENABLED", "detail": str(exc)}, ensure_ascii=True))
+        print("Synrail could not export feedback yet.")
+        print("What happened: telemetry is not enabled for this artifact root.")
+        print("What to do next: rerun synrail init with --telemetry-opt-in or use synrail telemetry enable before exporting feedback.")
         return 2
-    print(json.dumps({"result": "OK", "command_count": record["command_count"], "issue_title": record["issue_title"]}, ensure_ascii=True))
+    print("Feedback export ready.")
+    print("What it includes: one session replay and one issue-ready summary.")
+    print(f"Command count captured: {record['command_count']}")
+    print("Use this when you want to send back a non-green run without hand-assembling artifacts.")
     return 0
 
 
@@ -1662,7 +1677,8 @@ def cmd_bug_packet(args: argparse.Namespace) -> int:
         if not getattr(args, "issue_output", None):
             args.issue_output = str(root / "bug_packet_issue.md")
     if not getattr(args, "state_file", None) or not getattr(args, "report_file", None):
-        print(json.dumps({"result": "ERROR", "reason": "STATE_AND_REPORT_REQUIRED"}, ensure_ascii=True))
+        print("Synrail could not build the bug packet yet.")
+        print("What is missing: state and report are both required.")
         return 2
     forwarded = [
         "--state-file", args.state_file,
@@ -1679,7 +1695,12 @@ def cmd_bug_packet(args: argparse.Namespace) -> int:
     ]:
         if value:
             forwarded.extend([flag, value])
-    return run_python(BUG_PACKET, forwarded)
+    code = run_python(BUG_PACKET, forwarded)
+    if code == 0:
+        print("Bug packet ready.")
+        print("What it includes: one compact runtime summary and one issue-ready markdown body.")
+        print("Use this only when telemetry export is not enough for the bug report.")
+    return code
 
 
 def cmd_reproducibility(args: argparse.Namespace) -> int:

@@ -1,10 +1,12 @@
 # Alpha Test Pack 001
 
-This is the first minimal tester pack for `Synrail` alpha.
+Review this as a narrow proof-first control product, not as a platform.
 
-The goal is not broad product exploration.
+The goal of this pack is simple:
 
-The goal is to let 3-5 experienced operators run one real alpha lane and send back hard signal.
+- show one false-success contour that `Synrail` blocks honestly
+- show one restore/re-entry contour that is cheaper than manual archaeology
+- get blunt external signal in under 10 minutes
 
 ## Install
 
@@ -17,31 +19,72 @@ python3 -m venv --system-site-packages .venv
 
 ## 10-Minute Quickstart
 
+This is the cheapest first-run contour we currently trust.
+
 ```bash
 PROJECT_ROOT="$(pwd)"
-ARTIFACT_ROOT="$PROJECT_ROOT/.synrail"
+ARTIFACT_ROOT=".synrail"
 TASK_REQUEST="Reject a plain-text final result and keep the repair bounded."
+
 synrail init --artifact-root "$ARTIFACT_ROOT" --project-root "$PROJECT_ROOT" --task-identity "$TASK_REQUEST" --telemetry-opt-in --tester-id your_name
+printf 'Implemented the change and confirmed it locally.\n' > "$ARTIFACT_ROOT/final_result.txt"
 synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 synrail telemetry export --artifact-root "$ARTIFACT_ROOT"
 ```
 
-If you already have one verified working state, extend the lane with:
+What this should prove in minutes:
+
+- a plausible plain-text result is not accepted as done
+- the next repair stays bounded
+- feedback export is one command, not manual archaeology
+
+## Default Commands
+
+These are the only outer verbs a first tester should care about.
+
+- `synrail init`
+  Why it exists: starts one controlled run root and captures the minimum identity needed for the lane.
+- `synrail save`
+  Why it exists: only use it when a verified fallback is worth restoring quickly later.
+- `synrail check`
+  Why it exists: this is the truth gate that decides accepted, blocked, repairable, or restore-needed.
+- `synrail repair-step`
+  Why it exists: gives one bounded next repair instead of asking the operator to reverse-engineer artifacts.
+- `synrail retry`
+  Why it exists: reruns only the bounded repair contour, not a broader hopeful loop.
+- `synrail restore`
+  Why it exists: gets back to a verified fallback faster and more honestly than manual rollback archaeology.
+- `synrail telemetry export`
+  Why it exists: produces one replay and one issue-ready summary without hand-assembling artifacts.
+
+Explicit but not default:
+
+- `synrail confirm-restore`
+  Use only if you explicitly want to re-check a saved fallback again.
+- `synrail bug-packet`
+  Use only when the normal feedback export is not enough for the bug report.
+
+## Wow Scenario A — False Success Blocked
+
+Question:
+
+- what exactly would the operator lose without `Synrail`?
+
+Answer:
+
+- the agent leaves a plausible human-readable result
+- a baseline path could treat that as “done enough”
+- `Synrail` blocks acceptance, names the failure as proof-invalid, and gives one bounded next repair
+
+Run:
 
 ```bash
-synrail save --artifact-root "$ARTIFACT_ROOT"
-synrail confirm-restore --artifact-root "$ARTIFACT_ROOT"
-synrail restore --artifact-root "$ARTIFACT_ROOT"
+synrail init --artifact-root ".synrail" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
+printf 'Implemented the change and confirmed it locally.\n' > .synrail/final_result.txt
+synrail check --artifact-root ".synrail"
+synrail repair-step --artifact-root ".synrail"
 ```
-
-## Scenarios
-
-### 1. Fresh invalid-proof path
-
-Goal:
-
-- verify that `Synrail` rejects one malformed or plain-text final result instead of accepting closure
 
 Expected shape:
 
@@ -50,72 +93,70 @@ Expected shape:
 
 Reference:
 
-- [ALPHA_EXTERNAL_RUN_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_EXTERNAL_RUN_001.md)
+- [ALPHA_EXTERNAL_RUN_001.md](./ALPHA_EXTERNAL_RUN_001.md)
 
-### 2. Verified working restore path
+## Wow Scenario B — Restore / Re-entry Leverage
 
-Goal:
+Question:
 
-- verify that one previously verified working contour can be restored without replaying the whole run by hand
+- what exactly would the operator lose without `Synrail`?
 
-Expected shape:
+Answer:
 
-- `save` returns `OK`
-- `confirm-restore` passes
-- restore returns `OK`
-- working state is recoverable without false acceptance
+- after a non-green or risky contour, the operator would need manual rollback archaeology
+- with `Synrail`, one verified fallback can be restored directly and the re-entry path stays explicit
 
-Reference:
+Run:
 
-- [ALPHA_LANE_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md)
+```bash
+synrail init --artifact-root ".synrail" --project-root "$(pwd)" --task-identity "Preserve one verified fallback before a bounded change."
+synrail save --artifact-root ".synrail"
+synrail check --artifact-root ".synrail"
+synrail restore --artifact-root ".synrail"
+```
 
-### 3. Second-operator handoff
+If the contour is repairable, continue with:
 
-Goal:
-
-- verify that another operator can pick up the lane from visible artifacts only
-
-Expected shape:
-
-- no author memory needed
-- no hidden continuation guess
-
-Reference:
-
-- [ALPHA_SECOND_OPERATOR_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_SECOND_OPERATOR_001.md)
-
-### 4. Telemetry export after a non-green outcome
-
-Goal:
-
-- verify that one tester can export a useful replay and one GitHub-Issues-ready report without leaking file contents
+```bash
+synrail repair-step --artifact-root ".synrail"
+synrail retry --artifact-root ".synrail"
+```
 
 Expected shape:
 
-- `telemetry/session_replay.json` exists
-- `telemetry/github_issue.md` exists
-- replay includes command sequence, error class, and next safe step
+- `save` finishes with one trusted fallback
+- `restore` is available without replaying the whole run by hand
+- `retry` stays bounded to the current repair step
 
 Reference:
 
-- [ALPHA_TELEMETRY_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_TELEMETRY_001.md)
+- [ALPHA_LANE_001.md](./ALPHA_LANE_001.md)
+
+## Optional Deep-Dive Checks
+
+Use these only if you want to push the current contour harder.
+
+- second-operator handoff:
+  - [ALPHA_SECOND_OPERATOR_001.md](./ALPHA_SECOND_OPERATOR_001.md)
+- feedback export boundaries:
+  - [ALPHA_TELEMETRY_001.md](./ALPHA_TELEMETRY_001.md)
 
 ## Feedback Questions
 
-1. where did Synrail make the wrong decision?
+1. where did `Synrail` make the wrong decision?
 2. where did you stop knowing what to do next?
-3. what felt unnecessary?
-4. what exactly do you lose without Synrail?
-5. would you use this in a real project?
+3. which command felt like ceremony instead of leverage?
+4. what exactly did `Synrail` save you from?
+5. would you keep this in a real workflow with a costly false green?
 
 ## What to Send Back
 
 Please send back:
 
-- the scenario you ran
+- which scenario you ran
 - the command where you got stuck
-- the telemetry export, if enabled
-- one blunt sentence saying whether `Synrail` helped or added ceremony
+- the telemetry export, if you enabled it
+- one blunt sentence saying whether `Synrail` prevented a real loss or just added process
 
 This pack is successful only if it produces hard external signal, not polite approval.
 
@@ -123,10 +164,10 @@ This pack is successful only if it produces hard external signal, not polite app
 
 Current tester-pack smoke on the preferred shell:
 
-- [check output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/shell/check_stdout.txt)
-- [repair-step output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/shell/repair_step_stdout.txt)
-- [telemetry export output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/shell/telemetry_export_stdout.txt)
-- [thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/lane/thin_output.json)
-- [prompt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/lane/prompt.json)
-- [session replay](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/lane/telemetry/session_replay.json)
-- [issue body](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/lane/telemetry/github_issue.md)
+- [check output](../../fixtures/alpha_test_pack_run_003/shell/check_stdout.txt)
+- [repair-step output](../../fixtures/alpha_test_pack_run_003/shell/repair_step_stdout.txt)
+- [telemetry export output](../../fixtures/alpha_test_pack_run_003/shell/telemetry_export_stdout.txt)
+- [thin output](../../fixtures/alpha_test_pack_run_003/lane/thin_output.json)
+- [prompt](../../fixtures/alpha_test_pack_run_003/lane/prompt.json)
+- [session replay](../../fixtures/alpha_test_pack_run_003/lane/telemetry/session_replay.json)
+- [issue body](../../fixtures/alpha_test_pack_run_003/lane/telemetry/github_issue.md)

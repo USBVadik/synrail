@@ -39,6 +39,9 @@ Export one replay plus one issue body:
 synrail telemetry export --artifact-root "$ARTIFACT_ROOT"
 ```
 
+Use this after a confusing non-green run or when you want to send feedback.
+It is not required for the normal repair loop.
+
 This writes:
 
 - `telemetry/command_sequence.jsonl`
@@ -49,10 +52,10 @@ This writes:
 
 Canonical telemetry-enabled alpha run:
 
-- [session replay](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_telemetry_run_001/telemetry/session_replay.json)
-- [issue body](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_telemetry_run_001/telemetry/github_issue.md)
-- [thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_telemetry_run_001/thin_output.json)
-- [prompt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_telemetry_run_001/prompt.json)
+- [session replay](../../fixtures/alpha_telemetry_run_001/telemetry/session_replay.json)
+- [issue body](../../fixtures/alpha_telemetry_run_001/telemetry/github_issue.md)
+- [thin output](../../fixtures/alpha_telemetry_run_001/thin_output.json)
+- [prompt](../../fixtures/alpha_telemetry_run_001/prompt.json)
 
 What this run proves:
 
@@ -70,3 +73,5 @@ This is still provisional alpha telemetry:
 - no attempt to replace the underlying state, report, prompt, or observability artifacts
 
 The telemetry slice exists only to speed up external alpha feedback.
+
+If telemetry export is still not enough, `synrail bug-packet` is the optional heavier fallback for issue filing.

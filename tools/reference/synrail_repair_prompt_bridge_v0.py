@@ -144,7 +144,11 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         "Do not claim closure or acceptance unless the repaired run actually reaches it.",
     ]
     broken_truth = failure_reason(repair_packet)
-    failure_label = "the doctor coverage gate is still blocking trust in readiness" if doctor_coverage_block(doctor) else human_failure_label(broken_truth)
+    failure_label = (
+        "the current doctor coverage is still too narrow to trust readiness"
+        if doctor_coverage_block(doctor)
+        else human_failure_label(broken_truth)
+    )
     continuation_next_step = next_safe_step(repair_packet)
     next_safe_step_label = (
         "restore the original task request and intended task target, then run the next bounded check"

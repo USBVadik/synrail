@@ -20,7 +20,7 @@ Start by trying to break its truth claims.
 Read:
 
 - `docs/core/ALPHA_TEST_PACK_001.md`
-- `fixtures/alpha_test_pack_run_001/`
+- `fixtures/alpha_test_pack_run_003/`
 - `tests/test_alpha_test_pack_smoke.py`
 
 Ask:

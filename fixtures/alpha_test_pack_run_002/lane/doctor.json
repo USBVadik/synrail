@@ -1,0 +1,576 @@
+{
+  "schema_version": "doctor_record_v0",
+  "doctor_run_id": "ALPHA_RUN_20260415T100127Z",
+  "doctor_level": "CORE_DOCTOR",
+  "target_execution_surface": {
+    "path": "/private/tmp/synrail_alpha_pack_run_IkfbYi/project",
+    "classification": "trusted_worktree",
+    "observed_identity": "",
+    "expected_identity": "autodetected_generic_worktree"
+  },
+  "trusted_baseline": {
+    "identity": "autodetected_generic_baseline"
+  },
+  "intended_run_class": "core_probe",
+  "gate_results": {
+    "baseline_identity": {
+      "status": "PASS",
+      "note": "trusted baseline identity is present"
+    },
+    "clean_execution_surface": {
+      "status": "PASS",
+      "note": "non-git execution surface exists and is explicitly observed"
+    },
+    "artifact_viability": {
+      "status": "PASS",
+      "note": "artifact path parent exists and is writable by convention"
+    },
+    "helper_integrity": {
+      "status": "NOT_APPLICABLE",
+      "note": "helper integrity not required for this level"
+    },
+    "credential_surface": {
+      "status": "NOT_APPLICABLE",
+      "note": "credential surface not required for this level"
+    },
+    "prompt_task_identity": {
+      "status": "NOT_APPLICABLE",
+      "note": "prompt/task identity not required for this level"
+    }
+  },
+  "coverage": {
+    "schema_version": "doctor_coverage_record_v0",
+    "doctor_version": "synrail_doctor_v1",
+    "coverage_source": "DECLARED_PROFILE_PLUS_MEASURED_CORPUS",
+    "corpus_version": "doctor_coverage_corpus_v0",
+    "coverage_threshold_policy": "ALL_CRITICAL_FAIL_MODES_COVERED",
+    "critical_fail_modes": [
+      "wrong_target_identity_mismatch",
+      "dirty_execution_surface_under_git",
+      "out_of_scope_modified_files_on_observed_safe_surface",
+      "helper_entrypoint_missing",
+      "helper_entrypoint_syntax_invalid",
+      "helper_entrypoint_missing_module_import",
+      "credential_env_missing",
+      "credential_env_placeholder_value",
+      "credential_path_missing",
+      "credential_json_malformed",
+      "artifact_path_parent_missing",
+      "exact_prompt_or_task_identity_missing"
+    ],
+    "declared_covered_fail_modes": [
+      "baseline_identity_missing",
+      "wrong_target_identity_mismatch",
+      "dirty_execution_surface_under_git",
+      "out_of_scope_modified_files_on_observed_safe_surface",
+      "artifact_path_parent_missing",
+      "credential_env_missing",
+      "credential_path_missing",
+      "credential_env_placeholder_value",
+      "exact_prompt_or_task_identity_missing",
+      "exact_prompt_or_task_identity_mismatched",
+      "helper_entrypoint_missing",
+      "helper_entrypoint_syntax_invalid",
+      "helper_entrypoint_missing_module_import",
+      "credential_json_malformed"
+    ],
+    "declared_partial_fail_modes": [
+      "non_git_clean_surface_truth",
+      "helper_runtime_import_graph_truth",
+      "credential_auth_validity"
+    ],
+    "declared_uncovered_fail_modes": [
+      "deep_config_graph_validity",
+      "runtime_library_import_drift_beyond_helper_entrypoint",
+      "hidden_side_effects_inside_parsing_helper",
+      "semantic_intent_drift_inside_in_scope_file",
+      "broad_environment_truth_beyond_expensive_fail_modes"
+    ],
+    "covered_fail_modes": [
+      "wrong_target_identity_mismatch",
+      "dirty_execution_surface_under_git",
+      "out_of_scope_modified_files_on_observed_safe_surface",
+      "helper_entrypoint_missing",
+      "helper_entrypoint_syntax_invalid",
+      "helper_entrypoint_missing_module_import",
+      "credential_env_missing",
+      "credential_env_placeholder_value",
+      "credential_path_missing",
+      "credential_json_malformed",
+      "artifact_path_parent_missing",
+      "exact_prompt_or_task_identity_missing",
+      "exact_prompt_or_task_identity_mismatched"
+    ],
+    "partial_fail_modes": [],
+    "uncovered_fail_modes": [
+      "baseline_identity_missing",
+      "non_git_clean_surface_truth",
+      "helper_runtime_import_graph_truth",
+      "credential_auth_validity",
+      "deep_config_graph_validity",
+      "runtime_library_import_drift_beyond_helper_entrypoint",
+      "hidden_side_effects_inside_parsing_helper",
+      "semantic_intent_drift_inside_in_scope_file",
+      "broad_environment_truth_beyond_expensive_fail_modes"
+    ],
+    "measured_case_count": 13,
+    "measured_case_match_count": 13,
+    "measured_case_problem_count": 0,
+    "measured_cases": [
+      {
+        "case_id": "WRONG_TARGET_IDENTITY_MISMATCH_001",
+        "fail_mode_id": "wrong_target_identity_mismatch",
+        "doctor_record": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_pressure_test_002/target_identity_mismatch.json",
+        "status": "MATCHED",
+        "observed_final_verdict": "NOT_ACCEPTABLE_BASELINE_IDENTITY",
+        "observed_blocking_failure_classes": [
+          "baseline-identity ambiguous"
+        ],
+        "observed_failing_gate": "baseline_identity",
+        "observed_gate_note": "target identity artifact does not match the expected target surface",
+        "mismatch_reasons": []
+      },
+      {
+        "case_id": "DIRTY_EXECUTION_SURFACE_UNDER_GIT_001",
+        "fail_mode_id": "dirty_execution_surface_under_git",
+        "doctor_record": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_shell_run_009/doctor.json",
+        "status": "MATCHED",
+        "observed_final_verdict": "NOT_ACCEPTABLE_DIRTY_SURFACE",
+        "observed_blocking_failure_classes": [
+          "dirty-surface unsafe"
+        ],
+        "observed_failing_gate": "clean_execution_surface",
+        "observed_gate_note": "execution surface has uncommitted changes",
+        "mismatch_reasons": []
+      },
+      {
+        "case_id": "OUT_OF_SCOPE_MODIFIED_FILES_001",
+        "fail_mode_id": "out_of_scope_modified_files_on_observed_safe_surface",
+        "doctor_record": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_pressure_test_007/doctor.json",
+        "status": "MATCHED",
+        "observed_final_verdict": "NOT_ACCEPTABLE_DIRTY_SURFACE",
+        "observed_blocking_failure_classes": [
+          "dirty-surface unsafe"
+        ],
+        "observed_failing_gate": "clean_execution_surface",
+        "observed_gate_note": "execution surface has out-of-scope modifications: unrelated_policy.txt",
+        "mismatch_reasons": []
+      },
+      {
+        "case_id": "HELPER_ENTRYPOINT_MISSING_001",
+        "fail_mode_id": "helper_entrypoint_missing",
+        "doctor_record": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_measured_coverage_run_001/helper_missing_doctor.json",
+        "status": "MATCHED",
+        "observed_final_verdict": "NOT_ACCEPTABLE_HELPER_INTEGRITY",
+        "observed_blocking_failure_classes": [
+          "helper-integrity unknown"
+        ],
+        "observed_failing_gate": "helper_integrity",
+        "observed_gate_note": "helper entrypoint is missing",
+        "mismatch_reasons": []
+      },
+      {
+        "case_id": "HELPER_ENTRYPOINT_SYNTAX_INVALID_001",
+        "fail_mode_id": "helper_entrypoint_syntax_invalid",
+        "doctor_record": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_pressure_test_003/doctor.json",
+        "status": "MATCHED",
+        "observed_final_verdict": "NOT_ACCEPTABLE_HELPER_INTEGRITY",
+        "observed_blocking_failure_classes": [
+          "helper-integrity unknown"
+        ],
+        "observed_failing_gate": "helper_integrity",
+        "observed_gate_note": "helper entrypoint exists but python syntax is invalid",
+        "mismatch_reasons": []
+      },
+      {
+        "case_id": "HELPER_ENTRYPOINT_MISSING_IMPORT_001",
+        "fail_mode_id": "helper_entrypoint_missing_module_import",
+        "doctor_record": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_pressure_test_006/doctor.json",
+        "status": "MATCHED",
+        "observed_final_verdict": "NOT_ACCEPTABLE_HELPER_INTEGRITY",
+        "observed_blocking_failure_classes": [
+          "helper-integrity unknown"
+        ],
+        "observed_failing_gate": "helper_integrity",
+        "observed_gate_note": "helper entrypoint imports a missing module: missing_synrail_helper_dep",
+        "mismatch_reasons": []
+      },
+      {
+        "case_id": "CREDENTIAL_ENV_MISSING_001",
+        "fail_mode_id": "credential_env_missing",
+        "doctor_record": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_measured_coverage_run_001/credential_env_missing_doctor.json",
+        "status": "MATCHED",
+        "observed_final_verdict": "NOT_ACCEPTABLE_CREDENTIAL_SURFACE",
+        "observed_blocking_failure_classes": [
+          "credential-surface missing"
+        ],
+        "observed_failing_gate": "credential_surface",
+        "observed_gate_note": "missing credential env: MISSING_PROVIDER_TOKEN",
+        "mismatch_reasons": []
+      },
+      {
+        "case_id": "CREDENTIAL_ENV_PLACEHOLDER_001",
+        "fail_mode_id": "credential_env_placeholder_value",
+        "doctor_record": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_pressure_test_005/doctor.json",
+        "status": "MATCHED",
+        "observed_final_verdict": "NOT_ACCEPTABLE_CREDENTIAL_SURFACE",
+        "observed_blocking_failure_classes": [
+          "credential-surface missing"
+        ],
+        "observed_failing_gate": "credential_surface",
+        "observed_gate_note": "credential env still uses placeholder values: PLACEHOLDER_API_KEY",
+        "mismatch_reasons": []
+      },
+      {
+        "case_id": "CREDENTIAL_PATH_MISSING_001",
+        "fail_mode_id": "credential_path_missing",
+        "doctor_record": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_pressure_test_001/credential_path_missing.json",
+        "status": "MATCHED",
+        "observed_final_verdict": "NOT_ACCEPTABLE_CREDENTIAL_SURFACE",
+        "observed_blocking_failure_classes": [
+          "credential-surface missing"
+        ],
+        "observed_failing_gate": "credential_surface",
+        "observed_gate_note": "credential env points to a missing path: GOOGLE_APPLICATION_CREDENTIALS -> /Users/usbdick/Documents/New project/synrail/fixtures/doctor_pressure_test_001/missing-creds.json",
+        "mismatch_reasons": []
+      },
+      {
+        "case_id": "CREDENTIAL_JSON_MALFORMED_001",
+        "fail_mode_id": "credential_json_malformed",
+        "doctor_record": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_pressure_test_004/doctor.json",
+        "status": "MATCHED",
+        "observed_final_verdict": "NOT_ACCEPTABLE_CREDENTIAL_SURFACE",
+        "observed_blocking_failure_classes": [
+          "credential-surface missing"
+        ],
+        "observed_failing_gate": "credential_surface",
+        "observed_gate_note": "credential env points to an invalid credential surface: BROKEN_CREDS_JSON -> /Users/usbdick/Documents/New project/synrail/fixtures/doctor_pressure_test_004/invalid_credentials.json contains invalid json",
+        "mismatch_reasons": []
+      },
+      {
+        "case_id": "ARTIFACT_PATH_PARENT_MISSING_001",
+        "fail_mode_id": "artifact_path_parent_missing",
+        "doctor_record": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_measured_coverage_run_001/artifact_parent_missing_doctor.json",
+        "status": "MATCHED",
+        "observed_final_verdict": "NOT_ACCEPTABLE_ARTIFACT_PATH",
+        "observed_blocking_failure_classes": [
+          "artifact-viability missing"
+        ],
+        "observed_failing_gate": "artifact_viability",
+        "observed_gate_note": "artifact path parent does not exist",
+        "mismatch_reasons": []
+      },
+      {
+        "case_id": "EXACT_PROMPT_OR_TASK_IDENTITY_MISSING_001",
+        "fail_mode_id": "exact_prompt_or_task_identity_missing",
+        "doctor_record": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_run_001/stage1_doctor.json",
+        "status": "MATCHED",
+        "observed_final_verdict": "NOT_ACCEPTABLE_EXACT_PROMPT_MISSING",
+        "observed_blocking_failure_classes": [
+          "exact-prompt-artifact-missing"
+        ],
+        "observed_failing_gate": "prompt_task_identity",
+        "observed_gate_note": "exact prompt identity file is not specified",
+        "mismatch_reasons": []
+      },
+      {
+        "case_id": "EXACT_PROMPT_OR_TASK_IDENTITY_MISMATCHED_001",
+        "fail_mode_id": "exact_prompt_or_task_identity_mismatched",
+        "doctor_record": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_pressure_test_001/task_identity_mismatch.json",
+        "status": "MATCHED",
+        "observed_final_verdict": "NOT_ACCEPTABLE_EXACT_PROMPT_MISSING",
+        "observed_blocking_failure_classes": [
+          "exact-prompt-artifact-missing"
+        ],
+        "observed_failing_gate": "prompt_task_identity",
+        "observed_gate_note": "exact prompt identity artifact does not match the expected task identity",
+        "mismatch_reasons": []
+      }
+    ],
+    "decision_trace": [
+      {
+        "fail_mode_id": "wrong_target_identity_mismatch",
+        "is_critical": true,
+        "classification": "COVERED",
+        "measured_case_ids": [
+          "WRONG_TARGET_IDENTITY_MISMATCH_001"
+        ],
+        "matched_case_ids": [
+          "WRONG_TARGET_IDENTITY_MISMATCH_001"
+        ],
+        "problematic_case_ids": [],
+        "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+        "why": "all measured cases for this fail mode matched the expected doctor boundary"
+      },
+      {
+        "fail_mode_id": "dirty_execution_surface_under_git",
+        "is_critical": true,
+        "classification": "COVERED",
+        "measured_case_ids": [
+          "DIRTY_EXECUTION_SURFACE_UNDER_GIT_001"
+        ],
+        "matched_case_ids": [
+          "DIRTY_EXECUTION_SURFACE_UNDER_GIT_001"
+        ],
+        "problematic_case_ids": [],
+        "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+        "why": "all measured cases for this fail mode matched the expected doctor boundary"
+      },
+      {
+        "fail_mode_id": "out_of_scope_modified_files_on_observed_safe_surface",
+        "is_critical": true,
+        "classification": "COVERED",
+        "measured_case_ids": [
+          "OUT_OF_SCOPE_MODIFIED_FILES_001"
+        ],
+        "matched_case_ids": [
+          "OUT_OF_SCOPE_MODIFIED_FILES_001"
+        ],
+        "problematic_case_ids": [],
+        "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+        "why": "all measured cases for this fail mode matched the expected doctor boundary"
+      },
+      {
+        "fail_mode_id": "helper_entrypoint_missing",
+        "is_critical": true,
+        "classification": "COVERED",
+        "measured_case_ids": [
+          "HELPER_ENTRYPOINT_MISSING_001"
+        ],
+        "matched_case_ids": [
+          "HELPER_ENTRYPOINT_MISSING_001"
+        ],
+        "problematic_case_ids": [],
+        "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+        "why": "all measured cases for this fail mode matched the expected doctor boundary"
+      },
+      {
+        "fail_mode_id": "helper_entrypoint_syntax_invalid",
+        "is_critical": true,
+        "classification": "COVERED",
+        "measured_case_ids": [
+          "HELPER_ENTRYPOINT_SYNTAX_INVALID_001"
+        ],
+        "matched_case_ids": [
+          "HELPER_ENTRYPOINT_SYNTAX_INVALID_001"
+        ],
+        "problematic_case_ids": [],
+        "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+        "why": "all measured cases for this fail mode matched the expected doctor boundary"
+      },
+      {
+        "fail_mode_id": "helper_entrypoint_missing_module_import",
+        "is_critical": true,
+        "classification": "COVERED",
+        "measured_case_ids": [
+          "HELPER_ENTRYPOINT_MISSING_IMPORT_001"
+        ],
+        "matched_case_ids": [
+          "HELPER_ENTRYPOINT_MISSING_IMPORT_001"
+        ],
+        "problematic_case_ids": [],
+        "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+        "why": "all measured cases for this fail mode matched the expected doctor boundary"
+      },
+      {
+        "fail_mode_id": "credential_env_missing",
+        "is_critical": true,
+        "classification": "COVERED",
+        "measured_case_ids": [
+          "CREDENTIAL_ENV_MISSING_001"
+        ],
+        "matched_case_ids": [
+          "CREDENTIAL_ENV_MISSING_001"
+        ],
+        "problematic_case_ids": [],
+        "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+        "why": "all measured cases for this fail mode matched the expected doctor boundary"
+      },
+      {
+        "fail_mode_id": "credential_env_placeholder_value",
+        "is_critical": true,
+        "classification": "COVERED",
+        "measured_case_ids": [
+          "CREDENTIAL_ENV_PLACEHOLDER_001"
+        ],
+        "matched_case_ids": [
+          "CREDENTIAL_ENV_PLACEHOLDER_001"
+        ],
+        "problematic_case_ids": [],
+        "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+        "why": "all measured cases for this fail mode matched the expected doctor boundary"
+      },
+      {
+        "fail_mode_id": "credential_path_missing",
+        "is_critical": true,
+        "classification": "COVERED",
+        "measured_case_ids": [
+          "CREDENTIAL_PATH_MISSING_001"
+        ],
+        "matched_case_ids": [
+          "CREDENTIAL_PATH_MISSING_001"
+        ],
+        "problematic_case_ids": [],
+        "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+        "why": "all measured cases for this fail mode matched the expected doctor boundary"
+      },
+      {
+        "fail_mode_id": "credential_json_malformed",
+        "is_critical": true,
+        "classification": "COVERED",
+        "measured_case_ids": [
+          "CREDENTIAL_JSON_MALFORMED_001"
+        ],
+        "matched_case_ids": [
+          "CREDENTIAL_JSON_MALFORMED_001"
+        ],
+        "problematic_case_ids": [],
+        "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+        "why": "all measured cases for this fail mode matched the expected doctor boundary"
+      },
+      {
+        "fail_mode_id": "artifact_path_parent_missing",
+        "is_critical": true,
+        "classification": "COVERED",
+        "measured_case_ids": [
+          "ARTIFACT_PATH_PARENT_MISSING_001"
+        ],
+        "matched_case_ids": [
+          "ARTIFACT_PATH_PARENT_MISSING_001"
+        ],
+        "problematic_case_ids": [],
+        "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+        "why": "all measured cases for this fail mode matched the expected doctor boundary"
+      },
+      {
+        "fail_mode_id": "exact_prompt_or_task_identity_missing",
+        "is_critical": true,
+        "classification": "COVERED",
+        "measured_case_ids": [
+          "EXACT_PROMPT_OR_TASK_IDENTITY_MISSING_001"
+        ],
+        "matched_case_ids": [
+          "EXACT_PROMPT_OR_TASK_IDENTITY_MISSING_001"
+        ],
+        "problematic_case_ids": [],
+        "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+        "why": "all measured cases for this fail mode matched the expected doctor boundary"
+      },
+      {
+        "fail_mode_id": "baseline_identity_missing",
+        "is_critical": false,
+        "classification": "UNCOVERED",
+        "measured_case_ids": [],
+        "matched_case_ids": [],
+        "problematic_case_ids": [],
+        "gate_effect": "NON_CRITICAL",
+        "why": "no measured evidence currently exercises this fail mode"
+      },
+      {
+        "fail_mode_id": "exact_prompt_or_task_identity_mismatched",
+        "is_critical": false,
+        "classification": "COVERED",
+        "measured_case_ids": [
+          "EXACT_PROMPT_OR_TASK_IDENTITY_MISMATCHED_001"
+        ],
+        "matched_case_ids": [
+          "EXACT_PROMPT_OR_TASK_IDENTITY_MISMATCHED_001"
+        ],
+        "problematic_case_ids": [],
+        "gate_effect": "NON_CRITICAL",
+        "why": "all measured cases for this fail mode matched the expected doctor boundary"
+      },
+      {
+        "fail_mode_id": "non_git_clean_surface_truth",
+        "is_critical": false,
+        "classification": "UNCOVERED",
+        "measured_case_ids": [],
+        "matched_case_ids": [],
+        "problematic_case_ids": [],
+        "gate_effect": "NON_CRITICAL",
+        "why": "no measured evidence currently exercises this fail mode"
+      },
+      {
+        "fail_mode_id": "helper_runtime_import_graph_truth",
+        "is_critical": false,
+        "classification": "UNCOVERED",
+        "measured_case_ids": [],
+        "matched_case_ids": [],
+        "problematic_case_ids": [],
+        "gate_effect": "NON_CRITICAL",
+        "why": "no measured evidence currently exercises this fail mode"
+      },
+      {
+        "fail_mode_id": "credential_auth_validity",
+        "is_critical": false,
+        "classification": "UNCOVERED",
+        "measured_case_ids": [],
+        "matched_case_ids": [],
+        "problematic_case_ids": [],
+        "gate_effect": "NON_CRITICAL",
+        "why": "no measured evidence currently exercises this fail mode"
+      },
+      {
+        "fail_mode_id": "deep_config_graph_validity",
+        "is_critical": false,
+        "classification": "UNCOVERED",
+        "measured_case_ids": [],
+        "matched_case_ids": [],
+        "problematic_case_ids": [],
+        "gate_effect": "NON_CRITICAL",
+        "why": "no measured evidence currently exercises this fail mode"
+      },
+      {
+        "fail_mode_id": "runtime_library_import_drift_beyond_helper_entrypoint",
+        "is_critical": false,
+        "classification": "UNCOVERED",
+        "measured_case_ids": [],
+        "matched_case_ids": [],
+        "problematic_case_ids": [],
+        "gate_effect": "NON_CRITICAL",
+        "why": "no measured evidence currently exercises this fail mode"
+      },
+      {
+        "fail_mode_id": "hidden_side_effects_inside_parsing_helper",
+        "is_critical": false,
+        "classification": "UNCOVERED",
+        "measured_case_ids": [],
+        "matched_case_ids": [],
+        "problematic_case_ids": [],
+        "gate_effect": "NON_CRITICAL",
+        "why": "no measured evidence currently exercises this fail mode"
+      },
+      {
+        "fail_mode_id": "semantic_intent_drift_inside_in_scope_file",
+        "is_critical": false,
+        "classification": "UNCOVERED",
+        "measured_case_ids": [],
+        "matched_case_ids": [],
+        "problematic_case_ids": [],
+        "gate_effect": "NON_CRITICAL",
+        "why": "no measured evidence currently exercises this fail mode"
+      },
+      {
+        "fail_mode_id": "broad_environment_truth_beyond_expensive_fail_modes",
+        "is_critical": false,
+        "classification": "UNCOVERED",
+        "measured_case_ids": [],
+        "matched_case_ids": [],
+        "problematic_case_ids": [],
+        "gate_effect": "NON_CRITICAL",
+        "why": "no measured evidence currently exercises this fail mode"
+      }
+    ],
+    "critical_fail_mode_count": 12,
+    "critical_covered_count": 12,
+    "critical_missing_fail_modes": [],
+    "critical_modes_without_measured_evidence": [],
+    "critical_modes_with_mismatched_evidence": [],
+    "threshold_met": true,
+    "gate_status": "PASS",
+    "gate_reason": "CRITICAL_FAIL_MODE_MEASURED_COVERAGE_MET"
+  },
+  "blocking_failure_classes": [],
+  "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+  "recommended_next_safe_step": "run execution"
+}
