@@ -1,5 +1,0 @@
-Synrail initialized.
-Artifact root: .synrail
-Detected project type: generic
-After the agent leaves final_result.json or final_result.txt, run: synrail check --artifact-root .synrail
-Optional safety fallback: synrail save --artifact-root .synrail

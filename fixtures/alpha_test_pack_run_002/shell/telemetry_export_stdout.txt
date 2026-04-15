@@ -1,4 +1,0 @@
-Feedback export ready.
-What it includes: one session replay and one issue-ready summary.
-Command count captured: 3
-Use this when you want to send back a non-green run without hand-assembling artifacts.
