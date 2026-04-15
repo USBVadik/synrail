@@ -10,12 +10,14 @@ from pathlib import Path
 
 try:
     from .synrail_repair_focus_v0 import (
+        focused_repair_action_instruction,
         focused_repair_summary,
         focused_repair_surface,
         proof_target_paths as shared_proof_target_paths,
     )
 except ImportError:
     from synrail_repair_focus_v0 import (
+        focused_repair_action_instruction,
         focused_repair_summary,
         focused_repair_surface,
         proof_target_paths as shared_proof_target_paths,
@@ -200,6 +202,11 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         current_step_subsurface_id=current_step_subsurface_id,
         current_step_target_path=current_step_target_path,
     )
+    current_step_action_instruction = focused_repair_action_instruction(
+        current_step_id=current_step_id,
+        current_step_subsurface_id=current_step_subsurface_id,
+        current_step_target_path=current_step_target_path,
+    )
     allowed_scope = [current_step_subsurface_id] if current_step_subsurface_id else (stale_subsurfaces or ["current_repair_step_only"])
     allowed_scope_labels = [human_scope_label(scope_id, repair_packet=repair_packet) for scope_id in allowed_scope]
     required_input_labels = [human_required_input(input_id) for input_id in required_inputs]
@@ -239,6 +246,11 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
     checkpoint_hint = checkpoint_note(checkpoint, repair_packet=repair_packet)
     prompt_lines = [
         "Repair the current run without broadening scope.",
+        (
+            f"Do this now: {current_step_action_instruction}"
+            if current_step_action_instruction
+            else "Do this now: keep the repair inside the current bounded repair surface."
+        ),
         f"Current repair task: {current_step_label}.",
         f"What failed: {failure_label}.",
         (
@@ -270,6 +282,7 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         "current_step_subsurface_id": current_step_subsurface_id,
         "current_step_target_path": current_step_target_path,
         "current_step_focus_summary": current_step_focus_summary,
+        "current_step_action_instruction": current_step_action_instruction,
         "failure_reason": broken_truth,
         "failure_label": failure_label,
         "stale_artifact_ids": stale_artifacts,

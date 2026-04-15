@@ -8,6 +8,11 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_repair_focus_v0 import focused_repair_action_instruction
+except ImportError:
+    from synrail_repair_focus_v0 import focused_repair_action_instruction
+
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
@@ -104,6 +109,11 @@ def build_record(*, state: dict, report: dict, packet: dict, doctor: dict | None
         "current_step_id": continuation_core.get("current_step_id", repair_policy.get("next_step_id", "")),
         "current_step_subsurface_id": continuation_core.get("current_step_subsurface_id", ""),
         "current_step_target_path": continuation_core.get("current_step_target_path", ""),
+        "current_step_action_instruction": focused_repair_action_instruction(
+            current_step_id=continuation_core.get("current_step_id", repair_policy.get("next_step_id", "")),
+            current_step_subsurface_id=continuation_core.get("current_step_subsurface_id", ""),
+            current_step_target_path=continuation_core.get("current_step_target_path", ""),
+        ),
         "ready_now_step_ids": list(repair_policy.get("ready_now_step_ids", [])),
         "next_step_required_inputs": list(continuation_core.get("next_step_required_inputs", [])),
         "next_step_subsurface_ids": list(continuation_core.get("next_step_subsurface_ids", [])),

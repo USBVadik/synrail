@@ -58,6 +58,7 @@ def render_brief(payload: dict) -> str:
 - current step: `{payload["current_step_id"]}`
 - current subsurface: {render_optional(payload.get("current_step_subsurface_id", ""))}
 - edit target: {render_optional(payload.get("current_step_target_path", ""))}
+- do this now: {payload.get("current_step_action_instruction", "") or "none"}
 - next safe step: `{payload["next_safe_step"]}`
 - operator focus: {payload["operator_focus"] or "none"}
 

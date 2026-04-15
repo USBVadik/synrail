@@ -87,6 +87,10 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             self.assertEqual(0, repair_step.returncode, repair_step.stdout + repair_step.stderr)
             self.assertIn(".synrail/final_result.json", repair_step.stdout)
             self.assertIn("Repair target: update the result payload in .synrail/final_result.json", repair_step.stdout)
+            self.assertIn(
+                "Do this now: Update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
+                repair_step.stdout,
+            )
             self.assertNotIn(str(project_root), repair_step.stdout)
 
             prompt = load_json(artifact_root / "prompt.json")
@@ -96,6 +100,10 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             self.assertEqual(
                 "update the result payload in .synrail/final_result.json",
                 prompt["current_step_focus_summary"],
+            )
+            self.assertEqual(
+                "Update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
+                prompt["current_step_action_instruction"],
             )
             self.assertIn("final_result_payload", prompt["allowed_scope"])
 
@@ -211,6 +219,10 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             self.assertIn("final_result_payload", operator_render_text)
             self.assertIn(".synrail/final_result.json", operator_render_text)
             self.assertIn("update the result payload in .synrail/final_result.json", operator_render_text)
+            self.assertIn(
+                "Update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
+                operator_render_text,
+            )
             self.assertEqual("final_result_payload", operator_reading_record["current_step_subsurface_id"])
             self.assertEqual(".synrail/final_result.json", operator_reading_record["current_step_target_path"])
             self.assertEqual("FOLLOWABLE_WITH_RENDER", operator_reading_record["verdict"])

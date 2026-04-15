@@ -884,6 +884,11 @@ def print_prompt_summary_compact(output_file: Path, *, include_prompt: bool = Fa
     forbidden_scope = list(payload.get("forbidden_scope", []))
     lines = [
         "The next bounded repair instruction is ready.",
+        (
+            f"Do this now: {payload.get('current_step_action_instruction', '')}"
+            if payload.get("current_step_action_instruction", "")
+            else "Do this now: keep the repair inside the current bounded repair surface."
+        ),
         f"What failed: {payload.get('failure_label', payload.get('failure_reason', ''))}",
         f"Current repair task: {payload.get('current_step_label', payload.get('current_step_id', ''))}",
         f"Stale artifacts: {', '.join(stale_artifacts) if stale_artifacts else 'none'}",

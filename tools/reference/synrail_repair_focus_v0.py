@@ -51,6 +51,20 @@ def focused_repair_summary(*, current_step_id: str, current_step_subsurface_id: 
     return ""
 
 
+def focused_repair_action_instruction(*, current_step_id: str, current_step_subsurface_id: str, current_step_target_path: str) -> str:
+    summary = focused_repair_summary(
+        current_step_id=current_step_id,
+        current_step_subsurface_id=current_step_subsurface_id,
+        current_step_target_path=current_step_target_path,
+    )
+    if not summary:
+        return ""
+    capitalized = summary[0].upper() + summary[1:]
+    if current_step_target_path:
+        return f"{capitalized}. Leave every other proof surface unchanged."
+    return f"{capitalized}. Stay inside the current bounded repair step."
+
+
 def focused_repair_surface(
     *,
     current_step_id: str,
