@@ -30,7 +30,7 @@ Minimum package:
 4. [PRODUCT_MEMO_001.md](./PRODUCT_MEMO_001.md)
 5. [KNOWN_WEAKNESSES_001.md](./KNOWN_WEAKNESSES_001.md)
 6. curated external fixture:
-   - `fixtures/alpha_test_pack_run_003/`
+   - `fixtures/alpha_test_pack_run_004/`
 
 If the reviewer wants deeper technical context, also include:
 

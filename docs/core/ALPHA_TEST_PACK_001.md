@@ -176,10 +176,13 @@ This pack is successful only if it produces hard external signal, not polite app
 
 Current tester-pack smoke on the preferred shell:
 
-- [check output](../../fixtures/alpha_test_pack_run_003/shell/check_stdout.txt)
-- [repair-step output](../../fixtures/alpha_test_pack_run_003/shell/repair_step_stdout.txt)
-- [telemetry export output](../../fixtures/alpha_test_pack_run_003/shell/telemetry_export_stdout.txt)
-- [thin output](../../fixtures/alpha_test_pack_run_003/lane/thin_output.json)
-- [prompt](../../fixtures/alpha_test_pack_run_003/lane/prompt.json)
-- [session replay](../../fixtures/alpha_test_pack_run_003/lane/telemetry/session_replay.json)
-- [issue body](../../fixtures/alpha_test_pack_run_003/lane/telemetry/github_issue.md)
+- [start output](../../fixtures/alpha_test_pack_run_004/shell/start_stdout.txt)
+- [check output](../../fixtures/alpha_test_pack_run_004/shell/check_stdout.txt)
+- [repair-step output](../../fixtures/alpha_test_pack_run_004/shell/repair_step_stdout.txt)
+- [telemetry export output](../../fixtures/alpha_test_pack_run_004/shell/telemetry_export_stdout.txt)
+- [thin output](../../fixtures/alpha_test_pack_run_004/lane/thin_output.json)
+- [prompt](../../fixtures/alpha_test_pack_run_004/lane/prompt.json)
+- [operator brief](../../fixtures/alpha_test_pack_run_004/lane/operator_brief.json)
+- [operator render](../../fixtures/alpha_test_pack_run_004/lane/operator_render.md)
+- [session replay](../../fixtures/alpha_test_pack_run_004/lane/telemetry/session_replay.json)
+- [issue body](../../fixtures/alpha_test_pack_run_004/lane/telemetry/github_issue.md)

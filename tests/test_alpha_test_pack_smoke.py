@@ -228,6 +228,10 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             self.assertTrue(second_operator_record["has_explicit_target_path"])
             self.assertEqual("final_result_payload", operator_brief_record["current_step_subsurface_id"])
             self.assertEqual(".synrail/final_result.json", operator_brief_record["current_step_target_path"])
+            self.assertEqual(
+                ["--state-file", ".synrail/state.json", "--repair-packet-file", ".synrail/repair_packet.json"],
+                operator_brief_record["suggested_cli"]["args"],
+            )
             self.assertIn("final_result_payload", operator_render_text)
             self.assertIn(".synrail/final_result.json", operator_render_text)
             self.assertIn("update the result payload in .synrail/final_result.json", operator_render_text)
@@ -236,6 +240,7 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
                 operator_render_text,
             )
             self.assertIn("## Do This Now", operator_render_text)
+            self.assertNotIn(str(project_root), operator_render_text)
             self.assertEqual("final_result_payload", operator_reading_record["current_step_subsurface_id"])
             self.assertEqual(".synrail/final_result.json", operator_reading_record["current_step_target_path"])
             self.assertEqual("FOLLOWABLE_WITH_RENDER", operator_reading_record["verdict"])

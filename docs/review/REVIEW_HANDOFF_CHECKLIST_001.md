@@ -38,7 +38,7 @@ python3 -m unittest discover -s tests -p 'test_*.py' -v
 
 ## Current outward-facing proof to highlight
 
-- `fixtures/alpha_test_pack_run_003/`
+- `fixtures/alpha_test_pack_run_004/`
 
 ## Pre-Alpha No-Go Checklist
 

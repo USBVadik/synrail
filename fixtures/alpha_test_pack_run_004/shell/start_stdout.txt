@@ -1,0 +1,10 @@
+Controlled run started.
+Do this now: Edit only the starter proof files below in place. Leave every other surface unchanged.
+Artifact root: .synrail
+Run id: ALPHA_RUN_20260415T182201Z
+Starter proof files are ready for this run.
+- final result: .synrail/final_result.json
+- readback: .synrail/readback.txt
+- scenario proof: .synrail/scenario_proof.txt
+Then run: synrail check --artifact-root .synrail
+Optional safety fallback: synrail save --artifact-root .synrail

@@ -29,6 +29,18 @@ def normalize_report(payload: dict) -> dict:
     return payload
 
 
+def display_cli_path(value: str) -> str:
+    if not value:
+        return value
+    path = Path(value)
+    if not path.is_absolute():
+        return value
+    try:
+        return str(path.resolve().relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return value
+
+
 def determine_primary_action(packet: dict, report: dict) -> tuple[str, str]:
     resumability = packet.get("resumability", {})
     termination = packet.get("repair_termination", {})
@@ -70,9 +82,9 @@ def suggested_cli(primary_action: str, state_file: str, repair_packet_file: str)
             "command": "synrail resume",
             "args": [
                 "--state-file",
-                state_file,
+                display_cli_path(state_file),
                 "--repair-packet-file",
-                repair_packet_file,
+                display_cli_path(repair_packet_file),
             ],
         }
     return {
