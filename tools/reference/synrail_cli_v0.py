@@ -889,6 +889,9 @@ def print_prompt_summary_compact(output_file: Path, *, include_prompt: bool = Fa
         f"Required inputs: {', '.join(required_input_labels) if required_input_labels else 'none'}",
         f"Do not touch: {', '.join(forbidden_scope) if forbidden_scope else 'unrelated files or acceptance logic'}",
     ]
+    current_step_target_path = payload.get("current_step_target_path", "")
+    if current_step_target_path:
+        lines.append(f"Edit in place: {current_step_target_path}")
     acceptance = payload.get("acceptance_criteria", [])
     if acceptance:
         lines.append("Must pass:")

@@ -53,13 +53,46 @@ def doctor_coverage_block(doctor: dict | None) -> bool:
     return "doctor-coverage incomplete" in list((doctor or {}).get("blocking_failure_classes", []))
 
 
-def human_scope_label(scope_id: str) -> str:
+def display_target_path(path: Path, *, repair_packet: dict) -> str:
+    target_path = repair_packet.get("resume_context", {}).get("target_path", "")
+    if target_path:
+        try:
+            relative = path.resolve().relative_to(Path(target_path).resolve())
+            return str(relative) or "."
+        except ValueError:
+            pass
+    return str(path)
+
+
+def proof_target_paths(repair_packet: dict) -> dict[str, str]:
+    artifact_root = repair_packet.get("output_defaults", {}).get("artifact_root", "")
+    if not artifact_root:
+        return {
+            "final_result": "final_result.json",
+            "readback": "readback.txt",
+            "scenario_proof": "scenario_proof.txt",
+        }
+    root = Path(artifact_root)
+    return {
+        "final_result": display_target_path(root / "final_result.json", repair_packet=repair_packet),
+        "readback": display_target_path(root / "readback.txt", repair_packet=repair_packet),
+        "scenario_proof": display_target_path(root / "scenario_proof.txt", repair_packet=repair_packet),
+    }
+
+
+def human_scope_label(scope_id: str, *, repair_packet: dict | None = None) -> str:
+    proof_paths = proof_target_paths(repair_packet or {})
     labels = {
         "current_repair_step_only": "only the current bounded repair step",
         "helper_entrypoint_record": "the helper entrypoint that is blocking readiness",
         "clean_execution_surface_record": "the current workspace for this run",
         "proof_bundle_surface": "the proof bundle for this run",
         "final_result_artifact": "the final result artifact for this run",
+        "final_result_payload": f"the result payload in {proof_paths['final_result']}",
+        "diff_provenance_record": f"the diff provenance section in {proof_paths['final_result']}",
+        "cleanup_status_record": f"the cleanup status section in {proof_paths['final_result']}",
+        "readback_record": f"the readback starter file at {proof_paths['readback']}",
+        "scenario_proof_record": f"the scenario proof starter file at {proof_paths['scenario_proof']}",
         "target_identity_record": "the task target for this run",
     }
     return labels.get(scope_id, humanize_token(scope_id))
@@ -75,6 +108,29 @@ def human_required_input(input_id: str) -> str:
         "refresh_reverification_complete": "confirmation that reverification completed",
     }
     return labels.get(input_id, humanize_token(input_id))
+
+
+def focused_step_details(repair_packet: dict, current_step_id: str, stale_subsurfaces: list[str]) -> tuple[str, str, str]:
+    proof_paths = proof_target_paths(repair_packet)
+    stale_set = set(stale_subsurfaces)
+    if current_step_id == "repair_final_result_artifact":
+        focus_order = [
+            ("final_result_payload", f"repair the result payload in {proof_paths['final_result']}", proof_paths["final_result"]),
+            ("diff_provenance_record", f"record diff provenance in {proof_paths['final_result']}", proof_paths["final_result"]),
+            ("cleanup_status_record", f"record cleanup status in {proof_paths['final_result']}", proof_paths["final_result"]),
+        ]
+        for subsurface_id, label, target_path in focus_order:
+            if subsurface_id in stale_set:
+                return label, subsurface_id, target_path
+    if current_step_id == "complete_missing_proof_sections":
+        focus_order = [
+            ("readback_record", f"record readback in {proof_paths['readback']}", proof_paths["readback"]),
+            ("scenario_proof_record", f"record scenario proof in {proof_paths['scenario_proof']}", proof_paths["scenario_proof"]),
+        ]
+        matching = [(subsurface_id, label, target_path) for subsurface_id, label, target_path in focus_order if subsurface_id in stale_set]
+        if len(matching) == 1:
+            return matching[0][1], matching[0][0], matching[0][2]
+    return human_step_label(current_step_id), "", ""
 
 
 def load_json(path: Path) -> dict:
@@ -136,9 +192,13 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
     stale_subsurfaces = list(continuation.get("next_step_subsurface_ids", []) or artifact_quality.get("stale_subsurface_ids", []))
     stale_artifacts = list(artifact_quality.get("stale_artifact_ids", []))
     current_step_id = continuation.get("current_step_id", "") or repair_packet.get("repair_history", {}).get("current_step_id", "")
-    current_step_label = human_step_label(current_step_id)
-    allowed_scope = stale_subsurfaces or ["current_repair_step_only"]
-    allowed_scope_labels = [human_scope_label(scope_id) for scope_id in allowed_scope]
+    current_step_label, current_step_subsurface_id, current_step_target_path = focused_step_details(
+        repair_packet,
+        current_step_id,
+        stale_subsurfaces,
+    )
+    allowed_scope = [current_step_subsurface_id] if current_step_subsurface_id else (stale_subsurfaces or ["current_repair_step_only"])
+    allowed_scope_labels = [human_scope_label(scope_id, repair_packet=repair_packet) for scope_id in allowed_scope]
     required_input_labels = [human_required_input(input_id) for input_id in required_inputs]
     forbidden_scope = [
         "Do not broaden scope beyond the current repair step.",
@@ -170,6 +230,8 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         must_pass.append(f"Provide required input: {human_required_input(input_id)}")
     if next_safe_step_label:
         must_pass.append(f"Keep the next safe step aligned with: {next_safe_step_label}")
+    if current_step_target_path:
+        must_pass.append(f"Edit only this starter file in place: {current_step_target_path}")
     acceptance_criteria = list(must_pass)
     checkpoint_hint = checkpoint_note(checkpoint, repair_packet=repair_packet)
     prompt_lines = [
@@ -181,6 +243,11 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         f"Allowed scope: {', '.join(allowed_scope_labels) if allowed_scope_labels else 'only the current bounded repair step'}",
         f"Required inputs: {', '.join(required_input_labels) if required_input_labels else 'none'}",
         f"What must be true after repair: {next_safe_step_label or 'follow the next safe step from the repair packet'}",
+        (
+            f"Edit in place: {current_step_target_path}."
+            if current_step_target_path
+            else "Edit in place: keep the repair inside the current bounded proof surface."
+        ),
         "Do not touch unrelated files, state transitions, or acceptance logic.",
         "Return only the bounded repair needed for this current step and keep this same repair path intact.",
     ]
@@ -192,6 +259,8 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         "task_class": repair_packet["task_class"],
         "current_step_id": current_step_id,
         "current_step_label": current_step_label,
+        "current_step_subsurface_id": current_step_subsurface_id,
+        "current_step_target_path": current_step_target_path,
         "failure_reason": broken_truth,
         "failure_label": failure_label,
         "stale_artifact_ids": stale_artifacts,

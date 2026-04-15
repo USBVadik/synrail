@@ -80,11 +80,13 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
 
             repair_step = self.run_alpha("repair-step", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, repair_step.returncode, repair_step.stdout + repair_step.stderr)
-            self.assertIn("repair the final result artifact", repair_step.stdout)
+            self.assertIn(".synrail/final_result.json", repair_step.stdout)
             self.assertNotIn(str(project_root), repair_step.stdout)
 
             prompt = load_json(artifact_root / "prompt.json")
             self.assertEqual("repair_final_result_artifact", prompt["current_step_id"])
+            self.assertEqual("final_result_payload", prompt["current_step_subsurface_id"])
+            self.assertEqual(".synrail/final_result.json", prompt["current_step_target_path"])
             self.assertIn("final_result_payload", prompt["allowed_scope"])
 
             telemetry_export = self.run_alpha("telemetry", "export", "--artifact-root", ".synrail", cwd=project_root)

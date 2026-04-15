@@ -20,6 +20,10 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
+def write_json(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+
+
 class ControlledStartSmokeTests(unittest.TestCase):
     def run_alpha(self, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
@@ -168,6 +172,57 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual("NON_GREEN", thin_output["outcome_class"])
             self.assertEqual("", thin_output["next_command"])
             self.assertFalse((artifact_root / "prompt.json").exists())
+
+    def test_repair_step_names_readback_starter_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_readback_focus_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                "--task-identity",
+                "Point the next repair at the exact starter proof file that is still missing.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            state = load_json(artifact_root / "state.json")
+            write_json(
+                artifact_root / "final_result.json",
+                {
+                    "request_id": state["run_id"],
+                    "task_class": state["task_class"],
+                    "status": "DONE",
+                    "summary": "Implemented the bounded change.",
+                    "modified_files": ["app.py"],
+                    "git_diff": "diff --git a/app.py b/app.py\n--- a/app.py\n+++ b/app.py\n@@\n+patched\n",
+                    "cleanup_status": {
+                        "success": True,
+                        "summary": "workspace is clean after the bounded change",
+                    },
+                },
+            )
+            (artifact_root / "scenario_proof.txt").write_text(
+                "Scenario passed on the attested surface and confirmed the expected behavior.\n"
+            )
+
+            check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+
+            repair_step = self.run_alpha("repair-step", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, repair_step.returncode, repair_step.stdout + repair_step.stderr)
+            self.assertIn(".synrail/readback.txt", repair_step.stdout)
+
+            prompt = load_json(artifact_root / "prompt.json")
+            self.assertEqual("complete_missing_proof_sections", prompt["current_step_id"])
+            self.assertEqual("readback_record", prompt["current_step_subsurface_id"])
+            self.assertEqual(".synrail/readback.txt", prompt["current_step_target_path"])
+            self.assertIn("readback", prompt["current_step_label"])
 
 
 if __name__ == "__main__":
