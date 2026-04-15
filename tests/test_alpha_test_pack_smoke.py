@@ -74,19 +74,29 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, check.returncode, check.stdout + check.stderr)
             self.assertNotIn(str(project_root), check.stdout)
+            self.assertIn("Repair target: update the result payload in .synrail/final_result.json", check.stdout)
 
             thin_output = load_json(artifact_root / "thin_output.json")
             self.assertEqual("PROOF_INVALID", thin_output["outcome_class"])
+            self.assertEqual(
+                "update the result payload in .synrail/final_result.json",
+                thin_output["focused_repair_summary"],
+            )
 
             repair_step = self.run_alpha("repair-step", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, repair_step.returncode, repair_step.stdout + repair_step.stderr)
             self.assertIn(".synrail/final_result.json", repair_step.stdout)
+            self.assertIn("Repair target: update the result payload in .synrail/final_result.json", repair_step.stdout)
             self.assertNotIn(str(project_root), repair_step.stdout)
 
             prompt = load_json(artifact_root / "prompt.json")
             self.assertEqual("repair_final_result_artifact", prompt["current_step_id"])
             self.assertEqual("final_result_payload", prompt["current_step_subsurface_id"])
             self.assertEqual(".synrail/final_result.json", prompt["current_step_target_path"])
+            self.assertEqual(
+                "update the result payload in .synrail/final_result.json",
+                prompt["current_step_focus_summary"],
+            )
             self.assertIn("final_result_payload", prompt["allowed_scope"])
 
             telemetry_export = self.run_alpha("telemetry", "export", "--artifact-root", ".synrail", cwd=project_root)
@@ -200,6 +210,7 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             self.assertEqual(".synrail/final_result.json", operator_brief_record["current_step_target_path"])
             self.assertIn("final_result_payload", operator_render_text)
             self.assertIn(".synrail/final_result.json", operator_render_text)
+            self.assertIn("update the result payload in .synrail/final_result.json", operator_render_text)
             self.assertEqual("final_result_payload", operator_reading_record["current_step_subsurface_id"])
             self.assertEqual(".synrail/final_result.json", operator_reading_record["current_step_target_path"])
             self.assertEqual("FOLLOWABLE_WITH_RENDER", operator_reading_record["verdict"])

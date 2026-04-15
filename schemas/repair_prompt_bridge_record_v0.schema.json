@@ -18,6 +18,7 @@
     "current_step_label": {"type": "string"},
     "current_step_subsurface_id": {"type": "string"},
     "current_step_target_path": {"type": "string"},
+    "current_step_focus_summary": {"type": "string"},
     "failure_reason": {"type": "string"},
     "failure_label": {"type": "string"},
     "stale_artifact_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},

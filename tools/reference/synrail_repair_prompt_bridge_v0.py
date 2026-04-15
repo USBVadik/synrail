@@ -9,9 +9,17 @@ import sys
 from pathlib import Path
 
 try:
-    from .synrail_repair_focus_v0 import focused_repair_surface, proof_target_paths as shared_proof_target_paths
+    from .synrail_repair_focus_v0 import (
+        focused_repair_summary,
+        focused_repair_surface,
+        proof_target_paths as shared_proof_target_paths,
+    )
 except ImportError:
-    from synrail_repair_focus_v0 import focused_repair_surface, proof_target_paths as shared_proof_target_paths
+    from synrail_repair_focus_v0 import (
+        focused_repair_summary,
+        focused_repair_surface,
+        proof_target_paths as shared_proof_target_paths,
+    )
 
 
 def humanize_token(value: str) -> str:
@@ -187,6 +195,11 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         current_step_id,
         stale_subsurfaces,
     )
+    current_step_focus_summary = focused_repair_summary(
+        current_step_id=current_step_id,
+        current_step_subsurface_id=current_step_subsurface_id,
+        current_step_target_path=current_step_target_path,
+    )
     allowed_scope = [current_step_subsurface_id] if current_step_subsurface_id else (stale_subsurfaces or ["current_repair_step_only"])
     allowed_scope_labels = [human_scope_label(scope_id, repair_packet=repair_packet) for scope_id in allowed_scope]
     required_input_labels = [human_required_input(input_id) for input_id in required_inputs]
@@ -228,6 +241,11 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         "Repair the current run without broadening scope.",
         f"Current repair task: {current_step_label}.",
         f"What failed: {failure_label}.",
+        (
+            f"Repair target: {current_step_focus_summary}."
+            if current_step_focus_summary
+            else "Repair target: stay inside the current bounded repair surface."
+        ),
         f"Stale artifacts: {', '.join(stale_artifacts) if stale_artifacts else 'none'}",
         f"Stale subsurfaces: {', '.join(stale_subsurfaces) if stale_subsurfaces else 'none'}",
         f"Allowed scope: {', '.join(allowed_scope_labels) if allowed_scope_labels else 'only the current bounded repair step'}",
@@ -251,6 +269,7 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         "current_step_label": current_step_label,
         "current_step_subsurface_id": current_step_subsurface_id,
         "current_step_target_path": current_step_target_path,
+        "current_step_focus_summary": current_step_focus_summary,
         "failure_reason": broken_truth,
         "failure_label": failure_label,
         "stale_artifact_ids": stale_artifacts,

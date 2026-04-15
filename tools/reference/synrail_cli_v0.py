@@ -854,6 +854,9 @@ def print_thin_output_summary(output_file: Path) -> None:
         f"What it means: {payload.get('what_it_means', payload.get('diagnosis', ''))}",
         f"What to do next: {payload.get('what_to_do_next', payload.get('next_step', ''))}",
     ]
+    focused_repair_summary = payload.get("focused_repair_summary", "")
+    if focused_repair_summary:
+        lines.append(f"Repair target: {focused_repair_summary}")
     next_command = payload.get("next_command", "")
     restore_command = payload.get("restore_command", "")
     if next_command:
@@ -889,6 +892,9 @@ def print_prompt_summary_compact(output_file: Path, *, include_prompt: bool = Fa
         f"Required inputs: {', '.join(required_input_labels) if required_input_labels else 'none'}",
         f"Do not touch: {', '.join(forbidden_scope) if forbidden_scope else 'unrelated files or acceptance logic'}",
     ]
+    current_step_focus_summary = payload.get("current_step_focus_summary", "")
+    if current_step_focus_summary:
+        lines.append(f"Repair target: {current_step_focus_summary}")
     current_step_target_path = payload.get("current_step_target_path", "")
     if current_step_target_path:
         lines.append(f"Edit in place: {current_step_target_path}")

@@ -31,6 +31,26 @@ def proof_target_paths(*, artifact_root: str, target_path: str) -> dict[str, str
     }
 
 
+def focused_repair_summary(*, current_step_id: str, current_step_subsurface_id: str, current_step_target_path: str) -> str:
+    if current_step_subsurface_id == "final_result_payload":
+        return f"update the result payload in {current_step_target_path}"
+    if current_step_subsurface_id == "diff_provenance_record":
+        return f"record diff provenance in {current_step_target_path}"
+    if current_step_subsurface_id == "cleanup_status_record":
+        return f"record cleanup status in {current_step_target_path}"
+    if current_step_subsurface_id == "readback_record":
+        return f"record readback in {current_step_target_path}"
+    if current_step_subsurface_id == "scenario_proof_record":
+        return f"record scenario proof in {current_step_target_path}"
+    if current_step_target_path:
+        return f"edit {current_step_target_path} in place"
+    if current_step_id == "repair_final_result_artifact":
+        return "repair the final result artifact"
+    if current_step_id == "complete_missing_proof_sections":
+        return "complete the missing proof sections"
+    return ""
+
+
 def focused_repair_surface(
     *,
     current_step_id: str,

@@ -217,11 +217,13 @@ class ControlledStartSmokeTests(unittest.TestCase):
             repair_step = self.run_alpha("repair-step", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, repair_step.returncode, repair_step.stdout + repair_step.stderr)
             self.assertIn(".synrail/readback.txt", repair_step.stdout)
+            self.assertIn("Repair target: record readback in .synrail/readback.txt", repair_step.stdout)
 
             prompt = load_json(artifact_root / "prompt.json")
             self.assertEqual("complete_missing_proof_sections", prompt["current_step_id"])
             self.assertEqual("readback_record", prompt["current_step_subsurface_id"])
             self.assertEqual(".synrail/readback.txt", prompt["current_step_target_path"])
+            self.assertEqual("record readback in .synrail/readback.txt", prompt["current_step_focus_summary"])
             self.assertIn("readback", prompt["current_step_label"])
 
 

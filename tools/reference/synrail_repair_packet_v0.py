@@ -17,7 +17,7 @@ try:
         load_json as load_state_json,
     )
     from .synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
-    from .synrail_repair_focus_v0 import focused_repair_surface
+    from .synrail_repair_focus_v0 import focused_repair_surface, focused_repair_summary
 except ImportError:
     from synrail_repair_handoff_v0 import (
         DOCTOR_FAILURE_INPUTS,
@@ -27,7 +27,7 @@ except ImportError:
         load_json as load_state_json,
     )
     from synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
-    from synrail_repair_focus_v0 import focused_repair_surface
+    from synrail_repair_focus_v0 import focused_repair_surface, focused_repair_summary
 
 MAX_REPAIR_ATTEMPTS = 3
 NO_PROGRESS_WINDOW = 2
@@ -482,7 +482,11 @@ def build_continuation_core(
     current_step_target_path = focused_surface.get("current_step_target_path", "")
     operator_focus = operator_evidence.get("operator_focus", "") or handoff.get("next_safe_step", "")
     if current_step_target_path:
-        operator_focus = f"edit {current_step_target_path} in place for the current bounded repair"
+        operator_focus = focused_repair_summary(
+            current_step_id=handoff.get("repair_policy", {}).get("next_step_id", ""),
+            current_step_subsurface_id=current_step_subsurface_id,
+            current_step_target_path=current_step_target_path,
+        )
     ready_for_resume = handoff.get("continuation_allowed", False) and not missing_ids and repair_termination.get("status") != "TERMINATE"
     return {
         "contract_version": "continuation_core_v0",

@@ -8,6 +8,11 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_repair_focus_v0 import focused_repair_summary
+except ImportError:
+    from synrail_repair_focus_v0 import focused_repair_summary
+
 
 def humanize_token(value: str) -> str:
     if not value:
@@ -256,6 +261,15 @@ def technical_lines(*, state: dict, report: dict, repair_packet: dict | None, ch
     ]
 
 
+def current_repair_focus_summary(repair_packet: dict | None) -> str:
+    continuation = (repair_packet or {}).get("continuation_core", {})
+    return focused_repair_summary(
+        current_step_id=continuation.get("current_step_id", ""),
+        current_step_subsurface_id=continuation.get("current_step_subsurface_id", ""),
+        current_step_target_path=continuation.get("current_step_target_path", ""),
+    )
+
+
 def status_label(outcome_class: str, *, report: dict, repair_packet: dict | None) -> str:
     reason = (
         report.get("reason", "")
@@ -383,6 +397,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
         suggested_command = "use synrail restore or rerun from a clearer starting point before trusting continuation"
     next_step = report.get("next_safe_step", "") or state.get("next_safe_step", "")
+    focused_summary = current_repair_focus_summary(repair_packet)
     if outcome_class == "ACCEPTED":
         next_step = "No repair step is required."
     what_to_do_next = human_next_step(
@@ -422,6 +437,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "what_happened": summary,
         "what_it_means": diagnosis,
         "what_to_do_next": what_to_do_next,
+        "focused_repair_summary": focused_summary,
         "resume_available": can_resume,
         "next_command": next_command,
         "restore_command": restore_command,
