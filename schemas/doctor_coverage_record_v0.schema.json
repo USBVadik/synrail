@@ -21,6 +21,7 @@
     "measured_case_match_count",
     "measured_case_problem_count",
     "measured_cases",
+    "decision_trace",
     "critical_fail_mode_count",
     "critical_covered_count",
     "critical_missing_fail_modes",
@@ -75,6 +76,41 @@
           "observed_failing_gate": {"type": "string"},
           "observed_gate_note": {"type": "string"},
           "mismatch_reasons": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "decision_trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fail_mode_id",
+          "is_critical",
+          "classification",
+          "measured_case_ids",
+          "matched_case_ids",
+          "problematic_case_ids",
+          "gate_effect",
+          "why"
+        ],
+        "properties": {
+          "fail_mode_id": {"type": "string", "minLength": 1},
+          "is_critical": {"type": "boolean"},
+          "classification": {"type": "string", "enum": ["COVERED", "PARTIAL", "UNCOVERED"]},
+          "measured_case_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "matched_case_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "problematic_case_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "gate_effect": {
+            "type": "string",
+            "enum": [
+              "SATISFIES_CRITICAL_COVERAGE",
+              "HAS_MISMATCHED_EVIDENCE",
+              "MISSING_MEASURED_EVIDENCE",
+              "NON_CRITICAL"
+            ]
+          },
+          "why": {"type": "string", "minLength": 1}
         }
       }
     },

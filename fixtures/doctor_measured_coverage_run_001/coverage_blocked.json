@@ -234,6 +234,276 @@
       "mismatch_reasons": []
     }
   ],
+  "decision_trace": [
+    {
+      "fail_mode_id": "wrong_target_identity_mismatch",
+      "is_critical": true,
+      "classification": "COVERED",
+      "measured_case_ids": [
+        "WRONG_TARGET_IDENTITY_MISMATCH_001"
+      ],
+      "matched_case_ids": [
+        "WRONG_TARGET_IDENTITY_MISMATCH_001"
+      ],
+      "problematic_case_ids": [],
+      "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+      "why": "all measured cases for this fail mode matched the expected doctor boundary"
+    },
+    {
+      "fail_mode_id": "dirty_execution_surface_under_git",
+      "is_critical": true,
+      "classification": "COVERED",
+      "measured_case_ids": [
+        "DIRTY_EXECUTION_SURFACE_UNDER_GIT_001"
+      ],
+      "matched_case_ids": [
+        "DIRTY_EXECUTION_SURFACE_UNDER_GIT_001"
+      ],
+      "problematic_case_ids": [],
+      "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+      "why": "all measured cases for this fail mode matched the expected doctor boundary"
+    },
+    {
+      "fail_mode_id": "out_of_scope_modified_files_on_observed_safe_surface",
+      "is_critical": true,
+      "classification": "COVERED",
+      "measured_case_ids": [
+        "OUT_OF_SCOPE_MODIFIED_FILES_001"
+      ],
+      "matched_case_ids": [
+        "OUT_OF_SCOPE_MODIFIED_FILES_001"
+      ],
+      "problematic_case_ids": [],
+      "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+      "why": "all measured cases for this fail mode matched the expected doctor boundary"
+    },
+    {
+      "fail_mode_id": "helper_entrypoint_missing",
+      "is_critical": true,
+      "classification": "UNCOVERED",
+      "measured_case_ids": [],
+      "matched_case_ids": [],
+      "problematic_case_ids": [],
+      "gate_effect": "MISSING_MEASURED_EVIDENCE",
+      "why": "no measured evidence currently exercises this fail mode"
+    },
+    {
+      "fail_mode_id": "helper_entrypoint_syntax_invalid",
+      "is_critical": true,
+      "classification": "COVERED",
+      "measured_case_ids": [
+        "HELPER_ENTRYPOINT_SYNTAX_INVALID_001"
+      ],
+      "matched_case_ids": [
+        "HELPER_ENTRYPOINT_SYNTAX_INVALID_001"
+      ],
+      "problematic_case_ids": [],
+      "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+      "why": "all measured cases for this fail mode matched the expected doctor boundary"
+    },
+    {
+      "fail_mode_id": "helper_entrypoint_missing_module_import",
+      "is_critical": true,
+      "classification": "COVERED",
+      "measured_case_ids": [
+        "HELPER_ENTRYPOINT_MISSING_IMPORT_001"
+      ],
+      "matched_case_ids": [
+        "HELPER_ENTRYPOINT_MISSING_IMPORT_001"
+      ],
+      "problematic_case_ids": [],
+      "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+      "why": "all measured cases for this fail mode matched the expected doctor boundary"
+    },
+    {
+      "fail_mode_id": "credential_env_missing",
+      "is_critical": true,
+      "classification": "COVERED",
+      "measured_case_ids": [
+        "CREDENTIAL_ENV_MISSING_001"
+      ],
+      "matched_case_ids": [
+        "CREDENTIAL_ENV_MISSING_001"
+      ],
+      "problematic_case_ids": [],
+      "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+      "why": "all measured cases for this fail mode matched the expected doctor boundary"
+    },
+    {
+      "fail_mode_id": "credential_env_placeholder_value",
+      "is_critical": true,
+      "classification": "COVERED",
+      "measured_case_ids": [
+        "CREDENTIAL_ENV_PLACEHOLDER_001"
+      ],
+      "matched_case_ids": [
+        "CREDENTIAL_ENV_PLACEHOLDER_001"
+      ],
+      "problematic_case_ids": [],
+      "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+      "why": "all measured cases for this fail mode matched the expected doctor boundary"
+    },
+    {
+      "fail_mode_id": "credential_path_missing",
+      "is_critical": true,
+      "classification": "COVERED",
+      "measured_case_ids": [
+        "CREDENTIAL_PATH_MISSING_001"
+      ],
+      "matched_case_ids": [
+        "CREDENTIAL_PATH_MISSING_001"
+      ],
+      "problematic_case_ids": [],
+      "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+      "why": "all measured cases for this fail mode matched the expected doctor boundary"
+    },
+    {
+      "fail_mode_id": "credential_json_malformed",
+      "is_critical": true,
+      "classification": "COVERED",
+      "measured_case_ids": [
+        "CREDENTIAL_JSON_MALFORMED_001"
+      ],
+      "matched_case_ids": [
+        "CREDENTIAL_JSON_MALFORMED_001"
+      ],
+      "problematic_case_ids": [],
+      "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+      "why": "all measured cases for this fail mode matched the expected doctor boundary"
+    },
+    {
+      "fail_mode_id": "artifact_path_parent_missing",
+      "is_critical": true,
+      "classification": "COVERED",
+      "measured_case_ids": [
+        "ARTIFACT_PATH_PARENT_MISSING_001"
+      ],
+      "matched_case_ids": [
+        "ARTIFACT_PATH_PARENT_MISSING_001"
+      ],
+      "problematic_case_ids": [],
+      "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+      "why": "all measured cases for this fail mode matched the expected doctor boundary"
+    },
+    {
+      "fail_mode_id": "exact_prompt_or_task_identity_missing",
+      "is_critical": true,
+      "classification": "COVERED",
+      "measured_case_ids": [
+        "EXACT_PROMPT_OR_TASK_IDENTITY_MISSING_001"
+      ],
+      "matched_case_ids": [
+        "EXACT_PROMPT_OR_TASK_IDENTITY_MISSING_001"
+      ],
+      "problematic_case_ids": [],
+      "gate_effect": "SATISFIES_CRITICAL_COVERAGE",
+      "why": "all measured cases for this fail mode matched the expected doctor boundary"
+    },
+    {
+      "fail_mode_id": "baseline_identity_missing",
+      "is_critical": false,
+      "classification": "UNCOVERED",
+      "measured_case_ids": [],
+      "matched_case_ids": [],
+      "problematic_case_ids": [],
+      "gate_effect": "NON_CRITICAL",
+      "why": "no measured evidence currently exercises this fail mode"
+    },
+    {
+      "fail_mode_id": "exact_prompt_or_task_identity_mismatched",
+      "is_critical": false,
+      "classification": "COVERED",
+      "measured_case_ids": [
+        "EXACT_PROMPT_OR_TASK_IDENTITY_MISMATCHED_001"
+      ],
+      "matched_case_ids": [
+        "EXACT_PROMPT_OR_TASK_IDENTITY_MISMATCHED_001"
+      ],
+      "problematic_case_ids": [],
+      "gate_effect": "NON_CRITICAL",
+      "why": "all measured cases for this fail mode matched the expected doctor boundary"
+    },
+    {
+      "fail_mode_id": "non_git_clean_surface_truth",
+      "is_critical": false,
+      "classification": "UNCOVERED",
+      "measured_case_ids": [],
+      "matched_case_ids": [],
+      "problematic_case_ids": [],
+      "gate_effect": "NON_CRITICAL",
+      "why": "no measured evidence currently exercises this fail mode"
+    },
+    {
+      "fail_mode_id": "helper_runtime_import_graph_truth",
+      "is_critical": false,
+      "classification": "UNCOVERED",
+      "measured_case_ids": [],
+      "matched_case_ids": [],
+      "problematic_case_ids": [],
+      "gate_effect": "NON_CRITICAL",
+      "why": "no measured evidence currently exercises this fail mode"
+    },
+    {
+      "fail_mode_id": "credential_auth_validity",
+      "is_critical": false,
+      "classification": "UNCOVERED",
+      "measured_case_ids": [],
+      "matched_case_ids": [],
+      "problematic_case_ids": [],
+      "gate_effect": "NON_CRITICAL",
+      "why": "no measured evidence currently exercises this fail mode"
+    },
+    {
+      "fail_mode_id": "deep_config_graph_validity",
+      "is_critical": false,
+      "classification": "UNCOVERED",
+      "measured_case_ids": [],
+      "matched_case_ids": [],
+      "problematic_case_ids": [],
+      "gate_effect": "NON_CRITICAL",
+      "why": "no measured evidence currently exercises this fail mode"
+    },
+    {
+      "fail_mode_id": "runtime_library_import_drift_beyond_helper_entrypoint",
+      "is_critical": false,
+      "classification": "UNCOVERED",
+      "measured_case_ids": [],
+      "matched_case_ids": [],
+      "problematic_case_ids": [],
+      "gate_effect": "NON_CRITICAL",
+      "why": "no measured evidence currently exercises this fail mode"
+    },
+    {
+      "fail_mode_id": "hidden_side_effects_inside_parsing_helper",
+      "is_critical": false,
+      "classification": "UNCOVERED",
+      "measured_case_ids": [],
+      "matched_case_ids": [],
+      "problematic_case_ids": [],
+      "gate_effect": "NON_CRITICAL",
+      "why": "no measured evidence currently exercises this fail mode"
+    },
+    {
+      "fail_mode_id": "semantic_intent_drift_inside_in_scope_file",
+      "is_critical": false,
+      "classification": "UNCOVERED",
+      "measured_case_ids": [],
+      "matched_case_ids": [],
+      "problematic_case_ids": [],
+      "gate_effect": "NON_CRITICAL",
+      "why": "no measured evidence currently exercises this fail mode"
+    },
+    {
+      "fail_mode_id": "broad_environment_truth_beyond_expensive_fail_modes",
+      "is_critical": false,
+      "classification": "UNCOVERED",
+      "measured_case_ids": [],
+      "matched_case_ids": [],
+      "problematic_case_ids": [],
+      "gate_effect": "NON_CRITICAL",
+      "why": "no measured evidence currently exercises this fail mode"
+    }
+  ],
   "critical_fail_mode_count": 12,
   "critical_covered_count": 11,
   "critical_missing_fail_modes": [

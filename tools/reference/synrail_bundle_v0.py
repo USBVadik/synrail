@@ -72,6 +72,32 @@ def first_semantic_step(semantically_insufficient_sections: list[str]) -> str:
     return "strengthen the semantic proof evidence before trusting closure"
 
 
+def structural_trace_entry(*, section: str, present: bool, structurally_complete: bool, why: str) -> dict:
+    return {
+        "section": section,
+        "present": present,
+        "structurally_complete": structurally_complete,
+        "why": why,
+    }
+
+
+def semantic_trace_entry(
+    *,
+    section: str,
+    evaluated: bool,
+    semantically_sufficient: bool,
+    why: str,
+    recommended_action: str,
+) -> dict:
+    return {
+        "section": section,
+        "evaluated": evaluated,
+        "semantically_sufficient": semantically_sufficient,
+        "why": why,
+        "recommended_action": recommended_action,
+    }
+
+
 def build_bundle(args: argparse.Namespace) -> dict:
     final_present, final_path_str = file_present(args.final_result)
     final_path = Path(final_path_str) if final_path_str else None
@@ -160,6 +186,8 @@ def build_bundle(args: argparse.Namespace) -> dict:
         "missing_sections": [],
         "semantically_insufficient_sections": [],
         "semantic_next_safe_step": "",
+        "structural_decision_trace": [],
+        "semantic_decision_trace": [],
     }
 
     missing = []
@@ -181,6 +209,78 @@ def build_bundle(args: argparse.Namespace) -> dict:
         missing.append("cleanup_status")
 
     bundle["missing_sections"] = missing
+    bundle["structural_decision_trace"] = [
+        structural_trace_entry(
+            section="final_result",
+            present=bundle["final_result"]["present"],
+            structurally_complete=bundle["final_result"]["present"],
+            why=(
+                "the final result artifact is present and parseable"
+                if bundle["final_result"]["present"]
+                else "the final result artifact is missing or not parseable"
+            ),
+        ),
+        structural_trace_entry(
+            section="modified_files",
+            present=bundle["modified_files"]["present"],
+            structurally_complete=bundle["modified_files"]["present"],
+            why=(
+                "the modified-files section is present in the final result artifact"
+                if bundle["modified_files"]["present"]
+                else "the modified-files section is missing from the final result artifact"
+            ),
+        ),
+        structural_trace_entry(
+            section="diff_provenance",
+            present=bundle["diff_provenance"]["present"],
+            structurally_complete=bundle["diff_provenance"]["present"],
+            why=(
+                "diff or provenance evidence is present in the final result artifact"
+                if bundle["diff_provenance"]["present"]
+                else "diff or provenance evidence is missing from the final result artifact"
+            ),
+        ),
+        structural_trace_entry(
+            section="readback",
+            present=bundle["readback"]["present"],
+            structurally_complete=bundle["readback"]["present"],
+            why=(
+                "readback evidence file is present"
+                if bundle["readback"]["present"]
+                else "readback evidence file is missing"
+            ),
+        ),
+        structural_trace_entry(
+            section="scenario_proof",
+            present=bundle["scenario_proof"]["present"],
+            structurally_complete=bundle["scenario_proof"]["present"],
+            why=(
+                "scenario-proof evidence file is present"
+                if bundle["scenario_proof"]["present"]
+                else "scenario-proof evidence file is missing"
+            ),
+        ),
+        structural_trace_entry(
+            section="artifact_identity",
+            present=all(bool(value) for value in identity.values()),
+            structurally_complete=all(bool(value) for value in identity.values()),
+            why=(
+                "baseline, surface, prompt, and task identity fields are all present"
+                if all(bool(value) for value in identity.values())
+                else "one or more identity fields are missing"
+            ),
+        ),
+        structural_trace_entry(
+            section="cleanup_status",
+            present=bundle["cleanup_status"]["present"],
+            structurally_complete=bundle["cleanup_status"]["present"],
+            why=(
+                "cleanup status is present in the final result artifact"
+                if bundle["cleanup_status"]["present"]
+                else "cleanup status is missing from the final result artifact"
+            ),
+        ),
+    ]
 
     semantically_insufficient_sections: list[str] = []
     if not missing and final_present and final_parseable:
@@ -203,6 +303,74 @@ def build_bundle(args: argparse.Namespace) -> dict:
         if semantically_insufficient_sections
         else ""
     )
+    bundle["semantic_decision_trace"] = [
+        semantic_trace_entry(
+            section="modified_files",
+            evaluated=not missing,
+            semantically_sufficient=modified_files_semantically_sufficient,
+            why=(
+                "the modified-files list names at least one concrete changed file"
+                if modified_files_semantically_sufficient
+                else "the modified-files list is empty, malformed, or does not name concrete changed files"
+            ),
+            recommended_action=SEMANTIC_SECTION_STEPS["modified_files"],
+        ),
+        semantic_trace_entry(
+            section="diff_provenance",
+            evaluated=not missing,
+            semantically_sufficient=diff_semantically_sufficient,
+            why=(
+                "diff or provenance evidence contains recognizable diff markers"
+                if diff_semantically_sufficient
+                else "diff or provenance evidence is present but too thin to prove the change"
+            ),
+            recommended_action=SEMANTIC_SECTION_STEPS["diff_provenance"],
+        ),
+        semantic_trace_entry(
+            section="readback",
+            evaluated=not missing,
+            semantically_sufficient=readback_semantically_sufficient,
+            why=(
+                "readback evidence is substantive enough to indicate observed change truth"
+                if readback_semantically_sufficient
+                else "readback evidence is too thin to confirm the changed surface"
+            ),
+            recommended_action=SEMANTIC_SECTION_STEPS["readback"],
+        ),
+        semantic_trace_entry(
+            section="scenario_proof",
+            evaluated=not missing,
+            semantically_sufficient=scenario_semantically_sufficient,
+            why=(
+                "scenario-proof evidence names a concrete scenario outcome"
+                if scenario_semantically_sufficient
+                else "scenario-proof evidence is too thin to confirm the target scenario outcome"
+            ),
+            recommended_action=SEMANTIC_SECTION_STEPS["scenario_proof"],
+        ),
+        semantic_trace_entry(
+            section="artifact_identity",
+            evaluated=not missing,
+            semantically_sufficient=identity_semantically_sufficient,
+            why=(
+                "baseline, surface, prompt, and task identity fields are all non-empty"
+                if identity_semantically_sufficient
+                else "identity fields are incomplete or empty"
+            ),
+            recommended_action=SEMANTIC_SECTION_STEPS["artifact_identity"],
+        ),
+        semantic_trace_entry(
+            section="cleanup_status",
+            evaluated=not missing,
+            semantically_sufficient=cleanup_semantically_sufficient,
+            why=(
+                "cleanup status explicitly reports success"
+                if cleanup_semantically_sufficient
+                else "cleanup status is present but does not prove successful cleanup"
+            ),
+            recommended_action=SEMANTIC_SECTION_STEPS["cleanup_status"],
+        ),
+    ]
 
     if not final_present or not final_parseable:
         bundle["status"] = "INVALID"

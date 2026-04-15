@@ -148,6 +148,51 @@ def classify_measured_modes(all_modes: list[str], measured_cases: list[dict]) ->
     return covered, partial, uncovered
 
 
+def build_decision_trace(
+    all_modes: list[str],
+    critical: list[str],
+    measured_cases: list[dict],
+    *,
+    covered: list[str],
+    partial: list[str],
+    uncovered: list[str],
+) -> list[dict]:
+    cases_by_mode: dict[str, list[dict]] = {}
+    for case in measured_cases:
+        cases_by_mode.setdefault(case["fail_mode_id"], []).append(case)
+
+    trace: list[dict] = []
+    for mode in all_modes:
+        cases = cases_by_mode.get(mode, [])
+        matched_case_ids = [case["case_id"] for case in cases if case["status"] == "MATCHED"]
+        problematic_case_ids = [case["case_id"] for case in cases if case["status"] != "MATCHED"]
+        if mode in covered:
+            classification = "COVERED"
+            gate_effect = "SATISFIES_CRITICAL_COVERAGE" if mode in critical else "NON_CRITICAL"
+            why = "all measured cases for this fail mode matched the expected doctor boundary"
+        elif mode in partial:
+            classification = "PARTIAL"
+            gate_effect = "HAS_MISMATCHED_EVIDENCE" if mode in critical else "NON_CRITICAL"
+            why = "measured evidence exists for this fail mode, but at least one case mismatched the expected doctor boundary"
+        else:
+            classification = "UNCOVERED"
+            gate_effect = "MISSING_MEASURED_EVIDENCE" if mode in critical else "NON_CRITICAL"
+            why = "no measured evidence currently exercises this fail mode"
+        trace.append(
+            {
+                "fail_mode_id": mode,
+                "is_critical": mode in critical,
+                "classification": classification,
+                "measured_case_ids": [case["case_id"] for case in cases],
+                "matched_case_ids": matched_case_ids,
+                "problematic_case_ids": problematic_case_ids,
+                "gate_effect": gate_effect,
+                "why": why,
+            }
+        )
+    return trace
+
+
 def build_coverage_record(profile: dict, corpus: dict, *, corpus_file: Path = DEFAULT_CORPUS) -> dict:
     critical = list(profile.get("critical_fail_modes", []))
     declared_covered = list(profile.get("covered_fail_modes", []))
@@ -157,6 +202,14 @@ def build_coverage_record(profile: dict, corpus: dict, *, corpus_file: Path = DE
     threshold_policy = profile.get("coverage_threshold_policy", "ALL_CRITICAL_FAIL_MODES_COVERED")
     measured_cases = [evaluate_case(case, corpus_file=corpus_file) for case in corpus.get("cases", [])]
     covered, partial, uncovered = classify_measured_modes(all_modes, measured_cases)
+    decision_trace = build_decision_trace(
+        all_modes,
+        critical,
+        measured_cases,
+        covered=covered,
+        partial=partial,
+        uncovered=uncovered,
+    )
     critical_covered = [mode for mode in critical if mode in covered]
     critical_missing = [mode for mode in critical if mode not in covered]
     critical_without_evidence = [mode for mode in critical if mode in uncovered]
@@ -191,6 +244,7 @@ def build_coverage_record(profile: dict, corpus: dict, *, corpus_file: Path = DE
         "measured_case_match_count": measured_case_match_count,
         "measured_case_problem_count": measured_case_problem_count,
         "measured_cases": measured_cases,
+        "decision_trace": decision_trace,
         "critical_fail_mode_count": len(critical),
         "critical_covered_count": len(critical_covered),
         "critical_missing_fail_modes": critical_missing,

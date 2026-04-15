@@ -9,6 +9,8 @@
     "run_id",
     "task_class",
     "status",
+    "structural_status",
+    "semantic_status",
     "final_result",
     "modified_files",
     "diff_provenance",
@@ -16,7 +18,9 @@
     "scenario_proof",
     "artifact_identity",
     "cleanup_status",
-    "missing_sections"
+    "missing_sections",
+    "structural_decision_trace",
+    "semantic_decision_trace"
   ],
   "properties": {
     "schema_version": {
@@ -139,6 +143,35 @@
     "missing_sections": {
       "type": "array",
       "items": {"type": "string"}
+    },
+    "structural_decision_trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["section", "present", "structurally_complete", "why"],
+        "properties": {
+          "section": {"type": "string", "minLength": 1},
+          "present": {"type": "boolean"},
+          "structurally_complete": {"type": "boolean"},
+          "why": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "semantic_decision_trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["section", "evaluated", "semantically_sufficient", "why", "recommended_action"],
+        "properties": {
+          "section": {"type": "string", "minLength": 1},
+          "evaluated": {"type": "boolean"},
+          "semantically_sufficient": {"type": "boolean"},
+          "why": {"type": "string", "minLength": 1},
+          "recommended_action": {"type": "string", "minLength": 1}
+        }
+      }
     },
     "semantically_insufficient_sections": {
       "type": "array",
