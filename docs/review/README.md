@@ -5,6 +5,7 @@ Start with:
 - `../core/ALPHA_TEST_PACK_001.md`
 - `EXTERNAL_CRITIQUE_PACK_001.md`
 - `EXTERNAL_ALPHA_SEND_001.md`
+- `ONE_PAGER_001.md`
 
 Supporting docs:
 
@@ -16,3 +17,5 @@ Supporting docs:
 - `CRITIC_GUIDE_001.md`
 - `PITCH_DECK_001.md`
 - `REVIEW_HANDOFF_CHECKLIST_001.md`
+- `OUTREACH_MESSAGES_001.md`
+- `FEEDBACK_INTAKE_001.md`
