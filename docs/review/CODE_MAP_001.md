@@ -79,7 +79,7 @@ Current outside-facing smoke:
 
 - `fixtures/alpha_test_pack_run_004/`
 
-### Current shell contour
+### Current blocked-retry shell contour
 
 - `fixtures/alpha_shell_run_008/`
 

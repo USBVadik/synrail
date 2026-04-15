@@ -184,5 +184,7 @@ Current tester-pack smoke on the preferred shell:
 - [prompt](../../fixtures/alpha_test_pack_run_004/lane/prompt.json)
 - [operator brief](../../fixtures/alpha_test_pack_run_004/lane/operator_brief.json)
 - [operator render](../../fixtures/alpha_test_pack_run_004/lane/operator_render.md)
+- [second operator](../../fixtures/alpha_test_pack_run_004/lane/second_operator.json)
+- [operator reading](../../fixtures/alpha_test_pack_run_004/lane/operator_reading.json)
 - [session replay](../../fixtures/alpha_test_pack_run_004/lane/telemetry/session_replay.json)
 - [issue body](../../fixtures/alpha_test_pack_run_004/lane/telemetry/github_issue.md)

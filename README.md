@@ -108,12 +108,12 @@ synrail bug-packet --artifact-root "$ARTIFACT_ROOT"
 
 Current shell proof surfaces:
 
-- first-run onboarding errors:
-  - [alpha_onboarding_run_007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_007)
+- current canonical first-run pack:
+  - [alpha_test_pack_run_004](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_004)
 - self-contained restore point:
   - [alpha_safe_point_run_004](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_safe_point_run_004)
-- zero-config-ish first run:
-  - [alpha_shell_run_008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_shell_run_008)
+- first-run onboarding errors:
+  - [alpha_onboarding_run_007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_onboarding_run_007)
 - accepted default-mode translation:
   - [thin_output_run_accepted_003](/Users/usbdick/Documents/New%20project/synrail/fixtures/thin_output_run_accepted_003)
 - blocked retry translation:

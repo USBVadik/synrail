@@ -9,24 +9,24 @@ This slice asks one narrow question:
 
 Artifacts:
 
-- [second_operator.json](../../fixtures/alpha_second_operator_run_001/second_operator.json)
-- [reading.json](../../fixtures/alpha_second_operator_run_001/reading.json)
-- [alpha lane thin output](../../fixtures/alpha_lane_run_003/lane/thin_output.json)
-- [alpha lane repair packet](../../fixtures/alpha_lane_run_003/lane/repair_packet.json)
+- [second_operator.json](../../fixtures/alpha_test_pack_run_004/lane/second_operator.json)
+- [operator_reading.json](../../fixtures/alpha_test_pack_run_004/lane/operator_reading.json)
+- [alpha lane thin output](../../fixtures/alpha_test_pack_run_004/lane/thin_output.json)
+- [alpha lane operator render](../../fixtures/alpha_test_pack_run_004/lane/operator_render.md)
 
 Results:
 
 - `second_operator.verdict = FOLLOWABLE_BY_SECOND_OPERATOR`
-- `reading.verdict = FOLLOWABLE_WITHOUT_OPERATOR_AMBIGUITY`
+- `operator_reading.verdict = FOLLOWABLE_WITH_RENDER`
 
 What this proves:
 
 - the packet-first alpha contour is followable without author intuition
+- the derived operator render still preserves the exact repair target and next move
 - the thin operator output does not suggest the wrong next move
-- verified-checkpoint availability survives into the operator-facing reading
 
 The current bounded recovery reading is:
 
-- do not named-`resume` this contour
-- continue the governed forward path
-- restore exact prompt and task identity if the path became unsafe
+- update the result payload in `.synrail/final_result.json`
+- keep every other proof surface unchanged
+- then resume the bounded repair contour

@@ -1,0 +1,32 @@
+{
+  "schema_version": "operator_reading_record_v0",
+  "label": "alpha_pack_run_004",
+  "run_id": "ALPHA_RUN_20260415T182551Z",
+  "task_class": "bounded_change",
+  "source_brief_path": ".synrail/stage0_operator_brief.json",
+  "render_is_human_readable": true,
+  "packet_only_entry": true,
+  "requires_author_intuition": false,
+  "expected_reason": "INVALID_PROOF_BUNDLE",
+  "primary_action": "REPAIR_CURRENT_STEP",
+  "next_safe_step": "repair the final result artifact and rebuild the proof bundle",
+  "current_step_id": "repair_final_result_artifact",
+  "current_step_subsurface_id": "final_result_payload",
+  "current_step_target_path": ".synrail/final_result.json",
+  "termination_reason": "NONE",
+  "required_input_count": 1,
+  "required_markers": [
+    "REPAIR_CURRENT_STEP",
+    "repair the final result artifact and rebuild the proof bundle",
+    "repair_final_result_artifact",
+    "final_result_payload",
+    ".synrail/final_result.json",
+    "NONE",
+    "INVALID_PROOF_BUNDLE",
+    "repair the final result artifact and rebuild the proof bundle",
+    "final_result"
+  ],
+  "missing_markers": [],
+  "verdict": "FOLLOWABLE_WITH_RENDER",
+  "why": "the bounded continuation contour stays followable when the operator reads the derived render instead of the raw brief alone"
+}

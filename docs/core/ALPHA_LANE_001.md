@@ -98,20 +98,14 @@ On the current onboarding smoke in [`fixtures/alpha_onboarding_run_007/`](../../
 - `restore` without any checkpoint now says how to create the restore point first through `synrail save`
 - `confirm-restore` without any checkpoint now returns bounded guidance instead of a traceback and points to `synrail save`
 
-On the current shell smoke in [`fixtures/alpha_shell_run_008/`](../../fixtures/alpha_shell_run_008/):
+On the current canonical first-run pack contour in [`fixtures/alpha_test_pack_run_004/`](../../fixtures/alpha_test_pack_run_004/):
 
-- `start` auto-detects `project_type = python` and writes one controlled bootstrap record
-- `check` runs without explicit identity flags once the preferred proof artifacts appear under the artifact root
-- `check` now names one explicit next command: `synrail repair-step`
-- `check` now also prints one bounded repair summary directly in the same shell output
+- `start` opens with one explicit `Do this now` instruction on the starter proof files
+- `check` blocks the plain-text false-success contour as `PROOF_INVALID`
+- `check` now leads with one explicit bounded action instead of only a diagnosis
 - `repair-step` produces one bounded next-agent instruction without asking the operator to reconstruct packet internals by hand
-- `repair-step` now says `After this repair, run: synrail retry`
-- `retry` is now the preferred human-facing alias for the existing `resume` path
-- `continue` remains a compatibility alias for the same path
-- `save` now creates and confirms the default working restore point in one shell action
-- `confirm-restore` remains available when you explicitly want to re-check a fallback, but it is not part of the default lane
-- `check` now says `Workspace Not Trusted` instead of leaking `Working Surface` wording
-- `prompt-followup` confirms that the generated next-agent instruction preserves the bounded current step
+- `operator render` keeps that same `Do this now` instruction readable for a second operator
+- `telemetry export` now rides the same contour without leaking tmp or author-local paths
 
 ## What This Lane Returns
 
@@ -149,15 +143,16 @@ On the current blocked-retry output smoke in [`fixtures/alpha_shell_run_008/`](.
 
 Canonical artifacts:
 
-- [shell init output](../../fixtures/alpha_shell_run_005/shell/init_stdout.txt)
-- [shell check output with bounded repair summary](../../fixtures/alpha_shell_run_008/shell/check_stdout.txt)
+- [shell start output](../../fixtures/alpha_test_pack_run_004/shell/start_stdout.txt)
+- [shell check output with bounded repair summary](../../fixtures/alpha_test_pack_run_004/shell/check_stdout.txt)
 - [self-contained restore point output](../../fixtures/alpha_safe_point_run_004/shell/save_stdout.txt)
-- [shell repair-step output](../../fixtures/alpha_shell_run_008/shell/repair_step_stdout.txt)
+- [shell repair-step output](../../fixtures/alpha_test_pack_run_004/shell/repair_step_stdout.txt)
 - [shell retry output](../../fixtures/alpha_shell_run_008/shell/retry_stdout.txt)
-- [shell project profile](../../fixtures/alpha_shell_run_008/lane/project_profile.json)
-- [shell thin output](../../fixtures/alpha_shell_run_008/lane/thin_output.json)
-- [shell prompt](../../fixtures/alpha_shell_run_008/lane/prompt.json)
-- [shell prompt followup](../../fixtures/alpha_shell_run_008/lane/followup.json)
+- [shell thin output](../../fixtures/alpha_test_pack_run_004/lane/thin_output.json)
+- [shell prompt](../../fixtures/alpha_test_pack_run_004/lane/prompt.json)
+- [shell operator render](../../fixtures/alpha_test_pack_run_004/lane/operator_render.md)
+- [shell second operator](../../fixtures/alpha_test_pack_run_004/lane/second_operator.json)
+- [shell operator reading](../../fixtures/alpha_test_pack_run_004/lane/operator_reading.json)
 - [onboarding repair-step-before-check output](../../fixtures/alpha_onboarding_run_007/shell/repair_step_before_check_stdout.txt)
 - [onboarding restore-without-checkpoint output](../../fixtures/alpha_onboarding_run_007/shell/restore_without_checkpoint_stdout.txt)
 - [onboarding confirm-restore-without-checkpoint output](../../fixtures/alpha_onboarding_run_008/shell/confirm_restore_without_checkpoint_stdout.txt)

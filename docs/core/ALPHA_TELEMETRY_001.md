@@ -52,10 +52,10 @@ This writes:
 
 Canonical telemetry-enabled alpha run:
 
-- [session replay](../../fixtures/alpha_telemetry_run_001/telemetry/session_replay.json)
-- [issue body](../../fixtures/alpha_telemetry_run_001/telemetry/github_issue.md)
-- [thin output](../../fixtures/alpha_telemetry_run_001/thin_output.json)
-- [prompt](../../fixtures/alpha_telemetry_run_001/prompt.json)
+- [session replay](../../fixtures/alpha_test_pack_run_004/lane/telemetry/session_replay.json)
+- [issue body](../../fixtures/alpha_test_pack_run_004/lane/telemetry/github_issue.md)
+- [thin output](../../fixtures/alpha_test_pack_run_004/lane/thin_output.json)
+- [prompt](../../fixtures/alpha_test_pack_run_004/lane/prompt.json)
 
 What this run proves:
 
