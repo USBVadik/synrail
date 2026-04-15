@@ -36,7 +36,8 @@ synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$PROJECT_ROOT" --
 # - $ARTIFACT_ROOT/final_result.json
 # - $ARTIFACT_ROOT/readback.txt
 # - $ARTIFACT_ROOT/scenario_proof.txt
-# edit them in place for a native proof path, or use Wow Scenario A below to see the false-success block
+# do this now: edit only those starter proof files in place, then run synrail check
+# or use Wow Scenario A below to see the false-success block
 synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 synrail telemetry export --artifact-root "$ARTIFACT_ROOT"

@@ -944,13 +944,14 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
     preferred = proof_request.get("preferred_artifacts", {})
     lines = [
         "Controlled run started.",
+        "Do this now: Edit only the starter proof files below in place. Leave every other surface unchanged.",
         f"Artifact root: {display_path(root)}",
         f"Run id: {state.get('run_id', '')}",
-        "Starter proof files are ready for this run. Edit them in place:",
+        "Starter proof files are ready for this run.",
         f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
         f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
-        "After those starter files reflect the run, run: " + shell_command(root, "check"),
+        "Then run: " + shell_command(root, "check"),
         "Optional safety fallback: " + shell_command(root, "save"),
     ]
     print("\n".join(lines))

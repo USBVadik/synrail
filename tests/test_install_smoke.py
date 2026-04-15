@@ -70,6 +70,10 @@ class InstallSmokeTests(unittest.TestCase):
             )
 
             self.assertIn("Controlled run started.", start_result.stdout)
+            self.assertIn(
+                "Do this now: Edit only the starter proof files below in place. Leave every other surface unchanged.",
+                start_result.stdout,
+            )
             self.assertIn("Starter proof files are ready for this run.", start_result.stdout)
             self.assertIn("Artifact root: .synrail", start_result.stdout)
             self.assertTrue((artifact_root / "state.json").exists())

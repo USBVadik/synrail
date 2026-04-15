@@ -57,6 +57,10 @@ class ControlledStartSmokeTests(unittest.TestCase):
             )
             self.assertEqual(0, start.returncode, start.stdout + start.stderr)
             self.assertIn("Controlled run started.", start.stdout)
+            self.assertIn(
+                "Do this now: Edit only the starter proof files below in place. Leave every other surface unchanged.",
+                start.stdout,
+            )
             self.assertIn("Starter proof files are ready for this run.", start.stdout)
             self.assertTrue((artifact_root / "bootstrap.json").exists())
             self.assertTrue((artifact_root / "bootstrap_validation.json").exists())
