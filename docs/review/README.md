@@ -1,0 +1,16 @@
+# Review Docs
+
+Start with:
+
+- `EXTERNAL_CRITIQUE_PACK_001.md`
+
+Supporting docs:
+
+- `PRODUCT_MEMO_001.md`
+- `TECHNICAL_MAP_001.md`
+- `ROADMAP_STATUS_001.md`
+- `CODE_MAP_001.md`
+- `KNOWN_WEAKNESSES_001.md`
+- `CRITIC_GUIDE_001.md`
+- `PITCH_DECK_001.md`
+- `REVIEW_HANDOFF_CHECKLIST_001.md`
