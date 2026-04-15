@@ -31,6 +31,7 @@ def human_failure_label(reason: str) -> str:
     labels = {
         "EXACT_TASK_IDENTITY_NOT_CONFIRMED": "the original task request is not confirmed",
         "INVALID_PROOF_BUNDLE": "the final result proof could not be trusted",
+        "SEMANTIC_PROOF_INSUFFICIENT": "the proof is present but still too thin to trust",
         "MISSING_PROOF_SECTIONS": "the proof is still missing required sections",
         "ARTIFACT_BUNDLE_MISSING": "the result bundle is missing required proof files",
         "DOCTOR_NOT_GREEN": "the current workspace is not ready yet",

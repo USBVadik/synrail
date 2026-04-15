@@ -232,9 +232,12 @@ def collect_active_pressures(state: dict) -> list[str]:
         add_unique(pressures, "INVALID_PROOF")
     if (
         state.get("state") == "PROOF_BUNDLE_PARTIAL"
+        or state.get("state") == "PROOF_BUNDLE_STRUCTURALLY_COMPLETE"
         or state.get("proof_bundle", {}).get("status") == "PARTIAL"
+        or state.get("proof_bundle", {}).get("status") == "STRUCTURALLY_COMPLETE"
         or state.get("proof_bundle", {}).get("missing_sections")
-        or state.get("closure", {}).get("blocking_reason") == "MISSING_PROOF_SECTIONS"
+        or state.get("proof_bundle", {}).get("semantically_insufficient_sections")
+        or state.get("closure", {}).get("blocking_reason") in {"MISSING_PROOF_SECTIONS", "SEMANTIC_PROOF_INSUFFICIENT"}
     ):
         add_unique(pressures, "PARTIAL_PROOF")
     if (

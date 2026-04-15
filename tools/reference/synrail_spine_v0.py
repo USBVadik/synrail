@@ -49,11 +49,13 @@ TRANSITION_PRECEDENCE = {
     "PROOF_BUNDLE_COMPLETE": [
         "ARTIFACT_BUNDLE_MISSING",
         "INVALID_PROOF_BUNDLE",
+        "SEMANTIC_PROOF_INSUFFICIENT",
         "MISSING_PROOF_SECTIONS",
     ],
     "CLOSURE_ACCEPTED": [
         "ARTIFACT_BUNDLE_MISSING",
         "INVALID_PROOF_BUNDLE",
+        "SEMANTIC_PROOF_INSUFFICIENT",
         "MISSING_PROOF_SECTIONS",
         "RECOVERY_REVERIFICATION_INCOMPLETE",
     ],
@@ -86,6 +88,10 @@ def default_state(run_id: str, task_class: str) -> dict:
         "proof_bundle": {
             "status": "MISSING",
             "missing_sections": [],
+            "structural_status": "MISSING",
+            "semantic_status": "MISSING",
+            "semantically_insufficient_sections": [],
+            "semantic_next_safe_step": "",
         },
         "closure": {
             "status": "OPEN",
@@ -600,6 +606,8 @@ def gate_proof_bundle(state: dict) -> tuple[bool, str]:
         return True, ""
     if state["proof_bundle"]["status"] == "INVALID":
         return False, "INVALID_PROOF_BUNDLE"
+    if state["proof_bundle"]["status"] == "STRUCTURALLY_COMPLETE":
+        return False, "SEMANTIC_PROOF_INSUFFICIENT"
     return False, "MISSING_PROOF_SECTIONS"
 
 
@@ -714,6 +722,17 @@ def apply_dominant_blocker_to_state(state: dict, dominant: str) -> dict:
             missing_sections=list(state["proof_bundle"]["missing_sections"]),
         )
 
+    if dominant == "SEMANTIC_PROOF_INSUFFICIENT":
+        return enter_blocked_state(
+            state,
+            target="PROOF_BUNDLE_STRUCTURALLY_COMPLETE",
+            closure_status="CLAIMED_NOT_ACCEPTED",
+            blocking_reason="SEMANTIC_PROOF_INSUFFICIENT",
+            next_allowed_transition="PROOF_BUNDLE_STRENGTHENING",
+            narrow_next_safe_step=state["proof_bundle"].get("semantic_next_safe_step", "") or "strengthen the semantic proof evidence before trusting closure",
+            missing_sections=list(state["proof_bundle"].get("semantically_insufficient_sections", [])),
+        )
+
     if dominant == "MISSING_PROOF_SECTIONS":
         return enter_blocked_state(
             state,
@@ -826,6 +845,10 @@ def apply_bundle(state: dict, bundle: dict) -> tuple[int, dict, dict | None]:
     state["execution"]["artifact_bundle_present"] = bool(bundle.get("final_result", {}).get("present", False))
     state["proof_bundle"]["status"] = bundle.get("status", "INVALID")
     state["proof_bundle"]["missing_sections"] = list(bundle.get("missing_sections", []))
+    state["proof_bundle"]["structural_status"] = bundle.get("structural_status", "")
+    state["proof_bundle"]["semantic_status"] = bundle.get("semantic_status", "")
+    state["proof_bundle"]["semantically_insufficient_sections"] = list(bundle.get("semantically_insufficient_sections", []))
+    state["proof_bundle"]["semantic_next_safe_step"] = bundle.get("semantic_next_safe_step", "")
 
     if bundle.get("status") == "COMPLETE":
         return transition(state, "PROOF_BUNDLE_COMPLETE")
@@ -839,6 +862,16 @@ def apply_bundle(state: dict, bundle: dict) -> tuple[int, dict, dict | None]:
             next_allowed_transition="PROOF_BUNDLE_REPAIR",
             narrow_next_safe_step="repair the final result artifact and rebuild the proof bundle",
             missing_sections=list(bundle.get("missing_sections", [])),
+        ), None
+    if bundle.get("status") == "STRUCTURALLY_COMPLETE":
+        return 0, enter_blocked_state(
+            state,
+            target="PROOF_BUNDLE_STRUCTURALLY_COMPLETE",
+            closure_status="CLAIMED_NOT_ACCEPTED",
+            blocking_reason="SEMANTIC_PROOF_INSUFFICIENT",
+            next_allowed_transition="PROOF_BUNDLE_STRENGTHENING",
+            narrow_next_safe_step=bundle.get("semantic_next_safe_step", "") or "strengthen the semantic proof evidence before trusting closure",
+            missing_sections=list(bundle.get("semantically_insufficient_sections", [])),
         ), None
     return 0, enter_blocked_state(
         state,
@@ -926,6 +959,10 @@ def apply_closure(state: dict, verdict: dict) -> tuple[int, dict, dict | None]:
 
     if verdict["blocking_reason"] == "INVALID_PROOF_BUNDLE":
         state["state"] = "PROOF_BUNDLE_INVALID"
+        return 0, state, None
+
+    if verdict["blocking_reason"] == "SEMANTIC_PROOF_INSUFFICIENT":
+        state["state"] = "PROOF_BUNDLE_STRUCTURALLY_COMPLETE"
         return 0, state, None
 
     if verdict["blocking_reason"] == "MISSING_PROOF_SECTIONS":

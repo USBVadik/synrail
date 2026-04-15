@@ -40,7 +40,7 @@ def build_receipt(plan_path: Path, bundle_path: Path) -> dict:
 
     next_safe_step = "run closure on the complete planned bundle"
     if not complete_on_first_bundle_pass:
-        next_safe_step = "collect the missing planned proof sections and rebuild the bundle"
+        next_safe_step = bundle.get("semantic_next_safe_step", "") or "collect the missing planned proof sections and rebuild the bundle"
 
     return {
         "schema_version": "governed_path_preparation_receipt_v0",

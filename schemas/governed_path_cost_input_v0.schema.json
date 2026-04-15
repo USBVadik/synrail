@@ -52,7 +52,7 @@
     },
     "first_bundle_status": {
       "type": "string",
-      "enum": ["COMPLETE", "PARTIAL", "INVALID"]
+      "enum": ["COMPLETE", "STRUCTURALLY_COMPLETE", "PARTIAL", "INVALID"]
     },
     "first_pass_closure_ready": {
       "type": "boolean"

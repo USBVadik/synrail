@@ -39,6 +39,7 @@
         "READY",
         "EXECUTION_COMPLETED",
         "PROOF_BUNDLE_COMPLETE",
+        "PROOF_BUNDLE_STRUCTURALLY_COMPLETE",
         "PROOF_BUNDLE_PARTIAL",
         "PROOF_BUNDLE_INVALID",
         "DOCTOR_BLOCKED",
@@ -151,6 +152,7 @@
             "MISSING",
             "PARTIAL",
             "COMPLETE",
+            "STRUCTURALLY_COMPLETE",
             "INVALID"
           ]
         },
@@ -159,6 +161,21 @@
           "items": {
             "type": "string"
           }
+        },
+        "structural_status": {
+          "type": "string"
+        },
+        "semantic_status": {
+          "type": "string"
+        },
+        "semantically_insufficient_sections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "semantic_next_safe_step": {
+          "type": "string"
         }
       }
     },

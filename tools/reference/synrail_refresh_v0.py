@@ -20,6 +20,7 @@ def save_json(path: Path, payload: dict) -> None:
 PRECEDENCE = [
     "closure_invalidated_by_doctor",
     "closure_invalidated_by_invalid_bundle",
+    "closure_invalidated_by_semantic_bundle",
     "closure_invalidated_by_partial_bundle",
     "closure_invalidated_by_recovery",
 ]
@@ -45,6 +46,8 @@ def applicable_invalidations(state: dict) -> list[str]:
         invalidations.append("closure_invalidated_by_doctor")
     if state["proof_bundle"]["status"] == "INVALID":
         invalidations.append("closure_invalidated_by_invalid_bundle")
+    elif state["proof_bundle"]["status"] == "STRUCTURALLY_COMPLETE":
+        invalidations.append("closure_invalidated_by_semantic_bundle")
     elif state["proof_bundle"]["status"] != "COMPLETE":
         invalidations.append("closure_invalidated_by_partial_bundle")
     if state["recovery"]["status"] == "PENDING" and not state["recovery"]["reverification_complete"]:
@@ -80,6 +83,16 @@ def apply_dominant_invalidation(state: dict, dominant: str) -> None:
         state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
         return
 
+    if dominant == "closure_invalidated_by_semantic_bundle":
+        state["state"] = "PROOF_BUNDLE_STRUCTURALLY_COMPLETE"
+        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+        state["closure"]["blocking_reason"] = "SEMANTIC_PROOF_INSUFFICIENT"
+        state["closure"]["next_allowed_transition"] = "PROOF_BUNDLE_STRENGTHENING"
+        state["closure"]["narrow_next_safe_step"] = state["proof_bundle"].get("semantic_next_safe_step", "") or "strengthen the semantic proof evidence before trusting closure"
+        state["closure"]["missing_sections"] = list(state["proof_bundle"].get("semantically_insufficient_sections", []))
+        state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+        return
+
     if dominant == "closure_invalidated_by_partial_bundle":
         state["state"] = "PROOF_BUNDLE_PARTIAL"
         state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
@@ -112,7 +125,11 @@ def apply_event(args: argparse.Namespace, state: dict) -> tuple[dict, dict]:
         bundle = load_json(Path(args.bundle_file))
         state["execution"]["artifact_bundle_present"] = bool(bundle.get("final_result", {}).get("present", False))
         state["proof_bundle"]["status"] = bundle.get("status", "INVALID")
+        state["proof_bundle"]["structural_status"] = bundle.get("structural_status", bundle.get("status", "INVALID"))
+        state["proof_bundle"]["semantic_status"] = bundle.get("semantic_status", "NOT_EVALUATED")
         state["proof_bundle"]["missing_sections"] = list(bundle.get("missing_sections", []))
+        state["proof_bundle"]["semantically_insufficient_sections"] = list(bundle.get("semantically_insufficient_sections", []))
+        state["proof_bundle"]["semantic_next_safe_step"] = bundle.get("semantic_next_safe_step", "")
         steps_applied.append("proof_bundle_refreshed")
 
     if args.closure_file:

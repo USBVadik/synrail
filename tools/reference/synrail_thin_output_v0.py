@@ -24,6 +24,7 @@ def human_reason(report: dict, repair_packet: dict | None = None) -> str:
     labels = {
         "EXACT_TASK_IDENTITY_NOT_CONFIRMED": "the original task request is not confirmed",
         "INVALID_PROOF_BUNDLE": "the final result proof could not be trusted",
+        "SEMANTIC_PROOF_INSUFFICIENT": "the proof is present but still too thin to trust",
         "MISSING_PROOF_SECTIONS": "the proof is still missing required sections",
         "ARTIFACT_BUNDLE_MISSING": "the result bundle is missing required proof files",
         "DOCTOR_NOT_GREEN": "the current workspace is not ready yet",
@@ -94,6 +95,8 @@ def classify_outcome(*, state: dict, report: dict, repair_packet: dict | None, d
         return "CLOSURE_REJECTED"
     if report.get("reason", "") == "INVALID_PROOF_BUNDLE" or state.get("proof_bundle", {}).get("status", "") == "INVALID":
         return "PROOF_INVALID"
+    if report.get("reason", "") == "SEMANTIC_PROOF_INSUFFICIENT" or state.get("proof_bundle", {}).get("status", "") == "STRUCTURALLY_COMPLETE":
+        return "PROOF_THIN"
     if report.get("reason", "") in {"MISSING_PROOF_SECTIONS", "ARTIFACT_BUNDLE_MISSING"} or state.get("proof_bundle", {}).get("status", "") == "PARTIAL":
         return "PROOF_PARTIAL"
     if termination_reason in {"MAX_REPAIR_ATTEMPTS", "NO_PROGRESS_DETECTED"}:
@@ -179,6 +182,10 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
             "The proof bundle is invalid, so closure is not trustworthy.",
             f"Repair the proof surface before attempting closure again.{recovery_suffix}",
         ),
+        "PROOF_THIN": (
+            "The proof bundle is present, but still not strong enough to trust.",
+            f"Strengthen the semantic proof evidence before attempting closure again.{recovery_suffix}",
+        ),
         "PROOF_PARTIAL": (
             "The proof bundle is still incomplete.",
             f"Supply the missing proof sections and continue only the current bounded repair step.{recovery_suffix}",
@@ -236,6 +243,8 @@ def status_label(outcome_class: str, *, report: dict, repair_packet: dict | None
         return "Closure Rejected"
     if outcome_class == "PROOF_INVALID":
         return "Proof Invalid"
+    if outcome_class == "PROOF_THIN":
+        return "Proof Too Thin To Trust"
     if outcome_class == "PROOF_PARTIAL":
         return "Proof Incomplete"
     if outcome_class == "REPAIR_STOP":
@@ -272,6 +281,8 @@ def human_next_step(
         return "Run the next bounded forward attempt through synrail check."
     if outcome_class == "PROOF_INVALID":
         return "Replace the broken final result or proof inputs, then ask Synrail for the next bounded repair step."
+    if outcome_class == "PROOF_THIN":
+        return "Strengthen only the thin proof evidence, then ask Synrail for the next bounded repair step."
     if outcome_class == "PROOF_PARTIAL":
         return "Add the missing proof inputs, then ask Synrail for the next bounded repair step."
     if outcome_class == "REPAIR_STOP":
@@ -309,6 +320,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "NON_RESUMABLE": "synrail restore or start a new run",
         "CLOSURE_REJECTED": "synrail restore or repair and rerun closure",
         "PROOF_INVALID": "run synrail repair-step, apply only that repair, then synrail retry",
+        "PROOF_THIN": "run synrail repair-step, strengthen only the thin proof evidence, then synrail retry",
         "PROOF_PARTIAL": "run synrail repair-step, supply only the missing proof inputs, then synrail retry",
         "REPAIR_STOP": "synrail restore or start a new run",
         "SCOPE_VIOLATION": "repair the workspace or intended task target, then synrail retry",
@@ -339,7 +351,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
     )
     next_command = ""
     restore_command = ""
-    if outcome_class in {"PROOF_INVALID", "PROOF_PARTIAL", "SCOPE_VIOLATION", "DOCTOR_BLOCKED", "NON_GREEN"} and can_resume:
+    if outcome_class in {"PROOF_INVALID", "PROOF_THIN", "PROOF_PARTIAL", "SCOPE_VIOLATION", "DOCTOR_BLOCKED", "NON_GREEN"} and can_resume:
         next_command = "synrail repair-step"
     if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
         next_command = "synrail repair-step"

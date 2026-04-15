@@ -51,7 +51,7 @@
     },
     "bundle_status": {
       "type": "string",
-      "enum": ["COMPLETE", "PARTIAL", "INVALID"]
+      "enum": ["COMPLETE", "STRUCTURALLY_COMPLETE", "PARTIAL", "INVALID"]
     },
     "missing_required_sections": {
       "type": "array",

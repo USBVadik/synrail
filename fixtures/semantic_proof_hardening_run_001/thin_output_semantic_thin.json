@@ -1,0 +1,23 @@
+{
+  "schema_version": "thin_output_record_v0",
+  "mode": "default",
+  "run_id": "SEMANTIC_PROOF_HARDENING_THIN_001",
+  "task_class": "proof_sensitive_fix",
+  "outcome_class": "PROOF_THIN",
+  "status_label": "Proof Too Thin To Trust",
+  "summary": "The proof bundle is present, but still not strong enough to trust.",
+  "diagnosis": "Strengthen the semantic proof evidence before attempting closure again.",
+  "what_happened": "The proof bundle is present, but still not strong enough to trust.",
+  "what_it_means": "Strengthen the semantic proof evidence before attempting closure again.",
+  "what_to_do_next": "Strengthen only the thin proof evidence, then ask Synrail for the next bounded repair step.",
+  "resume_available": false,
+  "next_command": "",
+  "restore_command": "",
+  "next_step": "capture non-empty diff or provenance evidence for the changed files",
+  "restore_available": false,
+  "checkpoint_id": "",
+  "recovery_primary_action": "",
+  "recovery_operator_instructions": [],
+  "suggested_command": "run synrail repair-step, strengthen only the thin proof evidence, then synrail retry",
+  "technical_lines": []
+}

@@ -1,0 +1,45 @@
+{
+  "schema_version": "run_state_v0",
+  "run_id": "SEMANTIC_PROOF_HARDENING_THIN_001",
+  "task_class": "proof_sensitive_fix",
+  "state": "PROOF_BUNDLE_STRUCTURALLY_COMPLETE",
+  "target_surface": {
+    "status": "ATTESTED",
+    "identity": "clean-clone",
+    "baseline_relation": "trusted_clean"
+  },
+  "doctor": {
+    "status": "PASS",
+    "blocking_failure_classes": []
+  },
+  "integrity": {
+    "status": "PASS",
+    "exact_task_identity_ok": true
+  },
+  "execution": {
+    "status": "COMPLETED",
+    "artifact_bundle_present": true
+  },
+  "proof_bundle": {
+    "status": "STRUCTURALLY_COMPLETE",
+    "missing_sections": [],
+    "structural_status": "COMPLETE",
+    "semantic_status": "INSUFFICIENT",
+    "semantically_insufficient_sections": [
+      "diff_provenance"
+    ],
+    "semantic_next_safe_step": "capture non-empty diff or provenance evidence for the changed files"
+  },
+  "closure": {
+    "status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "SEMANTIC_PROOF_INSUFFICIENT",
+    "next_allowed_transition": "PROOF_BUNDLE_STRENGTHENING",
+    "narrow_next_safe_step": "capture non-empty diff or provenance evidence for the changed files",
+    "missing_sections": []
+  },
+  "recovery": {
+    "status": "NOT_REQUIRED",
+    "reverification_complete": false
+  },
+  "next_safe_step": "capture non-empty diff or provenance evidence for the changed files"
+}

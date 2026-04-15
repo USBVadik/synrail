@@ -33,8 +33,27 @@
       "type": "string",
       "enum": [
         "COMPLETE",
+        "STRUCTURALLY_COMPLETE",
         "PARTIAL",
         "INVALID"
+      ]
+    },
+    "structural_status": {
+      "type": "string",
+      "enum": [
+        "COMPLETE",
+        "PARTIAL",
+        "INVALID",
+        "MISSING"
+      ]
+    },
+    "semantic_status": {
+      "type": "string",
+      "enum": [
+        "SUFFICIENT",
+        "INSUFFICIENT",
+        "NOT_EVALUATED",
+        "MISSING"
       ]
     },
     "final_result": {
@@ -43,7 +62,8 @@
       "required": ["present", "status"],
       "properties": {
         "present": {"type": "boolean"},
-        "status": {"type": "string"}
+        "status": {"type": "string"},
+        "parseable": {"type": "boolean"}
       }
     },
     "modified_files": {
@@ -52,7 +72,8 @@
       "required": ["present", "count"],
       "properties": {
         "present": {"type": "boolean"},
-        "count": {"type": "integer", "minimum": 0}
+        "count": {"type": "integer", "minimum": 0},
+        "semantically_sufficient": {"type": "boolean"}
       }
     },
     "diff_provenance": {
@@ -61,7 +82,9 @@
       "required": ["present", "non_empty"],
       "properties": {
         "present": {"type": "boolean"},
-        "non_empty": {"type": "boolean"}
+        "non_empty": {"type": "boolean"},
+        "has_diff_markers": {"type": "boolean"},
+        "semantically_sufficient": {"type": "boolean"}
       }
     },
     "readback": {
@@ -70,7 +93,9 @@
       "required": ["present", "path"],
       "properties": {
         "present": {"type": "boolean"},
-        "path": {"type": "string"}
+        "path": {"type": "string"},
+        "non_empty": {"type": "boolean"},
+        "semantically_sufficient": {"type": "boolean"}
       }
     },
     "scenario_proof": {
@@ -79,7 +104,9 @@
       "required": ["present", "path"],
       "properties": {
         "present": {"type": "boolean"},
-        "path": {"type": "string"}
+        "path": {"type": "string"},
+        "non_empty": {"type": "boolean"},
+        "semantically_sufficient": {"type": "boolean"}
       }
     },
     "artifact_identity": {
@@ -95,7 +122,8 @@
         "baseline_identity": {"type": "string"},
         "execution_surface_identity": {"type": "string"},
         "prompt_identity": {"type": "string"},
-        "task_identity": {"type": "string"}
+        "task_identity": {"type": "string"},
+        "semantically_sufficient": {"type": "boolean"}
       }
     },
     "cleanup_status": {
@@ -104,12 +132,20 @@
       "required": ["present", "success"],
       "properties": {
         "present": {"type": "boolean"},
-        "success": {"type": "boolean"}
+        "success": {"type": "boolean"},
+        "semantically_sufficient": {"type": "boolean"}
       }
     },
     "missing_sections": {
       "type": "array",
       "items": {"type": "string"}
+    },
+    "semantically_insufficient_sections": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "semantic_next_safe_step": {
+      "type": "string"
     }
   }
 }

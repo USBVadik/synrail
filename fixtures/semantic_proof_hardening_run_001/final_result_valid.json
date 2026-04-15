@@ -1,0 +1,7 @@
+{
+  "request_id": "SEMANTIC_PROOF_HARDENING_VALID_001",
+  "status": "success",
+  "modified_files": ["core/router.py"],
+  "git_diff": "diff --git a/core/router.py b/core/router.py\n@@\n- old\n+ new",
+  "cleanup_status": {"success": true}
+}

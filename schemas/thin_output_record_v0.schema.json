@@ -22,7 +22,7 @@
     "mode": {"type": "string", "enum": ["default", "dev"]},
     "run_id": {"type": "string", "minLength": 1},
     "task_class": {"type": "string", "minLength": 1},
-    "outcome_class": {"type": "string", "enum": ["ACCEPTED", "NON_RESUMABLE", "CLOSURE_REJECTED", "PROOF_INVALID", "PROOF_PARTIAL", "REPAIR_STOP", "SCOPE_VIOLATION", "DOCTOR_BLOCKED", "NON_GREEN"]},
+    "outcome_class": {"type": "string", "enum": ["ACCEPTED", "NON_RESUMABLE", "CLOSURE_REJECTED", "PROOF_INVALID", "PROOF_PARTIAL", "PROOF_THIN", "REPAIR_STOP", "SCOPE_VIOLATION", "DOCTOR_BLOCKED", "NON_GREEN"]},
     "status_label": {"type": "string", "minLength": 1},
     "summary": {"type": "string", "minLength": 1},
     "diagnosis": {"type": "string", "minLength": 1},

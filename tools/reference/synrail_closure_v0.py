@@ -19,6 +19,15 @@ MISSING_SECTION_STEPS = {
     "diff_provenance": "recover diff or provenance evidence from the final result artifact",
 }
 
+SEMANTIC_SECTION_STEPS = {
+    "modified_files": "record the actual changed files in the final result artifact",
+    "diff_provenance": "capture non-empty diff or provenance evidence for the changed files",
+    "readback": "record substantive readback from the changed sections on the attested surface",
+    "scenario_proof": "record an explicit scenario-proof result for the attested target surface",
+    "artifact_identity": "repair baseline, surface, prompt, and task identity fields",
+    "cleanup_status": "record a successful cleanup status for the execution surface",
+}
+
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
@@ -35,8 +44,16 @@ def first_missing_step(missing_sections: list[str]) -> str:
     return "complete the missing proof sections"
 
 
+def first_semantic_step(semantically_insufficient_sections: list[str]) -> str:
+    for section in semantically_insufficient_sections:
+        if section in SEMANTIC_SECTION_STEPS:
+            return SEMANTIC_SECTION_STEPS[section]
+    return "strengthen the semantic proof evidence before trusting closure"
+
+
 def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = None) -> dict:
     missing_sections = list(bundle.get("missing_sections", []))
+    semantically_insufficient_sections = list(bundle.get("semantically_insufficient_sections", []))
     run_id = state.get("run_id", bundle.get("run_id", ""))
     task_class = state.get("task_class", bundle.get("task_class", ""))
     criteria_validation = criteria_validation or {}
@@ -50,6 +67,7 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         "next_allowed_transition": "",
         "narrow_next_safe_step": "",
         "missing_sections": missing_sections,
+        "semantically_insufficient_sections": semantically_insufficient_sections,
         "acceptance_criteria_revision_id": criteria_validation.get("criteria_revision_id", ""),
         "acceptance_criteria_status": criteria_validation.get("status", ""),
         "acceptance_criteria_reason": criteria_validation.get("reason", ""),
@@ -97,6 +115,12 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         verdict["narrow_next_safe_step"] = "repair the final result artifact and rebuild the proof bundle"
         return verdict
 
+    if bundle.get("status") == "STRUCTURALLY_COMPLETE":
+        verdict["blocking_reason"] = "SEMANTIC_PROOF_INSUFFICIENT"
+        verdict["next_allowed_transition"] = "PROOF_BUNDLE_STRENGTHENING"
+        verdict["narrow_next_safe_step"] = bundle.get("semantic_next_safe_step", "") or first_semantic_step(semantically_insufficient_sections)
+        return verdict
+
     if bundle.get("status") != "COMPLETE":
         verdict["blocking_reason"] = "MISSING_PROOF_SECTIONS"
         verdict["next_allowed_transition"] = "PROOF_BUNDLE_COMPLETION"
@@ -120,7 +144,11 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
 def apply_verdict_to_state(state: dict, bundle: dict, verdict: dict) -> dict:
     state["execution"]["artifact_bundle_present"] = bool(bundle.get("final_result", {}).get("present", False))
     state["proof_bundle"]["status"] = bundle.get("status", "INVALID")
+    state["proof_bundle"]["structural_status"] = bundle.get("structural_status", bundle.get("status", "INVALID"))
+    state["proof_bundle"]["semantic_status"] = bundle.get("semantic_status", "NOT_EVALUATED")
     state["proof_bundle"]["missing_sections"] = list(bundle.get("missing_sections", []))
+    state["proof_bundle"]["semantically_insufficient_sections"] = list(bundle.get("semantically_insufficient_sections", []))
+    state["proof_bundle"]["semantic_next_safe_step"] = bundle.get("semantic_next_safe_step", "")
     state["closure"]["status"] = verdict["closure_status"]
     state["closure"]["blocking_reason"] = verdict["blocking_reason"]
     state["closure"]["next_allowed_transition"] = verdict["next_allowed_transition"]
@@ -134,6 +162,8 @@ def apply_verdict_to_state(state: dict, bundle: dict, verdict: dict) -> dict:
         state["state"] = "CLOSURE_REJECTED"
     elif state["proof_bundle"]["status"] == "COMPLETE":
         state["state"] = "PROOF_BUNDLE_COMPLETE"
+    elif state["proof_bundle"]["status"] == "STRUCTURALLY_COMPLETE":
+        state["state"] = "PROOF_BUNDLE_STRUCTURALLY_COMPLETE"
 
     return state
 
