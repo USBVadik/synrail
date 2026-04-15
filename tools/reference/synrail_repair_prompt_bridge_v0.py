@@ -29,6 +29,7 @@ def human_step_label(step_id: str) -> str:
 
 def human_failure_label(reason: str) -> str:
     labels = {
+        "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED": "this run was not started in controlled mode",
         "EXACT_TASK_IDENTITY_NOT_CONFIRMED": "the original task request is not confirmed",
         "INVALID_PROOF_BUNDLE": "the final result proof could not be trusted",
         "SEMANTIC_PROOF_INSUFFICIENT": "the proof is present but still too thin to trust",

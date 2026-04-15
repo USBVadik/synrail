@@ -26,7 +26,7 @@ PROJECT_ROOT="$(pwd)"
 ARTIFACT_ROOT=".synrail"
 TASK_REQUEST="Reject a plain-text final result and keep the repair bounded."
 
-synrail init --artifact-root "$ARTIFACT_ROOT" --project-root "$PROJECT_ROOT" --task-identity "$TASK_REQUEST" --telemetry-opt-in --tester-id your_name
+synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$PROJECT_ROOT" --task-identity "$TASK_REQUEST" --telemetry-opt-in --tester-id your_name
 printf 'Implemented the change and confirmed it locally.\n' > "$ARTIFACT_ROOT/final_result.txt"
 synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail repair-step --artifact-root "$ARTIFACT_ROOT"
@@ -43,8 +43,8 @@ What this should prove in minutes:
 
 These are the only outer verbs a first tester should care about.
 
-- `synrail init`
-  Why it exists: starts one controlled run root and captures the minimum identity needed for the lane.
+- `synrail start`
+  Why it exists: starts one controlled run and captures the minimum bootstrap provenance needed for the lane.
 - `synrail save`
   Why it exists: only use it when a verified fallback is worth restoring quickly later.
 - `synrail check`
@@ -80,7 +80,7 @@ Answer:
 Run:
 
 ```bash
-synrail init --artifact-root ".synrail" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
+synrail start --artifact-root ".synrail" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
 printf 'Implemented the change and confirmed it locally.\n' > .synrail/final_result.txt
 synrail check --artifact-root ".synrail"
 synrail repair-step --artifact-root ".synrail"
@@ -109,7 +109,7 @@ Answer:
 Run:
 
 ```bash
-synrail init --artifact-root ".synrail" --project-root "$(pwd)" --task-identity "Preserve one verified fallback before a bounded change."
+synrail start --artifact-root ".synrail" --project-root "$(pwd)" --task-identity "Preserve one verified fallback before a bounded change."
 synrail save --artifact-root ".synrail"
 synrail check --artifact-root ".synrail"
 synrail restore --artifact-root ".synrail"

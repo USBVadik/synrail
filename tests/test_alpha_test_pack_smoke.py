@@ -41,8 +41,8 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             artifact_root = project_root / ".synrail"
             project_root.mkdir(parents=True, exist_ok=True)
 
-            init = self.run_alpha(
-                "init",
+            start = self.run_alpha(
+                "start",
                 "--artifact-root",
                 ".synrail",
                 "--project-root",
@@ -54,12 +54,15 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
                 "alpha_pack_smoke",
                 cwd=project_root,
             )
-            self.assertEqual(0, init.returncode, init.stdout + init.stderr)
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
             self.assertTrue((artifact_root / "state.json").exists())
             self.assertTrue((artifact_root / "acceptance_criteria.json").exists())
+            self.assertTrue((artifact_root / "bootstrap.json").exists())
+            self.assertTrue((artifact_root / "proof_request.json").exists())
+            self.assertTrue((artifact_root / "target_identity.txt").exists())
             self.assertTrue((artifact_root / "telemetry" / "config.json").exists())
-            self.assertIn("Artifact root: .synrail", init.stdout)
-            self.assertNotIn(str(project_root), init.stdout)
+            self.assertIn("Artifact root: .synrail", start.stdout)
+            self.assertNotIn(str(project_root), start.stdout)
 
             (artifact_root / "final_result.txt").write_text(
                 "Implemented the change and confirmed it locally.\n"

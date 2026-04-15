@@ -45,11 +45,13 @@ TRANSITION_PRECEDENCE = {
     "READY": [
         "TARGET_SURFACE_NOT_ATTESTED",
         "DOCTOR_NOT_GREEN",
+        "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED",
         "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
     ],
     "EXECUTION_COMPLETED": [
         "TARGET_SURFACE_NOT_ATTESTED",
         "DOCTOR_NOT_GREEN",
+        "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED",
         "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
         "EXECUTION_NOT_COMPLETED",
     ],
@@ -87,6 +89,8 @@ def default_state(run_id: str, task_class: str) -> dict:
         "integrity": {
             "status": "UNKNOWN",
             "exact_task_identity_ok": False,
+            "bootstrap_provenance_ok": False,
+            "bootstrap_provenance_reason": "CONTROLLED_BOOTSTRAP_MISSING",
         },
         "execution": {
             "status": "NOT_RUN",
@@ -618,6 +622,8 @@ def gate_doctor(state: dict) -> tuple[bool, str]:
 
 
 def gate_integrity(state: dict) -> tuple[bool, str]:
+    if not state["integrity"].get("bootstrap_provenance_ok", False):
+        return False, "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED"
     if not state["integrity"]["exact_task_identity_ok"]:
         return False, "EXACT_TASK_IDENTITY_NOT_CONFIRMED"
     return True, ""
@@ -709,6 +715,16 @@ def apply_dominant_blocker_to_state(state: dict, dominant: str) -> dict:
             next_allowed_transition="DOCTOR_READINESS",
             narrow_next_safe_step="run doctor and clear blocking failure classes",
         )
+
+    if dominant == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
+        state["integrity"]["status"] = "FAIL"
+        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+        state["closure"]["blocking_reason"] = "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED"
+        state["closure"]["next_allowed_transition"] = "CONTROLLED_START"
+        state["closure"]["narrow_next_safe_step"] = "start the run in controlled mode before trusting any proof or acceptance"
+        state["closure"]["missing_sections"] = []
+        state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+        return state
 
     if dominant == "EXACT_TASK_IDENTITY_NOT_CONFIRMED":
         state["integrity"]["status"] = "FAIL"
@@ -945,10 +961,21 @@ def apply_target_surface(state: dict, *, identity: str, baseline_relation: str) 
     return state
 
 
-def apply_integrity(state: dict, *, prompt_identity: str, task_identity: str) -> dict:
+def apply_integrity(
+    state: dict,
+    *,
+    prompt_identity: str,
+    task_identity: str,
+    bootstrap_provenance_ok: bool,
+    bootstrap_provenance_reason: str,
+) -> dict:
     exact_ok = bool(prompt_identity.strip() and task_identity.strip())
-    state["integrity"]["status"] = "PASS" if exact_ok else "FAIL"
+    state["integrity"]["status"] = "PASS" if exact_ok and bootstrap_provenance_ok else "FAIL"
     state["integrity"]["exact_task_identity_ok"] = exact_ok
+    state["integrity"]["bootstrap_provenance_ok"] = bool(bootstrap_provenance_ok)
+    state["integrity"]["bootstrap_provenance_reason"] = bootstrap_provenance_reason or (
+        "CONTROLLED_BOOTSTRAP_CONFIRMED" if bootstrap_provenance_ok else "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED"
+    )
     return state
 
 
@@ -991,6 +1018,11 @@ def apply_closure(state: dict, verdict: dict) -> tuple[int, dict, dict | None]:
 
     if verdict["blocking_reason"] == "SEMANTIC_PROOF_INSUFFICIENT":
         state["state"] = "PROOF_BUNDLE_STRUCTURALLY_COMPLETE"
+        return 0, state, None
+
+    if verdict["blocking_reason"] == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
+        state["integrity"]["status"] = "FAIL"
+        state["state"] = "INITIALIZED"
         return 0, state, None
 
     if verdict["blocking_reason"] == "MISSING_PROOF_SECTIONS":
@@ -2117,6 +2149,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         state,
         prompt_identity=args.prompt_identity,
         task_identity=args.task_identity,
+        bootstrap_provenance_ok=getattr(args, "bootstrap_provenance_ok", False),
+        bootstrap_provenance_reason=getattr(args, "bootstrap_provenance_reason", ""),
     )
     code, state, block_report = maybe_advance_to_ready(state)
     if code != 0:
@@ -2580,6 +2614,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--credential-env", action="append", default=[])
     p_orchestrate.add_argument("--prompt-identity-file")
     p_orchestrate.add_argument("--target-identity-file")
+    p_orchestrate.add_argument("--bootstrap-provenance-ok", action="store_true")
+    p_orchestrate.add_argument("--bootstrap-provenance-reason", default="")
     p_orchestrate.add_argument("--expected-target-identity")
     p_orchestrate.add_argument("--acceptance-criteria-file")
     p_orchestrate.add_argument("--acceptance-validation-output")

@@ -38,6 +38,23 @@ except ImportError:
         telemetry_enabled,
     )
 
+try:
+    from .synrail_bootstrap_v0 import (
+        build_bootstrap_record,
+        build_proof_request_record,
+        load_json as load_bootstrap_json,
+        save_json as save_bootstrap_json,
+        validate_bootstrap_record,
+    )
+except ImportError:
+    from synrail_bootstrap_v0 import (
+        build_bootstrap_record,
+        build_proof_request_record,
+        load_json as load_bootstrap_json,
+        save_json as save_bootstrap_json,
+        validate_bootstrap_record,
+    )
+
 
 HERE = Path(__file__).resolve().parent
 SPINE = HERE / "synrail_spine_v0.py"
@@ -89,6 +106,9 @@ DEFAULT_ALPHA_TASK_CLASS = "bounded_change"
 ALPHA_FILE_NAMES = {
     "state": "state.json",
     "project_profile": "project_profile.json",
+    "bootstrap": "bootstrap.json",
+    "bootstrap_validation": "bootstrap_validation.json",
+    "proof_request": "proof_request.json",
     "acceptance_criteria": "acceptance_criteria.json",
     "acceptance_validation": "acceptance_validation.json",
     "doctor": "doctor.json",
@@ -136,6 +156,10 @@ def run_python_capture(script: Path, args: list[str]) -> subprocess.CompletedPro
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
+
+
+def save_json(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
 def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path:
@@ -190,7 +214,7 @@ def write_acceptance_validation(root: Path, *, criteria_file: Path, state_file: 
 
 
 def save_project_profile(root: Path, payload: dict) -> None:
-    project_profile_file(root).write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+    save_json(project_profile_file(root), payload)
 
 
 def save_alpha_identity_files(root: Path, *, task_identity: str = "", prompt_identity: str = "") -> None:
@@ -200,6 +224,18 @@ def save_alpha_identity_files(root: Path, *, task_identity: str = "", prompt_ide
         (root / "task_identity.txt").write_text(task_text + "\n")
     if prompt_text:
         (root / "prompt_identity.txt").write_text(prompt_text + "\n")
+
+
+def save_alpha_target_identity_file(root: Path, *, target_identity: str) -> None:
+    text = (target_identity or "").strip()
+    if text:
+        (root / "target_identity.txt").write_text(text + "\n")
+
+
+def load_text_if_exists(path: Path) -> str:
+    if not path.exists():
+        return ""
+    return path.read_text().strip()
 
 
 def load_project_profile(root: Path | None) -> dict | None:
@@ -274,8 +310,37 @@ def display_path(path: Path) -> str:
     return text or "."
 
 
+def display_path_from_base(path: Path, *, base: Path) -> str:
+    resolved = path.resolve()
+    try:
+        relative = resolved.relative_to(base.resolve())
+    except ValueError:
+        return str(resolved)
+    text = str(relative)
+    return text or "."
+
+
 def shell_command(root: Path, *parts: str) -> str:
     return " ".join(shlex.quote(part) for part in ["synrail", *parts, "--artifact-root", display_path(root)])
+
+
+def preferred_proof_paths(root: Path, *, project_root: Path) -> dict[str, str]:
+    payload = build_proof_request_record(
+        run_id="PROOF_REQUEST_PREVIEW",
+        task_class=DEFAULT_ALPHA_TASK_CLASS,
+        task_identity="proof request preview",
+        project_root=project_root,
+        artifact_root=root,
+    )
+    return dict(payload["preferred_artifacts"])
+
+
+def preferred_proof_artifact_paths(root: Path) -> dict[str, Path]:
+    return {
+        "final_result": root / "final_result.json",
+        "readback": root / "readback.txt",
+        "scenario_proof": root / "scenario_proof.txt",
+    }
 
 
 def command_path_from_args(args: argparse.Namespace) -> list[str]:
@@ -293,7 +358,7 @@ def telemetry_flag_names(argv: list[str]) -> list[str]:
 
 def should_capture_alpha_telemetry(args: argparse.Namespace) -> bool:
     path = command_path_from_args(args)
-    return path[0] in {"init", "check", "refresh-acceptance", "generate-prompt", "next-step", "repair-step", "restore", "resume", "continue", "checkpoint", "session-export", "bug-packet"}
+    return path[0] in {"init", "start", "check", "refresh-acceptance", "generate-prompt", "next-step", "repair-step", "restore", "resume", "continue", "checkpoint", "session-export", "bug-packet"}
 
 
 def maybe_capture_alpha_telemetry(
@@ -480,6 +545,10 @@ def apply_alpha_runtime_file_defaults(args: argparse.Namespace) -> None:
         candidate = existing_alpha_variant("prompt_identity.txt")
         if candidate:
             args.prompt_identity_file = str(candidate)
+    if not getattr(args, "target_identity_file", None):
+        candidate = existing_alpha_variant("target_identity.txt")
+        if candidate:
+            args.target_identity_file = str(candidate)
     if not getattr(args, "prompt_identity", None):
         candidate = existing_alpha_variant("prompt_identity.txt")
         if candidate:
@@ -488,6 +557,173 @@ def apply_alpha_runtime_file_defaults(args: argparse.Namespace) -> None:
         candidate = existing_alpha_variant("task_identity.txt")
         if candidate:
             args.task_identity = candidate.read_text().strip()
+
+
+def write_controlled_start_artifacts(
+    root: Path,
+    *,
+    project_root: Path,
+    run_id: str,
+    task_class: str,
+    task_identity: str,
+    prompt_identity: str,
+    profile: dict,
+    started_via: str,
+) -> None:
+    proof_request = build_proof_request_record(
+        run_id=run_id,
+        task_class=task_class,
+        task_identity=task_identity,
+        project_root=project_root,
+        artifact_root=root,
+    )
+    save_alpha_target_identity_file(root, target_identity=profile["execution_surface_identity"])
+    bootstrap = build_bootstrap_record(
+        run_id=run_id,
+        task_class=task_class,
+        started_via=started_via,
+        project_root=project_root,
+        artifact_root=root,
+        task_identity=task_identity,
+        prompt_identity=prompt_identity,
+        target_path=profile["target_path"],
+        target_classification=profile["target_classification"],
+        target_identity=profile["execution_surface_identity"],
+        baseline_identity=profile["baseline_identity"],
+        execution_surface_identity=profile["execution_surface_identity"],
+        intended_run_class=profile["intended_run_class"],
+        intended_proof_path=dict(proof_request["preferred_artifacts"]),
+    )
+    save_bootstrap_json(alpha_file(root, "bootstrap"), bootstrap)
+    save_bootstrap_json(alpha_file(root, "proof_request"), proof_request)
+
+
+def resolve_start_identities(args: argparse.Namespace, *, root: Path) -> tuple[str, str]:
+    task_identity = (getattr(args, "task_identity", "") or "").strip()
+    prompt_identity = (getattr(args, "prompt_identity", "") or "").strip()
+    if not task_identity:
+        task_identity = load_text_if_exists(root / "task_identity.txt")
+    if not prompt_identity:
+        prompt_identity = load_text_if_exists(root / "prompt_identity.txt")
+    if not prompt_identity:
+        prompt_identity = task_identity
+    return task_identity, prompt_identity
+
+
+def existing_preferred_proof_artifacts(root: Path) -> list[str]:
+    discovered: list[str] = []
+    for artifact_id, path in preferred_proof_artifact_paths(root).items():
+        if path.exists():
+            discovered.append(f"{artifact_id}:{display_path(path)}")
+    return discovered
+
+
+def clear_runtime_artifacts_for_start(root: Path) -> None:
+    keep = {
+        "state",
+        "project_profile",
+        "bootstrap",
+        "bootstrap_validation",
+        "proof_request",
+        "acceptance_criteria",
+    }
+    for file_id, name in ALPHA_FILE_NAMES.items():
+        if file_id in keep:
+            continue
+        (root / name).unlink(missing_ok=True)
+
+
+def apply_bootstrap_defaults(args: argparse.Namespace, *, root: Path | None) -> dict | None:
+    if not root:
+        return None
+    state_file = Path(getattr(args, "state_file", "") or alpha_file(root, "state"))
+    profile = load_project_profile(root)
+    if not state_file.exists() or not profile:
+        return None
+    bootstrap_path = alpha_file(root, "bootstrap")
+    record = load_bootstrap_json(bootstrap_path) if bootstrap_path.exists() else None
+    validation = validate_bootstrap_record(record, state=load_json(state_file), profile=profile, artifact_root=root)
+    save_bootstrap_json(alpha_file(root, "bootstrap_validation"), validation)
+    args.bootstrap_provenance_ok = validation["status"] == "VALID"
+    args.bootstrap_provenance_reason = validation["reason"]
+    if record and validation["status"] == "VALID":
+        bootstrap_defaults = {
+            "task_identity": record.get("task_identity", ""),
+            "prompt_identity": record.get("prompt_identity", ""),
+            "target_path": record.get("target_path", ""),
+            "target_classification": record.get("target_classification", ""),
+            "baseline_identity": record.get("baseline_identity", ""),
+            "execution_surface_identity": record.get("execution_surface_identity", ""),
+            "intended_run_class": record.get("intended_run_class", ""),
+        }
+        for field, value in bootstrap_defaults.items():
+            if value and not getattr(args, field, None):
+                setattr(args, field, value)
+        if not getattr(args, "target_identity_file", None):
+            candidate = root / "target_identity.txt"
+            if candidate.exists():
+                args.target_identity_file = str(candidate)
+    return validation
+
+
+def write_bootstrap_required_block(*, args: argparse.Namespace, root: Path, validation: dict) -> int:
+    state_path = Path(args.state_file)
+    state = load_json(state_path)
+    task_identity = (getattr(args, "task_identity", "") or "").strip() or load_text_if_exists(root / "task_identity.txt")
+    prompt_identity = (getattr(args, "prompt_identity", "") or "").strip() or load_text_if_exists(root / "prompt_identity.txt")
+    state["integrity"]["status"] = "FAIL"
+    state["integrity"]["exact_task_identity_ok"] = bool(task_identity and prompt_identity)
+    state["integrity"]["bootstrap_provenance_ok"] = False
+    state["integrity"]["bootstrap_provenance_reason"] = validation["reason"]
+    state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+    state["closure"]["blocking_reason"] = "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED"
+    state["closure"]["next_allowed_transition"] = "CONTROLLED_START"
+    state["closure"]["narrow_next_safe_step"] = "start the run in controlled mode before trusting any proof or acceptance"
+    state["closure"]["missing_sections"] = []
+    state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+    save_json(state_path, state)
+    report = {
+        "schema_version": "orchestration_report_v0",
+        "run_id": state["run_id"],
+        "task_class": state["task_class"],
+        "result": "BLOCKED",
+        "stopping_stage": "bootstrap",
+        "reason": "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED",
+        "doctor_verdict": "",
+        "resume_applied": False,
+        "resume_from_state": "",
+        "repair_handoff_applied": False,
+        "repair_handoff_from_state": "",
+        "repair_handoff_required_inputs": [],
+        "missing_continuation_inputs": [],
+        "selection_applied": False,
+        "selected_mode": "",
+        "selected_with_preparation": False,
+        "preparation_applied": False,
+        "preparation_ready_for_closure": False,
+        "bundle_status": state["proof_bundle"]["status"],
+        "closure_status": state["closure"]["status"],
+        "refresh_applied": False,
+        "refresh_resulting_closure_status": "",
+        "comparison_applied": False,
+        "comparison_verdict": "",
+        "repair_termination_status": "",
+        "repair_termination_reason": "",
+        "repair_attempt_count": 0,
+        "repair_max_attempts": 0,
+        "repair_no_progress_window": 0,
+        "repair_stalled_step_id": "",
+        "blockers": ["CONTROLLED_BOOTSTRAP_NOT_CONFIRMED"],
+        "dominant_blocker": "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED",
+        "resulting_state": state["state"],
+        "next_safe_step": state["next_safe_step"],
+    }
+    save_json(Path(args.report_file), report)
+    args._suppress_summary = True
+    thin_code = cmd_thin_output(args)
+    if thin_code == 0 and args.mode == "default":
+        print_thin_output_summary(Path(args.output))
+    return thin_code
 
 
 def sync_restored_checkpoint_artifacts(target_root: Path) -> list[str]:
@@ -565,15 +801,33 @@ def print_prompt_summary_compact(output_file: Path, *, include_prompt: bool = Fa
 def print_init_summary(*, root: Path, state_file: Path) -> None:
     state = load_json(state_file)
     profile = load_project_profile(root) or {}
-    artifact_hint = "After the agent leaves final_result.json or final_result.txt, run: "
     lines = [
-        "Synrail initialized.",
+        "Synrail setup is ready.",
         f"Artifact root: {display_path(root)}",
         f"Detected project type: {profile.get('project_type', 'generic')}",
-        artifact_hint + shell_command(root, "check"),
+        "This setup is not a controlled run yet.",
+        "Next command: " + shell_command(root, "start"),
     ]
     checkpoint_suggestion = shell_command(root, "save")
     lines.append(f"Optional safety fallback: {checkpoint_suggestion}")
+    print("\n".join(lines))
+
+
+def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> None:
+    state = load_json(state_file)
+    proof_request = load_bootstrap_json(alpha_file(root, "proof_request"))
+    preferred = proof_request.get("preferred_artifacts", {})
+    lines = [
+        "Controlled run started.",
+        f"Artifact root: {display_path(root)}",
+        f"Run id: {state.get('run_id', '')}",
+        "Proof path for this run:",
+        f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
+        f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
+        f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
+        "After the agent leaves those proof artifacts, run: " + shell_command(root, "check"),
+        "Optional safety fallback: " + shell_command(root, "save"),
+    ]
     print("\n".join(lines))
 
 
@@ -746,6 +1000,83 @@ def cmd_init(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_start(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args, ensure=True)
+    project_root = Path(getattr(args, "project_root", "") or Path.cwd()).resolve()
+    if not getattr(args, "output", None):
+        if not root:
+            raise ValueError("output or artifact root is required")
+        args.output = str(alpha_file(root, "state"))
+
+    existing_state_path = Path(args.output)
+    existing_state = load_json(existing_state_path) if existing_state_path.exists() else None
+    if not getattr(args, "run_id", None):
+        args.run_id = existing_state.get("run_id", "") if existing_state else default_alpha_run_id()
+    if not getattr(args, "task_class", None):
+        args.task_class = existing_state.get("task_class", DEFAULT_ALPHA_TASK_CLASS) if existing_state else DEFAULT_ALPHA_TASK_CLASS
+
+    task_identity, prompt_identity = resolve_start_identities(args, root=root)
+    if not task_identity:
+        if args.mode == "dev":
+            print(json.dumps({"result": "ERROR", "reason": "TASK_IDENTITY_REQUIRED_FOR_CONTROLLED_START"}, ensure_ascii=True))
+        else:
+            print("Synrail could not start a controlled run yet.")
+            print("What is missing: the original task request for this run.")
+            print("What to do next: pass --task-identity or save the task request first, then rerun synrail start.")
+        return 2
+
+    existing_proof = existing_preferred_proof_artifacts(root)
+    if existing_proof:
+        if args.mode == "dev":
+            print(json.dumps({"result": "ERROR", "reason": "CONTROLLED_START_REQUIRES_CLEAN_PROOF_SURFACE", "existing_proof_artifacts": existing_proof}, ensure_ascii=True))
+        else:
+            print("Synrail could not start this run in controlled mode yet.")
+            print("What happened: proof artifacts already exist, so this looks like a post-hoc run instead of a controlled start.")
+            print("What to do next: clear those proof artifacts or begin a fresh run before trusting Synrail acceptance.")
+        return 2
+
+    forwarded = [
+        "init",
+        "--run-id", args.run_id,
+        "--task-class", args.task_class,
+        "--output", args.output,
+    ]
+    completed = run_python_capture(SPINE, forwarded)
+    if completed.returncode != 0:
+        if completed.stderr.strip():
+            print(completed.stderr.strip(), file=sys.stderr)
+        if completed.stdout.strip():
+            print(completed.stdout.strip())
+        return completed.returncode
+
+    profile = build_project_profile(project_root=project_root, root=root, task_class=args.task_class)
+    save_project_profile(root, profile)
+    clear_runtime_artifacts_for_start(root)
+    save_alpha_identity_files(root, task_identity=task_identity, prompt_identity=prompt_identity)
+    write_controlled_start_artifacts(
+        root,
+        project_root=project_root,
+        run_id=args.run_id,
+        task_class=args.task_class,
+        task_identity=task_identity,
+        prompt_identity=prompt_identity,
+        profile=profile,
+        started_via="synrail start",
+    )
+    criteria_completed = write_acceptance_criteria(root, generated_by="synrail start")
+    if criteria_completed.returncode != 0:
+        if criteria_completed.stderr.strip():
+            print(criteria_completed.stderr.strip(), file=sys.stderr)
+        if criteria_completed.stdout.strip():
+            print(criteria_completed.stdout.strip())
+        return criteria_completed.returncode
+    validation = apply_bootstrap_defaults(args, root=root)
+    if validation:
+        save_bootstrap_json(alpha_file(root, "bootstrap_validation"), validation)
+    print_start_summary(root=root, state_file=Path(args.output), project_root=project_root)
+    return 0
+
+
 def cmd_refresh_acceptance(args: argparse.Namespace) -> int:
     root = alpha_root_from_args(args, ensure=True)
     if not root:
@@ -757,7 +1088,7 @@ def cmd_refresh_acceptance(args: argparse.Namespace) -> int:
             print(json.dumps({"result": "ERROR", "reason": "PROJECT_PROFILE_REQUIRED"}, ensure_ascii=True))
         else:
             print("Synrail could not refresh the acceptance rules yet.")
-            print("What to do next: run synrail init first so Synrail can capture the project profile.")
+            print("What to do next: run synrail start first so Synrail can capture the controlled project profile.")
         return 2
     completed = write_acceptance_criteria(root, generated_by="synrail refresh-acceptance")
     if completed.returncode != 0:
@@ -810,7 +1141,7 @@ def cmd_telemetry_export(args: argparse.Namespace) -> int:
     except ValueError as exc:
         print("Synrail could not export feedback yet.")
         print("What happened: telemetry is not enabled for this artifact root.")
-        print("What to do next: rerun synrail init with --telemetry-opt-in or use synrail telemetry enable before exporting feedback.")
+        print("What to do next: rerun synrail start with --telemetry-opt-in or use synrail telemetry enable before exporting feedback.")
         return 2
     print("Feedback export ready.")
     print("What it includes: one session replay and one issue-ready summary.")
@@ -1414,12 +1745,21 @@ def cmd_check(args: argparse.Namespace) -> int:
         if discovered:
             args.checkpoint_record_file = discovered
     apply_alpha_profile_defaults(args, root=root)
+    bootstrap_validation = apply_bootstrap_defaults(args, root=root) if root else None
     if root and project_profile_file(root).exists():
         args.acceptance_validation_output = str(alpha_file(root, "acceptance_validation"))
         args.project_profile_file = str(project_profile_file(root))
         existing_criteria = maybe_existing_alpha_file(root, "acceptance_criteria")
         if existing_criteria:
             args.acceptance_criteria_file = existing_criteria
+
+    if (
+        root
+        and bootstrap_validation
+        and bootstrap_validation.get("status", "") != "VALID"
+        and Path(getattr(args, "state_file", "")).exists()
+    ):
+        return write_bootstrap_required_block(args=args, root=root, validation=bootstrap_validation)
 
     runtime_requested = all(
         [
@@ -1458,6 +1798,8 @@ def cmd_check(args: argparse.Namespace) -> int:
             execution_surface_identity=args.execution_surface_identity,
             prompt_identity=args.prompt_identity or "",
             task_identity=args.task_identity or "",
+            bootstrap_provenance_ok=getattr(args, "bootstrap_provenance_ok", False),
+            bootstrap_provenance_reason=getattr(args, "bootstrap_provenance_reason", ""),
             readback=getattr(args, "readback", None),
             scenario_proof=getattr(args, "scenario_proof", None),
             plan_output=getattr(args, "plan_output", None),
@@ -1498,13 +1840,23 @@ def cmd_check(args: argparse.Namespace) -> int:
         else:
             print("Synrail could not start the check yet.")
             if not getattr(args, "final_result", None):
-                profile = load_project_profile(root)
-                candidates = (profile or {}).get("final_result_candidates", [])
-                print("What is missing: Synrail could not find the agent's final result yet.")
-                if candidates:
-                    print("What to do next: pass --final-result or place one result file at one of these paths:")
-                    for candidate in candidates[:4]:
-                        print(f"- {candidate}")
+                proof_request_file = alpha_file(root, "proof_request") if root else None
+                if proof_request_file and proof_request_file.exists():
+                    proof_request = load_bootstrap_json(proof_request_file)
+                    preferred = proof_request.get("preferred_artifacts", {})
+                    print("What is missing: Synrail is still waiting for the proof artifacts for this controlled run.")
+                    print("What to do next: leave the preferred proof artifacts in place, then rerun synrail check.")
+                    for label in ["final_result", "readback", "scenario_proof"]:
+                        if preferred.get(label, ""):
+                            print(f"- {label}: {preferred[label]}")
+                else:
+                    profile = load_project_profile(root)
+                    candidates = (profile or {}).get("final_result_candidates", [])
+                    print("What is missing: Synrail could not find the agent's final result yet.")
+                    if candidates:
+                        print("What to do next: pass --final-result or place one result file at one of these paths:")
+                        for candidate in candidates[:4]:
+                            print(f"- {candidate}")
             else:
                 print("What to do next: provide the missing runtime context or rerun with --mode dev for full technical detail.")
         return 2
@@ -1517,6 +1869,10 @@ def cmd_check(args: argparse.Namespace) -> int:
         outcome_class = thin_payload.get("outcome_class", "")
         if thin_payload.get("next_command", "") == "synrail refresh-acceptance":
             return thin_code
+        if Path(args.report_file).exists():
+            report_payload = load_json(Path(args.report_file))
+            if report_payload.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
+                return thin_code
         if outcome_class not in {"ACCEPTED", ""} and getattr(args, "repair_packet_file", None):
             prompt_output = str(alpha_file(root, "prompt")) if root else str(Path(args.output).with_name("prompt.json"))
             forwarded = [
@@ -2290,10 +2646,12 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ("--acceptance-criteria-file", getattr(args, "acceptance_criteria_file", None)),
         ("--acceptance-validation-output", getattr(args, "acceptance_validation_output", None)),
         ("--project-profile-file", getattr(args, "project_profile_file", None)),
+        ("--bootstrap-provenance-reason", getattr(args, "bootstrap_provenance_reason", None)),
     ]:
         if value:
             forwarded.extend([flag, value])
     for enabled, flag in [
+        (getattr(args, "bootstrap_provenance_ok", False), "--bootstrap-provenance-ok"),
         (args.refresh_reverification_complete, "--refresh-reverification-complete"),
         (args.refresh_use_bundle, "--refresh-use-bundle"),
         (args.refresh_use_closure, "--refresh-use-closure"),
@@ -2446,6 +2804,8 @@ def add_orchestration_args(
     parser.add_argument("--credential-env", action="append", default=[])
     parser.add_argument("--prompt-identity-file")
     parser.add_argument("--target-identity-file")
+    parser.add_argument("--bootstrap-provenance-ok", action="store_true")
+    parser.add_argument("--bootstrap-provenance-reason", default="")
     parser.add_argument("--acceptance-criteria-file")
     parser.add_argument("--acceptance-validation-output")
     parser.add_argument("--project-profile-file")
@@ -2467,6 +2827,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--mode", default="default", choices=["default", "dev"])
     p_init.add_argument("--output")
     p_init.set_defaults(func=cmd_init)
+
+    p_start = sub.add_parser("start")
+    p_start.add_argument("--run-id")
+    p_start.add_argument("--task-class", default=DEFAULT_ALPHA_TASK_CLASS)
+    p_start.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_start.add_argument("--project-root")
+    p_start.add_argument("--task-identity")
+    p_start.add_argument("--prompt-identity")
+    p_start.add_argument("--telemetry-opt-in", action="store_true")
+    p_start.add_argument("--tester-id", default="alpha_tester")
+    p_start.add_argument("--mode", default="default", choices=["default", "dev"])
+    p_start.add_argument("--output")
+    p_start.set_defaults(func=cmd_start)
 
     p_refresh_acceptance = sub.add_parser("refresh-acceptance", aliases=["acceptance-refresh"])
     p_refresh_acceptance.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
@@ -3029,7 +3402,7 @@ def main() -> int:
     root = alpha_root_from_args(args) if getattr(args, "cmd", None) else None
     if (
         caught is None
-        and getattr(args, "cmd", None) == "init"
+        and getattr(args, "cmd", None) in {"init", "start"}
         and getattr(args, "telemetry_opt_in", False)
         and exit_code == 0
         and root is not None

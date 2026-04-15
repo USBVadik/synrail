@@ -35,18 +35,18 @@ The repo now carries one thin installable `synrail` entrypoint on top of the exi
 The current verified local install path is:
 
 ```bash
-python3 -m venv --system-site-packages .venv
-.venv/bin/python -m pip install -e . --no-build-isolation
+python3 -m venv .venv
+.venv/bin/python -m pip install .
 ```
 
 The current verified restore-capable alpha lane is:
 
 ```bash
 ARTIFACT_ROOT="$(pwd)/.synrail"
-synrail init --artifact-root "$ARTIFACT_ROOT"
+synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Preserve one verified fallback before a bounded change."
 # once this root reflects one verified working state:
 synrail save --artifact-root "$ARTIFACT_ROOT"
-# after the agent writes final_result.json or final_result.txt:
+# after the agent leaves the proof artifacts requested in .synrail/proof_request.json:
 synrail check --artifact-root "$ARTIFACT_ROOT"
 # after applying only that bounded repair:
 synrail retry --artifact-root "$ARTIFACT_ROOT"
@@ -58,8 +58,8 @@ The current fresh first-run contour is smaller:
 
 ```bash
 ARTIFACT_ROOT="$(pwd)/.synrail"
-synrail init --artifact-root "$ARTIFACT_ROOT"
-# write final_result.json or final_result.txt under $ARTIFACT_ROOT or the project root
+synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
+# follow .synrail/proof_request.json and leave the preferred proof artifacts under $ARTIFACT_ROOT
 synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 synrail bug-packet --artifact-root "$ARTIFACT_ROOT"
@@ -80,19 +80,13 @@ This shell is intentionally thin:
 - it keeps the existing dev/runtime helpers underneath
 - it does not introduce a new runtime semantics branch
 
-The current trusted local install path is now:
-
-```bash
-python3 -m venv --system-site-packages .venv
-.venv/bin/python -m pip install -e . --no-build-isolation
-```
-
-The older `setup.py install` route still works as a compatibility fallback, but editable install is now the verified alpha path on this local toolchain.
+The older `--system-site-packages` plus `--no-build-isolation` route still works as a compatibility fallback for restricted environments, but the plain `pip install .` path is now the verified alpha path.
 
 Optional alpha telemetry now sits on the same artifact root:
 
 ```bash
-synrail init --artifact-root "$ARTIFACT_ROOT" --telemetry-opt-in --tester-id your_name
+TASK_REQUEST="Reject a plain-text final result and keep the repair bounded."
+synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "$TASK_REQUEST" --telemetry-opt-in --tester-id your_name
 synrail telemetry export --artifact-root "$ARTIFACT_ROOT"
 ```
 

@@ -97,6 +97,12 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         verdict["narrow_next_safe_step"] = "run doctor and clear blocking failure classes"
         return verdict
 
+    if not state["integrity"].get("bootstrap_provenance_ok", False):
+        verdict["blocking_reason"] = "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED"
+        verdict["next_allowed_transition"] = "CONTROLLED_START"
+        verdict["narrow_next_safe_step"] = "start the run in controlled mode before trusting any proof or acceptance"
+        return verdict
+
     if not state["integrity"]["exact_task_identity_ok"]:
         verdict["blocking_reason"] = "EXACT_TASK_IDENTITY_NOT_CONFIRMED"
         verdict["next_allowed_transition"] = "INTEGRITY_RECONFIRMATION"

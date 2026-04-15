@@ -98,8 +98,8 @@ The product exists for environments where “looks plausible” is too weak, but
 
 Current first-run alpha lane:
 
-1. `synrail init`
-2. agent leaves `final_result.json` or `final_result.txt`
+1. `synrail start`
+2. agent leaves the proof artifacts requested for the run
 3. `synrail check`
 4. if non-green: `synrail repair-step`
 5. if a trusted fallback exists: `synrail restore`
@@ -107,7 +107,7 @@ Current first-run alpha lane:
 
 Current restore-capable lane:
 
-1. `synrail init`
+1. `synrail start`
 2. `synrail save`
 3. run the bounded change
 4. `synrail check`

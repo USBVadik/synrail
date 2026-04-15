@@ -101,7 +101,9 @@
       "additionalProperties": false,
       "required": [
         "status",
-        "exact_task_identity_ok"
+        "exact_task_identity_ok",
+        "bootstrap_provenance_ok",
+        "bootstrap_provenance_reason"
       ],
       "properties": {
         "status": {
@@ -114,6 +116,12 @@
         },
         "exact_task_identity_ok": {
           "type": "boolean"
+        },
+        "bootstrap_provenance_ok": {
+          "type": "boolean"
+        },
+        "bootstrap_provenance_reason": {
+          "type": "string"
         }
       }
     },

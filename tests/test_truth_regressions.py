@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import shutil
 import sys
 import tempfile
 import unittest
@@ -31,6 +32,17 @@ from synrail_second_operator_v0 import build_record as build_second_operator
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
+
+
+def controlled_state(state: dict) -> dict:
+    payload = copy.deepcopy(state)
+    integrity = dict(payload.get("integrity", {}))
+    integrity["bootstrap_provenance_ok"] = True
+    integrity["bootstrap_provenance_reason"] = "CONTROLLED_BOOTSTRAP_CONFIRMED"
+    if "status" not in integrity:
+        integrity["status"] = "PASS" if integrity.get("exact_task_identity_ok") else "FAIL"
+    payload["integrity"] = integrity
+    return payload
 
 
 def bundle_args(*, final_result: Path) -> argparse.Namespace:
@@ -80,7 +92,7 @@ def doctor_args(*, corpus_file: Path, target_path: Path, artifact_path: Path) ->
 
 class TruthRegressionTests(unittest.TestCase):
     def test_false_reject_valid_contour_stays_accepted(self) -> None:
-        state = load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
         bundle = build_bundle(
             bundle_args(final_result=FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "final_result_valid.json")
         )
@@ -94,7 +106,7 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("", verdict["blocking_reason"])
 
     def test_false_accept_stale_acceptance_criteria_block_closure(self) -> None:
-        state = load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
         bundle = load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "bundle_valid.json")
         profile = {
             "schema_version": "project_profile_v0",
@@ -121,7 +133,7 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("ACCEPTANCE_CRITERIA_REFRESH", verdict["next_allowed_transition"])
 
     def test_degraded_after_accepted_requires_reverification(self) -> None:
-        state = load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
         bundle = load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "bundle_valid.json")
         degraded = copy.deepcopy(state)
         degraded["recovery"]["status"] = "PENDING"
@@ -149,10 +161,15 @@ class TruthRegressionTests(unittest.TestCase):
 
     def test_checkpoint_restore_integrity_roundtrip(self) -> None:
         record = load_json(FIXTURES_ROOT / "checkpoint_scope_violation_run_001" / "checkpoint_verify.json")
-        record["checkpoint_root"] = str((REPO_ROOT / record["checkpoint_root"]).resolve())
+        source_checkpoint_root = (REPO_ROOT / record["checkpoint_root"]).resolve()
 
         with tempfile.TemporaryDirectory(prefix="synrail_checkpoint_restore_") as tmpdir:
             target_root = Path(tmpdir)
+            checkpoint_root = target_root / "checkpoint"
+            shutil.copytree(source_checkpoint_root, checkpoint_root)
+            state_path = checkpoint_root / "artifacts" / "state.json"
+            state_path.write_text(json.dumps(controlled_state(load_json(state_path)), indent=2, ensure_ascii=True) + "\n")
+            record["checkpoint_root"] = str(checkpoint_root)
             restored = restore_record(copy.deepcopy(record), target_root)
             restored_state = load_json(target_root / "artifacts" / "state.json")
             post_verify = verify_record(record, root_override=target_root)
@@ -215,7 +232,7 @@ class TruthRegressionTests(unittest.TestCase):
         )
 
     def test_closure_blocks_on_semantically_thin_proof(self) -> None:
-        state = load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_semantic_thin.json")
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_semantic_thin.json"))
         bundle = build_bundle(
             bundle_args(
                 final_result=FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "final_result_semantic_thin.json"

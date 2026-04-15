@@ -58,8 +58,8 @@ Not a hosted service.
 
 Current contour:
 
-1. `synrail init`
-2. agent leaves `final_result`
+1. `synrail start`
+2. agent leaves the proof artifacts requested for the run
 3. `synrail check`
 4. if non-green: `synrail repair-step`
 5. if restore point exists: `synrail restore`

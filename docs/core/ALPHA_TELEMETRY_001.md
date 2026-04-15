@@ -24,10 +24,10 @@ Enable telemetry on one artifact root:
 
 ```bash
 ARTIFACT_ROOT="$(pwd)/.synrail"
-synrail init --artifact-root "$ARTIFACT_ROOT" --telemetry-opt-in --tester-id alpha_tester_001
+synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded." --telemetry-opt-in --tester-id alpha_tester_001
 ```
 
-Or enable it explicitly after `init`:
+Or enable it explicitly after `start`:
 
 ```bash
 synrail telemetry enable --artifact-root "$ARTIFACT_ROOT" --tester-id alpha_tester_001

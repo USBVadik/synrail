@@ -22,7 +22,8 @@ The lane exists to prove one user value clearly:
 Optional alpha feedback export can be turned on for the same artifact root:
 
 ```bash
-synrail init --artifact-root "$ARTIFACT_ROOT" --telemetry-opt-in --tester-id your_name
+TASK_REQUEST="Reject a plain-text final result and keep the repair bounded."
+synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "$TASK_REQUEST" --telemetry-opt-in --tester-id your_name
 synrail telemetry export --artifact-root "$ARTIFACT_ROOT"
 ```
 
@@ -60,10 +61,10 @@ ARTIFACT_ROOT="$(pwd)/.synrail"
 This is the currently verified restore-capable alpha lane:
 
 ```bash
-synrail init --artifact-root "$ARTIFACT_ROOT"
+synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Preserve one verified fallback before a bounded change."
 # once this root reflects one verified working state:
 synrail save --artifact-root "$ARTIFACT_ROOT"
-# after the agent writes final_result.json or final_result.txt:
+# after the agent leaves the proof artifacts requested in .synrail/proof_request.json:
 synrail check --artifact-root "$ARTIFACT_ROOT"
 # after applying only that bounded repair:
 synrail retry --artifact-root "$ARTIFACT_ROOT"
@@ -75,11 +76,11 @@ This contour assumes the artifact root already reflects one verified working sta
 
 ### Fresh first-run contour
 
-On a fresh `init`, `Synrail` can still give bounded value immediately:
+On a fresh controlled start, `Synrail` can still give bounded value immediately:
 
 ```bash
-synrail init --artifact-root "$ARTIFACT_ROOT"
-# write final_result.json or final_result.txt under the artifact root or project root
+synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
+# follow .synrail/proof_request.json and leave the preferred proof artifacts under the artifact root
 synrail check --artifact-root "$ARTIFACT_ROOT"
 synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 ```
@@ -94,8 +95,8 @@ On the current onboarding smoke in [`fixtures/alpha_onboarding_run_007/`](../../
 
 On the current shell smoke in [`fixtures/alpha_shell_run_008/`](../../fixtures/alpha_shell_run_008/):
 
-- `init` auto-detects `project_type = python`
-- `check` runs without explicit identity flags once one `final_result.txt` appears under the artifact root
+- `start` auto-detects `project_type = python` and writes one controlled bootstrap record
+- `check` runs without explicit identity flags once the preferred proof artifacts appear under the artifact root
 - `check` now names one explicit next command: `synrail repair-step`
 - `check` now also prints one bounded repair summary directly in the same shell output
 - `repair-step` produces one bounded next-agent instruction without asking the operator to reconstruct packet internals by hand
@@ -111,7 +112,7 @@ On the current shell smoke in [`fixtures/alpha_shell_run_008/`](../../fixtures/a
 
 On the current verified smoke contour in [`fixtures/alpha_lane_run_003/`](../../fixtures/alpha_lane_run_003/):
 
-- `init` returns `INITIALIZED`
+- `start` returns `INITIALIZED` with controlled bootstrap provenance
 - `save` returns `OK`
 - `check` blocks on `EXACT_TASK_IDENTITY_NOT_CONFIRMED`
 - thin output translates that into:

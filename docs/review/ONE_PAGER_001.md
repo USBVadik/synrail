@@ -44,8 +44,8 @@ The wedge is narrower:
 
 Current alpha lane:
 
-1. `synrail init`
-2. agent leaves `final_result`
+1. `synrail start`
+2. agent leaves the proof artifacts requested for the run
 3. `synrail check`
 4. if non-green: `synrail repair-step`
 5. if repairable: `synrail retry`
@@ -94,4 +94,3 @@ We want:
 - [ALPHA_TEST_PACK_001.md](../core/ALPHA_TEST_PACK_001.md)
 - [EXTERNAL_CRITIQUE_PACK_001.md](./EXTERNAL_CRITIQUE_PACK_001.md)
 - [KNOWN_WEAKNESSES_001.md](./KNOWN_WEAKNESSES_001.md)
-

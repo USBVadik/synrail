@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class InstallSmokeTests(unittest.TestCase):
-    def test_supported_install_path_boots_synrail_init(self) -> None:
+    def test_supported_install_path_boots_synrail_start(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_install_smoke_") as tmpdir:
             root = Path(tmpdir)
             venv_dir = root / "venv"
@@ -43,7 +43,7 @@ class InstallSmokeTests(unittest.TestCase):
             )
 
             help_result = subprocess.run(
-                [str(venv_dir / "bin" / "synrail"), "init", "--help"],
+                [str(venv_dir / "bin" / "synrail"), "start", "--help"],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -52,10 +52,10 @@ class InstallSmokeTests(unittest.TestCase):
             self.assertIn("--task-identity", help_result.stdout)
 
             project_root.mkdir(parents=True, exist_ok=True)
-            init_result = subprocess.run(
+            start_result = subprocess.run(
                 [
                     str(venv_dir / "bin" / "synrail"),
-                    "init",
+                    "start",
                     "--artifact-root",
                     ".synrail",
                     "--project-root",
@@ -69,11 +69,14 @@ class InstallSmokeTests(unittest.TestCase):
                 text=True,
             )
 
-            self.assertIn("Synrail initialized.", init_result.stdout)
-            self.assertIn("Artifact root: .synrail", init_result.stdout)
+            self.assertIn("Controlled run started.", start_result.stdout)
+            self.assertIn("Artifact root: .synrail", start_result.stdout)
             self.assertTrue((artifact_root / "state.json").exists())
             self.assertTrue((artifact_root / "acceptance_criteria.json").exists())
             self.assertTrue((artifact_root / "project_profile.json").exists())
+            self.assertTrue((artifact_root / "bootstrap.json").exists())
+            self.assertTrue((artifact_root / "proof_request.json").exists())
+            self.assertTrue((artifact_root / "target_identity.txt").exists())
             self.assertTrue((artifact_root / "task_identity.txt").exists())
             self.assertTrue((artifact_root / "prompt_identity.txt").exists())
 

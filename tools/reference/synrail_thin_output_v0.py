@@ -22,6 +22,7 @@ def human_reason(report: dict, repair_packet: dict | None = None) -> str:
         or (repair_packet or {}).get("repair_termination", {}).get("reason", "")
     )
     labels = {
+        "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED": "this run was not started in controlled mode",
         "EXACT_TASK_IDENTITY_NOT_CONFIRMED": "the original task request is not confirmed",
         "INVALID_PROOF_BUNDLE": "the final result proof could not be trusted",
         "SEMANTIC_PROOF_INSUFFICIENT": "the proof is present but still too thin to trust",
@@ -166,6 +167,11 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
             "The acceptance rules for this run are not trustworthy yet.",
             "Refresh the acceptance rules for the current project state before trusting closure again.",
         )
+    if outcome_class == "NON_GREEN" and reason == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
+        return (
+            "This run was not started through Synrail controlled mode.",
+            "Synrail can inspect this run, but it cannot treat acceptance as trustworthy until the run starts through controlled bootstrap provenance.",
+        )
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
         return (
             "Synrail cannot resolve the current continuation path confidently yet.",
@@ -240,6 +246,7 @@ def technical_lines(*, state: dict, report: dict, repair_packet: dict | None, ch
         f"current_step_id={continuation.get('current_step_id', '') or packet.get('repair_history', {}).get('current_step_id', '')}",
         f"next_safe_step={report.get('next_safe_step', '') or state.get('next_safe_step', '')}",
         f"checkpoint_restore_available={checkpoint_restore_available(checkpoint, state=state)}",
+        f"bootstrap_provenance_reason={state.get('integrity', {}).get('bootstrap_provenance_reason', '')}",
     ]
 
 
@@ -275,6 +282,8 @@ def status_label(outcome_class: str, *, report: dict, repair_packet: dict | None
         return "Finish This Repair First"
     if outcome_class == "NON_GREEN" and reason in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
         return "Acceptance Rules Need Refresh"
+    if outcome_class == "NON_GREEN" and reason == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
+        return "Controlled Run Required"
     return "Needs Review"
 
 
@@ -315,6 +324,8 @@ def human_next_step(
         return "Finish the current bounded repair from synrail repair-step, then run synrail retry."
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
         return "Run synrail refresh-acceptance, then rerun synrail check."
+    if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
+        return "Start this run through synrail start before trusting any proof or acceptance."
     return human_safe_step_text(raw_next_step)
 
 
@@ -353,6 +364,8 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         suggested_command = "run synrail repair-step, finish only that repair, then synrail retry"
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
         suggested_command = "run synrail refresh-acceptance, then rerun synrail check"
+    if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
+        suggested_command = "run synrail start before acting on this run"
     if outcome_class == "DOCTOR_BLOCKED" and has_doctor_coverage_block(doctor):
         suggested_command = "treat doctor as bounded, close the agreed missing fail modes, then rerun readiness"
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
@@ -375,6 +388,8 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         next_command = "synrail repair-step"
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
         next_command = "synrail refresh-acceptance"
+    if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
+        next_command = "synrail start"
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
         next_command = ""
     if outcome_class in {"NON_RESUMABLE", "CLOSURE_REJECTED", "REPAIR_STOP", "SCOPE_VIOLATION"} and restore_available:
