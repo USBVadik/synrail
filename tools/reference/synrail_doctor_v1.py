@@ -13,9 +13,17 @@ import sys
 from pathlib import Path
 
 try:
-    from .synrail_doctor_coverage_v0 import build_coverage_record, load_profile as load_coverage_profile
+    from .synrail_doctor_coverage_v0 import (
+        build_coverage_record,
+        load_corpus as load_coverage_corpus,
+        load_profile as load_coverage_profile,
+    )
 except ImportError:
-    from synrail_doctor_coverage_v0 import build_coverage_record, load_profile as load_coverage_profile
+    from synrail_doctor_coverage_v0 import (
+        build_coverage_record,
+        load_corpus as load_coverage_corpus,
+        load_profile as load_coverage_profile,
+    )
 
 
 VERDICTS = {
@@ -369,7 +377,14 @@ def build_record(args: argparse.Namespace) -> dict:
         "credential_surface": probe_credential_surface(args),
         "prompt_task_identity": probe_prompt_task_identity(args),
     }
-    coverage = build_coverage_record(load_coverage_profile(Path(args.coverage_profile_file)) if args.coverage_profile_file else load_coverage_profile())
+    coverage_profile_file = Path(args.coverage_profile_file) if args.coverage_profile_file else None
+    coverage_profile = load_coverage_profile(coverage_profile_file) if coverage_profile_file else load_coverage_profile()
+    coverage_corpus, coverage_corpus_file = load_coverage_corpus(
+        Path(args.coverage_corpus_file) if args.coverage_corpus_file else None,
+        profile=coverage_profile,
+        profile_file=coverage_profile_file,
+    )
+    coverage = build_coverage_record(coverage_profile, coverage_corpus, corpus_file=coverage_corpus_file)
 
     blocking_failure_classes = []
     final_verdict = PASS_VERDICT[args.doctor_level]
@@ -450,6 +465,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--changed-file", action="append", default=[])
     parser.add_argument("--allowed-scope-path", action="append", default=[])
     parser.add_argument("--coverage-profile-file")
+    parser.add_argument("--coverage-corpus-file")
     return parser
 
 

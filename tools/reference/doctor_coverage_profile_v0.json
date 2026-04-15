@@ -1,6 +1,7 @@
 {
   "schema_version": "doctor_coverage_profile_v0",
   "doctor_version": "synrail_doctor_v1",
+  "measured_corpus_file": "tools/reference/doctor_coverage_corpus_v0.json",
   "critical_fail_modes": [
     "wrong_target_identity_mismatch",
     "dirty_execution_surface_under_git",
