@@ -1,0 +1,18 @@
+{
+  "schema_version": "acceptance_criteria_validation_record_v0",
+  "criteria_revision_id": "",
+  "status": "INVALID",
+  "reason": "CRITERIA_FILE_MISSING",
+  "task_class_matches": false,
+  "project_type_matches": false,
+  "target_classification_matches": false,
+  "intended_run_class_matches": false,
+  "required_gate_ids_match": false,
+  "required_bundle_sections_match": false,
+  "criteria_standard_matches": false,
+  "criteria_owner_matches": false,
+  "project_profile_fingerprint_matches": false,
+  "criteria_revision_matches": false,
+  "provenance_complete": false,
+  "provenance_profile_fingerprint_matches": false
+}

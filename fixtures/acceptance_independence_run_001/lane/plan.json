@@ -1,0 +1,31 @@
+{
+  "schema_version": "proof_bundle_plan_v0",
+  "run_id": "ACCEPTANCE_INDEPENDENCE_RUN_001",
+  "task_class": "proof_sensitive_fix",
+  "governed_mode": "FULL_GOVERNED_PATH",
+  "required_sections": [
+    "final_result",
+    "modified_files",
+    "diff_provenance",
+    "readback",
+    "scenario_proof",
+    "artifact_identity",
+    "cleanup_status"
+  ],
+  "recommended_artifacts": {
+    "final_result": "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane/final_result.json",
+    "readback": "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane/readback.txt",
+    "scenario_proof": "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane/scenario.txt",
+    "bundle_output": "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane/bundle.json",
+    "closure_output": "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane/closure.json",
+    "preparation_receipt_output": "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane/preparation_receipt.json"
+  },
+  "artifact_identity": {
+    "baseline_identity": "trusted_clean",
+    "execution_surface_identity": "clean-clone",
+    "prompt_identity": "",
+    "task_identity": ""
+  },
+  "planning_status": "READY",
+  "next_safe_step": "collect the planned proof artifacts and assemble the bundle before closure"
+}

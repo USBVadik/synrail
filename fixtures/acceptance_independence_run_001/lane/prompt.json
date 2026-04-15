@@ -1,0 +1,43 @@
+{
+  "schema_version": "repair_prompt_bridge_record_v0",
+  "run_id": "ACCEPTANCE_INDEPENDENCE_RUN_001",
+  "task_class": "proof_sensitive_fix",
+  "current_step_id": "complete_missing_proof_sections",
+  "current_step_label": "fill in the missing proof sections",
+  "failure_reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+  "failure_label": "the original task request is not confirmed",
+  "stale_artifact_ids": [
+    "runtime_state"
+  ],
+  "stale_subsurface_ids": [
+    "runtime_state_surface"
+  ],
+  "allowed_scope": [
+    "runtime_state_surface"
+  ],
+  "allowed_scope_labels": [
+    "runtime state surface"
+  ],
+  "required_inputs": [],
+  "required_input_labels": [],
+  "forbidden_scope": [
+    "Do not broaden scope beyond the current repair step.",
+    "Do not modify accepted or terminal-state logic.",
+    "Do not claim closure or acceptance unless the repaired run actually reaches it."
+  ],
+  "must_pass": [
+    "Repair only this task: fill in the missing proof sections",
+    "Keep this repair on the same run and task.",
+    "Do not rewrite previous repair progress.",
+    "Keep the next safe step aligned with: reconfirm exact task, prompt, and run-class identity"
+  ],
+  "acceptance_criteria": [
+    "Repair only this task: fill in the missing proof sections",
+    "Keep this repair on the same run and task.",
+    "Do not rewrite previous repair progress.",
+    "Keep the next safe step aligned with: reconfirm exact task, prompt, and run-class identity"
+  ],
+  "next_safe_step_label": "reconfirm exact task, prompt, and run-class identity",
+  "next_command": "synrail retry",
+  "prompt": "Repair the current run without broadening scope.\nCurrent repair task: fill in the missing proof sections.\nWhat failed: the original task request is not confirmed.\nStale artifacts: runtime_state\nStale subsurfaces: runtime_state_surface\nAllowed scope: runtime state surface\nRequired inputs: none\nWhat must be true after repair: reconfirm exact task, prompt, and run-class identity\nDo not touch unrelated files, state transitions, or acceptance logic.\nReturn only the bounded repair needed for this current step and keep this same repair path intact."
+}

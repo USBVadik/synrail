@@ -1,0 +1,86 @@
+{
+  "schema_version": "artifact_repair_receipt_v0",
+  "run_id": "ACCEPTANCE_INDEPENDENCE_RUN_001",
+  "task_class": "proof_sensitive_fix",
+  "from_state": "EXECUTION_COMPLETED",
+  "resulting_state": "EXECUTION_COMPLETED",
+  "result": "STEP_PROGRESS_RECORDED",
+  "completed_step_id": "",
+  "completed_artifact_ids": [],
+  "completed_subsurface_ids": [],
+  "remaining_stale_artifact_ids": [
+    "runtime_state"
+  ],
+  "remaining_stale_subsurface_ids": [
+    "runtime_state_surface"
+  ],
+  "remaining_non_resumable_artifact_ids": [],
+  "remaining_non_resumable_subsurface_ids": [],
+  "remaining_stale_hints": [
+    {
+      "artifact_id": "runtime_state",
+      "quality": "STALE",
+      "repair_step": "inspect_runtime_state",
+      "still_stale_parts": [
+        "runtime_state_surface"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "runtime_state_surface",
+          "why": "the runtime contour still needs inspection before a narrower stale artifact surface can be named"
+        }
+      ]
+    }
+  ],
+  "remaining_non_resumable_hints": [],
+  "completed_hints": [],
+  "next_step_id": "complete_missing_proof_sections",
+  "ready_now_step_ids": [
+    "complete_missing_proof_sections"
+  ],
+  "next_step_required_inputs": [],
+  "next_step_hints": [],
+  "repair_history": {
+    "applied": false,
+    "completed_step_ids": [],
+    "last_completed_step_id": "",
+    "current_step_id": "complete_missing_proof_sections",
+    "waiting_step_ids": [
+      "rebuild_proof_bundle",
+      "rerun_closure"
+    ]
+  },
+  "repair_history_chain": [
+    {
+      "step_index": 1,
+      "from_state": "EXECUTION_COMPLETED",
+      "resulting_state": "EXECUTION_COMPLETED",
+      "result": "STEP_PROGRESS_RECORDED",
+      "active_step_id": "complete_missing_proof_sections",
+      "completed_step_id": "",
+      "next_step_id": "complete_missing_proof_sections",
+      "completed_subsurface_ids": [],
+      "next_step_subsurface_ids": [],
+      "remaining_stale_subsurface_ids": [
+        "runtime_state_surface"
+      ],
+      "remaining_non_resumable_subsurface_ids": [],
+      "operator_focus": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there"
+    }
+  ],
+  "operator_evidence": {
+    "completed_step_id": "",
+    "completed_artifact_hints": [],
+    "completed_subsurface_ids": [],
+    "next_step_id": "complete_missing_proof_sections",
+    "next_step_required_inputs": [],
+    "next_step_artifact_hints": [],
+    "next_step_subsurface_ids": [],
+    "operator_focus": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there"
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_PARTIAL_PROOF"
+  },
+  "why": "the runtime recorded continuation progress even though the same repair step is still current"
+}

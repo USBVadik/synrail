@@ -93,6 +93,8 @@ def classify_outcome(*, state: dict, report: dict, repair_packet: dict | None, d
         return "NON_RESUMABLE"
     if state.get("closure", {}).get("status", "") == "REJECTED" or report.get("closure_status", "") == "REJECTED":
         return "CLOSURE_REJECTED"
+    if report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
+        return "NON_GREEN"
     if report.get("reason", "") == "INVALID_PROOF_BUNDLE" or state.get("proof_bundle", {}).get("status", "") == "INVALID":
         return "PROOF_INVALID"
     if report.get("reason", "") == "SEMANTIC_PROOF_INSUFFICIENT" or state.get("proof_bundle", {}).get("status", "") == "STRUCTURALLY_COMPLETE":
@@ -298,7 +300,7 @@ def human_next_step(
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTINUATION_INPUTS_MISSING":
         return "Finish the current bounded repair from synrail repair-step, then run synrail retry."
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
-        return "Refresh the acceptance rules for this project state, then rerun synrail check."
+        return "Run synrail refresh-acceptance, then rerun synrail check."
     return human_safe_step_text(raw_next_step)
 
 
@@ -336,7 +338,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTINUATION_INPUTS_MISSING":
         suggested_command = "run synrail repair-step, finish only that repair, then synrail retry"
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
-        suggested_command = "refresh the acceptance rules, then rerun synrail check"
+        suggested_command = "run synrail refresh-acceptance, then rerun synrail check"
     if outcome_class == "DOCTOR_BLOCKED" and has_doctor_coverage_block(doctor):
         suggested_command = "close the agreed critical doctor fail-mode coverage before trusting readiness"
     next_step = report.get("next_safe_step", "") or state.get("next_safe_step", "")
@@ -355,6 +357,8 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         next_command = "synrail repair-step"
     if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
         next_command = "synrail repair-step"
+    if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
+        next_command = "synrail refresh-acceptance"
     if outcome_class in {"NON_RESUMABLE", "CLOSURE_REJECTED", "REPAIR_STOP", "SCOPE_VIOLATION"} and restore_available:
         restore_command = "synrail restore"
     return {

@@ -322,6 +322,27 @@ def save_json(path: Path, payload: dict) -> None:
     os.replace(temp_name, path)
 
 
+def missing_acceptance_validation_record(reason: str) -> dict:
+    return {
+        "schema_version": "acceptance_criteria_validation_record_v0",
+        "criteria_revision_id": "",
+        "status": "INVALID",
+        "reason": reason,
+        "task_class_matches": False,
+        "project_type_matches": False,
+        "target_classification_matches": False,
+        "intended_run_class_matches": False,
+        "required_gate_ids_match": False,
+        "required_bundle_sections_match": False,
+        "criteria_standard_matches": False,
+        "criteria_owner_matches": False,
+        "project_profile_fingerprint_matches": False,
+        "criteria_revision_matches": False,
+        "provenance_complete": False,
+        "provenance_profile_fingerprint_matches": False,
+    }
+
+
 def repair_handoff_required_input_ids(handoff: dict | None) -> list[str]:
     if not handoff:
         return []
@@ -2298,19 +2319,22 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     save_state(state_path, state)
 
     closure_args = ["--state-file", args.state_file, "--bundle-file", args.bundle_output, "--output", args.closure_output]
-    if args.acceptance_criteria_file and args.acceptance_validation_output and args.project_profile_file:
-        code, _ = run_python_capture(
-            ACCEPTANCE_CRITERIA,
-            [
-                "validate",
-                "--criteria-file", args.acceptance_criteria_file,
-                "--state-file", args.state_file,
-                "--project-profile-file", args.project_profile_file,
-                "--output", args.acceptance_validation_output,
-            ],
-        )
-        if code != 0:
-            return code
+    if args.acceptance_validation_output and args.project_profile_file:
+        if args.acceptance_criteria_file and Path(args.acceptance_criteria_file).exists():
+            code, _ = run_python_capture(
+                ACCEPTANCE_CRITERIA,
+                [
+                    "validate",
+                    "--criteria-file", args.acceptance_criteria_file,
+                    "--state-file", args.state_file,
+                    "--project-profile-file", args.project_profile_file,
+                    "--output", args.acceptance_validation_output,
+                ],
+            )
+            if code != 0:
+                return code
+        else:
+            save_json(Path(args.acceptance_validation_output), missing_acceptance_validation_record("CRITERIA_FILE_MISSING"))
         closure_args.extend(["--acceptance-validation-file", args.acceptance_validation_output])
 
     code, _ = run_python_capture(CLOSURE, closure_args)

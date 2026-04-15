@@ -164,13 +164,27 @@ def project_profile_file(root: Path) -> Path:
     return root / PROJECT_PROFILE_BASENAME
 
 
-def write_acceptance_criteria(root: Path) -> subprocess.CompletedProcess[str]:
+def write_acceptance_criteria(root: Path, *, generated_by: str) -> subprocess.CompletedProcess[str]:
     return run_python_capture(
         ACCEPTANCE_CRITERIA,
         [
             "build",
             "--project-profile-file", str(project_profile_file(root)),
+            "--generated-by", generated_by,
             "--output", str(alpha_file(root, "acceptance_criteria")),
+        ],
+    )
+
+
+def write_acceptance_validation(root: Path, *, criteria_file: Path, state_file: Path) -> subprocess.CompletedProcess[str]:
+    return run_python_capture(
+        ACCEPTANCE_CRITERIA,
+        [
+            "validate",
+            "--criteria-file", str(criteria_file),
+            "--state-file", str(state_file),
+            "--project-profile-file", str(project_profile_file(root)),
+            "--output", str(alpha_file(root, "acceptance_validation")),
         ],
     )
 
@@ -260,7 +274,7 @@ def telemetry_flag_names(argv: list[str]) -> list[str]:
 
 def should_capture_alpha_telemetry(args: argparse.Namespace) -> bool:
     path = command_path_from_args(args)
-    return path[0] in {"init", "check", "generate-prompt", "next-step", "repair-step", "restore", "resume", "continue", "checkpoint", "session-export", "bug-packet"}
+    return path[0] in {"init", "check", "refresh-acceptance", "generate-prompt", "next-step", "repair-step", "restore", "resume", "continue", "checkpoint", "session-export", "bug-packet"}
 
 
 def maybe_capture_alpha_telemetry(
@@ -524,6 +538,22 @@ def print_init_summary(*, root: Path, state_file: Path) -> None:
     print("\n".join(lines))
 
 
+def print_acceptance_refresh_summary(*, root: Path) -> None:
+    criteria = load_json(alpha_file(root, "acceptance_criteria"))
+    lines = [
+        "Acceptance rules refreshed.",
+        "Revision: " + criteria.get("criteria_revision_id", ""),
+    ]
+    validation_file = alpha_file(root, "acceptance_validation")
+    if validation_file.exists():
+        validation = load_json(validation_file)
+        lines.append("Validation: " + validation.get("status", ""))
+        if validation.get("reason", "") and validation.get("reason", "") != "CRITERIA_VALID":
+            lines.append("Why: " + validation.get("reason", ""))
+    lines.append("Next command: " + shell_command(root, "check"))
+    print("\n".join(lines))
+
+
 def human_safe_point_class(value: str) -> str:
     mapping = {
         "VERIFIED_WORKING_STATE": "Verified working state",
@@ -642,7 +672,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         code = run_python(SPINE, forwarded)
         if code == 0 and root:
             save_project_profile(root, build_project_profile(project_root=Path.cwd().resolve(), root=root, task_class=args.task_class))
-            criteria_completed = write_acceptance_criteria(root)
+            criteria_completed = write_acceptance_criteria(root, generated_by="synrail init")
             if criteria_completed.returncode != 0:
                 return criteria_completed.returncode
         return code
@@ -655,7 +685,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         return completed.returncode
     if root:
         save_project_profile(root, build_project_profile(project_root=Path.cwd().resolve(), root=root, task_class=args.task_class))
-        criteria_completed = write_acceptance_criteria(root)
+        criteria_completed = write_acceptance_criteria(root, generated_by="synrail init")
         if criteria_completed.returncode != 0:
             if criteria_completed.stderr.strip():
                 print(criteria_completed.stderr.strip(), file=sys.stderr)
@@ -663,6 +693,49 @@ def cmd_init(args: argparse.Namespace) -> int:
                 print(criteria_completed.stdout.strip())
             return criteria_completed.returncode
         print_init_summary(root=root, state_file=Path(args.output))
+    return 0
+
+
+def cmd_refresh_acceptance(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args, ensure=True)
+    if not root:
+        print(json.dumps({"result": "ERROR", "reason": "ARTIFACT_ROOT_REQUIRED"}, ensure_ascii=True))
+        return 2
+    profile = project_profile_file(root)
+    if not profile.exists():
+        if args.mode == "dev":
+            print(json.dumps({"result": "ERROR", "reason": "PROJECT_PROFILE_REQUIRED"}, ensure_ascii=True))
+        else:
+            print("Synrail could not refresh the acceptance rules yet.")
+            print("What to do next: run synrail init first so Synrail can capture the project profile.")
+        return 2
+    completed = write_acceptance_criteria(root, generated_by="synrail refresh-acceptance")
+    if completed.returncode != 0:
+        if completed.stderr.strip():
+            print(completed.stderr.strip(), file=sys.stderr)
+        if completed.stdout.strip():
+            print(completed.stdout.strip())
+        return completed.returncode
+    state_file = alpha_file(root, "state")
+    if state_file.exists():
+        validation_completed = write_acceptance_validation(root, criteria_file=alpha_file(root, "acceptance_criteria"), state_file=state_file)
+        if validation_completed.returncode != 0:
+            if validation_completed.stderr.strip():
+                print(validation_completed.stderr.strip(), file=sys.stderr)
+            if validation_completed.stdout.strip():
+                print(validation_completed.stdout.strip())
+            return validation_completed.returncode
+    if args.mode == "dev":
+        print(json.dumps(
+            {
+                "criteria": load_json(alpha_file(root, "acceptance_criteria")),
+                "validation": load_json(alpha_file(root, "acceptance_validation")) if alpha_file(root, "acceptance_validation").exists() else None,
+            },
+            indent=2,
+            ensure_ascii=True,
+        ))
+    else:
+        print_acceptance_refresh_summary(root=root)
     return 0
 
 
@@ -1287,20 +1360,11 @@ def cmd_check(args: argparse.Namespace) -> int:
             args.checkpoint_record_file = discovered
     apply_alpha_profile_defaults(args, root=root)
     if root and project_profile_file(root).exists():
-        criteria_completed = write_acceptance_criteria(root)
-        if criteria_completed.returncode != 0:
-            if args.mode == "dev":
-                if criteria_completed.stderr.strip():
-                    print(criteria_completed.stderr.strip(), file=sys.stderr)
-                if criteria_completed.stdout.strip():
-                    print(criteria_completed.stdout.strip())
-            else:
-                print("Synrail could not refresh the acceptance rules for this project yet.")
-                print("What to do next: rerun synrail init or inspect the project profile in the artifact root.")
-            return criteria_completed.returncode
-        args.acceptance_criteria_file = str(alpha_file(root, "acceptance_criteria"))
         args.acceptance_validation_output = str(alpha_file(root, "acceptance_validation"))
         args.project_profile_file = str(project_profile_file(root))
+        existing_criteria = maybe_existing_alpha_file(root, "acceptance_criteria")
+        if existing_criteria:
+            args.acceptance_criteria_file = existing_criteria
 
     runtime_requested = all(
         [
@@ -1396,6 +1460,8 @@ def cmd_check(args: argparse.Namespace) -> int:
         print_thin_output_summary(Path(args.output))
         thin_payload = load_json(Path(args.output)) if Path(args.output).exists() else {}
         outcome_class = thin_payload.get("outcome_class", "")
+        if thin_payload.get("next_command", "") == "synrail refresh-acceptance":
+            return thin_code
         if outcome_class not in {"ACCEPTED", ""} and getattr(args, "repair_packet_file", None):
             prompt_output = str(alpha_file(root, "prompt")) if root else str(Path(args.output).with_name("prompt.json"))
             forwarded = [
@@ -2337,6 +2403,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--mode", default="default", choices=["default", "dev"])
     p_init.add_argument("--output")
     p_init.set_defaults(func=cmd_init)
+
+    p_refresh_acceptance = sub.add_parser("refresh-acceptance", aliases=["acceptance-refresh"])
+    p_refresh_acceptance.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_refresh_acceptance.add_argument("--mode", default="default", choices=["default", "dev"])
+    p_refresh_acceptance.set_defaults(func=cmd_refresh_acceptance)
 
     p_check = sub.add_parser("check")
     p_check.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)

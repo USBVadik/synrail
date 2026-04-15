@@ -14,7 +14,13 @@
     "target_classification_matches",
     "intended_run_class_matches",
     "required_gate_ids_match",
-    "required_bundle_sections_match"
+    "required_bundle_sections_match",
+    "criteria_standard_matches",
+    "criteria_owner_matches",
+    "project_profile_fingerprint_matches",
+    "criteria_revision_matches",
+    "provenance_complete",
+    "provenance_profile_fingerprint_matches"
   ],
   "properties": {
     "schema_version": {"type": "string", "const": "acceptance_criteria_validation_record_v0"},
@@ -26,6 +32,12 @@
     "target_classification_matches": {"type": "boolean"},
     "intended_run_class_matches": {"type": "boolean"},
     "required_gate_ids_match": {"type": "boolean"},
-    "required_bundle_sections_match": {"type": "boolean"}
+    "required_bundle_sections_match": {"type": "boolean"},
+    "criteria_standard_matches": {"type": "boolean"},
+    "criteria_owner_matches": {"type": "boolean"},
+    "project_profile_fingerprint_matches": {"type": "boolean"},
+    "criteria_revision_matches": {"type": "boolean"},
+    "provenance_complete": {"type": "boolean"},
+    "provenance_profile_fingerprint_matches": {"type": "boolean"}
   }
 }

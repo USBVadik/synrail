@@ -1,0 +1,23 @@
+{
+  "schema_version": "thin_output_record_v0",
+  "mode": "default",
+  "run_id": "ACCEPTANCE_INDEPENDENCE_MISSING_001",
+  "task_class": "proof_sensitive_fix",
+  "outcome_class": "NON_GREEN",
+  "status_label": "Acceptance Rules Need Refresh",
+  "summary": "The acceptance rules for this run are not trustworthy yet.",
+  "diagnosis": "Refresh the acceptance rules for the current project state before trusting closure again.",
+  "what_happened": "The acceptance rules for this run are not trustworthy yet.",
+  "what_it_means": "Refresh the acceptance rules for the current project state before trusting closure again.",
+  "what_to_do_next": "Run synrail refresh-acceptance, then rerun synrail check.",
+  "resume_available": true,
+  "next_command": "synrail refresh-acceptance",
+  "restore_command": "",
+  "next_step": "repair or rebuild the acceptance criteria before trusting closure",
+  "restore_available": false,
+  "checkpoint_id": "",
+  "recovery_primary_action": "",
+  "recovery_operator_instructions": [],
+  "suggested_command": "run synrail refresh-acceptance, then rerun synrail check",
+  "technical_lines": []
+}

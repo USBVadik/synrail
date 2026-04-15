@@ -1,0 +1,23 @@
+{
+  "schema_version": "thin_output_record_v0",
+  "mode": "default",
+  "run_id": "ACCEPTANCE_INDEPENDENCE_RUN_001",
+  "task_class": "proof_sensitive_fix",
+  "outcome_class": "PROOF_PARTIAL",
+  "status_label": "Proof Incomplete",
+  "summary": "The proof bundle is still incomplete.",
+  "diagnosis": "Supply the missing proof sections and continue only the current bounded repair step.",
+  "what_happened": "The proof bundle is still incomplete.",
+  "what_it_means": "Supply the missing proof sections and continue only the current bounded repair step.",
+  "what_to_do_next": "Add the missing proof inputs, then ask Synrail for the next bounded repair step.",
+  "resume_available": true,
+  "next_command": "synrail repair-step",
+  "restore_command": "",
+  "next_step": "reconfirm exact task, prompt, and run-class identity",
+  "restore_available": false,
+  "checkpoint_id": "",
+  "recovery_primary_action": "",
+  "recovery_operator_instructions": [],
+  "suggested_command": "run synrail repair-step, supply only the missing proof inputs, then synrail retry",
+  "technical_lines": []
+}

@@ -1,0 +1,47 @@
+{
+  "schema_version": "run_state_v0",
+  "run_id": "ACCEPTANCE_INDEPENDENCE_MISSING_001",
+  "task_class": "proof_sensitive_fix",
+  "state": "EXECUTION_COMPLETED",
+  "target_surface": {
+    "status": "ATTESTED",
+    "identity": "clean-clone",
+    "baseline_relation": "trusted_clean"
+  },
+  "doctor": {
+    "status": "PASS",
+    "blocking_failure_classes": []
+  },
+  "integrity": {
+    "status": "FAIL",
+    "exact_task_identity_ok": false
+  },
+  "execution": {
+    "status": "COMPLETED",
+    "artifact_bundle_present": true
+  },
+  "proof_bundle": {
+    "status": "PARTIAL",
+    "missing_sections": [
+      "artifact_identity"
+    ],
+    "structural_status": "PARTIAL",
+    "semantic_status": "NOT_EVALUATED",
+    "semantically_insufficient_sections": [],
+    "semantic_next_safe_step": ""
+  },
+  "closure": {
+    "status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "ACCEPTANCE_CRITERIA_INVALID",
+    "next_allowed_transition": "ACCEPTANCE_CRITERIA_REPAIR",
+    "narrow_next_safe_step": "repair or rebuild the acceptance criteria before trusting closure",
+    "missing_sections": [
+      "artifact_identity"
+    ]
+  },
+  "recovery": {
+    "status": "NOT_REQUIRED",
+    "reverification_complete": false
+  },
+  "next_safe_step": "repair or rebuild the acceptance criteria before trusting closure"
+}

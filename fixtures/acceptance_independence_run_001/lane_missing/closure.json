@@ -1,0 +1,16 @@
+{
+  "schema_version": "closure_verdict_v0",
+  "run_id": "ACCEPTANCE_INDEPENDENCE_MISSING_001",
+  "task_class": "proof_sensitive_fix",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "ACCEPTANCE_CRITERIA_INVALID",
+  "next_allowed_transition": "ACCEPTANCE_CRITERIA_REPAIR",
+  "narrow_next_safe_step": "repair or rebuild the acceptance criteria before trusting closure",
+  "missing_sections": [
+    "artifact_identity"
+  ],
+  "semantically_insufficient_sections": [],
+  "acceptance_criteria_revision_id": "",
+  "acceptance_criteria_status": "INVALID",
+  "acceptance_criteria_reason": "CRITERIA_FILE_MISSING"
+}
