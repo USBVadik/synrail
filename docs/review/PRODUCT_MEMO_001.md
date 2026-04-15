@@ -96,6 +96,11 @@ The product exists for environments where “looks plausible” is too weak, but
 
 ## Current alpha lane in plain language
 
+Current support boundary:
+
+- supported: one local trusted worktree on the same machine where the agent acts
+- not yet supported: remote host / ops / production-target execution as a first-class alpha lane
+
 Current first-run alpha lane:
 
 1. `synrail start`

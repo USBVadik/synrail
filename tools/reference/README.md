@@ -32,6 +32,11 @@ Do not treat them as:
 
 The repo now carries one thin installable `synrail` entrypoint on top of the existing reference helpers.
 
+Current alpha support boundary:
+
+- supported: one local trusted worktree on the same machine where the agent acts
+- not yet supported: remote host / ops / production-target execution as a first-class alpha lane
+
 The current verified local install path is:
 
 ```bash

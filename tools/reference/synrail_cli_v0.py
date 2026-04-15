@@ -103,6 +103,7 @@ REFERENCE_RUNNER_MODULE = "reference_runner"
 
 DEFAULT_ALPHA_ARTIFACT_ROOT = ".synrail"
 DEFAULT_ALPHA_TASK_CLASS = "bounded_change"
+SUPPORTED_ALPHA_TARGET_CLASSIFICATIONS = {"trusted_worktree", "resume_surface"}
 ALPHA_FILE_NAMES = {
     "state": "state.json",
     "project_profile": "project_profile.json",
@@ -341,6 +342,18 @@ def preferred_proof_artifact_paths(root: Path) -> dict[str, Path]:
         "readback": root / "readback.txt",
         "scenario_proof": root / "scenario_proof.txt",
     }
+
+
+def unsupported_remote_target_reason(*, target_path: str, target_classification: str) -> str:
+    classification = (target_classification or "").strip()
+    path = (target_path or "").strip()
+    if classification and classification not in SUPPORTED_ALPHA_TARGET_CLASSIFICATIONS:
+        return "REMOTE_TARGET_UNSUPPORTED"
+    if "://" in path:
+        return "REMOTE_TARGET_UNSUPPORTED"
+    if "@" in path and ":" in path and not path.startswith("/"):
+        return "REMOTE_TARGET_UNSUPPORTED"
+    return ""
 
 
 def command_path_from_args(args: argparse.Namespace) -> list[str]:
@@ -715,6 +728,60 @@ def write_bootstrap_required_block(*, args: argparse.Namespace, root: Path, vali
         "repair_stalled_step_id": "",
         "blockers": ["CONTROLLED_BOOTSTRAP_NOT_CONFIRMED"],
         "dominant_blocker": "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED",
+        "resulting_state": state["state"],
+        "next_safe_step": state["next_safe_step"],
+    }
+    save_json(Path(args.report_file), report)
+    args._suppress_summary = True
+    thin_code = cmd_thin_output(args)
+    if thin_code == 0 and args.mode == "default":
+        print_thin_output_summary(Path(args.output))
+    return thin_code
+
+
+def write_remote_unsupported_block(*, args: argparse.Namespace, root: Path) -> int:
+    state_path = Path(args.state_file)
+    state = load_json(state_path)
+    state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+    state["closure"]["blocking_reason"] = "REMOTE_TARGET_UNSUPPORTED"
+    state["closure"]["next_allowed_transition"] = "LOCAL_TRUSTED_WORKTREE_START"
+    state["closure"]["narrow_next_safe_step"] = "rerun this alpha lane on a local trusted worktree; the remote or ops lane is not supported yet"
+    state["closure"]["missing_sections"] = []
+    state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+    save_json(state_path, state)
+    report = {
+        "schema_version": "orchestration_report_v0",
+        "run_id": state["run_id"],
+        "task_class": state["task_class"],
+        "result": "BLOCKED",
+        "stopping_stage": "target_support",
+        "reason": "REMOTE_TARGET_UNSUPPORTED",
+        "doctor_verdict": "",
+        "resume_applied": False,
+        "resume_from_state": "",
+        "repair_handoff_applied": False,
+        "repair_handoff_from_state": "",
+        "repair_handoff_required_inputs": [],
+        "missing_continuation_inputs": [],
+        "selection_applied": False,
+        "selected_mode": "",
+        "selected_with_preparation": False,
+        "preparation_applied": False,
+        "preparation_ready_for_closure": False,
+        "bundle_status": state["proof_bundle"]["status"],
+        "closure_status": state["closure"]["status"],
+        "refresh_applied": False,
+        "refresh_resulting_closure_status": "",
+        "comparison_applied": False,
+        "comparison_verdict": "",
+        "repair_termination_status": "",
+        "repair_termination_reason": "",
+        "repair_attempt_count": 0,
+        "repair_max_attempts": 0,
+        "repair_no_progress_window": 0,
+        "repair_stalled_step_id": "",
+        "blockers": ["REMOTE_TARGET_UNSUPPORTED"],
+        "dominant_blocker": "REMOTE_TARGET_UNSUPPORTED",
         "resulting_state": state["state"],
         "next_safe_step": state["next_safe_step"],
     }
@@ -1761,6 +1828,16 @@ def cmd_check(args: argparse.Namespace) -> int:
     ):
         return write_bootstrap_required_block(args=args, root=root, validation=bootstrap_validation)
 
+    if (
+        root
+        and unsupported_remote_target_reason(
+            target_path=getattr(args, "target_path", ""),
+            target_classification=getattr(args, "target_classification", ""),
+        )
+        and Path(getattr(args, "state_file", "")).exists()
+    ):
+        return write_remote_unsupported_block(args=args, root=root)
+
     runtime_requested = all(
         [
             getattr(args, "target_path", None),
@@ -1871,7 +1948,7 @@ def cmd_check(args: argparse.Namespace) -> int:
             return thin_code
         if Path(args.report_file).exists():
             report_payload = load_json(Path(args.report_file))
-            if report_payload.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
+            if report_payload.get("reason", "") in {"CONTROLLED_BOOTSTRAP_NOT_CONFIRMED", "REMOTE_TARGET_UNSUPPORTED"}:
                 return thin_code
         if outcome_class not in {"ACCEPTED", ""} and getattr(args, "repair_packet_file", None):
             prompt_output = str(alpha_file(root, "prompt")) if root else str(Path(args.output).with_name("prompt.json"))

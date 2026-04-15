@@ -42,6 +42,11 @@ The wedge is narrower:
 
 ## What the product does today
 
+Current support boundary:
+
+- supported: one local trusted worktree on the same machine where the agent acts
+- not yet supported: remote host / ops / production-target execution as a first-class alpha lane
+
 Current alpha lane:
 
 1. `synrail start`

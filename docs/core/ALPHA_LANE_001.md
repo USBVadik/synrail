@@ -2,6 +2,11 @@
 
 This is the first narrow alpha lane for `Synrail`.
 
+Current support boundary:
+
+- supported: one local trusted worktree on the same machine where the agent acts
+- not yet supported: remote host / ops / production-target execution as a first-class alpha lane
+
 It is intentionally one contour, not a broad product shell:
 
 1. install one local `synrail` command

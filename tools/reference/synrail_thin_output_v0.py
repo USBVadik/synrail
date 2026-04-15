@@ -23,6 +23,7 @@ def human_reason(report: dict, repair_packet: dict | None = None) -> str:
     )
     labels = {
         "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED": "this run was not started in controlled mode",
+        "REMOTE_TARGET_UNSUPPORTED": "the current alpha lane does not support remote or ops targets yet",
         "EXACT_TASK_IDENTITY_NOT_CONFIRMED": "the original task request is not confirmed",
         "INVALID_PROOF_BUNDLE": "the final result proof could not be trusted",
         "SEMANTIC_PROOF_INSUFFICIENT": "the proof is present but still too thin to trust",
@@ -172,6 +173,11 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
             "This run was not started through Synrail controlled mode.",
             "Synrail can inspect this run, but it cannot treat acceptance as trustworthy until the run starts through controlled bootstrap provenance.",
         )
+    if outcome_class == "NON_GREEN" and reason == "REMOTE_TARGET_UNSUPPORTED":
+        return (
+            "This alpha lane does not support remote or ops targets yet.",
+            "Run this contour on a local trusted worktree on the machine where the agent acts, or wait for an explicitly supported remote lane.",
+        )
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
         return (
             "Synrail cannot resolve the current continuation path confidently yet.",
@@ -284,6 +290,8 @@ def status_label(outcome_class: str, *, report: dict, repair_packet: dict | None
         return "Acceptance Rules Need Refresh"
     if outcome_class == "NON_GREEN" and reason == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
         return "Controlled Run Required"
+    if outcome_class == "NON_GREEN" and reason == "REMOTE_TARGET_UNSUPPORTED":
+        return "Remote Target Not Supported Yet"
     return "Needs Review"
 
 
@@ -326,6 +334,8 @@ def human_next_step(
         return "Run synrail refresh-acceptance, then rerun synrail check."
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
         return "Start this run through synrail start before trusting any proof or acceptance."
+    if outcome_class == "NON_GREEN" and report.get("reason", "") == "REMOTE_TARGET_UNSUPPORTED":
+        return "Rerun this alpha lane on a local trusted worktree. The remote or ops contour is not supported yet."
     return human_safe_step_text(raw_next_step)
 
 
@@ -366,6 +376,8 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         suggested_command = "run synrail refresh-acceptance, then rerun synrail check"
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
         suggested_command = "run synrail start before acting on this run"
+    if outcome_class == "NON_GREEN" and report.get("reason", "") == "REMOTE_TARGET_UNSUPPORTED":
+        suggested_command = "rerun this alpha lane on a local trusted worktree"
     if outcome_class == "DOCTOR_BLOCKED" and has_doctor_coverage_block(doctor):
         suggested_command = "treat doctor as bounded, close the agreed missing fail modes, then rerun readiness"
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
@@ -390,6 +402,8 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         next_command = "synrail refresh-acceptance"
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
         next_command = "synrail start"
+    if outcome_class == "NON_GREEN" and report.get("reason", "") == "REMOTE_TARGET_UNSUPPORTED":
+        next_command = ""
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
         next_command = ""
     if outcome_class in {"NON_RESUMABLE", "CLOSURE_REJECTED", "REPAIR_STOP", "SCOPE_VIOLATION"} and restore_available:

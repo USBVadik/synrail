@@ -2,6 +2,11 @@
 
 Review this as a narrow proof-first control product, not as a platform.
 
+Current support boundary for this pack:
+
+- supported: one local trusted worktree on the same machine where the agent acts
+- not yet supported: remote host / ops / production-target execution as a first-class alpha lane
+
 The goal of this pack is simple:
 
 - show one false-success contour that `Synrail` blocks honestly

@@ -56,6 +56,11 @@ For a quick document map, start with:
 
 The current repo focus is one narrow alpha lane, not a broader shell.
 
+Current alpha support boundary:
+
+- supported: one local trusted worktree on the same machine where the agent acts
+- not yet supported: remote host / ops / production-target execution as a first-class alpha lane
+
 Preferred install path today:
 
 ```bash

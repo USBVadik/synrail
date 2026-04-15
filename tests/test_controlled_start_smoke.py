@@ -121,6 +121,47 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("readback: .synrail/readback.txt", check.stdout)
             self.assertIn("scenario_proof: .synrail/scenario_proof.txt", check.stdout)
 
+    def test_check_blocks_remote_target_as_unsupported(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_remote_unsupported_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                "--task-identity",
+                "Do not pretend that a remote target lane is supported.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            (artifact_root / "final_result.txt").write_text("Implemented the change and confirmed it locally.\n")
+
+            check = self.run_alpha(
+                "check",
+                "--artifact-root",
+                ".synrail",
+                "--target-path",
+                "ssh://remote-host/example-repo",
+                "--target-classification",
+                "remote_target",
+                cwd=project_root,
+            )
+            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertIn("Remote Target Not Supported Yet", check.stdout)
+
+            report = load_json(artifact_root / "report.json")
+            thin_output = load_json(artifact_root / "thin_output.json")
+
+            self.assertEqual("REMOTE_TARGET_UNSUPPORTED", report["reason"])
+            self.assertEqual("NON_GREEN", thin_output["outcome_class"])
+            self.assertEqual("", thin_output["next_command"])
+            self.assertFalse((artifact_root / "prompt.json").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
