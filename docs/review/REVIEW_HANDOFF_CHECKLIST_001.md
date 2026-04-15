@@ -2,6 +2,10 @@
 
 Use this when you send the product to an outside critic.
 
+If you need copy-paste outreach text, use:
+
+- [EXTERNAL_ALPHA_SEND_001.md](./EXTERNAL_ALPHA_SEND_001.md)
+
 ## Send these things
 
 1. the full repository snapshot

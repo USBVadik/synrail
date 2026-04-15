@@ -34,6 +34,10 @@ Give them:
 4. the full source tree
 5. the fixtures and tests
 
+If you want a send-ready reviewer message and exact handoff packet, use:
+
+- [EXTERNAL_ALPHA_SEND_001.md](./EXTERNAL_ALPHA_SEND_001.md)
+
 Do not send only a pitch.
 
 The code is part of the review surface.
