@@ -49,6 +49,8 @@ def short_fingerprint(*parts: str) -> str:
 
 
 def project_profile_fingerprint(profile: dict) -> str:
+    # Acceptance truth should track stable project/run identity, not the currently
+    # discovered final-result filename under that same contour.
     digest = short_fingerprint(
         profile.get("schema_version", ""),
         profile.get("project_root", ""),
@@ -58,7 +60,6 @@ def project_profile_fingerprint(profile: dict) -> str:
         profile.get("intended_run_class", ""),
         profile.get("baseline_identity", ""),
         profile.get("execution_surface_identity", ""),
-        profile.get("artifact_path", ""),
     )
     return f"project_profile_v0:{digest}"
 

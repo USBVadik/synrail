@@ -193,6 +193,15 @@ def save_project_profile(root: Path, payload: dict) -> None:
     project_profile_file(root).write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
+def save_alpha_identity_files(root: Path, *, task_identity: str = "", prompt_identity: str = "") -> None:
+    task_text = (task_identity or "").strip()
+    prompt_text = (prompt_identity or "").strip() or task_text
+    if task_text:
+        (root / "task_identity.txt").write_text(task_text + "\n")
+    if prompt_text:
+        (root / "prompt_identity.txt").write_text(prompt_text + "\n")
+
+
 def load_project_profile(root: Path | None) -> dict | None:
     if not root:
         return None
@@ -416,6 +425,14 @@ def apply_alpha_runtime_file_defaults(args: argparse.Namespace) -> None:
     root = alpha_root_from_args(args, ensure=True)
     if not root:
         return
+
+    def existing_alpha_variant(*names: str) -> Path | None:
+        for name in names:
+            candidate = root / name
+            if candidate.exists():
+                return candidate
+        return None
+
     if not getattr(args, "state_file", None):
         args.state_file = str(alpha_file(root, "state"))
     for attr, file_id in [
@@ -449,6 +466,18 @@ def apply_alpha_runtime_file_defaults(args: argparse.Namespace) -> None:
         profile = project_profile_file(root)
         if profile.exists():
             args.project_profile_file = str(profile)
+    if not getattr(args, "prompt_identity_file", None):
+        candidate = existing_alpha_variant("prompt_identity.txt")
+        if candidate:
+            args.prompt_identity_file = str(candidate)
+    if not getattr(args, "prompt_identity", None):
+        candidate = existing_alpha_variant("prompt_identity.txt")
+        if candidate:
+            args.prompt_identity = candidate.read_text().strip()
+    if not getattr(args, "task_identity", None):
+        candidate = existing_alpha_variant("task_identity.txt")
+        if candidate:
+            args.task_identity = candidate.read_text().strip()
 
 
 def sync_restored_checkpoint_artifacts(target_root: Path) -> list[str]:
@@ -654,6 +683,7 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 def cmd_init(args: argparse.Namespace) -> int:
     root = alpha_root_from_args(args, ensure=True)
+    project_root = Path(getattr(args, "project_root", "") or Path.cwd()).resolve()
     if not getattr(args, "run_id", None):
         args.run_id = default_alpha_run_id()
     if not getattr(args, "task_class", None):
@@ -671,7 +701,12 @@ def cmd_init(args: argparse.Namespace) -> int:
     if args.mode == "dev":
         code = run_python(SPINE, forwarded)
         if code == 0 and root:
-            save_project_profile(root, build_project_profile(project_root=Path.cwd().resolve(), root=root, task_class=args.task_class))
+            save_project_profile(root, build_project_profile(project_root=project_root, root=root, task_class=args.task_class))
+            save_alpha_identity_files(
+                root,
+                task_identity=getattr(args, "task_identity", ""),
+                prompt_identity=getattr(args, "prompt_identity", ""),
+            )
             criteria_completed = write_acceptance_criteria(root, generated_by="synrail init")
             if criteria_completed.returncode != 0:
                 return criteria_completed.returncode
@@ -684,7 +719,12 @@ def cmd_init(args: argparse.Namespace) -> int:
             print(completed.stdout.strip())
         return completed.returncode
     if root:
-        save_project_profile(root, build_project_profile(project_root=Path.cwd().resolve(), root=root, task_class=args.task_class))
+        save_project_profile(root, build_project_profile(project_root=project_root, root=root, task_class=args.task_class))
+        save_alpha_identity_files(
+            root,
+            task_identity=getattr(args, "task_identity", ""),
+            prompt_identity=getattr(args, "prompt_identity", ""),
+        )
         criteria_completed = write_acceptance_criteria(root, generated_by="synrail init")
         if criteria_completed.returncode != 0:
             if criteria_completed.stderr.strip():
@@ -2398,6 +2438,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--run-id")
     p_init.add_argument("--task-class", default=DEFAULT_ALPHA_TASK_CLASS)
     p_init.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_init.add_argument("--project-root")
+    p_init.add_argument("--task-identity")
+    p_init.add_argument("--prompt-identity")
     p_init.add_argument("--telemetry-opt-in", action="store_true")
     p_init.add_argument("--tester-id", default="alpha_tester")
     p_init.add_argument("--mode", default="default", choices=["default", "dev"])

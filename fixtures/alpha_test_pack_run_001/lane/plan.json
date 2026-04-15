@@ -1,0 +1,31 @@
+{
+  "schema_version": "proof_bundle_plan_v0",
+  "run_id": "ALPHA_RUN_20260415T082755Z",
+  "task_class": "bounded_change",
+  "governed_mode": "FULL_GOVERNED_PATH",
+  "required_sections": [
+    "final_result",
+    "modified_files",
+    "diff_provenance",
+    "readback",
+    "scenario_proof",
+    "artifact_identity",
+    "cleanup_status"
+  ],
+  "recommended_artifacts": {
+    "final_result": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/final_result.json",
+    "readback": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/readback.txt",
+    "scenario_proof": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/scenario.txt",
+    "bundle_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/bundle.json",
+    "closure_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/closure.json",
+    "preparation_receipt_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/preparation_receipt.json"
+  },
+  "artifact_identity": {
+    "baseline_identity": "autodetected_generic_baseline",
+    "execution_surface_identity": "autodetected_generic_worktree",
+    "prompt_identity": "Reject a plain-text final result and keep the repair bounded.",
+    "task_identity": "Reject a plain-text final result and keep the repair bounded."
+  },
+  "planning_status": "READY",
+  "next_safe_step": "collect the planned proof artifacts and assemble the bundle before closure"
+}

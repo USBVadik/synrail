@@ -11,26 +11,28 @@ The goal is to let 3-5 experienced operators run one real alpha lane and send ba
 Verified local install path:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python setup.py install
+python3 -m venv --system-site-packages .venv
+.venv/bin/python -m pip install -e . --no-build-isolation
 ```
 
 ## 10-Minute Quickstart
 
 ```bash
-ARTIFACT_ROOT="$(pwd)/.synrail"
-synrail init --artifact-root "$ARTIFACT_ROOT" --telemetry-opt-in --tester-id your_name
-synrail check --artifact-root "$ARTIFACT_ROOT" ...
-synrail generate-prompt --artifact-root "$ARTIFACT_ROOT"
+PROJECT_ROOT="$(pwd)"
+ARTIFACT_ROOT="$PROJECT_ROOT/.synrail"
+TASK_REQUEST="Reject a plain-text final result and keep the repair bounded."
+synrail init --artifact-root "$ARTIFACT_ROOT" --project-root "$PROJECT_ROOT" --task-identity "$TASK_REQUEST" --telemetry-opt-in --tester-id your_name
+synrail check --artifact-root "$ARTIFACT_ROOT"
+synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 synrail telemetry export --artifact-root "$ARTIFACT_ROOT"
 ```
 
 If you already have one verified working state, extend the lane with:
 
 ```bash
-synrail checkpoint create --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
-synrail checkpoint verify --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
-synrail restore --artifact-root "$ARTIFACT_ROOT" --checkpoint-id working
+synrail save --artifact-root "$ARTIFACT_ROOT"
+synrail confirm-restore --artifact-root "$ARTIFACT_ROOT"
+synrail restore --artifact-root "$ARTIFACT_ROOT"
 ```
 
 ## Scenarios
@@ -44,7 +46,7 @@ Goal:
 Expected shape:
 
 - `check` lands on `PROOF_INVALID`
-- `generate-prompt` stays bounded to `repair_final_result_artifact`
+- `repair-step` stays bounded to `repair_final_result_artifact`
 
 Reference:
 
@@ -58,7 +60,8 @@ Goal:
 
 Expected shape:
 
-- checkpoint verify passes
+- `save` returns `OK`
+- `confirm-restore` passes
 - restore returns `OK`
 - working state is recoverable without false acceptance
 
@@ -75,7 +78,7 @@ Goal:
 Expected shape:
 
 - no author memory needed
-- no hidden `resume` guess
+- no hidden continuation guess
 
 Reference:
 
@@ -115,3 +118,15 @@ Please send back:
 - one blunt sentence saying whether `Synrail` helped or added ceremony
 
 This pack is successful only if it produces hard external signal, not polite approval.
+
+## Current Canonical Pack Run
+
+Current tester-pack smoke on the preferred shell:
+
+- [check output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/shell/check_stdout.txt)
+- [repair-step output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/shell/repair_step_stdout.txt)
+- [telemetry export output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/shell/telemetry_export_stdout.txt)
+- [thin output](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/lane/thin_output.json)
+- [prompt](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/lane/prompt.json)
+- [session replay](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/lane/telemetry/session_replay.json)
+- [issue body](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_test_pack_run_001/lane/telemetry/github_issue.md)

@@ -1,0 +1,22 @@
+{
+  "schema_version": "governed_path_preparation_receipt_v0",
+  "plan_file": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/plan.json",
+  "bundle_file": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/bundle.json",
+  "run_id": "ALPHA_RUN_20260415T082755Z",
+  "task_class": "bounded_change",
+  "bundle_run_matches_plan": true,
+  "bundle_task_class_matches_plan": true,
+  "planned_required_sections_count": 7,
+  "planned_required_sections_present_count": 2,
+  "bundle_status": "INVALID",
+  "missing_required_sections": [
+    "final_result",
+    "diff_provenance",
+    "readback",
+    "scenario_proof",
+    "cleanup_status"
+  ],
+  "complete_on_first_bundle_pass": false,
+  "ready_for_closure": false,
+  "next_safe_step": "collect the missing planned proof sections and rebuild the bundle"
+}

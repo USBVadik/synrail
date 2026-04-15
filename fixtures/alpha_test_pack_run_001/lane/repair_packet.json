@@ -1,0 +1,830 @@
+{
+  "schema_version": "repair_packet_v0",
+  "run_id": "ALPHA_RUN_20260415T082755Z",
+  "task_class": "bounded_change",
+  "from_state": "PROOF_BUNDLE_INVALID",
+  "continuation_entrypoint": "resume",
+  "repair_handoff": {
+    "schema_version": "repair_handoff_v0",
+    "run_id": "ALPHA_RUN_20260415T082755Z",
+    "task_class": "bounded_change",
+    "from_state": "PROOF_BUNDLE_INVALID",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "INVALID_PROOF_BUNDLE",
+    "continuation_allowed": true,
+    "continuation_entrypoint": "resume",
+    "resumability": {
+      "status": "REPAIRABLE",
+      "family": "REPAIRABLE_COMPOUND",
+      "active_pressures": [
+        "INVALID_PROOF",
+        "PARTIAL_PROOF"
+      ],
+      "recommended_repair_order": [
+        "repair_final_result_artifact",
+        "complete_missing_proof_sections",
+        "rebuild_proof_bundle",
+        "rerun_closure"
+      ],
+      "requires_new_run": false,
+      "explanation": "more than one repairable pressure is active, so continuation should follow the ordered repair sequence before closure is rechecked"
+    },
+    "repair_policy": {
+      "policy_type": "MULTI_STEP_REPAIR",
+      "next_step_id": "repair_final_result_artifact",
+      "ready_now_step_ids": [
+        "repair_final_result_artifact"
+      ],
+      "ordered_steps": [
+        {
+          "step_id": "repair_final_result_artifact",
+          "status": "READY_NOW",
+          "required_inputs": [
+            "final_result"
+          ],
+          "repairs_artifacts": [
+            "final_result_artifact"
+          ],
+          "resolves_pressures": [
+            "INVALID_PROOF"
+          ],
+          "why": "invalid final-result truth should be repaired before later proof or recovery steps run"
+        },
+        {
+          "step_id": "complete_missing_proof_sections",
+          "status": "WAITING_ON_PREVIOUS_STEP",
+          "required_inputs": [
+            "readback",
+            "scenario_proof"
+          ],
+          "repairs_artifacts": [
+            "supporting_proof_artifacts"
+          ],
+          "resolves_pressures": [
+            "PARTIAL_PROOF"
+          ],
+          "why": "missing proof sections should be completed before bundle rebuild and closure recheck"
+        },
+        {
+          "step_id": "rebuild_proof_bundle",
+          "status": "WAITING_ON_PREVIOUS_STEP",
+          "required_inputs": [],
+          "repairs_artifacts": [
+            "proof_bundle_snapshot"
+          ],
+          "resolves_pressures": [
+            "INVALID_PROOF",
+            "PARTIAL_PROOF"
+          ],
+          "why": "the bundle should be rebuilt only after the stale proof artifacts above are repaired"
+        },
+        {
+          "step_id": "rerun_closure",
+          "status": "WAITING_ON_PREVIOUS_STEP",
+          "required_inputs": [],
+          "repairs_artifacts": [
+            "closure_verdict_surface"
+          ],
+          "resolves_pressures": [
+            "INVALID_PROOF",
+            "PARTIAL_PROOF"
+          ],
+          "why": "closure should be rechecked only after earlier repair steps finish"
+        }
+      ]
+    },
+    "artifact_quality_hints": [
+      {
+        "artifact_id": "final_result_artifact",
+        "quality": "STALE",
+        "still_stale_parts": [
+          "final_result_payload",
+          "diff_provenance_record",
+          "cleanup_status_record"
+        ],
+        "mapped_inputs": [
+          "final_result"
+        ],
+        "repair_step": "repair_final_result_artifact",
+        "why": "the final-result truth surface is still stale or incomplete",
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "final_result_payload",
+            "status": "STALE",
+            "mapped_inputs": [
+              "final_result"
+            ],
+            "why": "the final result artifact is missing, empty, or not yet trusted for bundle repair"
+          },
+          {
+            "subsurface_id": "diff_provenance_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "final_result"
+            ],
+            "why": "diff provenance still cannot be reconstructed from the current final result artifact"
+          },
+          {
+            "subsurface_id": "cleanup_status_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "final_result"
+            ],
+            "why": "cleanup status still cannot be trusted from the current final result artifact"
+          }
+        ]
+      },
+      {
+        "artifact_id": "supporting_proof_artifacts",
+        "quality": "STALE",
+        "still_stale_parts": [
+          "readback_record",
+          "scenario_proof_record"
+        ],
+        "mapped_inputs": [
+          "readback",
+          "scenario_proof"
+        ],
+        "repair_step": "complete_missing_proof_sections",
+        "why": "supporting proof sections are still missing from the current bundle",
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "readback_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "readback"
+            ],
+            "why": "the readback surface from changed sections is still missing"
+          },
+          {
+            "subsurface_id": "scenario_proof_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "scenario_proof"
+            ],
+            "why": "the scenario proof artifact is still missing"
+          }
+        ]
+      }
+    ],
+    "required_inputs": [
+      {
+        "input_id": "final_result",
+        "kind": "file",
+        "cli_flag": "--final-result",
+        "description": "supply the final result artifact for bundle repair or closure continuation",
+        "required_value": ""
+      }
+    ],
+    "runtime_defaults": {
+      "refresh_event_type": "",
+      "refresh_use_bundle": false,
+      "refresh_use_closure": false
+    },
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_COMPOUND",
+    "active_pressures": [
+      "INVALID_PROOF",
+      "PARTIAL_PROOF"
+    ],
+    "recommended_repair_order": [
+      "repair_final_result_artifact",
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "explanation": "more than one repairable pressure is active, so continuation should follow the ordered repair sequence before closure is rechecked"
+  },
+  "repair_policy": {
+    "policy_type": "MULTI_STEP_REPAIR",
+    "next_step_id": "repair_final_result_artifact",
+    "ready_now_step_ids": [
+      "repair_final_result_artifact"
+    ],
+    "ordered_steps": [
+      {
+        "step_id": "repair_final_result_artifact",
+        "status": "READY_NOW",
+        "required_inputs": [
+          "final_result"
+        ],
+        "repairs_artifacts": [
+          "final_result_artifact"
+        ],
+        "resolves_pressures": [
+          "INVALID_PROOF"
+        ],
+        "why": "invalid final-result truth should be repaired before later proof or recovery steps run"
+      },
+      {
+        "step_id": "complete_missing_proof_sections",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [
+          "readback",
+          "scenario_proof"
+        ],
+        "repairs_artifacts": [
+          "supporting_proof_artifacts"
+        ],
+        "resolves_pressures": [
+          "PARTIAL_PROOF"
+        ],
+        "why": "missing proof sections should be completed before bundle rebuild and closure recheck"
+      },
+      {
+        "step_id": "rebuild_proof_bundle",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "proof_bundle_snapshot"
+        ],
+        "resolves_pressures": [
+          "INVALID_PROOF",
+          "PARTIAL_PROOF"
+        ],
+        "why": "the bundle should be rebuilt only after the stale proof artifacts above are repaired"
+      },
+      {
+        "step_id": "rerun_closure",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_verdict_surface"
+        ],
+        "resolves_pressures": [
+          "INVALID_PROOF",
+          "PARTIAL_PROOF"
+        ],
+        "why": "closure should be rechecked only after earlier repair steps finish"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "final_result_artifact",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "final_result_payload",
+        "diff_provenance_record",
+        "cleanup_status_record"
+      ],
+      "mapped_inputs": [
+        "final_result"
+      ],
+      "repair_step": "repair_final_result_artifact",
+      "why": "the final-result truth surface is still stale or incomplete",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "final_result_payload",
+          "status": "STALE",
+          "mapped_inputs": [
+            "final_result"
+          ],
+          "why": "the final result artifact is missing, empty, or not yet trusted for bundle repair"
+        },
+        {
+          "subsurface_id": "diff_provenance_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "final_result"
+          ],
+          "why": "diff provenance still cannot be reconstructed from the current final result artifact"
+        },
+        {
+          "subsurface_id": "cleanup_status_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "final_result"
+          ],
+          "why": "cleanup status still cannot be trusted from the current final result artifact"
+        }
+      ]
+    },
+    {
+      "artifact_id": "supporting_proof_artifacts",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "readback_record",
+        "scenario_proof_record"
+      ],
+      "mapped_inputs": [
+        "readback",
+        "scenario_proof"
+      ],
+      "repair_step": "complete_missing_proof_sections",
+      "why": "supporting proof sections are still missing from the current bundle",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "readback_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "readback"
+          ],
+          "why": "the readback surface from changed sections is still missing"
+        },
+        {
+          "subsurface_id": "scenario_proof_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "scenario_proof"
+          ],
+          "why": "the scenario proof artifact is still missing"
+        }
+      ]
+    }
+  ],
+  "artifact_quality_summary": {
+    "artifact_ids": [
+      "final_result_artifact",
+      "supporting_proof_artifacts"
+    ],
+    "stale_artifact_ids": [
+      "final_result_artifact",
+      "supporting_proof_artifacts"
+    ],
+    "non_resumable_artifact_ids": [],
+    "stale_subsurface_ids": [
+      "final_result_payload",
+      "diff_provenance_record",
+      "cleanup_status_record",
+      "readback_record",
+      "scenario_proof_record"
+    ],
+    "non_resumable_subsurface_ids": []
+  },
+  "repair_history": {
+    "applied": false,
+    "last_receipt_result": "",
+    "last_completed_step_id": "",
+    "completed_step_ids": [],
+    "current_step_id": "repair_final_result_artifact",
+    "waiting_step_ids": [
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "rerun_closure"
+    ],
+    "history_chain_length": 0,
+    "history_chain_results": [],
+    "history_chain_step_ids": []
+  },
+  "repair_history_chain": [],
+  "repair_termination": {
+    "status": "CONTINUE",
+    "reason": "",
+    "attempt_count": 0,
+    "max_attempts": 3,
+    "no_progress_window": 2,
+    "stalled_step_id": "",
+    "next_action": "continue with the current repair policy order"
+  },
+  "repair_receipt_context": {
+    "applied": false,
+    "result": "",
+    "completed_step_id": "",
+    "remaining_stale_artifact_ids": [],
+    "remaining_stale_subsurface_ids": [],
+    "remaining_non_resumable_artifact_ids": [],
+    "remaining_non_resumable_subsurface_ids": [],
+    "remaining_stale_hints": [],
+    "remaining_non_resumable_hints": [],
+    "completed_hints": [],
+    "next_step_required_inputs": [],
+    "next_step_hints": [],
+    "history_chain": [],
+    "operator_evidence": {
+      "completed_step_id": "",
+      "completed_artifact_hints": [],
+      "completed_subsurface_ids": [],
+      "next_step_id": "",
+      "next_step_required_inputs": [],
+      "next_step_artifact_hints": [],
+      "next_step_subsurface_ids": [],
+      "operator_focus": ""
+    }
+  },
+  "continuation_plan": {
+    "doctor_required": true,
+    "bundle_required": true,
+    "closure_required": true,
+    "refresh_required": false,
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false,
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "resume_context": {
+    "doctor_run_id": "ALPHA_RUN_20260415T082755Z",
+    "doctor_level": "CORE_DOCTOR",
+    "target_path": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/project",
+    "target_classification": "trusted_worktree",
+    "baseline_identity": "autodetected_generic_baseline",
+    "intended_run_class": "core_probe",
+    "execution_surface_identity": "autodetected_generic_worktree"
+  },
+  "repair_inputs": {
+    "prompt_identity": "Reject a plain-text final result and keep the repair bounded.",
+    "task_identity": "Reject a plain-text final result and keep the repair bounded.",
+    "prompt_identity_ok": true,
+    "target_identity_file": "",
+    "clean_surface": false,
+    "artifact_viable": false,
+    "helper_ok": false,
+    "credentials_ok": false,
+    "artifact_path": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/final_result.txt",
+    "helper_path": "",
+    "credential_env": [],
+    "final_result": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/final_result.txt",
+    "readback": "",
+    "scenario_proof": "",
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "selection_context": {
+    "applied": false,
+    "scenario_class": "",
+    "recommended_mode": "",
+    "selected_mode": "",
+    "followed_recommendation": false,
+    "governed_preparation_recommended": false,
+    "selected_with_preparation": false,
+    "heavier_contour_entered": false,
+    "estimated_avoided_operator_minutes": 0,
+    "estimated_avoided_interventions": 0,
+    "estimated_avoided_closure_latency_minutes": 0
+  },
+  "preparation_context": {
+    "applied": true,
+    "ready_for_closure": false,
+    "complete_on_first_bundle_pass": false,
+    "bundle_status": "INVALID",
+    "planned_required_sections_count": 7,
+    "planned_required_sections_present_count": 2
+  },
+  "source_of_truth": {
+    "authoritative_entry_artifacts": [
+      "state_file",
+      "repair_packet"
+    ],
+    "precedence_order": [
+      "state_file",
+      "repair_packet",
+      "repair_receipt",
+      "repair_history_chain"
+    ],
+    "artifact_roles": {
+      "state_file": "authoritative current run state",
+      "repair_packet": "authoritative continuation contract, required inputs, and output defaults",
+      "repair_receipt": "authoritative latest repair-step progress only when it matches the same contour",
+      "repair_history_chain": "supporting chronology embedded for replay, not a stronger state source than the packet or state file"
+    },
+    "freshness_rule": "prefer the fresher stricter lower-level artifact when derived continuation surfaces disagree",
+    "contradiction_rule": "state_file anchors current state; repair_packet anchors continuation contract; repair_receipt can refine latest step progress but must not soften stricter state truth",
+    "latest_repair_receipt_available": false,
+    "embedded_history_chain_length": 0,
+    "packet_replay_ready": true,
+    "packet_replay_why": "state_file and repair_packet are enough for packet-first continuation, with any latest repair receipt and history embedded for replay"
+  },
+  "runtime_truth": {
+    "report_result": "OK",
+    "stopping_stage": "closure",
+    "report_reason": "INVALID_PROOF_BUNDLE",
+    "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "bundle_status": "INVALID",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": false,
+    "refresh_resulting_closure_status": "",
+    "resulting_state": "PROOF_BUNDLE_INVALID",
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle",
+    "active_pressures": [
+      "INVALID_PROOF",
+      "PARTIAL_PROOF"
+    ],
+    "state_snapshot": {
+      "state": "PROOF_BUNDLE_INVALID",
+      "target_surface_status": "ATTESTED",
+      "doctor_status": "PASS",
+      "doctor_failure_classes": [],
+      "integrity_status": "PASS",
+      "execution_status": "COMPLETED",
+      "proof_bundle_status": "INVALID",
+      "proof_missing_sections": [
+        "final_result",
+        "diff_provenance",
+        "readback",
+        "scenario_proof",
+        "cleanup_status"
+      ],
+      "closure_status": "CLAIMED_NOT_ACCEPTED",
+      "closure_blocking_reason": "INVALID_PROOF_BUNDLE",
+      "recovery_status": "NOT_REQUIRED",
+      "recovery_reverification_complete": false
+    }
+  },
+  "output_defaults": {
+    "artifact_root": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane",
+    "doctor_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/doctor.json",
+    "bundle_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/bundle.json",
+    "closure_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/closure.json",
+    "refresh_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/refresh.json",
+    "report_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/report.json",
+    "worked_artifact_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/orchestration.json",
+    "run_artifact_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/run.json",
+    "repair_handoff_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/repair_handoff.json",
+    "repair_packet_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/repair_packet.json",
+    "repair_receipt_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/repair_receipt.json",
+    "plan_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/plan.json",
+    "preparation_receipt_output": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane/preparation_receipt.json"
+  },
+  "provided_inputs": [
+    "prompt_identity",
+    "task_identity",
+    "artifact_path",
+    "final_result"
+  ],
+  "missing_inputs": [],
+  "ready_for_resume": true,
+  "next_safe_step": "repair the final result artifact and rebuild the proof bundle",
+  "continuation_core": {
+    "contract_version": "continuation_core_v0",
+    "entrypoint": "resume",
+    "ready_for_resume": true,
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "current_step_id": "repair_final_result_artifact",
+    "required_inputs": [
+      "final_result"
+    ],
+    "missing_inputs": [],
+    "next_step_required_inputs": [
+      "final_result"
+    ],
+    "next_step_subsurface_ids": [
+      "final_result_payload",
+      "diff_provenance_record",
+      "cleanup_status_record",
+      "readback_record",
+      "scenario_proof_record"
+    ],
+    "operator_focus": "repair the final result artifact and rebuild the proof bundle",
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle",
+    "history_chain_length": 0,
+    "selection_applied": false,
+    "selected_with_preparation": false,
+    "packet_supplies_resume_context": true,
+    "packet_supplies_repair_inputs": true,
+    "packet_supplies_output_defaults": true,
+    "requires_sibling_discovery": false,
+    "authoritative_entry_artifacts": [
+      "state_file",
+      "repair_packet"
+    ],
+    "source_of_truth_precedence": [
+      "state_file",
+      "repair_packet",
+      "repair_receipt",
+      "repair_history_chain"
+    ],
+    "packet_replay_ready": true
+  },
+  "continuation_arbiter": {
+    "schema_version": "continuation_arbiter_record_v0",
+    "run_id": "ALPHA_RUN_20260415T082755Z",
+    "task_class": "bounded_change",
+    "entrypoint": "resume",
+    "precedence_order": [
+      "state_file",
+      "repair_packet",
+      "repair_receipt",
+      "repair_history_chain"
+    ],
+    "source_status": {
+      "state_file": {
+        "available": true,
+        "eligible": true,
+        "why": "state file anchors the current run truth"
+      },
+      "repair_packet": {
+        "available": true,
+        "eligible": true,
+        "why": "repair packet anchors the continuation contract"
+      },
+      "repair_receipt": {
+        "available": false,
+        "eligible": false,
+        "why": "repair receipt is not available"
+      },
+      "repair_history_chain": {
+        "available": false,
+        "eligible": false,
+        "why": "repair history chain is not available"
+      }
+    },
+    "ignored_sources": [],
+    "conflict_count": 0,
+    "resolution_status": "RESOLVED",
+    "unresolved_surfaces": [],
+    "decision_trace": [
+      {
+        "surface": "resumability_status",
+        "chosen_source": "repair_packet",
+        "chosen_value": "REPAIRABLE",
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": "REPAIRABLE",
+            "eligible": true
+          },
+          {
+            "source": "repair_receipt",
+            "value": "",
+            "eligible": false
+          }
+        ],
+        "resolution_rule": "repair_packet resumability wins because it is the stricter continuation contract; repair_receipt can only fill a missing packet value",
+        "why": "the repair packet already names resumability for the active contour"
+      },
+      {
+        "surface": "resumability_family",
+        "chosen_source": "repair_packet",
+        "chosen_value": "REPAIRABLE_COMPOUND",
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": "REPAIRABLE_COMPOUND",
+            "eligible": true
+          },
+          {
+            "source": "repair_receipt",
+            "value": "",
+            "eligible": false
+          }
+        ],
+        "resolution_rule": "repair_packet resumability family wins; repair_receipt can only fill a missing family label",
+        "why": "the repair packet already names the resumability family"
+      },
+      {
+        "surface": "repair_termination",
+        "chosen_source": "repair_packet",
+        "chosen_value": {
+          "status": "CONTINUE",
+          "reason": ""
+        },
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": {
+              "status": "CONTINUE",
+              "reason": ""
+            },
+            "eligible": true
+          },
+          {
+            "source": "repair_receipt",
+            "value": {},
+            "eligible": false
+          }
+        ],
+        "resolution_rule": "repair_packet termination wins; repair_receipt can only surface a missing non-resumable boundary signal",
+        "why": "the repair packet already carries the current termination truth"
+      },
+      {
+        "surface": "current_step_id",
+        "chosen_source": "repair_packet",
+        "chosen_value": "repair_final_result_artifact",
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": "repair_final_result_artifact",
+            "eligible": true
+          },
+          {
+            "source": "repair_receipt",
+            "value": "",
+            "eligible": false
+          },
+          {
+            "source": "repair_history_chain",
+            "value": "",
+            "eligible": false
+          }
+        ],
+        "resolution_rule": "repair_packet current step wins; repair_receipt and repair_history_chain only fill the gap when the packet does not name a current step",
+        "why": "the repair packet already names the active continuation step"
+      },
+      {
+        "surface": "next_step_required_inputs",
+        "chosen_source": "repair_packet",
+        "chosen_value": [
+          "final_result"
+        ],
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": [
+              "final_result"
+            ],
+            "eligible": true
+          },
+          {
+            "source": "repair_receipt",
+            "value": [],
+            "eligible": false
+          }
+        ],
+        "resolution_rule": "repair_packet required inputs win; repair_receipt can only fill them when the packet leaves them empty",
+        "why": "the repair packet already names the required inputs for the active continuation step"
+      },
+      {
+        "surface": "missing_inputs",
+        "chosen_source": "repair_packet",
+        "chosen_value": [],
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": [],
+            "eligible": true
+          }
+        ],
+        "resolution_rule": "repair_packet missing inputs anchor continuation readiness because state and receipt do not carry a stronger missing-input contract",
+        "why": "the repair packet remains the authoritative source for current missing continuation inputs"
+      },
+      {
+        "surface": "operator_focus",
+        "chosen_source": "repair_packet",
+        "chosen_value": "repair the final result artifact and rebuild the proof bundle",
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": "repair the final result artifact and rebuild the proof bundle",
+            "eligible": true
+          },
+          {
+            "source": "repair_receipt",
+            "value": "",
+            "eligible": false
+          },
+          {
+            "source": "repair_history_chain",
+            "value": "",
+            "eligible": false
+          }
+        ],
+        "resolution_rule": "repair_receipt can refine operator focus for the same contour and step; otherwise the packet focus remains authoritative",
+        "why": "the repair packet focus remains authoritative because no fresher matching receipt focus is available"
+      },
+      {
+        "surface": "next_safe_step",
+        "chosen_source": "state_file",
+        "chosen_value": "repair the final result artifact and rebuild the proof bundle",
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "state_file",
+            "value": "repair the final result artifact and rebuild the proof bundle",
+            "eligible": true
+          },
+          {
+            "source": "repair_packet",
+            "value": "repair the final result artifact and rebuild the proof bundle",
+            "eligible": true
+          }
+        ],
+        "resolution_rule": "state_file next safe step wins because state anchors the current run truth; the packet mirrors it only when they still agree",
+        "why": "the state file already names the current next safe step"
+      }
+    ],
+    "resolved_decision": {
+      "continuation_status": "READY_TO_RESUME",
+      "ready_for_resume": true,
+      "resumability_status": "REPAIRABLE",
+      "resumability_family": "REPAIRABLE_COMPOUND",
+      "current_step_id": "repair_final_result_artifact",
+      "current_step_source": "repair_packet",
+      "next_step_required_inputs": [
+        "final_result"
+      ],
+      "missing_inputs": [],
+      "operator_focus": "repair the final result artifact and rebuild the proof bundle",
+      "operator_focus_source": "repair_packet",
+      "next_safe_step": "repair the final result artifact and rebuild the proof bundle",
+      "next_safe_step_source": "state_file",
+      "termination_status": "CONTINUE",
+      "termination_reason": "",
+      "latest_step_result": "",
+      "packet_replay_ready": true
+    },
+    "why": "the continuation conflict set resolves cleanly under explicit precedence"
+  }
+}

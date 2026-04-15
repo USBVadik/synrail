@@ -1,0 +1,14 @@
+{
+  "schema_version": "alpha_telemetry_config_v0",
+  "enabled": true,
+  "telemetry_session_id": "TELEMETRY_3D357BC4A036",
+  "tester_id": "alpha_pack_smoke",
+  "enabled_at": "2026-04-15T08:27:56Z",
+  "platform": {
+    "os": "Darwin",
+    "os_release": "24.6.0",
+    "platform": "macOS-15.6.1-arm64-arm-64bit",
+    "python_version": "3.9.6",
+    "synrail_version": "0.1.0"
+  }
+}
