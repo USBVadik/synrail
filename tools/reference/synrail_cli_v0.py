@@ -850,10 +850,15 @@ def print_thin_output_summary(output_file: Path) -> None:
     payload = load_json(output_file)
     lines = [
         f"Status: {payload.get('status_label', payload.get('outcome_class', ''))}",
+    ]
+    action_now = payload.get("action_now", "")
+    if action_now:
+        lines.append(f"Do this now: {action_now}")
+    lines.extend([
         f"What happened: {payload.get('what_happened', payload.get('summary', ''))}",
         f"What it means: {payload.get('what_it_means', payload.get('diagnosis', ''))}",
         f"What to do next: {payload.get('what_to_do_next', payload.get('next_step', ''))}",
-    ]
+    ])
     focused_repair_summary = payload.get("focused_repair_summary", "")
     if focused_repair_summary:
         lines.append(f"Repair target: {focused_repair_summary}")

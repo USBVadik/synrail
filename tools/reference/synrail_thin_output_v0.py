@@ -9,9 +9,9 @@ import sys
 from pathlib import Path
 
 try:
-    from .synrail_repair_focus_v0 import focused_repair_summary
+    from .synrail_repair_focus_v0 import focused_repair_action_instruction, focused_repair_summary
 except ImportError:
-    from synrail_repair_focus_v0 import focused_repair_summary
+    from synrail_repair_focus_v0 import focused_repair_action_instruction, focused_repair_summary
 
 
 def humanize_token(value: str) -> str:
@@ -270,6 +270,33 @@ def current_repair_focus_summary(repair_packet: dict | None) -> str:
     )
 
 
+def current_repair_action_instruction(repair_packet: dict | None) -> str:
+    continuation = (repair_packet or {}).get("continuation_core", {})
+    return focused_repair_action_instruction(
+        current_step_id=continuation.get("current_step_id", ""),
+        current_step_subsurface_id=continuation.get("current_step_subsurface_id", ""),
+        current_step_target_path=continuation.get("current_step_target_path", ""),
+    )
+
+
+def action_now_text(*, next_command: str, outcome_class: str, report: dict, repair_packet: dict | None) -> str:
+    focused_action = current_repair_action_instruction(repair_packet)
+    if next_command == "synrail repair-step" and focused_action:
+        lowered = focused_action[0].lower() + focused_action[1:]
+        return f"Run synrail repair-step, then {lowered}"
+    if next_command == "synrail refresh-acceptance":
+        return "Run synrail refresh-acceptance."
+    if next_command == "synrail start":
+        return "Run synrail start to restart this contour in controlled mode."
+    if next_command:
+        return f"Run {next_command}."
+    if outcome_class == "NON_GREEN" and report.get("reason", "") == "REMOTE_TARGET_UNSUPPORTED":
+        return "Move this contour onto a local trusted worktree before retrying."
+    if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
+        return "Restore a verified fallback or restart from a clearer continuation boundary."
+    return ""
+
+
 def status_label(outcome_class: str, *, report: dict, repair_packet: dict | None) -> str:
     reason = (
         report.get("reason", "")
@@ -425,6 +452,12 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         restore_command = "synrail restore"
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet) and restore_available:
         restore_command = "synrail restore"
+    action_now = action_now_text(
+        next_command=next_command,
+        outcome_class=outcome_class,
+        report=report,
+        repair_packet=repair_packet,
+    )
     return {
         "schema_version": "thin_output_record_v0",
         "mode": mode,
@@ -437,6 +470,8 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "what_happened": summary,
         "what_it_means": diagnosis,
         "what_to_do_next": what_to_do_next,
+        "action_now": action_now,
+        "current_step_action_instruction": current_repair_action_instruction(repair_packet),
         "focused_repair_summary": focused_summary,
         "resume_available": can_resume,
         "next_command": next_command,

@@ -29,6 +29,8 @@
     "what_happened": {"type": "string"},
     "what_it_means": {"type": "string"},
     "what_to_do_next": {"type": "string"},
+    "action_now": {"type": "string"},
+    "current_step_action_instruction": {"type": "string"},
     "focused_repair_summary": {"type": "string"},
     "next_step": {"type": "string", "minLength": 1},
     "resume_available": {"type": "boolean"},
