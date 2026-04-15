@@ -106,7 +106,7 @@
     },
     "continuation_summary": {
       "type": "object",
-      "required": ["entry_artifacts", "source_of_truth_precedence", "packet_replay_ready"],
+      "required": ["entry_artifacts", "source_of_truth_precedence", "packet_replay_ready", "arbiter_resolution_status", "arbiter_conflict_count", "arbiter_current_step_source"],
       "properties": {
         "entry_artifacts": {
           "type": "array",
@@ -116,7 +116,10 @@
           "type": "array",
           "items": {"type": "string", "minLength": 1}
         },
-        "packet_replay_ready": {"type": "boolean"}
+        "packet_replay_ready": {"type": "boolean"},
+        "arbiter_resolution_status": {"type": "string", "enum": ["", "RESOLVED", "CONFLICT_UNRESOLVED"]},
+        "arbiter_conflict_count": {"type": "integer", "minimum": 0},
+        "arbiter_current_step_source": {"type": "string"}
       },
       "additionalProperties": false
     },

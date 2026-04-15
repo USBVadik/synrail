@@ -337,6 +337,23 @@ def export_session_replay(root: Path, output: Path, issue_output: Path | None = 
                 or (repair_packet.get("continuation_core", {}) or {}).get("packet_replay_ready", False)
                 or (repair_packet.get("source_of_truth", {}) or {}).get("packet_replay_ready", False)
             ),
+            "arbiter_resolution_status": observability_export.get(
+                "arbiter_resolution_status",
+                (repair_packet.get("continuation_arbiter", {}) or {}).get("resolution_status", ""),
+            ),
+            "arbiter_conflict_count": int(
+                observability_export.get(
+                    "arbiter_conflict_count",
+                    (repair_packet.get("continuation_arbiter", {}) or {}).get("conflict_count", 0),
+                )
+            ),
+            "arbiter_current_step_source": observability_export.get(
+                "arbiter_current_step_source",
+                ((repair_packet.get("continuation_arbiter", {}) or {}).get("resolved_decision", {}) or {}).get(
+                    "current_step_source",
+                    "",
+                ),
+            ),
         },
     }
     record["issue_title"] = build_issue_title(record)

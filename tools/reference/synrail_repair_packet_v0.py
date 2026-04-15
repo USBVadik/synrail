@@ -15,6 +15,7 @@ from synrail_repair_handoff_v0 import (
     collect_active_pressures,
     load_json as load_state_json,
 )
+from synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
 
 MAX_REPAIR_ATTEMPTS = 3
 NO_PROGRESS_WINDOW = 2
@@ -485,6 +486,23 @@ def build_continuation_core(
     }
 
 
+def apply_arbiter_to_continuation_core(core: dict, arbiter: dict) -> dict:
+    resolved = dict(arbiter.get("resolved_decision", {}))
+    patched = dict(core)
+    patched["ready_for_resume"] = resolved.get("ready_for_resume", patched.get("ready_for_resume", False))
+    patched["resumability_status"] = resolved.get("resumability_status", patched.get("resumability_status", ""))
+    patched["resumability_family"] = resolved.get("resumability_family", patched.get("resumability_family", ""))
+    patched["current_step_id"] = resolved.get("current_step_id", patched.get("current_step_id", ""))
+    patched["missing_inputs"] = list(resolved.get("missing_inputs", patched.get("missing_inputs", [])))
+    patched["next_step_required_inputs"] = list(
+        resolved.get("next_step_required_inputs", patched.get("next_step_required_inputs", []))
+    )
+    patched["operator_focus"] = resolved.get("operator_focus", patched.get("operator_focus", ""))
+    patched["next_safe_step"] = resolved.get("next_safe_step", patched.get("next_safe_step", ""))
+    patched["packet_replay_ready"] = resolved.get("packet_replay_ready", patched.get("packet_replay_ready", False))
+    return patched
+
+
 def build_packet_from_runtime_truth(
     *,
     state: dict,
@@ -638,6 +656,19 @@ def build_packet_from_runtime_truth(
         packet["selection_receipt"] = selection_receipt
     if repair_receipt:
         packet["repair_receipt"] = repair_receipt
+    packet["continuation_arbiter"] = build_continuation_arbiter(
+        state=state,
+        packet=packet,
+        repair_receipt=repair_receipt,
+    )
+    packet["continuation_core"] = apply_arbiter_to_continuation_core(
+        packet["continuation_core"],
+        packet["continuation_arbiter"],
+    )
+    resolved = packet["continuation_arbiter"].get("resolved_decision", {})
+    packet["ready_for_resume"] = resolved.get("ready_for_resume", packet["ready_for_resume"])
+    packet["missing_inputs"] = list(resolved.get("missing_inputs", packet["missing_inputs"]))
+    packet["next_safe_step"] = resolved.get("next_safe_step", packet["next_safe_step"])
     return packet
 
 

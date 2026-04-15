@@ -1,0 +1,30 @@
+{
+  "schema_version": "second_operator_record_v0",
+  "run_id": "ALPHA_RUN_20260414T185910Z",
+  "task_class": "bounded_change",
+  "entrypoint": "resume",
+  "entry_state": "DOCTOR_BLOCKED",
+  "visible_entry_artifacts": [
+    "state_file",
+    "repair_packet"
+  ],
+  "packet_only_entry": true,
+  "has_explicit_next_step": true,
+  "has_explicit_required_inputs": true,
+  "has_explicit_operator_focus": false,
+  "has_explicit_precedence": true,
+  "packet_replay_ready": true,
+  "arbiter_resolution_status": "CONFLICT_UNRESOLVED",
+  "arbiter_conflict_count": 1,
+  "arbiter_ignored_sources": [
+    "repair_receipt",
+    "repair_history_chain"
+  ],
+  "requires_author_intuition": true,
+  "expected_result": "BLOCKED",
+  "expected_reason": "CONTINUATION_INPUTS_MISSING",
+  "expected_next_safe_step": "restore from the last trusted fallback before continuing",
+  "repair_family": "REPAIRABLE_DOCTOR_BLOCKED",
+  "verdict": "AUTHOR_INTUITION_STILL_REQUIRED",
+  "why": "the continuation path still leaves too much continuation conflict unresolved after explicit arbitration"
+}
