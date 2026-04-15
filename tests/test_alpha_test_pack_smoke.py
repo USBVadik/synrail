@@ -111,10 +111,79 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             )
             self.assertEqual(0, second_operator.returncode, second_operator.stdout + second_operator.stderr)
 
+            operator_brief = self.run_alpha(
+                "operator-brief",
+                "--state-file",
+                str(artifact_root / "state.json"),
+                "--report-file",
+                str(artifact_root / "run.json"),
+                "--repair-packet-file",
+                str(artifact_root / "repair_packet.json"),
+                "--output",
+                str(artifact_root / "stage0_operator_brief.json"),
+                cwd=project_root,
+            )
+            self.assertEqual(0, operator_brief.returncode, operator_brief.stdout + operator_brief.stderr)
+
+            operator_render = self.run_alpha(
+                "operator-render",
+                "--brief-file",
+                str(artifact_root / "stage0_operator_brief.json"),
+                "--output",
+                str(artifact_root / "operator_render.md"),
+                cwd=project_root,
+            )
+            self.assertEqual(0, operator_render.returncode, operator_render.stdout + operator_render.stderr)
+
+            operator_reading = self.run_alpha(
+                "operator-reading",
+                "--second-operator-file",
+                str(artifact_root / "second_operator.json"),
+                "--brief-file",
+                str(artifact_root / "stage0_operator_brief.json"),
+                "--render-file",
+                str(artifact_root / "operator_render.md"),
+                "--label",
+                "alpha_pack_smoke",
+                "--output",
+                str(artifact_root / "operator_reading.json"),
+                cwd=project_root,
+            )
+            self.assertEqual(0, operator_reading.returncode, operator_reading.stdout + operator_reading.stderr)
+
+            stage1_brief = artifact_root / "stage1_operator_brief.json"
+            stage1_brief.write_text((artifact_root / "stage0_operator_brief.json").read_text())
+            operator_brief_chain = self.run_alpha(
+                "operator-brief-chain",
+                "--brief",
+                str(artifact_root / "stage0_operator_brief.json"),
+                "--brief",
+                str(stage1_brief),
+                "--output",
+                str(artifact_root / "operator_brief_chain.json"),
+                cwd=project_root,
+            )
+            self.assertEqual(0, operator_brief_chain.returncode, operator_brief_chain.stdout + operator_brief_chain.stderr)
+
+            operator_chain_render = self.run_alpha(
+                "operator-render",
+                "--chain-file",
+                str(artifact_root / "operator_brief_chain.json"),
+                "--output",
+                str(artifact_root / "operator_chain_render.md"),
+                cwd=project_root,
+            )
+            self.assertEqual(0, operator_chain_render.returncode, operator_chain_render.stdout + operator_chain_render.stderr)
+
             session_replay = load_json(artifact_root / "telemetry" / "session_replay.json")
             issue_body = (artifact_root / "telemetry" / "github_issue.md").read_text()
             bug_packet_record = load_json(artifact_root / "bug_packet.json")
             second_operator_record = load_json(artifact_root / "second_operator.json")
+            operator_brief_record = load_json(artifact_root / "stage0_operator_brief.json")
+            operator_reading_record = load_json(artifact_root / "operator_reading.json")
+            operator_brief_chain_record = load_json(artifact_root / "operator_brief_chain.json")
+            operator_render_text = (artifact_root / "operator_render.md").read_text()
+            operator_chain_render_text = (artifact_root / "operator_chain_render.md").read_text()
 
             self.assertEqual("PROOF_INVALID", session_replay["latest_result"])
             self.assertIn("repair the final result artifact", session_replay["next_safe_step"])
@@ -127,6 +196,17 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             self.assertEqual("final_result_payload", second_operator_record["current_step_subsurface_id"])
             self.assertEqual(".synrail/final_result.json", second_operator_record["current_step_target_path"])
             self.assertTrue(second_operator_record["has_explicit_target_path"])
+            self.assertEqual("final_result_payload", operator_brief_record["current_step_subsurface_id"])
+            self.assertEqual(".synrail/final_result.json", operator_brief_record["current_step_target_path"])
+            self.assertIn("final_result_payload", operator_render_text)
+            self.assertIn(".synrail/final_result.json", operator_render_text)
+            self.assertEqual("final_result_payload", operator_reading_record["current_step_subsurface_id"])
+            self.assertEqual(".synrail/final_result.json", operator_reading_record["current_step_target_path"])
+            self.assertEqual("FOLLOWABLE_WITH_RENDER", operator_reading_record["verdict"])
+            self.assertEqual("final_result_payload", operator_brief_chain_record["stage_summaries"][0]["current_step_subsurface_id"])
+            self.assertEqual(".synrail/final_result.json", operator_brief_chain_record["stage_summaries"][0]["current_step_target_path"])
+            self.assertIn("final_result_payload", operator_chain_render_text)
+            self.assertIn(".synrail/final_result.json", operator_chain_render_text)
 
 
 if __name__ == "__main__":

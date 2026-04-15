@@ -60,6 +60,8 @@ def build_record(paths: list[Path]) -> dict:
                 "primary_action": primary_action,
                 "next_safe_step": brief["next_safe_step"],
                 "current_step_id": brief["current_step_id"],
+                "current_step_subsurface_id": brief.get("current_step_subsurface_id", ""),
+                "current_step_target_path": brief.get("current_step_target_path", ""),
                 "next_step_required_inputs": list(brief["next_step_required_inputs"]),
                 "termination_reason": brief["termination_reason"],
             }

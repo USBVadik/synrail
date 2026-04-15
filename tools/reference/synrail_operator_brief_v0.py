@@ -17,6 +17,13 @@ def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
+def normalize_report(payload: dict) -> dict:
+    embedded = payload.get("report")
+    if isinstance(embedded, dict) and (embedded.get("schema_version") == "report_record_v0" or "result" in embedded or "reason" in embedded):
+        return embedded
+    return payload
+
+
 def determine_primary_action(packet: dict, report: dict) -> tuple[str, str]:
     resumability = packet.get("resumability", {})
     termination = packet.get("repair_termination", {})
@@ -95,6 +102,8 @@ def build_record(*, state: dict, report: dict, packet: dict, doctor: dict | None
         "next_safe_step": continuation_core.get("next_safe_step", report.get("next_safe_step", state.get("next_safe_step", ""))),
         "operator_focus": continuation_core.get("operator_focus", ""),
         "current_step_id": continuation_core.get("current_step_id", repair_policy.get("next_step_id", "")),
+        "current_step_subsurface_id": continuation_core.get("current_step_subsurface_id", ""),
+        "current_step_target_path": continuation_core.get("current_step_target_path", ""),
         "ready_now_step_ids": list(repair_policy.get("ready_now_step_ids", [])),
         "next_step_required_inputs": list(continuation_core.get("next_step_required_inputs", [])),
         "next_step_subsurface_ids": list(continuation_core.get("next_step_subsurface_ids", [])),
@@ -126,7 +135,7 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     state = load_json(Path(args.state_file))
-    report = load_json(Path(args.report_file))
+    report = normalize_report(load_json(Path(args.report_file)))
     packet = load_json(Path(args.repair_packet_file))
     doctor = load_json(Path(args.doctor_file)) if args.doctor_file else None
     record = build_record(

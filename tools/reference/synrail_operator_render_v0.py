@@ -31,6 +31,10 @@ def render_suggested_cli(suggested: dict) -> str:
     return "`" + " ".join([command, *args]) + "`"
 
 
+def render_optional(value: str) -> str:
+    return f"`{value}`" if value else "none"
+
+
 def render_brief(payload: dict) -> str:
     return f"""# Operator Render
 
@@ -52,6 +56,8 @@ def render_brief(payload: dict) -> str:
 ## Current step
 
 - current step: `{payload["current_step_id"]}`
+- current subsurface: {render_optional(payload.get("current_step_subsurface_id", ""))}
+- edit target: {render_optional(payload.get("current_step_target_path", ""))}
 - next safe step: `{payload["next_safe_step"]}`
 - operator focus: {payload["operator_focus"] or "none"}
 
@@ -89,6 +95,8 @@ def render_chain(payload: dict) -> str:
                     f"- reason: `{stage['reason']}`",
                     f"- primary action: `{stage['primary_action']}`",
                     f"- current step: `{stage['current_step_id']}`",
+                    f"- current subsurface: {render_optional(stage.get('current_step_subsurface_id', ''))}",
+                    f"- edit target: {render_optional(stage.get('current_step_target_path', ''))}",
                     f"- next safe step: `{stage['next_safe_step']}`",
                     "- required inputs:",
                     render_list(list(stage.get("next_step_required_inputs", []))),
