@@ -75,8 +75,7 @@ If you are iterating on Synrail itself, editable install is also supported:
 ```bash
 .venv/bin/python -m pip install -e .
 ```
-
-The older `--system-site-packages` plus `--no-build-isolation` route is now only a compatibility fallback for restricted environments that already have build tooling available.
+No extra pip flags are required on the current supported install path.
 
 Then the smallest usable path depends on whether you already have one verified working state.
 

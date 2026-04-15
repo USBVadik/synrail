@@ -257,6 +257,8 @@ def detect_project_type(project_root: Path) -> str:
     markers = [
         ("package.json", "node"),
         ("pyproject.toml", "python"),
+        ("setup.py", "python"),
+        ("setup.cfg", "python"),
         ("requirements.txt", "python"),
         ("go.mod", "go"),
         ("Cargo.toml", "rust"),
