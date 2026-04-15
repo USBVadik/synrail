@@ -50,7 +50,9 @@ def continuation_summary(repair_packet: dict | None, observability: dict | None)
             or core.get("packet_replay_ready", False)
             or source_of_truth.get("packet_replay_ready", False)
         ),
-        "current_step_id": packet.get("repair_policy", {}).get("next_step_id", ""),
+        "current_step_id": core.get("current_step_id", packet.get("repair_policy", {}).get("next_step_id", "")),
+        "current_step_subsurface_id": core.get("current_step_subsurface_id", ""),
+        "current_step_target_path": core.get("current_step_target_path", ""),
         "repair_family": packet.get("resumability", {}).get("family", ""),
         "missing_inputs": list(packet.get("missing_inputs", [])),
     }
@@ -138,6 +140,8 @@ def build_issue_body(record: dict) -> str:
         "## Continuation",
         f"- repair family: `{record['continuation_summary']['repair_family']}`",
         f"- current step id: `{record['continuation_summary']['current_step_id']}`",
+        f"- current step subsurface: `{record['continuation_summary']['current_step_subsurface_id']}`",
+        f"- current step target path: `{record['continuation_summary']['current_step_target_path']}`",
         f"- packet replay ready: `{record['continuation_summary']['packet_replay_ready']}`",
         f"- entry artifacts: `{', '.join(record['continuation_summary']['entry_artifacts'])}`",
         f"- precedence: `{', '.join(record['continuation_summary']['source_of_truth_precedence'])}`",

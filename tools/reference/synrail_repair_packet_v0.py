@@ -17,6 +17,7 @@ try:
         load_json as load_state_json,
     )
     from .synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
+    from .synrail_repair_focus_v0 import focused_repair_surface
 except ImportError:
     from synrail_repair_handoff_v0 import (
         DOCTOR_FAILURE_INPUTS,
@@ -26,6 +27,7 @@ except ImportError:
         load_json as load_state_json,
     )
     from synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
+    from synrail_repair_focus_v0 import focused_repair_surface
 
 MAX_REPAIR_ATTEMPTS = 3
 NO_PROGRESS_WINDOW = 2
@@ -461,6 +463,8 @@ def build_continuation_core(
     missing_ids: list[str],
     repair_termination: dict,
     source_of_truth: dict,
+    output_defaults: dict,
+    resume_context: dict,
 ) -> dict:
     operator_evidence = dict(receipt_context.get("operator_evidence", {}))
     required_inputs = [item.get("input_id", "") for item in handoff.get("required_inputs", []) if item.get("input_id", "")]
@@ -468,7 +472,17 @@ def build_continuation_core(
     next_step_subsurface_ids = list(operator_evidence.get("next_step_subsurface_ids", [])) or list(
         artifact_quality_summary.get("stale_subsurface_ids", [])
     )
+    focused_surface = focused_repair_surface(
+        current_step_id=handoff.get("repair_policy", {}).get("next_step_id", ""),
+        stale_subsurfaces=next_step_subsurface_ids,
+        artifact_root=output_defaults.get("artifact_root", ""),
+        target_path=resume_context.get("target_path", ""),
+    )
+    current_step_subsurface_id = focused_surface.get("current_step_subsurface_id", "")
+    current_step_target_path = focused_surface.get("current_step_target_path", "")
     operator_focus = operator_evidence.get("operator_focus", "") or handoff.get("next_safe_step", "")
+    if current_step_target_path:
+        operator_focus = f"edit {current_step_target_path} in place for the current bounded repair"
     ready_for_resume = handoff.get("continuation_allowed", False) and not missing_ids and repair_termination.get("status") != "TERMINATE"
     return {
         "contract_version": "continuation_core_v0",
@@ -477,6 +491,8 @@ def build_continuation_core(
         "resumability_status": resumability.get("status", ""),
         "resumability_family": resumability.get("family", ""),
         "current_step_id": handoff.get("repair_policy", {}).get("next_step_id", ""),
+        "current_step_subsurface_id": current_step_subsurface_id,
+        "current_step_target_path": current_step_target_path,
         "required_inputs": required_inputs,
         "missing_inputs": list(missing_ids),
         "next_step_required_inputs": next_step_required_inputs,
@@ -661,6 +677,8 @@ def build_packet_from_runtime_truth(
         missing_ids=missing_ids,
         repair_termination=repair_termination,
         source_of_truth=source_of_truth,
+        output_defaults=output_defaults,
+        resume_context=packet["resume_context"],
     )
     if selection_receipt:
         packet["selection_receipt"] = selection_receipt

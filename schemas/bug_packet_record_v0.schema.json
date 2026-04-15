@@ -51,12 +51,14 @@
     },
     "continuation_summary": {
       "type": "object",
-      "required": ["entry_artifacts", "source_of_truth_precedence", "packet_replay_ready", "current_step_id", "repair_family", "missing_inputs"],
+      "required": ["entry_artifacts", "source_of_truth_precedence", "packet_replay_ready", "current_step_id", "current_step_subsurface_id", "current_step_target_path", "repair_family", "missing_inputs"],
       "properties": {
         "entry_artifacts": {"type": "array", "items": {"type": "string"}},
         "source_of_truth_precedence": {"type": "array", "items": {"type": "string"}},
         "packet_replay_ready": {"type": "boolean"},
         "current_step_id": {"type": "string"},
+        "current_step_subsurface_id": {"type": "string"},
+        "current_step_target_path": {"type": "string"},
         "repair_family": {"type": "string"},
         "missing_inputs": {"type": "array", "items": {"type": "string"}}
       },

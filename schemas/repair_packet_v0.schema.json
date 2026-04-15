@@ -1135,6 +1135,8 @@
         "resumability_status",
         "resumability_family",
         "current_step_id",
+        "current_step_subsurface_id",
+        "current_step_target_path",
         "required_inputs",
         "missing_inputs",
         "next_step_required_inputs",
@@ -1171,6 +1173,12 @@
           "minLength": 1
         },
         "current_step_id": {
+          "type": "string"
+        },
+        "current_step_subsurface_id": {
+          "type": "string"
+        },
+        "current_step_target_path": {
           "type": "string"
         },
         "required_inputs": {

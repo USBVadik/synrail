@@ -94,13 +94,39 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             self.assertIn("Feedback export ready.", telemetry_export.stdout)
             self.assertIn("issue-ready summary", telemetry_export.stdout)
 
+            bug_packet = self.run_alpha("bug-packet", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, bug_packet.returncode, bug_packet.stdout + bug_packet.stderr)
+
+            second_operator = self.run_alpha(
+                "second-operator",
+                "--state-file",
+                str(artifact_root / "state.json"),
+                "--repair-packet-file",
+                str(artifact_root / "repair_packet.json"),
+                "--run-file",
+                str(artifact_root / "run.json"),
+                "--output",
+                str(artifact_root / "second_operator.json"),
+                cwd=project_root,
+            )
+            self.assertEqual(0, second_operator.returncode, second_operator.stdout + second_operator.stderr)
+
             session_replay = load_json(artifact_root / "telemetry" / "session_replay.json")
             issue_body = (artifact_root / "telemetry" / "github_issue.md").read_text()
+            bug_packet_record = load_json(artifact_root / "bug_packet.json")
+            second_operator_record = load_json(artifact_root / "second_operator.json")
 
             self.assertEqual("PROOF_INVALID", session_replay["latest_result"])
             self.assertIn("repair the final result artifact", session_replay["next_safe_step"])
+            self.assertEqual("final_result_payload", session_replay["continuation_summary"]["current_step_subsurface_id"])
+            self.assertEqual(".synrail/final_result.json", session_replay["continuation_summary"]["current_step_target_path"])
             self.assertIn("# Synrail Alpha Telemetry", issue_body)
             self.assertIn("INVALID_PROOF_BUNDLE", issue_body)
+            self.assertEqual("final_result_payload", bug_packet_record["continuation_summary"]["current_step_subsurface_id"])
+            self.assertEqual(".synrail/final_result.json", bug_packet_record["continuation_summary"]["current_step_target_path"])
+            self.assertEqual("final_result_payload", second_operator_record["current_step_subsurface_id"])
+            self.assertEqual(".synrail/final_result.json", second_operator_record["current_step_target_path"])
+            self.assertTrue(second_operator_record["has_explicit_target_path"])
 
 
 if __name__ == "__main__":

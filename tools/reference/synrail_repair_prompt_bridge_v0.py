@@ -8,6 +8,11 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_repair_focus_v0 import focused_repair_surface, proof_target_paths as shared_proof_target_paths
+except ImportError:
+    from synrail_repair_focus_v0 import focused_repair_surface, proof_target_paths as shared_proof_target_paths
+
 
 def humanize_token(value: str) -> str:
     if not value:
@@ -53,31 +58,11 @@ def doctor_coverage_block(doctor: dict | None) -> bool:
     return "doctor-coverage incomplete" in list((doctor or {}).get("blocking_failure_classes", []))
 
 
-def display_target_path(path: Path, *, repair_packet: dict) -> str:
-    target_path = repair_packet.get("resume_context", {}).get("target_path", "")
-    if target_path:
-        try:
-            relative = path.resolve().relative_to(Path(target_path).resolve())
-            return str(relative) or "."
-        except ValueError:
-            pass
-    return str(path)
-
-
 def proof_target_paths(repair_packet: dict) -> dict[str, str]:
-    artifact_root = repair_packet.get("output_defaults", {}).get("artifact_root", "")
-    if not artifact_root:
-        return {
-            "final_result": "final_result.json",
-            "readback": "readback.txt",
-            "scenario_proof": "scenario_proof.txt",
-        }
-    root = Path(artifact_root)
-    return {
-        "final_result": display_target_path(root / "final_result.json", repair_packet=repair_packet),
-        "readback": display_target_path(root / "readback.txt", repair_packet=repair_packet),
-        "scenario_proof": display_target_path(root / "scenario_proof.txt", repair_packet=repair_packet),
-    }
+    return shared_proof_target_paths(
+        artifact_root=repair_packet.get("output_defaults", {}).get("artifact_root", ""),
+        target_path=repair_packet.get("resume_context", {}).get("target_path", ""),
+    )
 
 
 def human_scope_label(scope_id: str, *, repair_packet: dict | None = None) -> str:
@@ -112,24 +97,29 @@ def human_required_input(input_id: str) -> str:
 
 def focused_step_details(repair_packet: dict, current_step_id: str, stale_subsurfaces: list[str]) -> tuple[str, str, str]:
     proof_paths = proof_target_paths(repair_packet)
-    stale_set = set(stale_subsurfaces)
+    focused = focused_repair_surface(
+        current_step_id=current_step_id,
+        stale_subsurfaces=stale_subsurfaces,
+        artifact_root=repair_packet.get("output_defaults", {}).get("artifact_root", ""),
+        target_path=repair_packet.get("resume_context", {}).get("target_path", ""),
+    )
+    subsurface_id = focused.get("current_step_subsurface_id", "")
+    target_path = focused.get("current_step_target_path", "")
     if current_step_id == "repair_final_result_artifact":
-        focus_order = [
-            ("final_result_payload", f"repair the result payload in {proof_paths['final_result']}", proof_paths["final_result"]),
-            ("diff_provenance_record", f"record diff provenance in {proof_paths['final_result']}", proof_paths["final_result"]),
-            ("cleanup_status_record", f"record cleanup status in {proof_paths['final_result']}", proof_paths["final_result"]),
-        ]
-        for subsurface_id, label, target_path in focus_order:
-            if subsurface_id in stale_set:
-                return label, subsurface_id, target_path
+        labels = {
+            "final_result_payload": f"repair the result payload in {proof_paths['final_result']}",
+            "diff_provenance_record": f"record diff provenance in {proof_paths['final_result']}",
+            "cleanup_status_record": f"record cleanup status in {proof_paths['final_result']}",
+        }
+        if subsurface_id:
+            return labels.get(subsurface_id, human_step_label(current_step_id)), subsurface_id, target_path
     if current_step_id == "complete_missing_proof_sections":
-        focus_order = [
-            ("readback_record", f"record readback in {proof_paths['readback']}", proof_paths["readback"]),
-            ("scenario_proof_record", f"record scenario proof in {proof_paths['scenario_proof']}", proof_paths["scenario_proof"]),
-        ]
-        matching = [(subsurface_id, label, target_path) for subsurface_id, label, target_path in focus_order if subsurface_id in stale_set]
-        if len(matching) == 1:
-            return matching[0][1], matching[0][0], matching[0][2]
+        labels = {
+            "readback_record": f"record readback in {proof_paths['readback']}",
+            "scenario_proof_record": f"record scenario proof in {proof_paths['scenario_proof']}",
+        }
+        if subsurface_id:
+            return labels.get(subsurface_id, human_step_label(current_step_id)), subsurface_id, target_path
     return human_step_label(current_step_id), "", ""
 
 

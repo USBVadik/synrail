@@ -106,7 +106,7 @@
     },
     "continuation_summary": {
       "type": "object",
-      "required": ["entry_artifacts", "source_of_truth_precedence", "packet_replay_ready", "arbiter_resolution_status", "arbiter_conflict_count", "arbiter_current_step_source"],
+      "required": ["entry_artifacts", "source_of_truth_precedence", "packet_replay_ready", "current_step_id", "current_step_subsurface_id", "current_step_target_path", "arbiter_resolution_status", "arbiter_conflict_count", "arbiter_current_step_source"],
       "properties": {
         "entry_artifacts": {
           "type": "array",
@@ -117,6 +117,9 @@
           "items": {"type": "string", "minLength": 1}
         },
         "packet_replay_ready": {"type": "boolean"},
+        "current_step_id": {"type": "string"},
+        "current_step_subsurface_id": {"type": "string"},
+        "current_step_target_path": {"type": "string"},
         "arbiter_resolution_status": {"type": "string", "enum": ["", "RESOLVED", "CONFLICT_UNRESOLVED"]},
         "arbiter_conflict_count": {"type": "integer", "minimum": 0},
         "arbiter_current_step_source": {"type": "string"}

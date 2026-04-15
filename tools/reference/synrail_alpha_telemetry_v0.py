@@ -262,6 +262,9 @@ def build_issue_body(record: dict) -> str:
         f"- repair attempt count: `{record['repair_attempt_count']}`",
         f"- next safe step: `{record['next_safe_step']}`",
         f"- packet replay ready: `{record['continuation_summary']['packet_replay_ready']}`",
+        f"- current step id: `{record['continuation_summary']['current_step_id']}`",
+        f"- current step subsurface: `{record['continuation_summary']['current_step_subsurface_id']}`",
+        f"- current step target path: `{record['continuation_summary']['current_step_target_path']}`",
         "",
         "## Command Sequence",
     ]
@@ -336,6 +339,18 @@ def export_session_replay(root: Path, output: Path, issue_output: Path | None = 
                 observability_export.get("packet_replay_ready", False)
                 or (repair_packet.get("continuation_core", {}) or {}).get("packet_replay_ready", False)
                 or (repair_packet.get("source_of_truth", {}) or {}).get("packet_replay_ready", False)
+            ),
+            "current_step_id": (repair_packet.get("continuation_core", {}) or {}).get(
+                "current_step_id",
+                "",
+            ),
+            "current_step_subsurface_id": (repair_packet.get("continuation_core", {}) or {}).get(
+                "current_step_subsurface_id",
+                "",
+            ),
+            "current_step_target_path": (repair_packet.get("continuation_core", {}) or {}).get(
+                "current_step_target_path",
+                "",
             ),
             "arbiter_resolution_status": observability_export.get(
                 "arbiter_resolution_status",

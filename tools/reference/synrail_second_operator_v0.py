@@ -42,6 +42,9 @@ def build_record(*, state: dict, packet: dict, run_artifact: dict) -> dict:
     has_explicit_required_inputs = bool(resolved.get("next_step_required_inputs", []))
     no_input_boundary = resumability_status == "NOT_RESUMABLE" and not resolved.get("next_step_required_inputs", [])
     has_explicit_focus = bool(resolved.get("operator_focus", ""))
+    current_step_subsurface_id = core.get("current_step_subsurface_id", "")
+    current_step_target_path = core.get("current_step_target_path", "")
+    has_explicit_target_path = bool(current_step_target_path) if current_step_subsurface_id else True
     has_explicit_precedence = bool(arbiter.get("precedence_order", []))
     packet_replay_ready = bool(resolved.get("packet_replay_ready", False))
     packet_only_entry = visible_entry_artifacts == ["state_file", "repair_packet"]
@@ -49,6 +52,7 @@ def build_record(*, state: dict, packet: dict, run_artifact: dict) -> dict:
         arbiter.get("resolution_status", "") == "RESOLVED"
         and has_explicit_next_step
         and has_explicit_focus
+        and has_explicit_target_path
         and (has_explicit_required_inputs or no_input_boundary)
         and has_explicit_precedence
         and packet_replay_ready
@@ -65,6 +69,7 @@ def build_record(*, state: dict, packet: dict, run_artifact: dict) -> dict:
         "has_explicit_next_step": has_explicit_next_step,
         "has_explicit_required_inputs": has_explicit_required_inputs,
         "has_explicit_operator_focus": has_explicit_focus,
+        "has_explicit_target_path": has_explicit_target_path,
         "has_explicit_precedence": has_explicit_precedence,
         "packet_replay_ready": packet_replay_ready,
         "arbiter_resolution_status": arbiter.get("resolution_status", ""),
@@ -75,6 +80,9 @@ def build_record(*, state: dict, packet: dict, run_artifact: dict) -> dict:
         "expected_reason": report.get("reason", ""),
         "expected_next_safe_step": report.get("next_safe_step", ""),
         "repair_family": resolved.get("resumability_family", repair_packet.get("resumability_family", core.get("resumability_family", ""))),
+        "current_step_id": core.get("current_step_id", ""),
+        "current_step_subsurface_id": current_step_subsurface_id,
+        "current_step_target_path": current_step_target_path,
         "verdict": verdict,
         "why": (
             "the packet-first continuation path now resolves conflicts through the arbiter, so a second operator can follow the same next step without author memory"
