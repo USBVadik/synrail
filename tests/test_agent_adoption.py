@@ -100,6 +100,10 @@ class AgentAdoptionTests(unittest.TestCase):
             )
             self.assertEqual(0, forced.returncode, forced.stdout + forced.stderr)
             self.assertIn("GEMINI.md: written", forced.stdout)
+            self.assertIn("GEMINI.md backup:", forced.stdout)
+            backups = list(project_root.glob("GEMINI.md.synrail.bak.*"))
+            self.assertEqual(1, len(backups))
+            self.assertIn("# Existing Gemini Context", backups[0].read_text())
             self.assertNotIn("<!-- SYNRAIL_GEMINI_START -->", (project_root / "GEMINI.md").read_text())
             self.assertIn("Use Synrail as the default local control path", (project_root / "GEMINI.md").read_text())
 

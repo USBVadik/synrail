@@ -12,7 +12,7 @@ Proof-first control kernel for agentic work.
 synrail install-agent-files --project-root "$(pwd)"
 ```
 
-This writes missing `AGENTS.md` / `GEMINI.md` files and appends a managed Synrail block to existing ones, so local agents discover the same `synrail start -> work -> synrail check` path without per-task prompt instructions.
+This writes missing `AGENTS.md` / `GEMINI.md` files and appends a managed Synrail block to existing ones, so local agents discover the same `synrail start -> work -> synrail check` path without per-task prompt instructions. If you do choose `--force`, Synrail now writes a timestamped `.synrail.bak.*` backup before replacing an existing policy file.
 
 ## Wedge
 

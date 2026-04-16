@@ -381,27 +381,35 @@ def upsert_managed_policy_block(current: str, *, path: Path, block: str) -> tupl
     return updated, state
 
 
+def backup_existing_policy_file(path: Path) -> Path:
+    timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    backup_path = path.with_name(f"{path.name}.synrail.bak.{timestamp}")
+    backup_path.write_text(path.read_text())
+    return backup_path
+
+
 def write_agent_policy_file(
     path: Path,
     full_content: str,
     *,
     managed_block: str,
     force: bool,
-) -> tuple[bool, str]:
+) -> tuple[bool, str, Path | None]:
     if path.exists():
         current = path.read_text()
         if current == full_content:
-            return False, "unchanged"
+            return False, "unchanged", None
         if force:
+            backup_path = backup_existing_policy_file(path)
             path.write_text(full_content)
-            return True, "written"
+            return True, "written", backup_path
         updated, state = upsert_managed_policy_block(current, path=path, block=managed_block)
         if state == "unchanged":
-            return False, state
+            return False, state, None
         path.write_text(updated)
-        return True, state
+        return True, state, None
     path.write_text(full_content)
-    return True, "written"
+    return True, "written", None
 
 
 def cmd_install_agent_files(args: argparse.Namespace) -> int:
@@ -426,13 +434,13 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         artifact_root=artifact_root,
     )
 
-    agents_written, agents_state = write_agent_policy_file(
+    agents_written, agents_state, agents_backup = write_agent_policy_file(
         agents_path,
         agents_content,
         managed_block=agents_block,
         force=args.force,
     )
-    gemini_written, gemini_state = write_agent_policy_file(
+    gemini_written, gemini_state, gemini_backup = write_agent_policy_file(
         gemini_path,
         gemini_content,
         managed_block=gemini_block,
@@ -444,6 +452,10 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
     print(f"Artifact root hint: {artifact_root}")
     print(f"AGENTS.md: {agents_state}")
     print(f"GEMINI.md: {gemini_state}")
+    if agents_backup:
+        print(f"AGENTS.md backup: {agents_backup}")
+    if gemini_backup:
+        print(f"GEMINI.md backup: {gemini_backup}")
     if agents_state in {"appended", "updated"} or gemini_state in {"appended", "updated"}:
         print("What to do next: review the managed Synrail block added to the existing agent file and commit it if the wording fits the repo.")
     elif agents_written or gemini_written:
