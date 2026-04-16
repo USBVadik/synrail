@@ -62,6 +62,7 @@ Current alpha support boundary:
 
 - supported: one local trusted worktree on the same machine where the agent acts
 - not yet supported: remote host / ops / production-target execution as a first-class alpha lane
+- supported integration pattern: guard-first deploy and restart scripts after a locally accepted run
 
 Preferred install path today:
 
@@ -122,6 +123,7 @@ For alpha feedback collection and tester handoff, also read:
 
 - [ALPHA_TELEMETRY_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_TELEMETRY_001.md)
 - [ALPHA_TEST_PACK_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_TEST_PACK_001.md)
+- [DEPLOY_GUARD_INTEGRATION_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/DEPLOY_GUARD_INTEGRATION_001.md)
 
 ## First Reference Helpers
 

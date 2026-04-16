@@ -6,6 +6,7 @@ Current support boundary:
 
 - supported: one local trusted worktree on the same machine where the agent acts
 - not yet supported: remote host / ops / production-target execution as a first-class alpha lane
+- supported integration pattern: external deploy or restart scripts may enforce `synrail deploy` plus guard-first side effects after a local accepted run
 
 It is intentionally one contour, not a broad product shell:
 
@@ -33,6 +34,8 @@ synrail telemetry export --artifact-root "$ARTIFACT_ROOT"
 ```
 
 That replay stays bounded to command sequence, error class, and next safe step.
+
+If you need a bounded deploy or restart integration after local acceptance, use the pattern in [DEPLOY_GUARD_INTEGRATION_001.md](./DEPLOY_GUARD_INTEGRATION_001.md).
 
 ## Verified Install Path
 

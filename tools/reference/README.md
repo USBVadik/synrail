@@ -13,6 +13,7 @@ For the quickest helper-selection view, start with:
 For the current installable alpha path, start with:
 
 - [`docs/core/ALPHA_LANE_001.md`](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md)
+- [`docs/core/DEPLOY_GUARD_INTEGRATION_001.md`](/Users/usbdick/Documents/New%20project/synrail/docs/core/DEPLOY_GUARD_INTEGRATION_001.md)
 
 ## What these helpers are for
 
@@ -36,12 +37,12 @@ Current alpha support boundary:
 
 - supported: one local trusted worktree on the same machine where the agent acts
 - not yet supported: remote host / ops / production-target execution as a first-class alpha lane
+- supported integration pattern: external deploy and restart scripts can reuse the local deploy guard after an accepted run
 
 The current verified local install path is:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install .
+python3 tools/reference/synrail_install_v0.py --venv .venv
 ```
 
 The current verified restore-capable alpha lane is:
@@ -85,7 +86,7 @@ This shell is intentionally thin:
 - it keeps the existing dev/runtime helpers underneath
 - it does not introduce a new runtime semantics branch
 
-The older `--system-site-packages` plus `--no-build-isolation` route still works as a compatibility fallback for restricted environments, but the plain `pip install .` path is now the verified alpha path.
+The older `--system-site-packages` plus `--no-build-isolation` route still works as a compatibility fallback for restricted environments, but the installer script above is now the verified alpha path.
 
 Optional alpha telemetry now sits on the same artifact root:
 
@@ -185,6 +186,46 @@ Does not guarantee:
 - good diagnosis
 - good patches
 - closure on its own
+
+### `synrail_deploy_guard.sh`
+
+Purpose:
+
+- block deploy or restart side effects unless the current accepted run still matches the deploy receipt and target identity
+
+Useful when:
+
+- a shell script wants to run `rsync`, `scp`, `pm2 restart`, or `systemctl restart`
+
+Guarantees:
+
+- refuses side effects on stale run ids
+- refuses side effects after current state regresses
+- refuses side effects on stale or missing target identity
+
+Does not guarantee:
+
+- first-class remote lane support
+- remote proof capture
+- remote restore truth
+
+### `synrail_guarded_side_effect_v0.sh`
+
+Purpose:
+
+- wrap one side effect so the deploy guard is always checked first
+
+Useful when:
+
+- you want one reusable shell-level guard around a deploy or restart command
+
+Guarantees:
+
+- runs the wrapped command only after deploy authorization still holds
+
+Does not guarantee:
+
+- that the wrapped command itself is correct
 
 ### `synrail_spine_v0.py`
 

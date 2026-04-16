@@ -6,6 +6,7 @@ Current support boundary for this pack:
 
 - supported: one local trusted worktree on the same machine where the agent acts
 - not yet supported: remote host / ops / production-target execution as a first-class alpha lane
+- supported integration pattern: deploy and restart scripts can enforce local Synrail authorization before side effects
 
 The goal of this pack is simple:
 
@@ -170,6 +171,8 @@ Please send back:
 - one blunt sentence saying whether `Synrail` prevented a real loss or just added process
 
 This pack is successful only if it produces hard external signal, not polite approval.
+
+If you specifically want to review the current deploy-side-effect boundary, use [DEPLOY_GUARD_INTEGRATION_001.md](./DEPLOY_GUARD_INTEGRATION_001.md). Review it as a narrow guard pattern, not as full remote lane support.
 
 ## Current Canonical Pack Run
 

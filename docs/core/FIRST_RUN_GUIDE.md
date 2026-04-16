@@ -68,6 +68,9 @@ Non-green is the normal first state. It means the system is working.
 synrail session-export --artifact-root "$ARTIFACT_ROOT"
 ```
 
+If a later deploy or restart script must cause a side effect, do not call it raw.
+Use the deploy-guard pattern described in [DEPLOY_GUARD_INTEGRATION_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/DEPLOY_GUARD_INTEGRATION_001.md).
+
 ## If something breaks
 
 ```bash
