@@ -601,6 +601,7 @@ class TestClosureRunIdBinding(unittest.TestCase):
             "semantically_insufficient_sections": [],
             "structural_decision_trace": [{"section": "test", "present": True}],
             "semantic_decision_trace": [{"section": "test", "sufficient": True}],
+            "final_result": {"request_id": run_id},
         }
 
     def test_matching_run_ids_accepted(self) -> None:
@@ -625,6 +626,14 @@ class TestClosureRunIdBinding(unittest.TestCase):
         bundle["run_id"] = ""
         verdict = build_verdict(state, bundle)
         self.assertEqual("ACCEPTED", verdict["closure_status"])
+
+    def test_mismatched_artifact_request_id_blocked(self) -> None:
+        state = ready_state("R1")
+        bundle = self._valid_bundle("R1")
+        bundle["final_result"]["request_id"] = "R2"
+        verdict = build_verdict(state, bundle)
+        self.assertEqual("CLAIMED_NOT_ACCEPTED", verdict["closure_status"])
+        self.assertEqual("RUN_ID_MISMATCH", verdict["blocking_reason"])
 
 
 class TestCheckpointRequiredField(unittest.TestCase):

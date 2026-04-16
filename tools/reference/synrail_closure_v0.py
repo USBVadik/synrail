@@ -56,14 +56,17 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
     semantically_insufficient_sections = list(bundle.get("semantically_insufficient_sections", []))
     state_run_id = state.get("run_id", "")
     bundle_run_id = bundle.get("run_id", "")
+    artifact_request_id = (bundle.get("final_result", {}).get("request_id", "") or "").strip()
     run_id = state_run_id or bundle_run_id
     task_class = state.get("task_class", bundle.get("task_class", ""))
     criteria_validation = criteria_validation or {}
 
-    # Cross-artifact identity binding: if both state and bundle carry a run_id,
-    # they must agree.  A mismatch means the bundle was built from a different
-    # run and cannot be trusted for closure.
-    run_id_mismatch = bool(state_run_id and bundle_run_id and state_run_id != bundle_run_id)
+    # Cross-artifact identity binding: if state, bundle, or final-result
+    # request_id disagree, the proof was assembled from mixed run surfaces.
+    run_id_mismatch = bool(
+        (state_run_id and artifact_request_id and state_run_id != artifact_request_id)
+        or (state_run_id and bundle_run_id and state_run_id != bundle_run_id)
+    )
 
     verdict = {
         "schema_version": "closure_verdict_v0",

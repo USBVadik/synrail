@@ -3245,7 +3245,9 @@ def cmd_resume(args: argparse.Namespace) -> int:
     if not getattr(args, "state_file", None):
         print(json.dumps({"result": "ERROR", "reason": "STATE_FILE_REQUIRED"}, ensure_ascii=True))
         return 2
-    state = load_json(Path(args.state_file))
+    state_path = Path(args.state_file)
+    state = load_json(state_path)
+    apply_bootstrap_defaults(args, root=state_path.parent)
     args.resume_from_state = state["state"]
     apply_resume_output_defaults(args, state)
     temp_runtime_files: list[str] = []

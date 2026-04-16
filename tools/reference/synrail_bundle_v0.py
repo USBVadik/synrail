@@ -236,10 +236,11 @@ def build_bundle(args: argparse.Namespace) -> dict:
     ]
     identity_semantically_sufficient = all(bool(value.strip()) for value in identity_values)
     cleanup_semantically_sufficient = "cleanup_status" in final and cleanup_is_semantically_sufficient(cleanup)
+    final_request_id = (final.get("request_id", "") or "").strip()
 
     bundle = {
         "schema_version": "proof_bundle_v0",
-        "run_id": final.get("request_id", args.run_id or ""),
+        "run_id": args.run_id or final_request_id or "",
         "task_class": args.task_class,
         "status": "COMPLETE",
         "structural_status": "COMPLETE",
@@ -248,6 +249,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "present": final_present and final_parseable,
             "parseable": final_parseable,
             "status": final.get("status", ""),
+            "request_id": final_request_id,
         },
         "modified_files": {
             "present": isinstance(modified_files, list),

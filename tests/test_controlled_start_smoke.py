@@ -238,6 +238,60 @@ class ControlledStartSmokeTests(unittest.TestCase):
             )
             self.assertIn("readback", prompt["current_step_label"])
 
+    def test_retry_preserves_controlled_bootstrap_after_proof_thin_check(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_retry_bootstrap_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                "--task-identity",
+                "Stay in the same controlled run while strengthening thin proof.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            state = load_json(artifact_root / "state.json")
+            write_json(
+                artifact_root / "final_result.json",
+                {
+                    "request_id": state["run_id"],
+                    "task_class": state["task_class"],
+                    "status": "COMPLETED",
+                    "summary": "Implemented a bounded local change.",
+                    "modified_files": ["app.py"],
+                    "git_diff": "diff --git a/app.py b/app.py\n--- a/app.py\n+++ b/app.py\n@@\n+patched\n",
+                    "cleanup_status": {
+                        "success": True,
+                        "summary": "workspace is stable after the bounded change",
+                    },
+                },
+            )
+            (artifact_root / "readback.txt").write_text("Updated app.py.\n")
+            (artifact_root / "scenario_proof.txt").write_text("Scenario passed.\n")
+
+            check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertIn("Proof Too Thin To Trust", check.stdout)
+
+            retry = self.run_alpha("retry", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, retry.returncode, retry.stdout + retry.stderr)
+            self.assertIn("Proof Too Thin To Trust", retry.stdout)
+            self.assertNotIn("Controlled Run Required", retry.stdout)
+            self.assertNotIn("Not Ready For The Next Attempt", retry.stdout)
+
+            retried_state = load_json(artifact_root / "state.json")
+            self.assertTrue(retried_state["integrity"]["bootstrap_provenance_ok"])
+            self.assertEqual(
+                "CONTROLLED_BOOTSTRAP_CONFIRMED",
+                retried_state["integrity"]["bootstrap_provenance_reason"],
+            )
+
 
     def test_start_after_terminal_state_auto_clears_proof(self) -> None:
         """After CLOSURE_ACCEPTED, next synrail start should work without manual cleanup."""
