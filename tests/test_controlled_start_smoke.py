@@ -239,5 +239,78 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("readback", prompt["current_step_label"])
 
 
+    def test_start_after_terminal_state_auto_clears_proof(self) -> None:
+        """After CLOSURE_ACCEPTED, next synrail start should work without manual cleanup."""
+        with tempfile.TemporaryDirectory(prefix="synrail_restart_after_terminal_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            # First run: synrail start
+            start1 = self.run_alpha(
+                "start",
+                "--artifact-root", ".synrail",
+                "--project-root", str(project_root),
+                "--task-identity", "First task for terminal state test.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start1.returncode, start1.stdout + start1.stderr)
+
+            # Simulate completed run: modify proof files and set terminal state
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "CLOSURE_ACCEPTED"
+            write_json(artifact_root / "state.json", state)
+            (artifact_root / "final_result.json").write_text(
+                json.dumps({"status": "DONE", "summary": "completed"}) + "\n"
+            )
+            (artifact_root / "readback.txt").write_text("Confirmed change in source.\n")
+            (artifact_root / "scenario_proof.txt").write_text("Scenario passed.\n")
+
+            # Second run: synrail start should auto-clear and succeed
+            start2 = self.run_alpha(
+                "start",
+                "--artifact-root", ".synrail",
+                "--project-root", str(project_root),
+                "--task-identity", "Second task after terminal state.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start2.returncode, start2.stdout + start2.stderr)
+            self.assertIn("Controlled run started.", start2.stdout)
+
+    def test_start_after_active_run_still_blocks(self) -> None:
+        """Mid-run proof artifacts should still block a new start."""
+        with tempfile.TemporaryDirectory(prefix="synrail_restart_blocks_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start1 = self.run_alpha(
+                "start",
+                "--artifact-root", ".synrail",
+                "--project-root", str(project_root),
+                "--task-identity", "Active run that should not be overwritten.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start1.returncode, start1.stdout + start1.stderr)
+
+            # Simulate active run: modify proof but state is NOT terminal
+            state = load_json(artifact_root / "state.json")
+            self.assertNotIn(state["state"], ("CLOSURE_ACCEPTED", "CLOSURE_REJECTED"))
+            (artifact_root / "final_result.json").write_text(
+                json.dumps({"status": "DONE", "summary": "in progress"}) + "\n"
+            )
+
+            # Second start should be blocked
+            start2 = self.run_alpha(
+                "start",
+                "--artifact-root", ".synrail",
+                "--project-root", str(project_root),
+                "--task-identity", "Should not overwrite active run.",
+                cwd=project_root,
+            )
+            self.assertEqual(2, start2.returncode)
+            self.assertIn("proof artifacts already exist", start2.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
