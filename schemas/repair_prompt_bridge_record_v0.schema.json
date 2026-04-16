@@ -1,0 +1,39 @@
+{
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "current_step_id",
+    "allowed_scope",
+    "forbidden_scope",
+    "must_pass",
+    "prompt"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "repair_prompt_bridge_record_v0"},
+    "run_id": {"type": "string", "minLength": 1},
+    "task_class": {"type": "string", "minLength": 1},
+    "current_step_id": {"type": "string"},
+    "current_step_label": {"type": "string"},
+    "current_step_subsurface_id": {"type": "string"},
+    "current_step_target_path": {"type": "string"},
+    "current_step_focus_summary": {"type": "string"},
+    "current_step_action_instruction": {"type": "string"},
+    "failure_reason": {"type": "string"},
+    "failure_label": {"type": "string"},
+    "stale_artifact_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "stale_subsurface_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "allowed_scope": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "allowed_scope_labels": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "required_inputs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "required_input_labels": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "forbidden_scope": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "must_pass": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "acceptance_criteria": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "next_safe_step_label": {"type": "string"},
+    "next_command": {"type": "string"},
+    "prompt": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

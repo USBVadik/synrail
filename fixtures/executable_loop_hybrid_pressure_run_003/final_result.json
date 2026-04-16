@@ -1,0 +1,7 @@
+{
+  "request_id": "EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_003",
+  "status": "success",
+  "modified_files": ["core/reversible_guard.py"],
+  "git_diff": "diff --git a/core/reversible_guard.py b/core/reversible_guard.py\n+hybrid demotion pressure patch",
+  "cleanup_status": {"success": true}
+}

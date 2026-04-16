@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/baseline_comparison_record_v0.schema.json",
+  "title": "Synrail Baseline Comparison Record v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scenario_id",
+    "task_class",
+    "baseline",
+    "synrail",
+    "verdict",
+    "reasons"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "baseline_comparison_record_v0"
+    },
+    "scenario_id": {
+      "type": "string"
+    },
+    "task_class": {
+      "type": "string"
+    },
+    "baseline": {
+      "type": "object"
+    },
+    "synrail": {
+      "type": "object"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["SYNRAIL_BETTER", "BASELINE_GOOD_ENOUGH", "UNCLEAR"]
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

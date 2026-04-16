@@ -1,0 +1,7 @@
+{
+  "request_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_002",
+  "status": "success",
+  "modified_files": ["core/router.py"],
+  "git_diff": "diff --git a/core/router.py b/core/router.py\n+runtime degraded resume patch",
+  "cleanup_status": {"success": true}
+}

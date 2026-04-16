@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v1",
+  "system": "synrail",
+  "scenario_id": "SCENARIO_HYBRID_001",
+  "scenario_class": "medium_risk_ambiguous_closure",
+  "task_class": "medium_risk_ambiguous_fix",
+  "path_id": "hybrid_subset",
+  "closure_result": "CLAIMED_NOT_ACCEPTED",
+  "blocker_to_closure_cycles": 3,
+  "false_success_risk": "LOW",
+  "proof_completeness": "MEDIUM",
+  "recovery_cost": "MEDIUM",
+  "coordination_overhead": "MEDIUM",
+  "operator_minutes": 24,
+  "intervention_count": 3,
+  "repair_cycles": 1,
+  "invalidation_count": 1,
+  "closure_latency_minutes": 30,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 70,
+  "notes": "Hybrid adds bounded stop discipline and some proof gain, but the signal is still mixed."
+}

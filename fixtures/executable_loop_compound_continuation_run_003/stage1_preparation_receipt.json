@@ -1,0 +1,16 @@
+{
+  "schema_version": "governed_path_preparation_receipt_v0",
+  "plan_file": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_003/stage1_plan.json",
+  "bundle_file": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_003/stage1_bundle.json",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_003",
+  "task_class": "bounded_router_trigger_fix",
+  "bundle_run_matches_plan": false,
+  "bundle_task_class_matches_plan": true,
+  "planned_required_sections_count": 7,
+  "planned_required_sections_present_count": 7,
+  "bundle_status": "COMPLETE",
+  "missing_required_sections": [],
+  "complete_on_first_bundle_pass": false,
+  "ready_for_closure": false,
+  "next_safe_step": "collect the missing planned proof sections and rebuild the bundle"
+}

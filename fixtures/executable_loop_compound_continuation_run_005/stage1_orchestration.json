@@ -1,0 +1,128 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "doctor": {
+    "final_verdict": "NOT_ACCEPTABLE_ARTIFACT_PATH",
+    "blocking_failure_classes": [
+      "artifact-viability missing"
+    ]
+  },
+  "resume": {
+    "applied": true,
+    "from_state": "PROOF_BUNDLE_INVALID"
+  },
+  "repair_handoff": {
+    "applied": true,
+    "from_state": "DOCTOR_BLOCKED",
+    "required_inputs": [
+      "artifact_path"
+    ],
+    "missing_inputs": []
+  },
+  "repair_packet": {
+    "emitted": true,
+    "from_state": "DOCTOR_BLOCKED",
+    "ready_for_resume": false,
+    "missing_inputs": [
+      "artifact_path"
+    ],
+    "selected_with_preparation": true,
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "active_pressures": [
+      "DOCTOR_BLOCKED",
+      "INVALID_PROOF",
+      "PARTIAL_PROOF",
+      "RECOVERY_PENDING"
+    ],
+    "repair_order": [
+      "restore_readiness_truth",
+      "repair_final_result_artifact",
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "policy_type": "MULTI_STEP_REPAIR",
+    "policy_next_step": "restore_readiness_truth",
+    "policy_ready_steps": [
+      "restore_readiness_truth"
+    ],
+    "stale_artifact_ids": [
+      "readiness_surface",
+      "final_result_artifact",
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ],
+    "non_resumable_artifact_ids": []
+  },
+  "resumability": {
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "resumability_active_pressures": [
+      "DOCTOR_BLOCKED",
+      "INVALID_PROOF",
+      "PARTIAL_PROOF",
+      "RECOVERY_PENDING"
+    ],
+    "resumability_repair_order": [
+      "restore_readiness_truth",
+      "repair_final_result_artifact",
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "resumability_requires_new_run": false,
+    "resumability_policy_type": "MULTI_STEP_REPAIR",
+    "resumability_policy_next_step": "restore_readiness_truth",
+    "resumability_ready_now_steps": [
+      "restore_readiness_truth"
+    ],
+    "resumability_stale_artifact_ids": [
+      "readiness_surface",
+      "final_result_artifact",
+      "supporting_proof_artifacts",
+      "recovery_reverification_surface"
+    ]
+  },
+  "selection": {
+    "applied": true,
+    "selected_mode": "FULL_GOVERNED_PATH",
+    "selected_with_preparation": true
+  },
+  "preparation": {
+    "applied": false,
+    "ready_for_closure": false
+  },
+  "bundle": {
+    "status": "INVALID",
+    "missing_sections": [
+      "final_result",
+      "diff_provenance",
+      "readback",
+      "scenario_proof",
+      "cleanup_status"
+    ]
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "DOCTOR_NOT_GREEN"
+  },
+  "refresh": {
+    "applied": false,
+    "event_type": "",
+    "resulting_closure_status": ""
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "DOCTOR_BLOCKED",
+  "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "restore a reliable machine-readable artifact path"
+}

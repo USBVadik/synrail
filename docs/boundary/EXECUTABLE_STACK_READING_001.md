@@ -1,0 +1,314 @@
+# Executable Stack Reading 001
+
+## Purpose
+
+State the shortest honest current reading of what the executable `Synrail` stack has actually proven so far.
+
+This document exists so the repo can summarize product reality without forcing a reader to reconstruct it from many slice-level artifacts.
+
+## What the stack now demonstrably does
+
+The current executable stack can already provide:
+
+1. machine-readable run state
+2. hard gating on unsafe progression
+3. machine-readable proof-bundle assembly
+4. machine-readable closure verdicts
+5. refresh-driven invalidation after lower-level degradation
+6. terminal-first operator commands
+7. machine-readable baseline comparison records
+8. one bounded orchestration path across attestation, doctor, integrity, bundle, closure, optional refresh, and optional comparison
+9. one primary spine-produced canonical run artifact
+10. one cost-aware mode selector that can keep obvious non-winning paths out of heavier contours
+11. four operator-facing selection receipts that prove a heavier contour can now be deliberately skipped or deliberately entered before the runtime path begins, including one preparation-aware strong-path receipt
+12. one governed-path preparation plan and receipt that prove the planned proof surface can reach a complete first bundle pass before closure starts
+13. one canonical prepared governed-path run that proves preparation can now live inside the spine-owned contour
+14. one canonical selected-prepared governed-path run that proves a strong selection receipt can now hand off directly into that same prepared contour
+15. one named runtime resume path that can continue a partial-proof state back toward accepted closure through the same artifact surface
+16. one second named runtime resume path that can continue a degraded recovery state back toward accepted closure through that same artifact surface
+17. one third named runtime resume path that can continue a true `DOCTOR_BLOCKED` state back toward accepted closure through that same artifact surface
+18. one first-class repair handoff layer that names missing continuation inputs and bounded runtime defaults in machine-readable form
+19. one richer repair-packet layer that is now auto-synthesized from current runtime truth and carries continuation context, continuation plan, repair inputs, and output defaults in one machine-readable bundle
+20. one canonical blocked repair-packet contour that proves `resume` no longer needs a fake final-result input just to stop honestly at `repair_handoff`
+21. one canonical ugly compound continuation contour that crosses readiness repair, proof repair, and recovery repair through staged handoffs plus named `resume`
+22. one second uglier compound continuation contour that crosses blocked readiness, invalid proof, degraded recovery, and accepted closure through richer repair packets plus named `resume`
+23. one third uglier packet-first continuation contour that crosses selection/preparation handoff, invalid proof, degraded recovery, and accepted closure through named `resume`
+24. one fourth uglier packet-first continuation contour that keeps selection/preparation truth through repair-handoff blocking, recovery repair, and a final explicit terminal not-resumable reading
+25. one fifth uglier packet-first continuation contour that crosses invalid proof, recovery pressure, doctor identity pressure, and accepted closure through one packet-first repair chain
+26. one sixth uglier packet-first continuation contour that crosses doctor identity pressure, partial proof pressure, recovery pressure, and accepted closure while keeping one packet-native repair-history chain
+27. one bounded governed-path cost delta that shows preparation can reduce human tax inside the winning contour without a safety regression
+28. one minimal-continuation-core run that shows packet-first `resume` can now return from `DOCTOR_BLOCKED` to accepted closure from just `state + repair_packet`
+29. one continuation-adoption delta that shows a newer repeated-doctor continuation contour now reduces visible root side-file tax without losing ugly-path truth
+
+That is enough to say:
+
+- `Synrail` is no longer only an architecture doctrine or a repo of strong control prose
+- it is now a small executable control system
+
+## What current evidence says about value
+
+Current executable evidence supports a narrow product claim:
+
+- `Synrail` looks most justified on proof-sensitive closure paths where false completion is expensive
+
+The current stack does **not** support the broader claim:
+
+- `Synrail` should be the default full path for every small incident
+
+## Why that reading is credible
+
+Because the repo now contains three canonical comparison readings plus one uglier hybrid pressure-test:
+
+1. strong path:
+   - `docs/core/EXECUTABLE_LOOP_RUN_001.md`
+   - verdict: `SYNRAIL_BETTER`
+2. weaker path:
+   - `docs/core/EXECUTABLE_LOOP_RUN_002.md`
+   - verdict: `BASELINE_GOOD_ENOUGH`
+3. hybrid path:
+   - `docs/core/EXECUTABLE_LOOP_RUN_003.md`
+   - verdict: `UNCLEAR`
+4. hybrid pressure win path:
+   - `docs/core/EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_002.md`
+   - verdict: `SYNRAIL_BETTER`
+5. hybrid pressure demotion path:
+   - `docs/core/EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_003.md`
+   - verdict: `BASELINE_GOOD_ENOUGH`
+
+This set is stronger than any single result alone.
+
+It shows that the stack can express:
+
+- where `Synrail` currently earns its cost
+- where a simpler baseline may already be enough
+- where a middle mode now looks inconsistent enough to lose default policy status
+
+## What is currently strongest in the stack
+
+Current strongest value carriers are:
+
+- target-surface truth discipline
+- explicit exact-task integrity
+- targeted doctor reduction of two false-readiness shapes: broken credential paths and exact task identity mismatch
+- targeted doctor reduction of one wrong-target-surface readiness lie
+- cost-aware steering back to baseline on weak and demoted-hybrid paths
+- one preparation-aware strong-path steering slice that now points the wedge toward the prepared governed contour instead of the unprepared one
+- one direct selection-to-runtime handoff where a preparation-aware strong-path receipt now enters the prepared governed contour without separately restating preparation outputs
+- one named runtime resume path that starts turning repaired re-entry from repo evidence into explicit operator behavior across partial-proof, degraded-recovery, and doctor-blocked families
+- one repair handoff layer that now tells the runtime and the operator exactly which continuation inputs are still missing before a non-green contour can resume honestly
+- one richer repair packet that is now runtime-owned enough to group continuation contract, continuation plan, selection/preparation truth, repair inputs, and runtime output defaults above the handoff itself
+- one richer repair packet that now also carries explicit resumability family, active repair pressures, repair order, and a clearer separation between repairable and terminal continuation truth
+- one richer repair packet that now also points to which existing artifact surface is still stale during continuation, not only which next input is missing
+- one richer repair packet that now also points to narrower stale sub-surfaces like exact identity records, diff provenance, cleanup status, recovery status, and terminal accepted or rejected state
+- one governed-path preparation slice that predeclares the proof surface and records complete first-pass bundle assembly
+- one preparation-aware prepared governed run that reaches accepted closure inside the same bounded orchestration path
+- one measured governed-path cost-reduction slice that treats preparation as a bounded economic improvement rather than only a cleaner ritual
+- proof-bundle completeness reading
+- closure acceptance vs claimed-not-accepted separation
+- explicit blocked state lanes for main failure branches
+- explicit degradation lanes after refresh-driven invalidation
+- one canonical blocked-to-accepted re-entry contour
+- one canonical partial-to-accepted re-entry contour
+- one canonical degraded-to-accepted re-entry contour
+- one canonical ugly compound repair contour across blocked, partial, degraded, and accepted stages
+- one canonical hybrid pressure contour that stops on partial proof and then returns to accepted closure
+- one canonical truly not-resumable selection-blocked continuation contour
+- one canonical truly not-resumable accepted-terminal continuation contour
+- one canonical truly not-resumable rejected-terminal continuation contour
+- one canonical truly not-resumable fresh-forward-orchestration continuation contour
+- one canonical packet-first runtime-resume contour that now reaches accepted closure through sibling auto-discovery instead of long raw flag replay
+- one canonical minimal-continuation contour that now reaches accepted closure from one compact packet contract without separate repair handoff, repair receipt, or resume-input side files
+- one canonical tenth ugly compound continuation contour that now replays repeated doctor pressure through packet chaining instead of full context replay
+- one canonical packet-first continuation contour that now uses stage-aware sibling discovery plus one narrow `resume_inputs.json` file to avoid replaying most continuation flags by hand
+- one fifth uglier packet-first compound continuation contour that now carries stale-artifact hints, explicit repair order, one newly surfaced readiness failure, and accepted closure on the same runtime surface
+- one first-class artifact repair receipt layer that now records step completion and narrower stale sub-surface truth between packet states
+- one sixth uglier packet-first compound continuation contour that now carries repair receipts, blocked recovery completion, and a final truthful non-resumable packet on the same runtime surface
+- one seventh uglier packet-first compound continuation contour that now crosses invalid proof, recovery repair, doctor target-identity pressure, and accepted closure on the same runtime surface
+- explicit precedence for competing spine-side blockers
+- explicit precedence for competing degradations
+- anti-drift refresh after state degradation
+
+## What is still weaker than it should be
+
+Current weaker areas are:
+
+- doctor is now stronger than v0, includes bounded filesystem/env probes, and now catches one credential-path false-green, one exact-task-identity mismatch, and one wrong-target-surface mismatch, but it is still narrower than a mature readiness layer
+- the stack now has one bounded spine-driven runtime contour, but not yet a deeper end-to-end runtime
+- blocked-to-accepted, partial-to-accepted, and degraded-to-accepted re-entry are now canonical, and one ugly mixed repair family is now canonical too, but compound reality is still much weaker than it should be
+- repair handoff and repair packet now both exist, packet-first continuation is now the default operator path, and current-step stale-artifact hints now exist too, but the packet is still narrower than a mature continuation surface should eventually become
+- terminal vs repairable continuation is now materially clearer than before across selection-blocked, terminal accepted, and terminal rejected families, but not every future non-green family is yet pressure-tested
+- comparison harness now has a six-scenario economics slice, but it is still too narrow to count as product-grade economics
+- production-grade runtime readiness is not yet proven
+
+## Current wedge reading
+
+The shortest current product reading is:
+
+- use `Synrail` when getting the truth wrong is expensive
+- do not assume the full governed path is justified for lower-risk honesty-restoration work
+- treat the hybrid subset as a demoted exception pattern now that the class-level evidence includes `BASELINE_GOOD_ENOUGH`
+
+The shortest current output reading is:
+
+- the spine can now emit one primary canonical run artifact
+- accepted contours now have a stable canonical repo fixture
+- prepared governed contours now also have a stable canonical repo fixture
+- selected-prepared governed contours now also have a stable canonical repo fixture
+- runtime-resume contours now also have a stable canonical repo fixture
+- doctor-blocked runtime-resume contours now also have a stable canonical repo fixture
+- repair-packet blocked contours now also have a stable canonical repo fixture
+- repair-handoff blocked contours now also have a stable canonical repo fixture
+- selection-blocked contours now also have a stable canonical repo fixture
+- blocked contours now emit the same primary run artifact shape
+- one repaired blocked contour now also has a stable canonical repo fixture
+- one repaired partial-proof contour now also has a stable canonical repo fixture
+- one repaired degraded contour now also has a stable canonical repo fixture
+- one ugly compound repair contour now also has a stable canonical repo fixture
+- one third ugly compound continuation contour now also has a stable canonical repo fixture
+- one fourth ugly compound continuation contour now also has a stable canonical repo fixture
+- one fifth ugly compound continuation contour now also has a stable canonical repo fixture
+- one sixth ugly compound continuation contour now also has a stable canonical repo fixture
+- one hybrid pressure contour now also has a stable canonical repo fixture
+- that artifact is a better single entrypoint than reconstructing a run from report, state, and worked envelope separately
+
+The first canonical accepted reference surface for that output now lives at:
+
+- `fixtures/executable_loop_accepted_run_001/run.json`
+
+The first canonical prepared governed reference surface for that output now lives at:
+
+- `fixtures/executable_loop_prepared_run_001/run.json`
+
+The first canonical selected-prepared governed reference surface for that output now lives at:
+
+- `fixtures/executable_loop_selected_prepared_run_001/run.json`
+
+The first canonical runtime-resume reference surface for that output now lives at:
+
+- `fixtures/executable_loop_runtime_resume_run_001/run.json`
+
+The second canonical runtime-resume reference surface for that output now lives at:
+
+- `fixtures/executable_loop_runtime_resume_run_002/run.json`
+
+The third canonical runtime-resume reference surface for that output now lives at:
+
+- `fixtures/executable_loop_runtime_resume_run_003/run.json`
+
+The first canonical repair-packet blocked reference surface for that output now lives at:
+
+- `fixtures/repair_packet_run_001/run.json`
+
+The first canonical repair-handoff blocked reference surface for that output now lives at:
+
+- `fixtures/repair_handoff_run_001/run.json`
+
+The first canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_001/run.json`
+
+The second canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_002/run.json`
+
+The third canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_003/run.json`
+
+The fourth canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_004/run.json`
+
+The fifth canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_005/run.json`
+
+The sixth canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_006/run.json`
+
+The seventh canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_007/run.json`
+
+The eighth canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_008/run.json`
+
+The seventh canonical ugly compound continuation reference surface for that output now lives at:
+
+- `fixtures/executable_loop_compound_continuation_run_007/run.json`
+
+The first canonical selection-blocked reference surface for that output now lives at:
+
+- `fixtures/executable_loop_selection_blocked_run_001/run.json`
+
+The first canonical blocked reference surface for that output now lives at:
+
+- `fixtures/executable_loop_blocked_run_001/run.json`
+
+The first canonical re-entry reference surface for that output now lives at:
+
+- `fixtures/executable_loop_reentry_run_001/run.json`
+
+The first canonical partial-proof re-entry reference surface for that output now lives at:
+
+- `fixtures/executable_loop_partial_reentry_run_001/run.json`
+
+The first canonical degraded re-entry reference surface for that output now lives at:
+
+- `fixtures/executable_loop_degraded_reentry_run_001/run.json`
+
+The shortest current outcome-class reading for those surfaces now lives at:
+
+- `OUTCOME_LATTICE_001.md`
+
+The shortest current transition reading for those surfaces now lives at:
+
+- `TRANSITION_LATTICE_001.md`
+
+The shortest current re-entry reading for those surfaces now lives at:
+
+- `REENTRY_LATTICE_001.md`
+
+The shortest current cost reading for those surfaces now lives at:
+
+- `COST_OF_CONTROL_001.md`
+
+## What this changes for product direction
+
+The next phase should optimize for:
+
+- stronger executable superiority on the real wedge
+- comparator economics rather than comparison prose
+- more ugly compound scenarios instead of only clean single-family repair
+- better evidence for where the stack is worth its overhead
+- faster prove-or-demote pressure on the hybrid mode
+- cheaper pre-contour selection on paths that current evidence already says are non-winners
+- repeated operator-facing receipts proving that some heavier contours are now skipped deliberately instead of entered by habit
+- repeated operator-facing receipts proving that the strong wedge still enters the governed contour deliberately instead of drifting to baseline by cost anxiety
+
+Not for:
+
+- broader surface area
+- public packaging pressure
+- generic orchestration expansion
+- new explanatory layers without runtime or economic payload
+
+## Decision rule
+
+Any next-step build work should now answer one of these questions:
+
+1. does it make comparison more economic and less descriptive?
+2. does it strengthen the wedge where `Synrail` is already winning?
+3. does it prove the stack under uglier compound reality?
+4. does it reduce the gap between current slices and a true executable kernel loop?
+
+If not, it is likely not the best next move for the project right now.
+
+- primary run artifacts now also surface one first-class repair-history summary instead of hiding that progression only inside repair packets
+- one ninth ugly compound continuation now proves doctor pressure can return after an intermediate proof repair and still resolve honestly through recovery to acceptance
+- packet-first continuation now emits fewer root-level side artifacts when the packet already carries enough truth for the next step
+
+- one first substitute-kill pressure slice now compares Synrail against concrete substitute stacks rather than only one abstract baseline
+- that slice currently shows two real substitute wins for Synrail and one still-unclear weak path, which is a healthier signal than blanket victory

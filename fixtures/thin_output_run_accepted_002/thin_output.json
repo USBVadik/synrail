@@ -1,0 +1,23 @@
+{
+  "schema_version": "thin_output_record_v0",
+  "mode": "default",
+  "run_id": "EXECUTABLE_LOOP_ACCEPTED_RUN_001",
+  "task_class": "proof_sensitive_fix",
+  "outcome_class": "ACCEPTED",
+  "status_label": "Accepted",
+  "summary": "The run reached accepted closure.",
+  "diagnosis": "Synrail accepted the result based on the current proof and closure surfaces.",
+  "what_happened": "The run reached accepted closure.",
+  "what_it_means": "Synrail accepted the result based on the current proof and closure surfaces.",
+  "what_to_do_next": "No repair step is required.",
+  "resume_available": false,
+  "next_command": "",
+  "restore_command": "",
+  "next_step": "No repair step is required.",
+  "restore_available": false,
+  "checkpoint_id": "",
+  "recovery_primary_action": "",
+  "recovery_operator_instructions": [],
+  "suggested_command": "no next command required",
+  "technical_lines": []
+}

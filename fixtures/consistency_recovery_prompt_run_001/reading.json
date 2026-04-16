@@ -1,0 +1,13 @@
+{
+  "schema_version": "consistency_recovery_prompt_reading_record_v0",
+  "run_id": "EXECUTABLE_LOOP_MINIMAL_CONTINUATION_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "primary_action": "RESTORE_CORRUPT_AND_REEMIT_STALE",
+  "allowed_scope": [
+    "report",
+    "repair_packet"
+  ],
+  "missing_markers": [],
+  "verdict": "RECOVERY_PROMPT_BOUNDED",
+  "why": "the restore-or-reemit path can be handed to the next agent call without broadening beyond the listed artifact actions"
+}

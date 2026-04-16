@@ -1,0 +1,338 @@
+{
+  "schema_version": "repair_packet_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "RECOVERY_PENDING",
+  "continuation_entrypoint": "resume",
+  "repair_handoff": {
+    "schema_version": "repair_handoff_v0",
+    "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+    "task_class": "bounded_router_trigger_fix",
+    "from_state": "RECOVERY_PENDING",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "RECOVERY_REVERIFICATION_INCOMPLETE",
+    "continuation_allowed": true,
+    "continuation_entrypoint": "resume",
+    "resumability": {
+      "status": "REPAIRABLE",
+      "family": "REPAIRABLE_RECOVERY_PENDING",
+      "active_pressures": [
+        "RECOVERY_PENDING"
+      ],
+      "recommended_repair_order": [
+        "complete_recovery_reverification",
+        "run_refresh_reconciliation",
+        "rerun_closure"
+      ],
+      "requires_new_run": false,
+      "explanation": "recovery reverification is still pending, but continuation can resume once recovery is completed and refresh can reconcile closure"
+    },
+    "repair_policy": {
+      "policy_type": "MULTI_STEP_REPAIR",
+      "next_step_id": "complete_recovery_reverification",
+      "ready_now_step_ids": [
+        "complete_recovery_reverification"
+      ],
+      "ordered_steps": [
+        {
+          "step_id": "complete_recovery_reverification",
+          "status": "READY_NOW",
+          "required_inputs": [
+            "refresh_recovery_complete",
+            "refresh_reverification_complete"
+          ],
+          "repairs_artifacts": [
+            "recovery_reverification_surface"
+          ],
+          "resolves_pressures": [
+            "RECOVERY_PENDING"
+          ],
+          "why": "recovery should be completed before refresh reconciliation can restore closure acceptance"
+        },
+        {
+          "step_id": "run_refresh_reconciliation",
+          "status": "WAITING_ON_PREVIOUS_STEP",
+          "required_inputs": [],
+          "repairs_artifacts": [
+            "closure_refresh_surface"
+          ],
+          "resolves_pressures": [
+            "RECOVERY_PENDING"
+          ],
+          "why": "refresh reconciliation should only run once recovery reverification is complete"
+        },
+        {
+          "step_id": "rerun_closure",
+          "status": "WAITING_ON_PREVIOUS_STEP",
+          "required_inputs": [],
+          "repairs_artifacts": [
+            "closure_verdict_surface"
+          ],
+          "resolves_pressures": [
+            "RECOVERY_PENDING"
+          ],
+          "why": "closure should be rechecked only after earlier repair steps finish"
+        }
+      ]
+    },
+    "artifact_quality_hints": [
+      {
+        "artifact_id": "recovery_reverification_surface",
+        "quality": "STALE",
+        "still_stale_parts": [
+          "recovery_status",
+          "reverification_complete"
+        ],
+        "mapped_inputs": [
+          "refresh_recovery_complete",
+          "refresh_reverification_complete"
+        ],
+        "repair_step": "complete_recovery_reverification",
+        "why": "recovery was started but reverification has not been completed yet"
+      }
+    ],
+    "required_inputs": [
+      {
+        "input_id": "refresh_recovery_complete",
+        "kind": "enum",
+        "cli_flag": "--refresh-recovery-status",
+        "description": "mark recovery as complete before resuming closure acceptance",
+        "required_value": "COMPLETE"
+      },
+      {
+        "input_id": "refresh_reverification_complete",
+        "kind": "flag",
+        "cli_flag": "--refresh-reverification-complete",
+        "description": "confirm recovery reverification is complete before refresh reconciliation",
+        "required_value": "true"
+      }
+    ],
+    "runtime_defaults": {
+      "refresh_event_type": "RECOVERY_EVENT",
+      "refresh_use_bundle": true,
+      "refresh_use_closure": true
+    },
+    "next_safe_step": "run reverification against the attested target surface"
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_RECOVERY_PENDING",
+    "active_pressures": [
+      "RECOVERY_PENDING"
+    ],
+    "recommended_repair_order": [
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "explanation": "recovery reverification is still pending, but continuation can resume once recovery is completed and refresh can reconcile closure"
+  },
+  "repair_policy": {
+    "policy_type": "MULTI_STEP_REPAIR",
+    "next_step_id": "complete_recovery_reverification",
+    "ready_now_step_ids": [
+      "complete_recovery_reverification"
+    ],
+    "ordered_steps": [
+      {
+        "step_id": "complete_recovery_reverification",
+        "status": "READY_NOW",
+        "required_inputs": [
+          "refresh_recovery_complete",
+          "refresh_reverification_complete"
+        ],
+        "repairs_artifacts": [
+          "recovery_reverification_surface"
+        ],
+        "resolves_pressures": [
+          "RECOVERY_PENDING"
+        ],
+        "why": "recovery should be completed before refresh reconciliation can restore closure acceptance"
+      },
+      {
+        "step_id": "run_refresh_reconciliation",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_refresh_surface"
+        ],
+        "resolves_pressures": [
+          "RECOVERY_PENDING"
+        ],
+        "why": "refresh reconciliation should only run once recovery reverification is complete"
+      },
+      {
+        "step_id": "rerun_closure",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_verdict_surface"
+        ],
+        "resolves_pressures": [
+          "RECOVERY_PENDING"
+        ],
+        "why": "closure should be rechecked only after earlier repair steps finish"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "recovery_reverification_surface",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "recovery_status",
+        "reverification_complete"
+      ],
+      "mapped_inputs": [
+        "refresh_recovery_complete",
+        "refresh_reverification_complete"
+      ],
+      "repair_step": "complete_recovery_reverification",
+      "why": "recovery was started but reverification has not been completed yet"
+    }
+  ],
+  "artifact_quality_summary": {
+    "artifact_ids": [
+      "recovery_reverification_surface"
+    ],
+    "stale_artifact_ids": [
+      "recovery_reverification_surface"
+    ],
+    "non_resumable_artifact_ids": []
+  },
+  "continuation_plan": {
+    "doctor_required": true,
+    "bundle_required": true,
+    "closure_required": true,
+    "refresh_required": true,
+    "refresh_event_type": "RECOVERY_EVENT",
+    "refresh_use_bundle": true,
+    "refresh_use_closure": true,
+    "refresh_recovery_status": "PENDING",
+    "refresh_reverification_complete": false
+  },
+  "resume_context": {
+    "doctor_run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005_RESUME",
+    "doctor_level": "CORE_DOCTOR",
+    "target_path": "fixtures/executable_loop_compound_continuation_run_005",
+    "target_classification": "resume_surface",
+    "baseline_identity": "compound-prepared-surface-004",
+    "intended_run_class": "core_probe",
+    "execution_surface_identity": "compound-prepared-surface-004"
+  },
+  "repair_inputs": {
+    "prompt_identity": "compound-prepared-prompt-005",
+    "task_identity": "compound-prepared-task-005",
+    "prompt_identity_ok": true,
+    "target_identity_file": "",
+    "clean_surface": false,
+    "artifact_viable": false,
+    "helper_ok": false,
+    "credentials_ok": false,
+    "artifact_path": "fixtures/executable_loop_compound_continuation_run_005/final_result.json",
+    "helper_path": "",
+    "credential_env": [],
+    "final_result": "fixtures/executable_loop_compound_continuation_run_005/final_result.json",
+    "readback": "fixtures/executable_loop_compound_continuation_run_005/readback.txt",
+    "scenario_proof": "fixtures/executable_loop_compound_continuation_run_005/scenario.txt",
+    "refresh_recovery_status": "PENDING",
+    "refresh_reverification_complete": false
+  },
+  "selection_context": {
+    "applied": true,
+    "scenario_class": "expensive_wrong_closure",
+    "recommended_mode": "FULL_GOVERNED_PATH",
+    "selected_mode": "FULL_GOVERNED_PATH",
+    "followed_recommendation": true,
+    "governed_preparation_recommended": true,
+    "selected_with_preparation": true,
+    "heavier_contour_entered": true,
+    "estimated_avoided_operator_minutes": 0,
+    "estimated_avoided_interventions": 0,
+    "estimated_avoided_closure_latency_minutes": 0
+  },
+  "preparation_context": {
+    "applied": true,
+    "ready_for_closure": true,
+    "complete_on_first_bundle_pass": true,
+    "bundle_status": "COMPLETE",
+    "planned_required_sections_count": 7,
+    "planned_required_sections_present_count": 7
+  },
+  "runtime_truth": {
+    "report_result": "OK",
+    "stopping_stage": "refresh",
+    "report_reason": "RECOVERY_REVERIFICATION_INCOMPLETE",
+    "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "bundle_status": "COMPLETE",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": true,
+    "refresh_resulting_closure_status": "CLAIMED_NOT_ACCEPTED",
+    "resulting_state": "RECOVERY_PENDING",
+    "next_safe_step": "run reverification against the attested target surface",
+    "active_pressures": [
+      "RECOVERY_PENDING"
+    ],
+    "state_snapshot": {
+      "state": "RECOVERY_PENDING",
+      "target_surface_status": "ATTESTED",
+      "doctor_status": "PASS",
+      "doctor_failure_classes": [],
+      "integrity_status": "PASS",
+      "execution_status": "COMPLETED",
+      "proof_bundle_status": "COMPLETE",
+      "proof_missing_sections": [],
+      "closure_status": "CLAIMED_NOT_ACCEPTED",
+      "closure_blocking_reason": "RECOVERY_REVERIFICATION_INCOMPLETE",
+      "recovery_status": "PENDING",
+      "recovery_reverification_complete": false
+    }
+  },
+  "output_defaults": {
+    "artifact_root": "fixtures/executable_loop_compound_continuation_run_005",
+    "doctor_output": "fixtures/executable_loop_compound_continuation_run_005/doctor.json",
+    "bundle_output": "fixtures/executable_loop_compound_continuation_run_005/bundle.json",
+    "closure_output": "fixtures/executable_loop_compound_continuation_run_005/closure.json",
+    "refresh_output": "fixtures/executable_loop_compound_continuation_run_005/refresh.json",
+    "report_output": "fixtures/executable_loop_compound_continuation_run_005/report.json",
+    "worked_artifact_output": "fixtures/executable_loop_compound_continuation_run_005/orchestration.json",
+    "run_artifact_output": "fixtures/executable_loop_compound_continuation_run_005/run.json",
+    "repair_handoff_output": "fixtures/executable_loop_compound_continuation_run_005/repair_handoff.json",
+    "repair_packet_output": "fixtures/executable_loop_compound_continuation_run_005/repair_packet.json",
+    "plan_output": "fixtures/executable_loop_compound_continuation_run_005/plan.json",
+    "preparation_receipt_output": "fixtures/executable_loop_compound_continuation_run_005/preparation_receipt.json"
+  },
+  "provided_inputs": [
+    "prompt_identity",
+    "task_identity",
+    "artifact_path",
+    "final_result",
+    "readback",
+    "scenario_proof"
+  ],
+  "missing_inputs": [
+    "refresh_recovery_complete",
+    "refresh_reverification_complete"
+  ],
+  "ready_for_resume": false,
+  "next_safe_step": "run reverification against the attested target surface",
+  "selection_receipt": {
+    "schema_version": "mode_selection_receipt_v0",
+    "recommendation_file": "fixtures/executable_loop_compound_continuation_run_005/recommendation.json",
+    "scenario_class": "expensive_wrong_closure",
+    "task_class": "bounded_router_trigger_fix",
+    "recommended_mode": "FULL_GOVERNED_PATH",
+    "selected_mode": "FULL_GOVERNED_PATH",
+    "secondary_exception_mode": "",
+    "governed_preparation_recommended": true,
+    "selected_with_preparation": true,
+    "followed_recommendation": true,
+    "heavier_contour_entered": true,
+    "estimated_avoided_operator_minutes": 0,
+    "estimated_avoided_interventions": 0,
+    "estimated_avoided_closure_latency_minutes": 0,
+    "why": "expensive wrong-closure risk still dominates here, so the extra control remains justified despite added operator cost; bounded governed-path evidence also says preparation likely saves about 5 operator minutes, 1 intervention, and 7 closure-latency minutes without weakening the final safety surface",
+    "next_safe_step": "run the full governed path with preparation"
+  }
+}

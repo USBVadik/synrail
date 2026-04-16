@@ -1,0 +1,24 @@
+{
+  "schema_version": "prompt_retry_guard_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "initial_current_step_id": "restore_readiness_truth",
+  "retry_current_step_id": "restore_readiness_truth",
+  "initial_allowed_scope": [
+    "helper_entrypoint_record"
+  ],
+  "retry_allowed_scope": [
+    "helper_entrypoint_record"
+  ],
+  "initial_required_inputs": [
+    "helper_path"
+  ],
+  "retry_required_inputs": [
+    "helper_path"
+  ],
+  "initial_next_safe_step": "repair, replace, or safely bypass the helper entrypoint before execution",
+  "retry_next_safe_step": "repair, replace, or safely bypass the helper entrypoint before execution",
+  "missing_markers": [],
+  "verdict": "RETRY_SCOPE_STABLE",
+  "why": "the repeated retry prompt keeps the same bounded step, scope, required inputs, and next-safe-step truth"
+}

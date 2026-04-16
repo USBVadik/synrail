@@ -1,0 +1,1 @@
+{"event_id": 1, "timestamp": "2026-04-14T21:25:21Z", "command_path": ["session-export"], "flag_names": ["--artifact-root"], "exit_code": 0, "state": "DOCTOR_BLOCKED", "result": "BLOCKED", "reason": "CONTINUATION_INPUTS_MISSING", "component_error_class": "CONTINUATION_INPUTS_MISSING", "repair_attempt_count": 2}

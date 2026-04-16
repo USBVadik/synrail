@@ -1,0 +1,13 @@
+{
+  "schema_version": "operator_render_adoption_delta_v0",
+  "record_count": 2,
+  "labels": [
+    "brief_recovery_render",
+    "chain_stop_render"
+  ],
+  "total_line_reduction": 48,
+  "truth_preserved_all": true,
+  "render_shorter_all": true,
+  "verdict": "READING_TAX_REDUCED_WITHOUT_TRUTH_LOSS",
+  "why": "every measured render stayed shorter than its source artifact and preserved the required operator markers"
+}

@@ -1,0 +1,135 @@
+{
+  "schema_version": "repair_packet_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_002",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "PROOF_BUNDLE_INVALID",
+  "continuation_entrypoint": "resume",
+  "repair_handoff": {
+    "schema_version": "repair_handoff_v0",
+    "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_002",
+    "task_class": "bounded_router_trigger_fix",
+    "from_state": "PROOF_BUNDLE_INVALID",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "INVALID_PROOF_BUNDLE",
+    "continuation_allowed": true,
+    "continuation_entrypoint": "resume",
+    "required_inputs": [
+      {
+        "input_id": "final_result",
+        "kind": "file",
+        "cli_flag": "--final-result",
+        "description": "supply the final result artifact for bundle repair or closure continuation",
+        "required_value": ""
+      },
+      {
+        "input_id": "readback",
+        "kind": "file",
+        "cli_flag": "--readback",
+        "description": "supply readback from the changed sections on the attested surface",
+        "required_value": ""
+      },
+      {
+        "input_id": "scenario_proof",
+        "kind": "file",
+        "cli_flag": "--scenario-proof",
+        "description": "supply scenario proof for the continuation bundle",
+        "required_value": ""
+      }
+    ],
+    "runtime_defaults": {
+      "refresh_event_type": "",
+      "refresh_use_bundle": false,
+      "refresh_use_closure": false
+    },
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+  },
+  "continuation_plan": {
+    "doctor_required": true,
+    "bundle_required": true,
+    "closure_required": true,
+    "refresh_required": false,
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false,
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "resume_context": {
+    "doctor_run_id": "COMPOUND_CONT_002_STAGE1",
+    "doctor_level": "EXACT_RETRY_DOCTOR",
+    "target_path": "fixtures/executable_loop_compound_continuation_run_002",
+    "target_classification": "trusted_clean_target",
+    "baseline_identity": "compound-reentry-surface",
+    "intended_run_class": "exact_retry",
+    "execution_surface_identity": "compound-reentry-surface"
+  },
+  "repair_inputs": {
+    "prompt_identity": "repaired-compound-prompt",
+    "task_identity": "repaired-compound-task",
+    "prompt_identity_ok": true,
+    "target_identity_file": "",
+    "clean_surface": true,
+    "artifact_viable": true,
+    "helper_ok": true,
+    "credentials_ok": true,
+    "artifact_path": "",
+    "helper_path": "",
+    "credential_env": [],
+    "final_result": "",
+    "readback": "",
+    "scenario_proof": "",
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "selection_context": {
+    "applied": false,
+    "recommended_mode": "",
+    "selected_mode": "",
+    "selected_with_preparation": false,
+    "heavier_contour_entered": false
+  },
+  "preparation_context": {
+    "applied": false,
+    "ready_for_closure": false,
+    "complete_on_first_bundle_pass": false
+  },
+  "runtime_truth": {
+    "report_result": "OK",
+    "stopping_stage": "closure",
+    "report_reason": "INVALID_PROOF_BUNDLE",
+    "doctor_verdict": "ACCEPTABLE_FOR_EXACT_RETRY",
+    "bundle_status": "INVALID",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": false,
+    "refresh_resulting_closure_status": "",
+    "resulting_state": "PROOF_BUNDLE_INVALID",
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+  },
+  "output_defaults": {
+    "artifact_root": "fixtures/executable_loop_compound_continuation_run_002",
+    "doctor_output": "fixtures/executable_loop_compound_continuation_run_002/doctor.json",
+    "bundle_output": "fixtures/executable_loop_compound_continuation_run_002/bundle.json",
+    "closure_output": "fixtures/executable_loop_compound_continuation_run_002/closure.json",
+    "refresh_output": "fixtures/executable_loop_compound_continuation_run_002/refresh.json",
+    "report_output": "fixtures/executable_loop_compound_continuation_run_002/report.json",
+    "worked_artifact_output": "fixtures/executable_loop_compound_continuation_run_002/orchestration.json",
+    "run_artifact_output": "fixtures/executable_loop_compound_continuation_run_002/run.json",
+    "repair_handoff_output": "fixtures/executable_loop_compound_continuation_run_002/repair_handoff.json",
+    "repair_packet_output": "fixtures/executable_loop_compound_continuation_run_002/repair_packet.json",
+    "plan_output": "fixtures/executable_loop_compound_continuation_run_002/plan.json",
+    "preparation_receipt_output": "fixtures/executable_loop_compound_continuation_run_002/preparation_receipt.json"
+  },
+  "provided_inputs": [
+    "prompt_identity",
+    "task_identity",
+    "clean_surface_confirmation",
+    "credential_surface"
+  ],
+  "missing_inputs": [
+    "final_result",
+    "readback",
+    "scenario_proof"
+  ],
+  "ready_for_resume": false,
+  "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+}

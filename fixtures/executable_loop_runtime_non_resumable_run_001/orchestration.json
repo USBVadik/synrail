@@ -1,0 +1,86 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_001",
+  "task_class": "honesty_restoration_guard",
+  "doctor": {
+    "final_verdict": "NOT_RUN",
+    "blocking_failure_classes": []
+  },
+  "resume": {
+    "applied": true,
+    "from_state": "INITIALIZED"
+  },
+  "repair_handoff": {
+    "applied": true,
+    "from_state": "INITIALIZED",
+    "required_inputs": [],
+    "missing_inputs": []
+  },
+  "repair_packet": {
+    "emitted": false,
+    "from_state": "",
+    "ready_for_resume": false,
+    "missing_inputs": [],
+    "selected_with_preparation": false,
+    "resumability_status": "NOT_RESUMABLE",
+    "resumability_family": "NOT_RESUMABLE_SELECTION_BLOCKED",
+    "active_pressures": [
+      "SELECTION_BLOCKED"
+    ],
+    "repair_order": [
+      "switch_to_lighter_mode"
+    ],
+    "policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "policy_next_step": "switch_to_lighter_mode",
+    "policy_ready_steps": [],
+    "stale_artifact_ids": [],
+    "non_resumable_artifact_ids": [
+      "mode_selection_receipt"
+    ]
+  },
+  "resumability": {
+    "resumability_status": "NOT_RESUMABLE",
+    "resumability_family": "NOT_RESUMABLE_SELECTION_BLOCKED",
+    "resumability_active_pressures": [
+      "SELECTION_BLOCKED"
+    ],
+    "resumability_repair_order": [
+      "switch_to_lighter_mode"
+    ],
+    "resumability_requires_new_run": false,
+    "resumability_policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "resumability_policy_next_step": "switch_to_lighter_mode",
+    "resumability_ready_now_steps": [],
+    "resumability_stale_artifact_ids": []
+  },
+  "selection": {
+    "applied": true,
+    "selected_mode": "LIGHTWEIGHT_BASELINE",
+    "selected_with_preparation": false
+  },
+  "preparation": {
+    "applied": false,
+    "ready_for_closure": false
+  },
+  "bundle": {
+    "status": "MISSING",
+    "missing_sections": []
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "MODE_SELECTION_NOT_GOVERNED"
+  },
+  "refresh": {
+    "applied": false,
+    "event_type": "",
+    "resulting_closure_status": ""
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "INITIALIZED",
+  "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "follow the selected lighter mode instead of entering governed orchestration"
+}

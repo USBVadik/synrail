@@ -1,0 +1,101 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_004",
+  "task_class": "bounded_router_trigger_fix",
+  "doctor": {
+    "final_verdict": "NOT_RUN",
+    "blocking_failure_classes": []
+  },
+  "resume": {
+    "applied": true,
+    "from_state": "PROOF_BUNDLE_INVALID"
+  },
+  "repair_handoff": {
+    "applied": true,
+    "from_state": "PROOF_BUNDLE_INVALID",
+    "required_inputs": [
+      "final_result",
+      "readback",
+      "scenario_proof"
+    ],
+    "missing_inputs": [
+      "final_result",
+      "readback",
+      "scenario_proof"
+    ]
+  },
+  "repair_packet": {
+    "emitted": true,
+    "from_state": "PROOF_BUNDLE_INVALID",
+    "ready_for_resume": false,
+    "missing_inputs": [
+      "final_result",
+      "readback",
+      "scenario_proof"
+    ],
+    "selected_with_preparation": true,
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "active_pressures": [
+      "INVALID_PROOF",
+      "PARTIAL_PROOF"
+    ],
+    "repair_order": [
+      "repair_final_result_artifact",
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "rerun_closure"
+    ]
+  },
+  "resumability": {
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "resumability_active_pressures": [
+      "INVALID_PROOF",
+      "PARTIAL_PROOF"
+    ],
+    "resumability_repair_order": [
+      "repair_final_result_artifact",
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "rerun_closure"
+    ],
+    "resumability_requires_new_run": false
+  },
+  "selection": {
+    "applied": true,
+    "selected_mode": "FULL_GOVERNED_PATH",
+    "selected_with_preparation": true
+  },
+  "preparation": {
+    "applied": false,
+    "ready_for_closure": false
+  },
+  "bundle": {
+    "status": "INVALID",
+    "missing_sections": [
+      "final_result",
+      "diff_provenance",
+      "readback",
+      "scenario_proof",
+      "cleanup_status"
+    ]
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "INVALID_PROOF_BUNDLE"
+  },
+  "refresh": {
+    "applied": false,
+    "event_type": "",
+    "resulting_closure_status": ""
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "PROOF_BUNDLE_INVALID",
+  "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+}

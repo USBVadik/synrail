@@ -1,0 +1,6 @@
+{
+  "result": "BLOCKED",
+  "stopping_stage": "resume",
+  "reason": "CONTINUATION_INPUTS_MISSING",
+  "next_safe_step": "repair, replace, or safely bypass the helper entrypoint before execution"
+}

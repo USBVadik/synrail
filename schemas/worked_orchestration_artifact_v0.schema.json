@@ -1,0 +1,547 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "doctor",
+    "bundle",
+    "closure",
+    "refresh",
+    "comparison",
+    "resulting_state",
+    "current_closure_status",
+    "next_safe_step"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "worked_orchestration_artifact_v0"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "doctor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "final_verdict",
+        "blocking_failure_classes"
+      ],
+      "properties": {
+        "final_verdict": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocking_failure_classes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "resume": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "from_state"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "from_state": {
+          "type": "string"
+        }
+      }
+    },
+    "repair_handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "from_state",
+        "required_inputs",
+        "missing_inputs"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "from_state": {
+          "type": "string"
+        },
+        "required_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "missing_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "repair_packet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "emitted",
+        "from_state",
+        "ready_for_resume",
+        "missing_inputs",
+        "selected_with_preparation"
+      ],
+      "properties": {
+        "emitted": {
+          "type": "boolean"
+        },
+        "from_state": {
+          "type": "string"
+        },
+        "ready_for_resume": {
+          "type": "boolean"
+        },
+        "missing_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selected_with_preparation": {
+          "type": "boolean"
+        },
+        "resumability_status": {
+          "type": "string"
+        },
+        "resumability_family": {
+          "type": "string"
+        },
+        "active_pressures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repair_order": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "policy_type": {
+          "type": "string"
+        },
+        "policy_next_step": {
+          "type": "string"
+        },
+        "policy_ready_steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repair_history_applied": {
+          "type": "boolean"
+        },
+        "repair_history_last_result": {
+          "type": "string"
+        },
+        "repair_history_last_completed_step_id": {
+          "type": "string"
+        },
+        "repair_history_completed_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repair_history_current_step_id": {
+          "type": "string"
+        },
+        "repair_history_waiting_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repair_history_chain_length": {
+          "type": "integer"
+        },
+        "repair_history_chain_results": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repair_history_chain_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repair_termination_status": {
+          "type": "string"
+        },
+        "repair_termination_reason": {
+          "type": "string"
+        },
+        "repair_attempt_count": {
+          "type": "integer"
+        },
+        "repair_max_attempts": {
+          "type": "integer"
+        },
+        "repair_no_progress_window": {
+          "type": "integer"
+        },
+        "repair_stalled_step_id": {
+          "type": "string"
+        },
+        "repair_termination_next_action": {
+          "type": "string"
+        },
+        "repair_receipt_last_operator_focus": {
+          "type": "string"
+        },
+        "repair_receipt_next_step_required_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repair_receipt_next_step_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stale_artifact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "non_resumable_artifact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stale_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "non_resumable_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "resumability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resumability_status",
+        "resumability_family",
+        "resumability_active_pressures",
+        "resumability_repair_order",
+        "resumability_requires_new_run"
+      ],
+      "properties": {
+        "resumability_status": {
+          "type": "string"
+        },
+        "resumability_family": {
+          "type": "string"
+        },
+        "resumability_active_pressures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resumability_repair_order": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resumability_requires_new_run": {
+          "type": "boolean"
+        },
+        "resumability_policy_type": {
+          "type": "string"
+        },
+        "resumability_policy_next_step": {
+          "type": "string"
+        },
+        "resumability_ready_now_steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resumability_stale_artifact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resumability_stale_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "selected_mode",
+        "selected_with_preparation"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "selected_mode": {
+          "type": "string"
+        },
+        "selected_with_preparation": {
+          "type": "boolean"
+        }
+      }
+    },
+    "preparation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "ready_for_closure"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "ready_for_closure": {
+          "type": "boolean"
+        }
+      }
+    },
+    "bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "missing_sections"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "missing_sections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "closure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "closure_status",
+        "blocking_reason"
+      ],
+      "properties": {
+        "closure_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocking_reason": {
+          "type": "string"
+        }
+      }
+    },
+    "refresh": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "event_type",
+        "resulting_closure_status"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "event_type": {
+          "type": "string"
+        },
+        "resulting_closure_status": {
+          "type": "string"
+        }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "verdict",
+        "reasons"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "verdict": {
+          "type": "string"
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "resulting_state": {
+      "type": "string",
+      "minLength": 1
+    },
+    "current_closure_status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "next_safe_step": {
+      "type": "string"
+    },
+    "repair_history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "available",
+        "from_state",
+        "last_result",
+        "last_completed_step_id",
+        "current_step_id",
+        "waiting_step_ids",
+        "completed_step_ids",
+        "chain_length",
+        "chain_results",
+        "chain_step_ids",
+        "termination_status",
+        "termination_reason",
+        "attempt_count",
+        "max_attempts",
+        "no_progress_window",
+        "stalled_step_id",
+        "termination_next_action",
+        "last_operator_focus",
+        "next_step_required_inputs",
+        "next_step_subsurface_ids"
+      ],
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "from_state": {
+          "type": "string"
+        },
+        "last_result": {
+          "type": "string"
+        },
+        "last_completed_step_id": {
+          "type": "string"
+        },
+        "current_step_id": {
+          "type": "string"
+        },
+        "waiting_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "completed_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "chain_length": {
+          "type": "integer"
+        },
+        "chain_results": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "chain_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "termination_status": {
+          "type": "string"
+        },
+        "termination_reason": {
+          "type": "string"
+        },
+        "attempt_count": {
+          "type": "integer"
+        },
+        "max_attempts": {
+          "type": "integer"
+        },
+        "no_progress_window": {
+          "type": "integer"
+        },
+        "stalled_step_id": {
+          "type": "string"
+        },
+        "termination_next_action": {
+          "type": "string"
+        },
+        "last_operator_focus": {
+          "type": "string"
+        },
+        "next_step_required_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "next_step_subsurface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

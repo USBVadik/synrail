@@ -1,0 +1,22 @@
+{
+  "schema_version": "thin_output_reading_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+  "task_class": "bounded_router_trigger_fix",
+  "source_paths": [
+    "fixtures/repair_convergence_run_004/report.json",
+    "fixtures/repair_convergence_run_004/repair_packet.json"
+  ],
+  "bridge_paths": [
+    "fixtures/thin_output_reading_test_001/thin_output.json",
+    "fixtures/thin_output_reading_test_001/prompt.json"
+  ],
+  "source_line_count": 904,
+  "bridge_line_count": 37,
+  "line_reduction": 867,
+  "bridge_shorter": true,
+  "outcome_class": "REPAIR_STOP",
+  "current_step_id": "restore_readiness_truth",
+  "missing_markers": [],
+  "verdict": "READING_TAX_REDUCED",
+  "why": "the thin output plus prompt bridge preserve the current-step and next-step truth while reducing the amount of runtime surface a human must read"
+}

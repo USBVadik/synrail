@@ -1,0 +1,690 @@
+{
+  "schema_version": "repair_packet_v0",
+  "run_id": "EXECUTABLE_LOOP_MINIMAL_CONTINUATION_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "CLOSURE_ACCEPTED",
+  "continuation_entrypoint": "resume",
+  "repair_handoff": {
+    "schema_version": "repair_handoff_v0",
+    "run_id": "EXECUTABLE_LOOP_MINIMAL_CONTINUATION_RUN_001",
+    "task_class": "bounded_router_trigger_fix",
+    "from_state": "CLOSURE_ACCEPTED",
+    "closure_status": "ACCEPTED",
+    "blocking_reason": "",
+    "continuation_allowed": false,
+    "continuation_entrypoint": "",
+    "resumability": {
+      "status": "NOT_RESUMABLE",
+      "family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+      "active_pressures": [
+        "TERMINAL_ACCEPTED",
+        "TERMINAL_STATE"
+      ],
+      "recommended_repair_order": [
+        "start_new_run"
+      ],
+      "requires_new_run": true,
+      "explanation": "the run is already accepted, so continuation should stop and a new run should start instead"
+    },
+    "repair_policy": {
+      "policy_type": "NON_RESUMABLE_NEXT_STEP",
+      "next_step_id": "start_new_run",
+      "ready_now_step_ids": [],
+      "ordered_steps": [
+        {
+          "step_id": "start_new_run",
+          "status": "TERMINAL_NEXT_STEP",
+          "required_inputs": [],
+          "repairs_artifacts": [
+            "terminal_run_state"
+          ],
+          "resolves_pressures": [
+            "TERMINAL_STATE",
+            "TERMINAL_ACCEPTED"
+          ],
+          "why": "terminal state should yield to a new run rather than another resume attempt"
+        }
+      ]
+    },
+    "artifact_quality_hints": [
+      {
+        "artifact_id": "terminal_run_state",
+        "quality": "NON_RESUMABLE",
+        "still_stale_parts": [
+          "accepted_terminal_state"
+        ],
+        "mapped_inputs": [],
+        "repair_step": "start_new_run",
+        "why": "the current run is already accepted and continuation should yield to a new run",
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "accepted_terminal_state",
+            "status": "NON_RESUMABLE",
+            "mapped_inputs": [],
+            "why": "the accepted closure state is terminal and should not be resumed"
+          }
+        ]
+      }
+    ],
+    "required_inputs": [],
+    "runtime_defaults": {
+      "refresh_event_type": "",
+      "refresh_use_bundle": false,
+      "refresh_use_closure": false
+    },
+    "next_safe_step": "NONE"
+  },
+  "resumability": {
+    "status": "NOT_RESUMABLE",
+    "family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+    "active_pressures": [
+      "TERMINAL_ACCEPTED",
+      "TERMINAL_STATE"
+    ],
+    "recommended_repair_order": [
+      "start_new_run"
+    ],
+    "requires_new_run": true,
+    "explanation": "the run is already accepted, so continuation should stop and a new run should start instead"
+  },
+  "repair_policy": {
+    "policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "next_step_id": "start_new_run",
+    "ready_now_step_ids": [],
+    "ordered_steps": [
+      {
+        "step_id": "start_new_run",
+        "status": "TERMINAL_NEXT_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "terminal_run_state"
+        ],
+        "resolves_pressures": [
+          "TERMINAL_STATE",
+          "TERMINAL_ACCEPTED"
+        ],
+        "why": "terminal state should yield to a new run rather than another resume attempt"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "terminal_run_state",
+      "quality": "NON_RESUMABLE",
+      "still_stale_parts": [
+        "accepted_terminal_state"
+      ],
+      "mapped_inputs": [],
+      "repair_step": "start_new_run",
+      "why": "the current run is already accepted and continuation should yield to a new run",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "accepted_terminal_state",
+          "status": "NON_RESUMABLE",
+          "mapped_inputs": [],
+          "why": "the accepted closure state is terminal and should not be resumed"
+        }
+      ]
+    }
+  ],
+  "artifact_quality_summary": {
+    "artifact_ids": [
+      "terminal_run_state"
+    ],
+    "stale_artifact_ids": [],
+    "non_resumable_artifact_ids": [
+      "terminal_run_state"
+    ],
+    "stale_subsurface_ids": [],
+    "non_resumable_subsurface_ids": [
+      "accepted_terminal_state"
+    ]
+  },
+  "repair_history": {
+    "applied": true,
+    "last_receipt_result": "NON_RESUMABLE_BOUNDARY_REACHED",
+    "last_completed_step_id": "restore_readiness_truth",
+    "completed_step_ids": [
+      "restore_readiness_truth"
+    ],
+    "current_step_id": "start_new_run",
+    "waiting_step_ids": [],
+    "history_chain_length": 1,
+    "history_chain_results": [
+      "NON_RESUMABLE_BOUNDARY_REACHED"
+    ],
+    "history_chain_step_ids": [
+      "restore_readiness_truth"
+    ]
+  },
+  "repair_history_chain": [
+    {
+      "step_index": 1,
+      "from_state": "DOCTOR_BLOCKED",
+      "resulting_state": "CLOSURE_ACCEPTED",
+      "result": "NON_RESUMABLE_BOUNDARY_REACHED",
+      "active_step_id": "restore_readiness_truth",
+      "completed_step_id": "restore_readiness_truth",
+      "next_step_id": "start_new_run",
+      "completed_subsurface_ids": [
+        "prompt_identity_record",
+        "task_identity_record"
+      ],
+      "next_step_subsurface_ids": [
+        "accepted_terminal_state"
+      ],
+      "remaining_stale_subsurface_ids": [],
+      "remaining_non_resumable_subsurface_ids": [
+        "accepted_terminal_state"
+      ],
+      "operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead"
+    }
+  ],
+  "repair_receipt_context": {
+    "applied": true,
+    "result": "NON_RESUMABLE_BOUNDARY_REACHED",
+    "completed_step_id": "restore_readiness_truth",
+    "remaining_stale_artifact_ids": [],
+    "remaining_stale_subsurface_ids": [],
+    "remaining_non_resumable_artifact_ids": [
+      "terminal_run_state"
+    ],
+    "remaining_non_resumable_subsurface_ids": [
+      "accepted_terminal_state"
+    ],
+    "remaining_stale_hints": [],
+    "remaining_non_resumable_hints": [
+      {
+        "artifact_id": "terminal_run_state",
+        "quality": "NON_RESUMABLE",
+        "repair_step": "start_new_run",
+        "still_stale_parts": [
+          "accepted_terminal_state"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "accepted_terminal_state",
+            "why": "the accepted closure state is terminal and should not be resumed"
+          }
+        ]
+      }
+    ],
+    "completed_hints": [
+      {
+        "artifact_id": "readiness_surface",
+        "quality": "STALE",
+        "repair_step": "restore_readiness_truth",
+        "still_stale_parts": [
+          "prompt_identity_record",
+          "task_identity_record"
+        ],
+        "mapped_inputs": [
+          "prompt_identity",
+          "task_identity"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "prompt_identity_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "prompt_identity"
+            ],
+            "why": "the continuation prompt identity is still missing or unresolved"
+          },
+          {
+            "subsurface_id": "task_identity_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "task_identity"
+            ],
+            "why": "the continuation task identity is still missing or unresolved"
+          }
+        ]
+      }
+    ],
+    "next_step_required_inputs": [],
+    "next_step_hints": [
+      {
+        "artifact_id": "terminal_run_state",
+        "quality": "NON_RESUMABLE",
+        "repair_step": "start_new_run",
+        "still_stale_parts": [
+          "accepted_terminal_state"
+        ],
+        "mapped_inputs": [],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "accepted_terminal_state",
+            "status": "NON_RESUMABLE",
+            "mapped_inputs": [],
+            "why": "the accepted closure state is terminal and should not be resumed"
+          }
+        ]
+      }
+    ],
+    "history_chain": [
+      {
+        "step_index": 1,
+        "from_state": "DOCTOR_BLOCKED",
+        "resulting_state": "CLOSURE_ACCEPTED",
+        "result": "NON_RESUMABLE_BOUNDARY_REACHED",
+        "active_step_id": "restore_readiness_truth",
+        "completed_step_id": "restore_readiness_truth",
+        "next_step_id": "start_new_run",
+        "completed_subsurface_ids": [
+          "prompt_identity_record",
+          "task_identity_record"
+        ],
+        "next_step_subsurface_ids": [
+          "accepted_terminal_state"
+        ],
+        "remaining_stale_subsurface_ids": [],
+        "remaining_non_resumable_subsurface_ids": [
+          "accepted_terminal_state"
+        ],
+        "operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead"
+      }
+    ],
+    "operator_evidence": {
+      "completed_step_id": "restore_readiness_truth",
+      "completed_artifact_hints": [
+        {
+          "artifact_id": "readiness_surface",
+          "quality": "STALE",
+          "repair_step": "restore_readiness_truth",
+          "still_stale_parts": [
+            "prompt_identity_record",
+            "task_identity_record"
+          ],
+          "mapped_inputs": [
+            "prompt_identity",
+            "task_identity"
+          ],
+          "stale_subsurfaces": [
+            {
+              "subsurface_id": "prompt_identity_record",
+              "status": "STALE",
+              "mapped_inputs": [
+                "prompt_identity"
+              ],
+              "why": "the continuation prompt identity is still missing or unresolved"
+            },
+            {
+              "subsurface_id": "task_identity_record",
+              "status": "STALE",
+              "mapped_inputs": [
+                "task_identity"
+              ],
+              "why": "the continuation task identity is still missing or unresolved"
+            }
+          ]
+        }
+      ],
+      "completed_subsurface_ids": [
+        "prompt_identity_record",
+        "task_identity_record"
+      ],
+      "next_step_id": "start_new_run",
+      "next_step_required_inputs": [],
+      "next_step_artifact_hints": [
+        {
+          "artifact_id": "terminal_run_state",
+          "quality": "NON_RESUMABLE",
+          "repair_step": "start_new_run",
+          "still_stale_parts": [
+            "accepted_terminal_state"
+          ],
+          "mapped_inputs": [],
+          "stale_subsurfaces": [
+            {
+              "subsurface_id": "accepted_terminal_state",
+              "status": "NON_RESUMABLE",
+              "mapped_inputs": [],
+              "why": "the accepted closure state is terminal and should not be resumed"
+            }
+          ]
+        }
+      ],
+      "next_step_subsurface_ids": [
+        "accepted_terminal_state"
+      ],
+      "operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead"
+    }
+  },
+  "continuation_plan": {
+    "doctor_required": true,
+    "bundle_required": true,
+    "closure_required": true,
+    "refresh_required": false,
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false,
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "resume_context": {
+    "doctor_run_id": "EXECUTABLE_LOOP_MINIMAL_CONTINUATION_RUN_001_RESUME",
+    "doctor_level": "CORE_DOCTOR",
+    "target_path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001",
+    "target_classification": "resume_surface",
+    "baseline_identity": "compound-reentry-surface",
+    "intended_run_class": "core_probe",
+    "execution_surface_identity": "compound-reentry-surface"
+  },
+  "repair_inputs": {
+    "prompt_identity": "minimal-continuation-001-prompt",
+    "task_identity": "minimal-continuation-001-task",
+    "prompt_identity_ok": true,
+    "target_identity_file": "",
+    "clean_surface": false,
+    "artifact_viable": false,
+    "helper_ok": false,
+    "credentials_ok": false,
+    "artifact_path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/final_result.json",
+    "helper_path": "",
+    "credential_env": [],
+    "final_result": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/final_result.json",
+    "readback": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/readback.txt",
+    "scenario_proof": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/scenario.txt",
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "selection_context": {
+    "applied": false,
+    "scenario_class": "",
+    "recommended_mode": "",
+    "selected_mode": "",
+    "followed_recommendation": false,
+    "governed_preparation_recommended": false,
+    "selected_with_preparation": false,
+    "heavier_contour_entered": false,
+    "estimated_avoided_operator_minutes": 0,
+    "estimated_avoided_interventions": 0,
+    "estimated_avoided_closure_latency_minutes": 0
+  },
+  "preparation_context": {
+    "applied": true,
+    "ready_for_closure": true,
+    "complete_on_first_bundle_pass": true,
+    "bundle_status": "COMPLETE",
+    "planned_required_sections_count": 7,
+    "planned_required_sections_present_count": 7
+  },
+  "runtime_truth": {
+    "report_result": "OK",
+    "stopping_stage": "accepted",
+    "report_reason": "NONE",
+    "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "bundle_status": "COMPLETE",
+    "closure_status": "ACCEPTED",
+    "refresh_applied": false,
+    "refresh_resulting_closure_status": "",
+    "resulting_state": "CLOSURE_ACCEPTED",
+    "next_safe_step": "NONE",
+    "active_pressures": [
+      "TERMINAL_ACCEPTED",
+      "TERMINAL_STATE"
+    ],
+    "state_snapshot": {
+      "state": "CLOSURE_ACCEPTED",
+      "target_surface_status": "ATTESTED",
+      "doctor_status": "PASS",
+      "doctor_failure_classes": [],
+      "integrity_status": "PASS",
+      "execution_status": "COMPLETED",
+      "proof_bundle_status": "COMPLETE",
+      "proof_missing_sections": [],
+      "closure_status": "ACCEPTED",
+      "closure_blocking_reason": "",
+      "recovery_status": "NOT_REQUIRED",
+      "recovery_reverification_complete": false
+    }
+  },
+  "output_defaults": {
+    "artifact_root": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001",
+    "doctor_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/doctor.json",
+    "bundle_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/bundle.json",
+    "closure_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/closure.json",
+    "refresh_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/refresh.json",
+    "report_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/report.json",
+    "worked_artifact_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/orchestration.json",
+    "run_artifact_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/run.json",
+    "repair_handoff_output": "",
+    "repair_packet_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/repair_packet.json",
+    "repair_receipt_output": "",
+    "plan_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/plan.json",
+    "preparation_receipt_output": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_minimal_continuation_run_001/preparation_receipt.json"
+  },
+  "provided_inputs": [
+    "prompt_identity",
+    "task_identity",
+    "artifact_path",
+    "final_result",
+    "readback",
+    "scenario_proof"
+  ],
+  "missing_inputs": [],
+  "ready_for_resume": false,
+  "next_safe_step": "NONE",
+  "continuation_core": {
+    "contract_version": "continuation_core_v0",
+    "entrypoint": "resume",
+    "ready_for_resume": false,
+    "resumability_status": "NOT_RESUMABLE",
+    "resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+    "current_step_id": "start_new_run",
+    "required_inputs": [],
+    "missing_inputs": [],
+    "next_step_required_inputs": [],
+    "next_step_subsurface_ids": [
+      "accepted_terminal_state"
+    ],
+    "operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead",
+    "next_safe_step": "NONE",
+    "history_chain_length": 1,
+    "selection_applied": false,
+    "selected_with_preparation": false,
+    "packet_supplies_resume_context": true,
+    "packet_supplies_repair_inputs": true,
+    "packet_supplies_output_defaults": true,
+    "requires_sibling_discovery": false
+  },
+  "repair_receipt": {
+    "schema_version": "artifact_repair_receipt_v0",
+    "run_id": "EXECUTABLE_LOOP_MINIMAL_CONTINUATION_RUN_001",
+    "task_class": "bounded_router_trigger_fix",
+    "from_state": "DOCTOR_BLOCKED",
+    "resulting_state": "CLOSURE_ACCEPTED",
+    "result": "NON_RESUMABLE_BOUNDARY_REACHED",
+    "completed_step_id": "restore_readiness_truth",
+    "completed_artifact_ids": [
+      "readiness_surface"
+    ],
+    "completed_subsurface_ids": [
+      "prompt_identity_record",
+      "task_identity_record"
+    ],
+    "remaining_stale_artifact_ids": [],
+    "remaining_stale_subsurface_ids": [],
+    "remaining_non_resumable_artifact_ids": [
+      "terminal_run_state"
+    ],
+    "remaining_non_resumable_subsurface_ids": [
+      "accepted_terminal_state"
+    ],
+    "remaining_stale_hints": [],
+    "remaining_non_resumable_hints": [
+      {
+        "artifact_id": "terminal_run_state",
+        "quality": "NON_RESUMABLE",
+        "repair_step": "start_new_run",
+        "still_stale_parts": [
+          "accepted_terminal_state"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "accepted_terminal_state",
+            "why": "the accepted closure state is terminal and should not be resumed"
+          }
+        ]
+      }
+    ],
+    "completed_hints": [
+      {
+        "artifact_id": "readiness_surface",
+        "quality": "STALE",
+        "repair_step": "restore_readiness_truth",
+        "still_stale_parts": [
+          "prompt_identity_record",
+          "task_identity_record"
+        ],
+        "mapped_inputs": [
+          "prompt_identity",
+          "task_identity"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "prompt_identity_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "prompt_identity"
+            ],
+            "why": "the continuation prompt identity is still missing or unresolved"
+          },
+          {
+            "subsurface_id": "task_identity_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "task_identity"
+            ],
+            "why": "the continuation task identity is still missing or unresolved"
+          }
+        ]
+      }
+    ],
+    "next_step_id": "start_new_run",
+    "ready_now_step_ids": [],
+    "next_step_required_inputs": [],
+    "next_step_hints": [
+      {
+        "artifact_id": "terminal_run_state",
+        "quality": "NON_RESUMABLE",
+        "repair_step": "start_new_run",
+        "still_stale_parts": [
+          "accepted_terminal_state"
+        ],
+        "mapped_inputs": [],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "accepted_terminal_state",
+            "status": "NON_RESUMABLE",
+            "mapped_inputs": [],
+            "why": "the accepted closure state is terminal and should not be resumed"
+          }
+        ]
+      }
+    ],
+    "repair_history": {
+      "applied": false,
+      "completed_step_ids": [
+        "restore_readiness_truth"
+      ],
+      "last_completed_step_id": "restore_readiness_truth",
+      "current_step_id": "start_new_run",
+      "waiting_step_ids": []
+    },
+    "repair_history_chain": [
+      {
+        "step_index": 1,
+        "from_state": "DOCTOR_BLOCKED",
+        "resulting_state": "CLOSURE_ACCEPTED",
+        "result": "NON_RESUMABLE_BOUNDARY_REACHED",
+        "active_step_id": "restore_readiness_truth",
+        "completed_step_id": "restore_readiness_truth",
+        "next_step_id": "start_new_run",
+        "completed_subsurface_ids": [
+          "prompt_identity_record",
+          "task_identity_record"
+        ],
+        "next_step_subsurface_ids": [
+          "accepted_terminal_state"
+        ],
+        "remaining_stale_subsurface_ids": [],
+        "remaining_non_resumable_subsurface_ids": [
+          "accepted_terminal_state"
+        ],
+        "operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead"
+      }
+    ],
+    "operator_evidence": {
+      "completed_step_id": "restore_readiness_truth",
+      "completed_artifact_hints": [
+        {
+          "artifact_id": "readiness_surface",
+          "quality": "STALE",
+          "repair_step": "restore_readiness_truth",
+          "still_stale_parts": [
+            "prompt_identity_record",
+            "task_identity_record"
+          ],
+          "mapped_inputs": [
+            "prompt_identity",
+            "task_identity"
+          ],
+          "stale_subsurfaces": [
+            {
+              "subsurface_id": "prompt_identity_record",
+              "status": "STALE",
+              "mapped_inputs": [
+                "prompt_identity"
+              ],
+              "why": "the continuation prompt identity is still missing or unresolved"
+            },
+            {
+              "subsurface_id": "task_identity_record",
+              "status": "STALE",
+              "mapped_inputs": [
+                "task_identity"
+              ],
+              "why": "the continuation task identity is still missing or unresolved"
+            }
+          ]
+        }
+      ],
+      "completed_subsurface_ids": [
+        "prompt_identity_record",
+        "task_identity_record"
+      ],
+      "next_step_id": "start_new_run",
+      "next_step_required_inputs": [],
+      "next_step_artifact_hints": [
+        {
+          "artifact_id": "terminal_run_state",
+          "quality": "NON_RESUMABLE",
+          "repair_step": "start_new_run",
+          "still_stale_parts": [
+            "accepted_terminal_state"
+          ],
+          "mapped_inputs": [],
+          "stale_subsurfaces": [
+            {
+              "subsurface_id": "accepted_terminal_state",
+              "status": "NON_RESUMABLE",
+              "mapped_inputs": [],
+              "why": "the accepted closure state is terminal and should not be resumed"
+            }
+          ]
+        }
+      ],
+      "next_step_subsurface_ids": [
+        "accepted_terminal_state"
+      ],
+      "operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead"
+    },
+    "resumability": {
+      "status": "NOT_RESUMABLE",
+      "family": "NOT_RESUMABLE_TERMINAL_ACCEPTED"
+    },
+    "why": "the continuation crossed into a non-resumable boundary, so the next move is no longer another repair step"
+  }
+}

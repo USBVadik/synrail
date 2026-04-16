@@ -1,0 +1,175 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+  "task_class": "bounded_router_trigger_fix",
+  "doctor": {
+    "final_verdict": "NOT_RUN",
+    "blocking_failure_classes": []
+  },
+  "resume": {
+    "applied": true,
+    "from_state": "DOCTOR_BLOCKED"
+  },
+  "repair_handoff": {
+    "applied": false,
+    "from_state": "",
+    "required_inputs": [],
+    "missing_inputs": []
+  },
+  "repair_packet": {
+    "emitted": true,
+    "from_state": "DOCTOR_BLOCKED",
+    "ready_for_resume": false,
+    "missing_inputs": [
+      "prompt_identity",
+      "task_identity"
+    ],
+    "selected_with_preparation": false,
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_DOCTOR_BLOCKED",
+    "active_pressures": [
+      "DOCTOR_BLOCKED"
+    ],
+    "repair_order": [
+      "restore_readiness_truth",
+      "rerun_closure"
+    ],
+    "policy_type": "MULTI_STEP_REPAIR",
+    "policy_next_step": "restore_readiness_truth",
+    "policy_ready_steps": [
+      "restore_readiness_truth"
+    ],
+    "repair_history_applied": true,
+    "repair_history_last_result": "STEP_NOT_COMPLETED",
+    "repair_history_last_completed_step_id": "",
+    "repair_history_completed_step_ids": [],
+    "repair_history_current_step_id": "restore_readiness_truth",
+    "repair_history_waiting_step_ids": [
+      "rerun_closure"
+    ],
+    "repair_history_chain_length": 2,
+    "repair_history_chain_results": [
+      "STEP_NOT_COMPLETED",
+      "STEP_NOT_COMPLETED"
+    ],
+    "repair_history_chain_step_ids": [
+      "restore_readiness_truth",
+      "restore_readiness_truth"
+    ],
+    "repair_termination_status": "TERMINATE",
+    "repair_termination_reason": "NO_PROGRESS_DETECTED",
+    "repair_attempt_count": 2,
+    "repair_max_attempts": 3,
+    "repair_no_progress_window": 2,
+    "repair_stalled_step_id": "restore_readiness_truth",
+    "repair_termination_next_action": "stop retrying the same repair step without new evidence or inputs",
+    "repair_receipt_last_operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
+    "repair_receipt_next_step_required_inputs": [
+      "prompt_identity",
+      "task_identity"
+    ],
+    "repair_receipt_next_step_subsurface_ids": [
+      "prompt_identity_record",
+      "task_identity_record"
+    ],
+    "stale_artifact_ids": [
+      "readiness_surface"
+    ],
+    "non_resumable_artifact_ids": [],
+    "stale_subsurface_ids": [
+      "prompt_identity_record",
+      "task_identity_record"
+    ],
+    "non_resumable_subsurface_ids": []
+  },
+  "repair_history": {
+    "available": true,
+    "from_state": "DOCTOR_BLOCKED",
+    "last_result": "STEP_NOT_COMPLETED",
+    "last_completed_step_id": "",
+    "current_step_id": "restore_readiness_truth",
+    "waiting_step_ids": [
+      "rerun_closure"
+    ],
+    "completed_step_ids": [],
+    "chain_length": 2,
+    "chain_results": [
+      "STEP_NOT_COMPLETED",
+      "STEP_NOT_COMPLETED"
+    ],
+    "chain_step_ids": [
+      "restore_readiness_truth",
+      "restore_readiness_truth"
+    ],
+    "termination_status": "TERMINATE",
+    "termination_reason": "NO_PROGRESS_DETECTED",
+    "attempt_count": 2,
+    "max_attempts": 3,
+    "no_progress_window": 2,
+    "stalled_step_id": "restore_readiness_truth",
+    "termination_next_action": "stop retrying the same repair step without new evidence or inputs",
+    "last_operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
+    "next_step_required_inputs": [
+      "prompt_identity",
+      "task_identity"
+    ],
+    "next_step_subsurface_ids": [
+      "prompt_identity_record",
+      "task_identity_record"
+    ]
+  },
+  "resumability": {
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_DOCTOR_BLOCKED",
+    "resumability_active_pressures": [
+      "DOCTOR_BLOCKED"
+    ],
+    "resumability_repair_order": [
+      "restore_readiness_truth",
+      "rerun_closure"
+    ],
+    "resumability_requires_new_run": false,
+    "resumability_policy_type": "MULTI_STEP_REPAIR",
+    "resumability_policy_next_step": "restore_readiness_truth",
+    "resumability_ready_now_steps": [
+      "restore_readiness_truth"
+    ],
+    "resumability_stale_artifact_ids": [
+      "readiness_surface"
+    ],
+    "resumability_stale_subsurface_ids": [
+      "prompt_identity_record",
+      "task_identity_record"
+    ]
+  },
+  "selection": {
+    "applied": false,
+    "selected_mode": "",
+    "selected_with_preparation": false
+  },
+  "preparation": {
+    "applied": false,
+    "ready_for_closure": false
+  },
+  "bundle": {
+    "status": "MISSING",
+    "missing_sections": []
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "NO_PROGRESS_DETECTED"
+  },
+  "refresh": {
+    "applied": false,
+    "event_type": "",
+    "resulting_closure_status": ""
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "DOCTOR_BLOCKED",
+  "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "stop retrying the same repair step without new evidence or inputs"
+}

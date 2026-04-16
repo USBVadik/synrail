@@ -1,0 +1,86 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "doctor": {
+    "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "blocking_failure_classes": []
+  },
+  "resume": {
+    "applied": true,
+    "from_state": "RECOVERY_PENDING"
+  },
+  "repair_handoff": {
+    "applied": true,
+    "from_state": "CLOSURE_ACCEPTED",
+    "required_inputs": [],
+    "missing_inputs": []
+  },
+  "repair_packet": {
+    "emitted": false,
+    "from_state": "",
+    "ready_for_resume": false,
+    "missing_inputs": [],
+    "selected_with_preparation": false,
+    "resumability_status": "NOT_RESUMABLE",
+    "resumability_family": "NOT_RESUMABLE_TERMINAL",
+    "active_pressures": [
+      "TERMINAL_STATE"
+    ],
+    "repair_order": [
+      "start_new_run"
+    ],
+    "policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "policy_next_step": "start_new_run",
+    "policy_ready_steps": [],
+    "stale_artifact_ids": [],
+    "non_resumable_artifact_ids": [
+      "terminal_run_state"
+    ]
+  },
+  "resumability": {
+    "resumability_status": "NOT_RESUMABLE",
+    "resumability_family": "NOT_RESUMABLE_TERMINAL",
+    "resumability_active_pressures": [
+      "TERMINAL_STATE"
+    ],
+    "resumability_repair_order": [
+      "start_new_run"
+    ],
+    "resumability_requires_new_run": true,
+    "resumability_policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "resumability_policy_next_step": "start_new_run",
+    "resumability_ready_now_steps": [],
+    "resumability_stale_artifact_ids": []
+  },
+  "selection": {
+    "applied": true,
+    "selected_mode": "FULL_GOVERNED_PATH",
+    "selected_with_preparation": true
+  },
+  "preparation": {
+    "applied": true,
+    "ready_for_closure": true
+  },
+  "bundle": {
+    "status": "COMPLETE",
+    "missing_sections": []
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "RECOVERY_REVERIFICATION_INCOMPLETE"
+  },
+  "refresh": {
+    "applied": true,
+    "event_type": "RECOVERY_EVENT",
+    "resulting_closure_status": "ACCEPTED"
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "current_closure_status": "ACCEPTED",
+  "next_safe_step": "NONE"
+}

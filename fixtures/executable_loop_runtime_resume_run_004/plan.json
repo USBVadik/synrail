@@ -1,0 +1,31 @@
+{
+  "schema_version": "proof_bundle_plan_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_004",
+  "task_class": "bounded_router_trigger_fix",
+  "governed_mode": "FULL_GOVERNED_PATH",
+  "required_sections": [
+    "final_result",
+    "modified_files",
+    "diff_provenance",
+    "readback",
+    "scenario_proof",
+    "artifact_identity",
+    "cleanup_status"
+  ],
+  "recommended_artifacts": {
+    "final_result": "fixtures/executable_loop_runtime_resume_run_004/final_result.json",
+    "readback": "fixtures/executable_loop_runtime_resume_run_004/readback.txt",
+    "scenario_proof": "fixtures/executable_loop_runtime_resume_run_004/scenario.txt",
+    "bundle_output": "fixtures/executable_loop_runtime_resume_run_004/bundle.json",
+    "closure_output": "fixtures/executable_loop_runtime_resume_run_004/closure.json",
+    "preparation_receipt_output": "fixtures/executable_loop_runtime_resume_run_004/preparation_receipt.json"
+  },
+  "artifact_identity": {
+    "baseline_identity": "compound-reentry-surface",
+    "execution_surface_identity": "compound-reentry-surface",
+    "prompt_identity": "runtime-resume-004-prompt",
+    "task_identity": "runtime-resume-004-task"
+  },
+  "planning_status": "READY",
+  "next_safe_step": "collect the planned proof artifacts and assemble the bundle before closure"
+}

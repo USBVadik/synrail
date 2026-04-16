@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/substitute_comparison_record_v0.schema.json",
+  "title": "Synrail Substitute Comparison Record v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scenario_id",
+    "scenario_class",
+    "task_class",
+    "substitute_stack",
+    "substitute_family",
+    "substitute_path",
+    "synrail_path",
+    "substitute",
+    "synrail",
+    "economics_summary",
+    "verdict",
+    "why_verdict",
+    "reasons"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "substitute_comparison_record_v0"},
+    "scenario_id": {"type": "string"},
+    "scenario_class": {"type": "string"},
+    "task_class": {"type": "string"},
+    "substitute_stack": {"type": "string"},
+    "substitute_family": {"type": "string"},
+    "substitute_path": {"type": "string"},
+    "synrail_path": {"type": "string"},
+    "substitute": {"type": "object"},
+    "synrail": {"type": "object"},
+    "economics_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operator_minutes_added",
+        "intervention_count_added",
+        "repair_cycles_added",
+        "invalidation_count_added",
+        "closure_latency_minutes_added",
+        "blocker_to_closure_cycles_added",
+        "false_green_exposure_reduced",
+        "artifact_completeness_percent_gain"
+      ],
+      "properties": {
+        "operator_minutes_added": {"type": "integer"},
+        "intervention_count_added": {"type": "integer"},
+        "repair_cycles_added": {"type": "integer"},
+        "invalidation_count_added": {"type": "integer"},
+        "closure_latency_minutes_added": {"type": "integer"},
+        "blocker_to_closure_cycles_added": {"type": "integer"},
+        "false_green_exposure_reduced": {"type": "integer"},
+        "artifact_completeness_percent_gain": {"type": "integer"}
+      }
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["SYNRAIL_BETTER", "SUBSTITUTE_GOOD_ENOUGH", "UNCLEAR"]
+    },
+    "why_verdict": {"type": "string"},
+    "reasons": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": "orchestration_report_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "result": "BLOCKED",
+  "stopping_stage": "repair_handoff",
+  "reason": "CONTINUATION_INPUTS_MISSING",
+  "doctor_verdict": "",
+  "resume_applied": true,
+  "resume_from_state": "DOCTOR_BLOCKED",
+  "repair_handoff_applied": true,
+  "repair_handoff_from_state": "DOCTOR_BLOCKED",
+  "repair_handoff_required_inputs": [
+    "prompt_identity",
+    "task_identity"
+  ],
+  "missing_continuation_inputs": [
+    "prompt_identity",
+    "task_identity"
+  ],
+  "selection_applied": false,
+  "selected_mode": "",
+  "selected_with_preparation": false,
+  "preparation_applied": false,
+  "preparation_ready_for_closure": false,
+  "bundle_status": "MISSING",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "refresh_applied": false,
+  "refresh_resulting_closure_status": "",
+  "comparison_applied": false,
+  "comparison_verdict": "",
+  "blockers": [
+    "prompt_identity",
+    "task_identity"
+  ],
+  "dominant_blocker": "CONTINUATION_INPUTS_MISSING",
+  "resulting_state": "DOCTOR_BLOCKED",
+  "next_safe_step": "restore the exact prompt and task identity artifacts"
+}

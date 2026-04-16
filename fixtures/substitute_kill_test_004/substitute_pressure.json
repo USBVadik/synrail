@@ -1,0 +1,45 @@
+{
+  "schema_version": "substitute_pressure_record_v0",
+  "record_count": 3,
+  "source_records": [
+    {
+      "path": "fixtures/substitute_kill_test_004/record_external_doctor.json",
+      "scenario_id": "SUBSTITUTE_SCENARIO_EXTERNAL_DOCTOR_004",
+      "substitute_stack": "manual_resume_triage_sheet",
+      "verdict": "SYNRAIL_BETTER"
+    },
+    {
+      "path": "fixtures/substitute_kill_test_004/record_recovery_repair.json",
+      "scenario_id": "SUBSTITUTE_SCENARIO_RECOVERY_REPAIR_004",
+      "substitute_stack": "manual_recovery_reverification_checklist",
+      "verdict": "SYNRAIL_BETTER"
+    },
+    {
+      "path": "fixtures/substitute_kill_test_004/record_weak.json",
+      "scenario_id": "SUBSTITUTE_SCENARIO_WEAK_004",
+      "substitute_stack": "bounded_patch_validation_loop",
+      "verdict": "UNCLEAR"
+    }
+  ],
+  "verdict_counts": {
+    "SYNRAIL_BETTER": 2,
+    "SUBSTITUTE_GOOD_ENOUGH": 0,
+    "UNCLEAR": 1
+  },
+  "substitute_stack_counts": {
+    "manual_resume_triage_sheet": 1,
+    "manual_recovery_reverification_checklist": 1,
+    "bounded_patch_validation_loop": 1
+  },
+  "reading": {
+    "strongest_synrail_edge": "SUBSTITUTE_SCENARIO_EXTERNAL_DOCTOR_004",
+    "clearest_substitute_sufficient_path": "",
+    "winning_substitute_stacks": [
+      "manual_recovery_reverification_checklist",
+      "manual_resume_triage_sheet"
+    ],
+    "non_winning_substitute_stacks": [
+      "bounded_patch_validation_loop"
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v2",
+  "system": "synrail",
+  "scenario_id": "SUBSTITUTE_SCENARIO_CHECKPOINT_RESTORE_007",
+  "scenario_class": "verified_working_restore_contour",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "path_id": "verified_checkpoint_restore_then_forward_packet",
+  "closure_result": "CLAIMED_NOT_ACCEPTED",
+  "blocker_to_closure_cycles": 1,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "MEDIUM",
+  "operator_minutes": 11,
+  "intervention_count": 1,
+  "repair_cycles": 0,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 10,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 94,
+  "notes": "Synrail restores a verified working state, rebuilds continuation truth immediately, and keeps the contour on the named forward boundary instead of a false repair path"
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_SELECTION_BLOCKED_RUN_001",
+  "task_class": "honesty_restoration_guard",
+  "report": {
+    "result": "BLOCKED",
+    "stopping_stage": "selection",
+    "reason": "MODE_SELECTION_NOT_GOVERNED",
+    "doctor_verdict": "",
+    "selection_applied": true,
+    "selected_mode": "LIGHTWEIGHT_BASELINE",
+    "selected_with_preparation": false,
+    "preparation_applied": false,
+    "preparation_ready_for_closure": false,
+    "bundle_status": "",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": false,
+    "comparison_applied": false,
+    "blockers": [
+      "MODE_SELECTION_NOT_GOVERNED"
+    ],
+    "dominant_blocker": "MODE_SELECTION_NOT_GOVERNED",
+    "resulting_state": "INITIALIZED",
+    "next_safe_step": "follow the selected lighter mode instead of entering governed orchestration"
+  },
+  "resulting_state": {
+    "state": "INITIALIZED",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "MODE_SELECTION_NOT_GOVERNED",
+    "next_safe_step": "follow the selected lighter mode instead of entering governed orchestration"
+  },
+  "worked_envelope": {
+    "resulting_state": "INITIALIZED",
+    "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+    "next_safe_step": "follow the selected lighter mode instead of entering governed orchestration"
+  }
+}

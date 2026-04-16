@@ -1,0 +1,208 @@
+{
+  "schema_version": "artifact_repair_receipt_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "DOCTOR_BLOCKED",
+  "resulting_state": "DOCTOR_BLOCKED",
+  "result": "STEP_PROGRESS_RECORDED",
+  "completed_step_id": "",
+  "completed_artifact_ids": [],
+  "completed_subsurface_ids": [],
+  "remaining_stale_artifact_ids": [
+    "readiness_surface"
+  ],
+  "remaining_stale_subsurface_ids": [
+    "prompt_identity_record",
+    "task_identity_record"
+  ],
+  "remaining_non_resumable_artifact_ids": [],
+  "remaining_non_resumable_subsurface_ids": [],
+  "remaining_stale_hints": [
+    {
+      "artifact_id": "readiness_surface",
+      "quality": "STALE",
+      "repair_step": "restore_readiness_truth",
+      "still_stale_parts": [
+        "prompt_identity_record",
+        "task_identity_record"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "prompt_identity_record",
+          "why": "the continuation prompt identity is still missing or unresolved"
+        },
+        {
+          "subsurface_id": "task_identity_record",
+          "why": "the continuation task identity is still missing or unresolved"
+        }
+      ]
+    }
+  ],
+  "remaining_non_resumable_hints": [],
+  "completed_hints": [],
+  "next_step_id": "restore_readiness_truth",
+  "ready_now_step_ids": [
+    "restore_readiness_truth"
+  ],
+  "next_step_required_inputs": [
+    "prompt_identity",
+    "task_identity"
+  ],
+  "next_step_hints": [
+    {
+      "artifact_id": "readiness_surface",
+      "quality": "STALE",
+      "repair_step": "restore_readiness_truth",
+      "still_stale_parts": [
+        "prompt_identity_record",
+        "task_identity_record"
+      ],
+      "mapped_inputs": [
+        "prompt_identity",
+        "task_identity"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "prompt_identity_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "prompt_identity"
+          ],
+          "why": "the continuation prompt identity is still missing or unresolved"
+        },
+        {
+          "subsurface_id": "task_identity_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "task_identity"
+          ],
+          "why": "the continuation task identity is still missing or unresolved"
+        }
+      ]
+    }
+  ],
+  "repair_history": {
+    "applied": true,
+    "completed_step_ids": [],
+    "last_completed_step_id": "",
+    "current_step_id": "restore_readiness_truth",
+    "waiting_step_ids": [
+      "rerun_closure"
+    ]
+  },
+  "repair_history_chain": [
+    {
+      "step_index": 1,
+      "from_state": "DOCTOR_BLOCKED",
+      "resulting_state": "DOCTOR_BLOCKED",
+      "result": "STEP_NOT_COMPLETED",
+      "active_step_id": "restore_readiness_truth",
+      "completed_step_id": "",
+      "next_step_id": "restore_readiness_truth",
+      "completed_subsurface_ids": [],
+      "next_step_subsurface_ids": [
+        "prompt_identity_record",
+        "task_identity_record"
+      ],
+      "remaining_stale_subsurface_ids": [
+        "prompt_identity_record",
+        "task_identity_record"
+      ],
+      "remaining_non_resumable_subsurface_ids": [],
+      "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+    },
+    {
+      "step_index": 2,
+      "from_state": "DOCTOR_BLOCKED",
+      "resulting_state": "DOCTOR_BLOCKED",
+      "result": "STEP_NOT_COMPLETED",
+      "active_step_id": "restore_readiness_truth",
+      "completed_step_id": "",
+      "next_step_id": "restore_readiness_truth",
+      "completed_subsurface_ids": [],
+      "next_step_subsurface_ids": [
+        "prompt_identity_record",
+        "task_identity_record"
+      ],
+      "remaining_stale_subsurface_ids": [
+        "prompt_identity_record",
+        "task_identity_record"
+      ],
+      "remaining_non_resumable_subsurface_ids": [],
+      "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+    },
+    {
+      "step_index": 3,
+      "from_state": "DOCTOR_BLOCKED",
+      "resulting_state": "DOCTOR_BLOCKED",
+      "result": "STEP_PROGRESS_RECORDED",
+      "active_step_id": "restore_readiness_truth",
+      "completed_step_id": "",
+      "next_step_id": "restore_readiness_truth",
+      "completed_subsurface_ids": [],
+      "next_step_subsurface_ids": [
+        "prompt_identity_record",
+        "task_identity_record"
+      ],
+      "remaining_stale_subsurface_ids": [
+        "prompt_identity_record",
+        "task_identity_record"
+      ],
+      "remaining_non_resumable_subsurface_ids": [],
+      "operator_focus": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there"
+    }
+  ],
+  "operator_evidence": {
+    "completed_step_id": "",
+    "completed_artifact_hints": [],
+    "completed_subsurface_ids": [],
+    "next_step_id": "restore_readiness_truth",
+    "next_step_required_inputs": [
+      "prompt_identity",
+      "task_identity"
+    ],
+    "next_step_artifact_hints": [
+      {
+        "artifact_id": "readiness_surface",
+        "quality": "STALE",
+        "repair_step": "restore_readiness_truth",
+        "still_stale_parts": [
+          "prompt_identity_record",
+          "task_identity_record"
+        ],
+        "mapped_inputs": [
+          "prompt_identity",
+          "task_identity"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "prompt_identity_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "prompt_identity"
+            ],
+            "why": "the continuation prompt identity is still missing or unresolved"
+          },
+          {
+            "subsurface_id": "task_identity_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "task_identity"
+            ],
+            "why": "the continuation task identity is still missing or unresolved"
+          }
+        ]
+      }
+    ],
+    "next_step_subsurface_ids": [
+      "prompt_identity_record",
+      "task_identity_record"
+    ],
+    "operator_focus": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there"
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_DOCTOR_BLOCKED"
+  },
+  "why": "the runtime recorded continuation progress even though the same repair step is still current"
+}

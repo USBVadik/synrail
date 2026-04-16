@@ -1,0 +1,59 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_003",
+  "task_class": "bounded_router_trigger_fix",
+  "doctor": {
+    "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "blocking_failure_classes": []
+  },
+  "resume": {
+    "applied": true,
+    "from_state": "RECOVERY_PENDING"
+  },
+  "repair_handoff": {
+    "applied": true,
+    "from_state": "RECOVERY_PENDING",
+    "required_inputs": [
+      "refresh_recovery_complete",
+      "refresh_reverification_complete"
+    ],
+    "missing_inputs": []
+  },
+  "repair_packet": {
+    "emitted": false,
+    "from_state": "",
+    "ready_for_resume": false,
+    "missing_inputs": [],
+    "selected_with_preparation": false
+  },
+  "selection": {
+    "applied": true,
+    "selected_mode": "FULL_GOVERNED_PATH",
+    "selected_with_preparation": true
+  },
+  "preparation": {
+    "applied": true,
+    "ready_for_closure": false
+  },
+  "bundle": {
+    "status": "COMPLETE",
+    "missing_sections": []
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "RECOVERY_REVERIFICATION_INCOMPLETE"
+  },
+  "refresh": {
+    "applied": true,
+    "event_type": "RECOVERY_EVENT",
+    "resulting_closure_status": "ACCEPTED"
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "current_closure_status": "ACCEPTED",
+  "next_safe_step": "NONE"
+}

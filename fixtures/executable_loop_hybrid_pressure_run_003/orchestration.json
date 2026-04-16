@@ -1,0 +1,34 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_003",
+  "task_class": "medium_risk_reversible_artifact_fix",
+  "doctor": {
+    "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "blocking_failure_classes": []
+  },
+  "bundle": {
+    "status": "COMPLETE",
+    "missing_sections": []
+  },
+  "closure": {
+    "closure_status": "ACCEPTED",
+    "blocking_reason": ""
+  },
+  "refresh": {
+    "applied": false,
+    "event_type": "",
+    "resulting_closure_status": ""
+  },
+  "comparison": {
+    "applied": true,
+    "verdict": "BASELINE_GOOD_ENOUGH",
+    "reasons": [
+      "synrail_adds_control_overhead",
+      "synrail_requires_more_operator_interventions",
+      "synrail_increases_closure_latency"
+    ]
+  },
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "current_closure_status": "ACCEPTED",
+  "next_safe_step": "NONE"
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": "repair_prompt_bridge_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+  "task_class": "bounded_router_trigger_fix",
+  "current_step_id": "restore_readiness_truth",
+  "allowed_scope": [
+    "prompt_identity_record",
+    "task_identity_record"
+  ],
+  "forbidden_scope": [
+    "Do not broaden scope beyond the current repair step.",
+    "Do not modify accepted or terminal-state logic.",
+    "Do not claim closure or acceptance unless the repaired run actually reaches it."
+  ],
+  "must_pass": [
+    "Repair only the current step: restore_readiness_truth",
+    "Keep run_id and task_class consistent with the current contour.",
+    "Do not remove or rewrite existing repair history.",
+    "Supply required repair input: prompt_identity",
+    "Supply required repair input: task_identity"
+  ],
+  "prompt": "Repair the current Synrail contour without broadening scope.\nCurrent step: restore_readiness_truth\nBroken truth: MAX_REPAIR_ATTEMPTS\nAllowed scope: prompt_identity_record, task_identity_record\nRequired inputs: prompt_identity, task_identity\nNext safe step: stop retrying the same repair step without new evidence or inputs\nDo not touch unrelated files, state transitions, or acceptance logic.\nReturn only the bounded repair needed for this current step and preserve continuity truth."
+}

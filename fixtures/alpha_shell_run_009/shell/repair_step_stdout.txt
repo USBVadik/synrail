@@ -1,0 +1,25 @@
+The next bounded repair instruction is ready.
+What failed: the next repair step is still missing required inputs
+Current repair task: restore a trustworthy workspace
+Stale artifacts: readiness_surface
+Stale subsurfaces: clean_execution_surface_record
+Allowed scope: the current workspace for this run
+Required inputs: confirmation that the workspace is clean and safe to use
+Do not touch: Do not broaden scope beyond the current repair step., Do not modify accepted or terminal-state logic., Do not claim closure or acceptance unless the repaired run actually reaches it.
+Must pass:
+- Repair only this task: restore a trustworthy workspace
+- Keep this repair on the same run and task.
+- Do not rewrite previous repair progress.
+- Provide required input: confirmation that the workspace is clean and safe to use
+- Keep the next safe step aligned with: move back to a clean or clearly verified-safe workspace
+Prompt for the next agent attempt:
+Repair the current run without broadening scope.
+Current repair task: restore a trustworthy workspace.
+What failed: the next repair step is still missing required inputs.
+Stale artifacts: readiness_surface
+Stale subsurfaces: clean_execution_surface_record
+Allowed scope: the current workspace for this run
+Required inputs: confirmation that the workspace is clean and safe to use
+What must be true after repair: move back to a clean or clearly verified-safe workspace
+Do not touch unrelated files, state transitions, or acceptance logic.
+Return only the bounded repair needed for this current step and keep this same repair path intact.

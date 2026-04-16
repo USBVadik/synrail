@@ -1,0 +1,32 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "doctor": {
+    "final_verdict": "NOT_ACCEPTABLE_EXACT_PROMPT_MISSING",
+    "blocking_failure_classes": [
+      "exact-prompt-artifact-missing"
+    ]
+  },
+  "bundle": {
+    "status": "MISSING",
+    "missing_sections": []
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "DOCTOR_NOT_GREEN"
+  },
+  "refresh": {
+    "applied": false,
+    "event_type": "",
+    "resulting_closure_status": ""
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "DOCTOR_BLOCKED",
+  "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "restore the exact prompt and task identity artifacts"
+}

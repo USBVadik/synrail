@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v2",
+  "system": "synrail",
+  "scenario_id": "SUBSTITUTE_SCENARIO_RECOVERY_REPAIR_004",
+  "scenario_class": "repairable_recovery_contour",
+  "task_class": "bounded_router_trigger_fix",
+  "path_id": "packet_first_recovery_repair_rendered",
+  "closure_result": "CLAIMED_NOT_ACCEPTED",
+  "blocker_to_closure_cycles": 1,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "MEDIUM",
+  "operator_minutes": 13,
+  "intervention_count": 1,
+  "repair_cycles": 1,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 14,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 88,
+  "notes": "the repairable recovery contour now stays packet-followable and render-followable with the exact repair step and required inputs still explicit"
+}

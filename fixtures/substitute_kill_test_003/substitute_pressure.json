@@ -1,0 +1,45 @@
+{
+  "schema_version": "substitute_pressure_record_v0",
+  "record_count": 3,
+  "source_records": [
+    {
+      "path": "/Users/usbdick/Documents/New project/synrail/fixtures/substitute_kill_test_003/record_doctor_return.json",
+      "scenario_id": "SUBSTITUTE_SCENARIO_DOCTOR_RETURN_003",
+      "substitute_stack": "manual_identity_repair_checklist",
+      "verdict": "SYNRAIL_BETTER"
+    },
+    {
+      "path": "/Users/usbdick/Documents/New project/synrail/fixtures/substitute_kill_test_003/record_second_operator.json",
+      "scenario_id": "SUBSTITUTE_SCENARIO_SECOND_OPERATOR_003",
+      "substitute_stack": "stage_runbook_resume_checklist",
+      "verdict": "SYNRAIL_BETTER"
+    },
+    {
+      "path": "/Users/usbdick/Documents/New project/synrail/fixtures/substitute_kill_test_003/record_weak.json",
+      "scenario_id": "SUBSTITUTE_SCENARIO_WEAK_003",
+      "substitute_stack": "bounded_patch_validation_loop",
+      "verdict": "UNCLEAR"
+    }
+  ],
+  "verdict_counts": {
+    "SYNRAIL_BETTER": 2,
+    "SUBSTITUTE_GOOD_ENOUGH": 0,
+    "UNCLEAR": 1
+  },
+  "substitute_stack_counts": {
+    "manual_identity_repair_checklist": 1,
+    "stage_runbook_resume_checklist": 1,
+    "bounded_patch_validation_loop": 1
+  },
+  "reading": {
+    "strongest_synrail_edge": "SUBSTITUTE_SCENARIO_DOCTOR_RETURN_003",
+    "clearest_substitute_sufficient_path": "",
+    "winning_substitute_stacks": [
+      "manual_identity_repair_checklist",
+      "stage_runbook_resume_checklist"
+    ],
+    "non_winning_substitute_stacks": [
+      "bounded_patch_validation_loop"
+    ]
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "schema_version": "checkpoint_record_v0",
+  "checkpoint_id": "working",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "event_type": "CREATE",
+  "result": "OK",
+  "checkpoint_root": "/Users/usbdick/Documents/New project/synrail/fixtures/alpha_safe_point_run_003/lane/checkpoints/working",
+  "source_state": "READY",
+  "source_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "source_doctor_status": "PASS",
+  "source_target_surface_status": "ATTESTED",
+  "source_integrity_status": "PASS",
+  "source_resumability_status": "NOT_RESUMABLE",
+  "source_resumability_family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
+  "safe_point_class": "VERIFIED_WORKING_STATE",
+  "safe_point_eligible": true,
+  "artifact_manifest": [
+    {
+      "artifact_id": "state",
+      "path": "artifacts/state.json",
+      "required": true,
+      "kind": "STATE"
+    }
+  ],
+  "verification": {
+    "status": "NOT_RUN",
+    "safe_point_eligible": false,
+    "required_artifacts_present": false,
+    "schema_validation_passed": false,
+    "state_consistency_passed": false,
+    "stale_artifacts_detected": [],
+    "failure_reasons": []
+  },
+  "restore": {
+    "status": "NOT_RUN",
+    "target_root": "",
+    "restore_verification_required": true,
+    "restored_artifact_ids": [],
+    "failure_reasons": []
+  },
+  "rollback": {
+    "status": "NOT_NEEDED",
+    "trigger": "NONE",
+    "rolled_back_artifact_ids": [],
+    "failure_reasons": []
+  },
+  "next_safe_step": "verify checkpoint before trusting restore"
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "closure_verdict_v0",
+  "run_id": "SEMANTIC_PROOF_HARDENING_VALID_001",
+  "task_class": "proof_sensitive_fix",
+  "closure_status": "ACCEPTED",
+  "blocking_reason": "",
+  "next_allowed_transition": "NONE",
+  "narrow_next_safe_step": "NONE",
+  "missing_sections": [],
+  "semantically_insufficient_sections": [],
+  "acceptance_criteria_revision_id": "",
+  "acceptance_criteria_status": "",
+  "acceptance_criteria_reason": ""
+}

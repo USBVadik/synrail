@@ -1,0 +1,73 @@
+{
+  "schema_version": "checkpoint_record_v0",
+  "checkpoint_id": "CHECKPOINT_RUN_002",
+  "run_id": "EXECUTABLE_LOOP_SELECTED_PREPARED_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "event_type": "CREATE",
+  "result": "OK",
+  "checkpoint_root": "fixtures/checkpoint_run_002/checkpoint",
+  "source_state": "CLOSURE_ACCEPTED",
+  "source_closure_status": "ACCEPTED",
+  "source_doctor_status": "PASS",
+  "source_target_surface_status": "ATTESTED",
+  "source_integrity_status": "PASS",
+  "source_resumability_status": "NOT_RESUMABLE",
+  "source_resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+  "safe_point_class": "VERIFIED_ACCEPTED_STATE",
+  "safe_point_eligible": true,
+  "artifact_manifest": [
+    {
+      "artifact_id": "state",
+      "path": "artifacts/state.json",
+      "required": true,
+      "kind": "STATE"
+    },
+    {
+      "artifact_id": "report",
+      "path": "artifacts/report.json",
+      "required": true,
+      "kind": "REPORT"
+    },
+    {
+      "artifact_id": "orchestration",
+      "path": "artifacts/orchestration.json",
+      "required": true,
+      "kind": "ORCHESTRATION"
+    },
+    {
+      "artifact_id": "selection_receipt",
+      "path": "artifacts/selection_receipt.json",
+      "required": true,
+      "kind": "SELECTION"
+    },
+    {
+      "artifact_id": "preparation_receipt",
+      "path": "artifacts/preparation_receipt.json",
+      "required": true,
+      "kind": "PREPARATION"
+    }
+  ],
+  "verification": {
+    "status": "NOT_RUN",
+    "safe_point_eligible": false,
+    "required_artifacts_present": false,
+    "schema_validation_passed": false,
+    "state_consistency_passed": false,
+    "stale_artifacts_detected": [],
+    "failure_reasons": []
+  },
+  "restore": {
+    "status": "NOT_RUN",
+    "target_root": "",
+    "restore_verification_required": true,
+    "restored_artifact_ids": [],
+    "failure_reasons": []
+  },
+  "rollback": {
+    "status": "NOT_NEEDED",
+    "trigger": "NONE",
+    "rolled_back_artifact_ids": [],
+    "failure_reasons": []
+  },
+  "next_safe_step": "verify checkpoint before trusting restore"
+}

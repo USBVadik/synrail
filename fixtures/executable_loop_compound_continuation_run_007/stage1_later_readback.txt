@@ -1,0 +1,1 @@
+readback confirms repaired path and refreshed surface state

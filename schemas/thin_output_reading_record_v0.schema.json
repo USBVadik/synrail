@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/thin_output_reading_record_v0.schema.json",
+  "title": "Synrail Thin Output Reading Record v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "source_paths",
+    "bridge_paths",
+    "source_line_count",
+    "bridge_line_count",
+    "line_reduction",
+    "bridge_shorter",
+    "outcome_class",
+    "current_step_id",
+    "missing_markers",
+    "verdict",
+    "why"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "thin_output_reading_record_v0"},
+    "run_id": {"type": "string"},
+    "task_class": {"type": "string"},
+    "source_paths": {"type": "array", "items": {"type": "string"}},
+    "bridge_paths": {"type": "array", "items": {"type": "string"}},
+    "source_line_count": {"type": "integer", "minimum": 0},
+    "bridge_line_count": {"type": "integer", "minimum": 0},
+    "line_reduction": {"type": "integer"},
+    "bridge_shorter": {"type": "boolean"},
+    "outcome_class": {"type": "string"},
+    "current_step_id": {"type": "string"},
+    "missing_markers": {"type": "array", "items": {"type": "string"}},
+    "verdict": {"type": "string", "enum": ["READING_TAX_REDUCED", "NO_CLEAR_READING_GAIN"]},
+    "why": {"type": "string"}
+  }
+}

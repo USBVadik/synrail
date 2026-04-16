@@ -1,0 +1,41 @@
+{
+  "schema_version": "run_state_v0",
+  "run_id": "ALPHA_RUN_20260414T180953Z",
+  "task_class": "bounded_change",
+  "state": "DOCTOR_BLOCKED",
+  "target_surface": {
+    "status": "ATTESTED",
+    "identity": "autodetected_python_worktree",
+    "baseline_relation": "autodetected_python_baseline"
+  },
+  "doctor": {
+    "status": "FAIL",
+    "blocking_failure_classes": [
+      "dirty-surface unsafe"
+    ]
+  },
+  "integrity": {
+    "status": "FAIL",
+    "exact_task_identity_ok": false
+  },
+  "execution": {
+    "status": "NOT_RUN",
+    "artifact_bundle_present": false
+  },
+  "proof_bundle": {
+    "status": "MISSING",
+    "missing_sections": []
+  },
+  "closure": {
+    "status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "DOCTOR_NOT_GREEN",
+    "next_allowed_transition": "DOCTOR_READINESS",
+    "narrow_next_safe_step": "move to a clean or explicitly observed-safe execution surface",
+    "missing_sections": []
+  },
+  "recovery": {
+    "status": "NOT_REQUIRED",
+    "reverification_complete": false
+  },
+  "next_safe_step": "move to a clean or explicitly observed-safe execution surface"
+}

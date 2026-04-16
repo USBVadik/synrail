@@ -1,0 +1,215 @@
+{
+  "schema_version": "artifact_repair_receipt_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "PROOF_BUNDLE_INVALID",
+  "resulting_state": "PROOF_BUNDLE_INVALID",
+  "result": "STEP_NOT_COMPLETED",
+  "completed_step_id": "",
+  "completed_artifact_ids": [],
+  "completed_subsurface_ids": [],
+  "remaining_stale_artifact_ids": [
+    "final_result_artifact",
+    "supporting_proof_artifacts",
+    "recovery_reverification_surface"
+  ],
+  "remaining_stale_subsurface_ids": [
+    "final_result_payload",
+    "diff_provenance_record",
+    "cleanup_status_record",
+    "readback_record",
+    "scenario_proof_record",
+    "recovery_status_record",
+    "reverification_completion_record"
+  ],
+  "remaining_non_resumable_artifact_ids": [],
+  "remaining_non_resumable_subsurface_ids": [],
+  "remaining_stale_hints": [
+    {
+      "artifact_id": "final_result_artifact",
+      "quality": "STALE",
+      "repair_step": "repair_final_result_artifact",
+      "still_stale_parts": [
+        "final_result_payload",
+        "diff_provenance_record",
+        "cleanup_status_record"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "final_result_payload",
+          "why": "the final result artifact is missing, empty, or not yet trusted for bundle repair"
+        },
+        {
+          "subsurface_id": "diff_provenance_record",
+          "why": "diff provenance still cannot be reconstructed from the current final result artifact"
+        },
+        {
+          "subsurface_id": "cleanup_status_record",
+          "why": "cleanup status still cannot be trusted from the current final result artifact"
+        }
+      ]
+    },
+    {
+      "artifact_id": "supporting_proof_artifacts",
+      "quality": "STALE",
+      "repair_step": "complete_missing_proof_sections",
+      "still_stale_parts": [
+        "readback_record",
+        "scenario_proof_record"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "readback_record",
+          "why": "the readback surface from changed sections is still missing"
+        },
+        {
+          "subsurface_id": "scenario_proof_record",
+          "why": "the scenario proof artifact is still missing"
+        }
+      ]
+    },
+    {
+      "artifact_id": "recovery_reverification_surface",
+      "quality": "STALE",
+      "repair_step": "complete_recovery_reverification",
+      "still_stale_parts": [
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "recovery_status_record",
+          "why": "the recovery status is still pending rather than complete"
+        },
+        {
+          "subsurface_id": "reverification_completion_record",
+          "why": "the recovery reverification completion flag is still missing"
+        }
+      ]
+    }
+  ],
+  "remaining_non_resumable_hints": [],
+  "completed_hints": [],
+  "next_step_id": "repair_final_result_artifact",
+  "ready_now_step_ids": [
+    "repair_final_result_artifact"
+  ],
+  "next_step_required_inputs": [
+    "final_result"
+  ],
+  "next_step_hints": [
+    {
+      "artifact_id": "final_result_artifact",
+      "quality": "STALE",
+      "repair_step": "repair_final_result_artifact",
+      "still_stale_parts": [
+        "final_result_payload",
+        "diff_provenance_record",
+        "cleanup_status_record"
+      ],
+      "mapped_inputs": [
+        "final_result"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "final_result_payload",
+          "status": "STALE",
+          "mapped_inputs": [
+            "final_result"
+          ],
+          "why": "the final result artifact is missing, empty, or not yet trusted for bundle repair"
+        },
+        {
+          "subsurface_id": "diff_provenance_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "final_result"
+          ],
+          "why": "diff provenance still cannot be reconstructed from the current final result artifact"
+        },
+        {
+          "subsurface_id": "cleanup_status_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "final_result"
+          ],
+          "why": "cleanup status still cannot be trusted from the current final result artifact"
+        }
+      ]
+    }
+  ],
+  "repair_history": {
+    "applied": false,
+    "completed_step_ids": [],
+    "last_completed_step_id": "",
+    "current_step_id": "repair_final_result_artifact",
+    "waiting_step_ids": [
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ]
+  },
+  "operator_evidence": {
+    "completed_step_id": "",
+    "completed_artifact_hints": [],
+    "completed_subsurface_ids": [],
+    "next_step_id": "repair_final_result_artifact",
+    "next_step_required_inputs": [
+      "final_result"
+    ],
+    "next_step_artifact_hints": [
+      {
+        "artifact_id": "final_result_artifact",
+        "quality": "STALE",
+        "repair_step": "repair_final_result_artifact",
+        "still_stale_parts": [
+          "final_result_payload",
+          "diff_provenance_record",
+          "cleanup_status_record"
+        ],
+        "mapped_inputs": [
+          "final_result"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "final_result_payload",
+            "status": "STALE",
+            "mapped_inputs": [
+              "final_result"
+            ],
+            "why": "the final result artifact is missing, empty, or not yet trusted for bundle repair"
+          },
+          {
+            "subsurface_id": "diff_provenance_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "final_result"
+            ],
+            "why": "diff provenance still cannot be reconstructed from the current final result artifact"
+          },
+          {
+            "subsurface_id": "cleanup_status_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "final_result"
+            ],
+            "why": "cleanup status still cannot be trusted from the current final result artifact"
+          }
+        ]
+      }
+    ],
+    "next_step_subsurface_ids": [
+      "final_result_payload",
+      "diff_provenance_record",
+      "cleanup_status_record"
+    ],
+    "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_COMPOUND"
+  },
+  "why": "the current repair step is still blocked, so the receipt records no completed step yet"
+}

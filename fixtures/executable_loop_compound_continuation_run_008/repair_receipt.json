@@ -1,0 +1,269 @@
+{
+  "schema_version": "artifact_repair_receipt_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_008",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "PROOF_BUNDLE_COMPLETE",
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "result": "NON_RESUMABLE_BOUNDARY_REACHED",
+  "completed_step_id": "complete_recovery_reverification",
+  "completed_artifact_ids": [
+    "recovery_reverification_surface"
+  ],
+  "completed_subsurface_ids": [
+    "recovery_status_record",
+    "reverification_completion_record"
+  ],
+  "remaining_stale_artifact_ids": [],
+  "remaining_stale_subsurface_ids": [],
+  "remaining_non_resumable_artifact_ids": [
+    "terminal_run_state"
+  ],
+  "remaining_non_resumable_subsurface_ids": [
+    "accepted_terminal_state"
+  ],
+  "remaining_stale_hints": [],
+  "remaining_non_resumable_hints": [
+    {
+      "artifact_id": "terminal_run_state",
+      "quality": "NON_RESUMABLE",
+      "repair_step": "start_new_run",
+      "still_stale_parts": [
+        "accepted_terminal_state"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "accepted_terminal_state",
+          "why": "the accepted closure state is terminal and should not be resumed"
+        }
+      ]
+    }
+  ],
+  "completed_hints": [
+    {
+      "artifact_id": "recovery_reverification_surface",
+      "quality": "STALE",
+      "repair_step": "complete_recovery_reverification",
+      "still_stale_parts": [
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "mapped_inputs": [
+        "refresh_recovery_complete",
+        "refresh_reverification_complete"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "recovery_status_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "refresh_recovery_complete"
+          ],
+          "why": "the recovery status is still pending rather than complete"
+        },
+        {
+          "subsurface_id": "reverification_completion_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "refresh_reverification_complete"
+          ],
+          "why": "the recovery reverification completion flag is still missing"
+        }
+      ]
+    }
+  ],
+  "next_step_id": "start_new_run",
+  "ready_now_step_ids": [],
+  "next_step_required_inputs": [],
+  "next_step_hints": [
+    {
+      "artifact_id": "terminal_run_state",
+      "quality": "NON_RESUMABLE",
+      "repair_step": "start_new_run",
+      "still_stale_parts": [
+        "accepted_terminal_state"
+      ],
+      "mapped_inputs": [],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "accepted_terminal_state",
+          "status": "NON_RESUMABLE",
+          "mapped_inputs": [],
+          "why": "the accepted closure state is terminal and should not be resumed"
+        }
+      ]
+    }
+  ],
+  "repair_history": {
+    "applied": true,
+    "completed_step_ids": [
+      "restore_readiness_truth",
+      "complete_missing_proof_sections",
+      "complete_recovery_reverification"
+    ],
+    "last_completed_step_id": "complete_recovery_reverification",
+    "current_step_id": "start_new_run",
+    "waiting_step_ids": []
+  },
+  "repair_history_chain": [
+    {
+      "step_index": 1,
+      "from_state": "DOCTOR_BLOCKED",
+      "resulting_state": "DOCTOR_BLOCKED",
+      "result": "STEP_NOT_COMPLETED",
+      "active_step_id": "restore_readiness_truth",
+      "completed_step_id": "",
+      "next_step_id": "restore_readiness_truth",
+      "completed_subsurface_ids": [],
+      "next_step_subsurface_ids": [
+        "target_identity_record"
+      ],
+      "remaining_stale_subsurface_ids": [
+        "target_identity_record",
+        "readback_record",
+        "scenario_proof_record",
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "remaining_non_resumable_subsurface_ids": [],
+      "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+    },
+    {
+      "step_index": 2,
+      "from_state": "DOCTOR_BLOCKED",
+      "resulting_state": "PROOF_BUNDLE_PARTIAL",
+      "result": "STEP_COMPLETED",
+      "active_step_id": "restore_readiness_truth",
+      "completed_step_id": "restore_readiness_truth",
+      "next_step_id": "complete_missing_proof_sections",
+      "completed_subsurface_ids": [
+        "target_identity_record"
+      ],
+      "next_step_subsurface_ids": [
+        "readback_record",
+        "scenario_proof_record"
+      ],
+      "remaining_stale_subsurface_ids": [
+        "readback_record",
+        "scenario_proof_record",
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "remaining_non_resumable_subsurface_ids": [],
+      "operator_focus": "move to the next repair step and focus only on the remaining stale sub-surfaces there"
+    },
+    {
+      "step_index": 3,
+      "from_state": "PROOF_BUNDLE_PARTIAL",
+      "resulting_state": "PROOF_BUNDLE_COMPLETE",
+      "result": "STEP_COMPLETED",
+      "active_step_id": "complete_missing_proof_sections",
+      "completed_step_id": "complete_missing_proof_sections",
+      "next_step_id": "complete_recovery_reverification",
+      "completed_subsurface_ids": [
+        "readback_record",
+        "scenario_proof_record"
+      ],
+      "next_step_subsurface_ids": [
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "remaining_stale_subsurface_ids": [
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "remaining_non_resumable_subsurface_ids": [],
+      "operator_focus": "move to the next repair step and focus only on the remaining stale sub-surfaces there"
+    },
+    {
+      "step_index": 4,
+      "from_state": "PROOF_BUNDLE_COMPLETE",
+      "resulting_state": "CLOSURE_ACCEPTED",
+      "result": "NON_RESUMABLE_BOUNDARY_REACHED",
+      "active_step_id": "complete_recovery_reverification",
+      "completed_step_id": "complete_recovery_reverification",
+      "next_step_id": "start_new_run",
+      "completed_subsurface_ids": [
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "next_step_subsurface_ids": [
+        "accepted_terminal_state"
+      ],
+      "remaining_stale_subsurface_ids": [],
+      "remaining_non_resumable_subsurface_ids": [
+        "accepted_terminal_state"
+      ],
+      "operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead"
+    }
+  ],
+  "operator_evidence": {
+    "completed_step_id": "complete_recovery_reverification",
+    "completed_artifact_hints": [
+      {
+        "artifact_id": "recovery_reverification_surface",
+        "quality": "STALE",
+        "repair_step": "complete_recovery_reverification",
+        "still_stale_parts": [
+          "recovery_status_record",
+          "reverification_completion_record"
+        ],
+        "mapped_inputs": [
+          "refresh_recovery_complete",
+          "refresh_reverification_complete"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "recovery_status_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "refresh_recovery_complete"
+            ],
+            "why": "the recovery status is still pending rather than complete"
+          },
+          {
+            "subsurface_id": "reverification_completion_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "refresh_reverification_complete"
+            ],
+            "why": "the recovery reverification completion flag is still missing"
+          }
+        ]
+      }
+    ],
+    "completed_subsurface_ids": [
+      "recovery_status_record",
+      "reverification_completion_record"
+    ],
+    "next_step_id": "start_new_run",
+    "next_step_required_inputs": [],
+    "next_step_artifact_hints": [
+      {
+        "artifact_id": "terminal_run_state",
+        "quality": "NON_RESUMABLE",
+        "repair_step": "start_new_run",
+        "still_stale_parts": [
+          "accepted_terminal_state"
+        ],
+        "mapped_inputs": [],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "accepted_terminal_state",
+            "status": "NON_RESUMABLE",
+            "mapped_inputs": [],
+            "why": "the accepted closure state is terminal and should not be resumed"
+          }
+        ]
+      }
+    ],
+    "next_step_subsurface_ids": [
+      "accepted_terminal_state"
+    ],
+    "operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead"
+  },
+  "resumability": {
+    "status": "NOT_RESUMABLE",
+    "family": "NOT_RESUMABLE_TERMINAL_ACCEPTED"
+  },
+  "why": "the continuation crossed into a non-resumable boundary, so the next move is no longer another repair step"
+}

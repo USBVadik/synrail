@@ -1,0 +1,18 @@
+{
+  "schema_version": "acceptance_criteria_validation_record_v0",
+  "criteria_revision_id": "acceptance_criteria_v0:tampered000000",
+  "status": "INVALID",
+  "reason": "CRITERIA_REVISION_MISMATCH",
+  "task_class_matches": true,
+  "project_type_matches": true,
+  "target_classification_matches": true,
+  "intended_run_class_matches": true,
+  "required_gate_ids_match": true,
+  "required_bundle_sections_match": true,
+  "criteria_standard_matches": true,
+  "criteria_owner_matches": true,
+  "project_profile_fingerprint_matches": true,
+  "criteria_revision_matches": false,
+  "provenance_complete": true,
+  "provenance_profile_fingerprint_matches": true
+}

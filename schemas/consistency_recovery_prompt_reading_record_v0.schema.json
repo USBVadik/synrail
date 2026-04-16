@@ -1,0 +1,27 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "primary_action",
+    "allowed_scope",
+    "missing_markers",
+    "verdict",
+    "why"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "consistency_recovery_prompt_reading_record_v0"},
+    "run_id": {"type": "string"},
+    "task_class": {"type": "string"},
+    "primary_action": {"type": "string"},
+    "allowed_scope": {"type": "array", "items": {"type": "string"}},
+    "missing_markers": {"type": "array", "items": {"type": "string"}},
+    "verdict": {
+      "type": "string",
+      "enum": ["RECOVERY_PROMPT_BOUNDED", "RECOVERY_PROMPT_DRIFT"]
+    },
+    "why": {"type": "string"}
+  }
+}

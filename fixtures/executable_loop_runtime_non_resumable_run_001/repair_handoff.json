@@ -1,0 +1,60 @@
+{
+  "schema_version": "repair_handoff_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_001",
+  "task_class": "honesty_restoration_guard",
+  "from_state": "INITIALIZED",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "MODE_SELECTION_NOT_GOVERNED",
+  "continuation_allowed": false,
+  "continuation_entrypoint": "",
+  "resumability": {
+    "status": "NOT_RESUMABLE",
+    "family": "NOT_RESUMABLE_SELECTION_BLOCKED",
+    "active_pressures": [
+      "SELECTION_BLOCKED"
+    ],
+    "recommended_repair_order": [
+      "switch_to_lighter_mode"
+    ],
+    "requires_new_run": false,
+    "explanation": "the governed contour should not resume because the current policy choice points to a lighter mode instead"
+  },
+  "repair_policy": {
+    "policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "next_step_id": "switch_to_lighter_mode",
+    "ready_now_step_ids": [],
+    "ordered_steps": [
+      {
+        "step_id": "switch_to_lighter_mode",
+        "status": "TERMINAL_NEXT_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "mode_selection_receipt"
+        ],
+        "resolves_pressures": [
+          "SELECTION_BLOCKED"
+        ],
+        "why": "this contour should follow the lighter selected mode instead of resuming governed execution"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "mode_selection_receipt",
+      "quality": "NON_RESUMABLE",
+      "still_stale_parts": [
+        "selected_mode_policy"
+      ],
+      "mapped_inputs": [],
+      "repair_step": "switch_to_lighter_mode",
+      "why": "the current selected mode explicitly keeps this run out of the governed continuation contour"
+    }
+  ],
+  "required_inputs": [],
+  "runtime_defaults": {
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false
+  },
+  "next_safe_step": "follow the selected lighter mode instead of entering governed orchestration"
+}

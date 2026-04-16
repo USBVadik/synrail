@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/consistency_recovery_record_v0.schema.json",
+  "title": "Synrail Consistency Recovery Record v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "consistency_result",
+    "dominant_conflict",
+    "checkpoint_restore_available",
+    "primary_action",
+    "restore_artifact_ids",
+    "reemit_artifact_ids",
+    "keep_artifact_ids",
+    "artifact_plan",
+    "operator_instructions",
+    "ambiguous",
+    "why"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "consistency_recovery_record_v0"},
+    "run_id": {"type": "string"},
+    "task_class": {"type": "string"},
+    "consistency_result": {"type": "string"},
+    "dominant_conflict": {"type": "string"},
+    "checkpoint_restore_available": {"type": "boolean"},
+    "primary_action": {"type": "string"},
+    "restore_artifact_ids": {"type": "array", "items": {"type": "string"}},
+    "reemit_artifact_ids": {"type": "array", "items": {"type": "string"}},
+    "keep_artifact_ids": {"type": "array", "items": {"type": "string"}},
+    "artifact_plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact_id", "requested_action", "concrete_action"],
+        "properties": {
+          "artifact_id": {"type": "string"},
+          "requested_action": {"type": "string"},
+          "concrete_action": {"type": "string"}
+        }
+      }
+    },
+    "operator_instructions": {"type": "array", "items": {"type": "string"}},
+    "ambiguous": {"type": "boolean"},
+    "why": {"type": "string"}
+  }
+}

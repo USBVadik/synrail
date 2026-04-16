@@ -1,0 +1,21 @@
+{
+  "schema_version": "continuation_adoption_record_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "label": "packet_chained_minimal_core_repeated_doctor",
+  "fixture_root": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_010",
+  "final_result": "OK",
+  "final_state": "CLOSURE_ACCEPTED",
+  "final_closure_status": "ACCEPTED",
+  "packet_only_root_entry": true,
+  "root_continuation_side_files": [],
+  "root_continuation_side_files_count": 0,
+  "stage_run_count": 4,
+  "repeated_doctor_block_events": 1,
+  "repair_history_available": true,
+  "repair_history_chain_length": 4,
+  "packet_continuation_core_present": true,
+  "packet_core_requires_sibling_discovery": false,
+  "packet_core_selected_with_preparation": false,
+  "packet_core_operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead",
+  "packet_core_next_step_required_inputs": []
+}

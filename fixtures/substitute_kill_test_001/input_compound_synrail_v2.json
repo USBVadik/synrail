@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v2",
+  "system": "synrail",
+  "scenario_id": "SUBSTITUTE_SCENARIO_COMPOUND_001",
+  "scenario_class": "compound_proof_sensitive_repair",
+  "task_class": "bounded_router_trigger_fix",
+  "path_id": "packet_first_continuation",
+  "closure_result": "ACCEPTED",
+  "blocker_to_closure_cycles": 5,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "MEDIUM",
+  "coordination_overhead": "HIGH",
+  "operator_minutes": 57,
+  "intervention_count": 6,
+  "repair_cycles": 3,
+  "invalidation_count": 2,
+  "closure_latency_minutes": 74,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 100,
+  "notes": "synrail compound continuation against CI checklist substitute"
+}

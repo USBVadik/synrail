@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v2",
+  "system": "synrail",
+  "scenario_id": "SUBSTITUTE_SCENARIO_DOCTOR_RETURN_003",
+  "scenario_class": "repeated_doctor_pressure_compound",
+  "task_class": "bounded_router_trigger_fix",
+  "path_id": "packet_chained_repeated_doctor_resume",
+  "closure_result": "BLOCKED",
+  "blocker_to_closure_cycles": 3,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "MEDIUM",
+  "operator_minutes": 21,
+  "intervention_count": 3,
+  "repair_cycles": 2,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 27,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 93,
+  "notes": "the tightened kernel keeps the repeated doctor-return contour explicit, bounded, and reproducible even when the step still ends blocked"
+}

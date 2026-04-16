@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/comparison_input_v0.schema.json",
+  "title": "Synrail Comparison Input v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "system",
+    "scenario_id",
+    "task_class",
+    "closure_result",
+    "blocker_to_closure_cycles",
+    "false_success_risk",
+    "proof_completeness",
+    "recovery_cost",
+    "coordination_overhead"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "comparison_input_v0"
+    },
+    "system": {
+      "type": "string",
+      "enum": ["baseline", "synrail"]
+    },
+    "scenario_id": {
+      "type": "string"
+    },
+    "task_class": {
+      "type": "string"
+    },
+    "closure_result": {
+      "type": "string",
+      "enum": ["ACCEPTED", "CLAIMED_NOT_ACCEPTED", "REJECTED", "BLOCKED"]
+    },
+    "blocker_to_closure_cycles": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "false_success_risk": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH"]
+    },
+    "proof_completeness": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH"]
+    },
+    "recovery_cost": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH"]
+    },
+    "coordination_overhead": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH"]
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

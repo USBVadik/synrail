@@ -1,0 +1,63 @@
+{
+  "schema_version": "observability_record_v0",
+  "run_id": "ALPHA_RUN_20260414T185910Z",
+  "task_class": "bounded_change",
+  "resulting_state": "DOCTOR_BLOCKED",
+  "report_summary": {
+    "result": "BLOCKED",
+    "stopping_stage": "doctor",
+    "reason": "DOCTOR_NOT_GREEN",
+    "next_safe_step": "move to a clean or explicitly observed-safe execution surface"
+  },
+  "event_counts": {
+    "transition_count": 0,
+    "repair_attempt_count": 1,
+    "rejection_count": 1
+  },
+  "state_transition_log": [],
+  "repair_attempt_log": [
+    {
+      "attempt_number": 1,
+      "step_id": "restore_readiness_truth",
+      "result": "STEP_PROGRESS_RECORDED"
+    }
+  ],
+  "rejection_log": [
+    {
+      "stage": "doctor",
+      "reason": "DOCTOR_NOT_GREEN",
+      "dominant_blocker": "DOCTOR_NOT_GREEN",
+      "next_safe_step": "move to a clean or explicitly observed-safe execution surface"
+    }
+  ],
+  "sanitized_session_export": {
+    "sensitive_values_redacted": true,
+    "run_id": "ALPHA_RUN_20260414T185910Z",
+    "task_class": "bounded_change",
+    "state": "DOCTOR_BLOCKED",
+    "result": "BLOCKED",
+    "reason": "DOCTOR_NOT_GREEN",
+    "next_safe_step": "move to a clean or explicitly observed-safe execution surface",
+    "resumability_family": "REPAIRABLE_DOCTOR_BLOCKED",
+    "repair_current_step_id": "restore_readiness_truth",
+    "repair_last_result": "STEP_PROGRESS_RECORDED",
+    "entry_artifacts": [
+      "state_file",
+      "repair_packet"
+    ],
+    "source_of_truth_precedence": [
+      "state_file",
+      "repair_packet",
+      "repair_receipt",
+      "repair_history_chain"
+    ],
+    "packet_replay_ready": true,
+    "latest_repair_receipt_available": true,
+    "artifact_files": [
+      "repair_packet.json",
+      "repair_receipt.json",
+      "report.json",
+      "state.json"
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+"""Synrail schema package."""

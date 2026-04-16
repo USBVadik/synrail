@@ -1,0 +1,23 @@
+{
+  "schema_version": "thin_output_record_v0",
+  "mode": "default",
+  "run_id": "ALPHA_RUN_20260414T185910Z",
+  "task_class": "bounded_change",
+  "outcome_class": "REPAIR_STOP",
+  "status_label": "Repair Stopped",
+  "summary": "The repair loop has reached a bounded stop condition.",
+  "diagnosis": "Stop replaying this contour and start a new run or restore a verified restore point.",
+  "what_happened": "The repair loop has reached a bounded stop condition.",
+  "what_it_means": "Stop replaying this contour and start a new run or restore a verified restore point.",
+  "what_to_do_next": "Stop replaying this contour. Restore a verified restore point or start a new run.",
+  "resume_available": false,
+  "next_command": "",
+  "restore_command": "",
+  "next_step": "move to a clean or explicitly observed-safe execution surface",
+  "restore_available": false,
+  "checkpoint_id": "",
+  "recovery_primary_action": "",
+  "recovery_operator_instructions": [],
+  "suggested_command": "synrail restore or start a new run",
+  "technical_lines": []
+}

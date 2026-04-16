@@ -1,0 +1,12 @@
+{
+  "schema_version": "acceptance_criteria_validation_record_v0",
+  "criteria_revision_id": "acceptance_criteria_v0:7358e00fea15",
+  "status": "VALID",
+  "reason": "CRITERIA_VALID",
+  "task_class_matches": true,
+  "project_type_matches": true,
+  "target_classification_matches": true,
+  "intended_run_class_matches": true,
+  "required_gate_ids_match": true,
+  "required_bundle_sections_match": true
+}

@@ -1,0 +1,5 @@
+Synrail initialized.
+Artifact root: /Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_008/lane
+Detected project type: python
+After the agent leaves final_result.json or final_result.txt, run: synrail check --artifact-root '/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_008/lane'
+Optional restore point: synrail save --artifact-root '/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_008/lane'

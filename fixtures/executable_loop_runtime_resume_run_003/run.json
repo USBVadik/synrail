@@ -1,0 +1,37 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+  "task_class": "bounded_router_trigger_fix",
+  "report": {
+    "result": "OK",
+    "stopping_stage": "accepted",
+    "reason": "NONE",
+    "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "resume_applied": true,
+    "resume_from_state": "DOCTOR_BLOCKED",
+    "selection_applied": false,
+    "selected_mode": "",
+    "selected_with_preparation": false,
+    "preparation_applied": false,
+    "preparation_ready_for_closure": false,
+    "bundle_status": "COMPLETE",
+    "closure_status": "ACCEPTED",
+    "refresh_applied": false,
+    "comparison_applied": false,
+    "blockers": [],
+    "dominant_blocker": "",
+    "resulting_state": "CLOSURE_ACCEPTED",
+    "next_safe_step": "NONE"
+  },
+  "resulting_state": {
+    "state": "CLOSURE_ACCEPTED",
+    "closure_status": "ACCEPTED",
+    "blocking_reason": "",
+    "next_safe_step": "NONE"
+  },
+  "worked_envelope": {
+    "resulting_state": "CLOSURE_ACCEPTED",
+    "current_closure_status": "ACCEPTED",
+    "next_safe_step": "NONE"
+  }
+}

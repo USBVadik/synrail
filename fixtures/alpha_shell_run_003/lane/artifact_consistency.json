@@ -1,0 +1,42 @@
+{
+  "schema_version": "artifact_consistency_record_v0",
+  "run_id": "ALPHA_RUN_20260414T173732Z",
+  "task_class": "bounded_change",
+  "source_of_truth": {
+    "artifact_id": "state_file",
+    "state": "DOCTOR_BLOCKED",
+    "run_id": "ALPHA_RUN_20260414T173732Z",
+    "task_class": "bounded_change"
+  },
+  "checked_artifacts": [
+    "state_file",
+    "report",
+    "orchestration",
+    "run",
+    "repair_packet",
+    "repair_handoff"
+  ],
+  "update_model": "ATOMIC_OR_ROLLBACKABLE_DERIVED_SURFACES",
+  "conflict_precedence": [
+    "CORRUPT_DERIVED_ARTIFACT",
+    "RUN_ID_MISMATCH",
+    "TASK_CLASS_MISMATCH",
+    "DERIVED_FROM_STATE_MISMATCH",
+    "RESULTING_STATE_MISMATCH"
+  ],
+  "result": "CONSISTENT",
+  "dominant_conflict": "",
+  "failure_reasons": [],
+  "stale_artifact_ids": [],
+  "conflicting_artifact_ids": [],
+  "corrupt_artifact_ids": [],
+  "artifact_actions": {
+    "state_file": "TRUST_SOURCE_OF_TRUTH",
+    "report": "KEEP_DERIVED_ARTIFACT",
+    "orchestration": "KEEP_DERIVED_ARTIFACT",
+    "run": "KEEP_DERIVED_ARTIFACT",
+    "repair_packet": "KEEP_DERIVED_ARTIFACT",
+    "repair_handoff": "KEEP_DERIVED_ARTIFACT"
+  },
+  "next_action": "continue using the current source-of-truth state and derived artifacts"
+}

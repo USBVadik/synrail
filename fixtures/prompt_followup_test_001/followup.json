@@ -1,0 +1,16 @@
+{
+  "schema_version": "prompt_followup_record_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_009",
+  "task_class": "bounded_router_trigger_fix",
+  "current_step_id": "complete_missing_proof_sections",
+  "required_inputs": [],
+  "allowed_scope": [
+    "readback_record",
+    "scenario_proof_record",
+    "recovery_status_record",
+    "reverification_completion_record"
+  ],
+  "missing_markers": [],
+  "verdict": "FOLLOWUP_SCOPE_PRESERVED",
+  "why": "the generated prompt preserves the bounded repair step, scope, and must-pass constraints for the next agent call"
+}

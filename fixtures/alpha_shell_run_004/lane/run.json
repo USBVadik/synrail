@@ -1,0 +1,187 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "ALPHA_RUN_20260414T180953Z",
+  "task_class": "bounded_change",
+  "report": {
+    "result": "BLOCKED",
+    "stopping_stage": "repair_handoff",
+    "reason": "CONTINUATION_INPUTS_MISSING",
+    "doctor_verdict": "",
+    "resume_applied": true,
+    "resume_from_state": "DOCTOR_BLOCKED",
+    "repair_handoff_applied": true,
+    "repair_handoff_from_state": "DOCTOR_BLOCKED",
+    "repair_handoff_required_inputs": [
+      "clean_surface_confirmation"
+    ],
+    "missing_continuation_inputs": [
+      "clean_surface_confirmation"
+    ],
+    "selection_applied": false,
+    "selected_mode": "",
+    "selected_with_preparation": false,
+    "preparation_applied": false,
+    "preparation_ready_for_closure": false,
+    "bundle_status": "MISSING",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": false,
+    "comparison_applied": false,
+    "blockers": [
+      "clean_surface_confirmation"
+    ],
+    "dominant_blocker": "CONTINUATION_INPUTS_MISSING",
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_DOCTOR_BLOCKED",
+    "resumability_active_pressures": [
+      "DOCTOR_BLOCKED"
+    ],
+    "resumability_repair_order": [
+      "restore_readiness_truth",
+      "rerun_closure"
+    ],
+    "resumability_requires_new_run": false,
+    "resumability_policy_type": "MULTI_STEP_REPAIR",
+    "resumability_policy_next_step": "restore_readiness_truth",
+    "resumability_ready_now_steps": [
+      "restore_readiness_truth"
+    ],
+    "resumability_stale_artifact_ids": [
+      "readiness_surface"
+    ],
+    "resumability_stale_subsurface_ids": [
+      "clean_execution_surface_record"
+    ],
+    "resulting_state": "DOCTOR_BLOCKED",
+    "next_safe_step": "move to a clean or explicitly observed-safe execution surface"
+  },
+  "resulting_state": {
+    "state": "DOCTOR_BLOCKED",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "DOCTOR_NOT_GREEN",
+    "next_safe_step": "move to a clean or explicitly observed-safe execution surface"
+  },
+  "worked_envelope": {
+    "resulting_state": "DOCTOR_BLOCKED",
+    "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+    "next_safe_step": "move to a clean or explicitly observed-safe execution surface"
+  },
+  "repair_packet": {
+    "emitted": true,
+    "from_state": "DOCTOR_BLOCKED",
+    "ready_for_resume": false,
+    "missing_inputs": [
+      "clean_surface_confirmation"
+    ],
+    "selected_with_preparation": false,
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_DOCTOR_BLOCKED",
+    "active_pressures": [
+      "DOCTOR_BLOCKED"
+    ],
+    "repair_order": [
+      "restore_readiness_truth",
+      "rerun_closure"
+    ],
+    "policy_type": "MULTI_STEP_REPAIR",
+    "policy_next_step": "restore_readiness_truth",
+    "policy_ready_steps": [
+      "restore_readiness_truth"
+    ],
+    "repair_history_applied": true,
+    "repair_history_last_result": "STEP_NOT_COMPLETED",
+    "repair_history_last_completed_step_id": "",
+    "repair_history_completed_step_ids": [],
+    "repair_history_current_step_id": "restore_readiness_truth",
+    "repair_history_waiting_step_ids": [
+      "rerun_closure"
+    ],
+    "repair_history_chain_length": 2,
+    "repair_history_chain_results": [
+      "STEP_PROGRESS_RECORDED",
+      "STEP_NOT_COMPLETED"
+    ],
+    "repair_history_chain_step_ids": [
+      "restore_readiness_truth",
+      "restore_readiness_truth"
+    ],
+    "repair_termination_status": "TERMINATE",
+    "repair_termination_reason": "NO_PROGRESS_DETECTED",
+    "repair_attempt_count": 2,
+    "repair_max_attempts": 3,
+    "repair_no_progress_window": 2,
+    "repair_stalled_step_id": "restore_readiness_truth",
+    "repair_termination_next_action": "stop retrying the same repair step without new evidence or inputs",
+    "repair_receipt_last_operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
+    "repair_receipt_next_step_required_inputs": [
+      "clean_surface_confirmation"
+    ],
+    "repair_receipt_next_step_subsurface_ids": [
+      "clean_execution_surface_record"
+    ],
+    "stale_artifact_ids": [
+      "readiness_surface"
+    ],
+    "non_resumable_artifact_ids": [],
+    "stale_subsurface_ids": [
+      "clean_execution_surface_record"
+    ],
+    "non_resumable_subsurface_ids": []
+  },
+  "repair_history": {
+    "available": true,
+    "from_state": "DOCTOR_BLOCKED",
+    "last_result": "STEP_NOT_COMPLETED",
+    "last_completed_step_id": "",
+    "current_step_id": "restore_readiness_truth",
+    "waiting_step_ids": [
+      "rerun_closure"
+    ],
+    "completed_step_ids": [],
+    "chain_length": 2,
+    "chain_results": [
+      "STEP_PROGRESS_RECORDED",
+      "STEP_NOT_COMPLETED"
+    ],
+    "chain_step_ids": [
+      "restore_readiness_truth",
+      "restore_readiness_truth"
+    ],
+    "termination_status": "TERMINATE",
+    "termination_reason": "NO_PROGRESS_DETECTED",
+    "attempt_count": 2,
+    "max_attempts": 3,
+    "no_progress_window": 2,
+    "stalled_step_id": "restore_readiness_truth",
+    "termination_next_action": "stop retrying the same repair step without new evidence or inputs",
+    "last_operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
+    "next_step_required_inputs": [
+      "clean_surface_confirmation"
+    ],
+    "next_step_subsurface_ids": [
+      "clean_execution_surface_record"
+    ]
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_DOCTOR_BLOCKED",
+    "active_pressures": [
+      "DOCTOR_BLOCKED"
+    ],
+    "repair_order": [
+      "restore_readiness_truth",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "policy_type": "MULTI_STEP_REPAIR",
+    "policy_next_step": "restore_readiness_truth",
+    "ready_now_steps": [
+      "restore_readiness_truth"
+    ],
+    "stale_artifact_ids": [
+      "readiness_surface"
+    ],
+    "stale_subsurface_ids": [
+      "clean_execution_surface_record"
+    ]
+  }
+}

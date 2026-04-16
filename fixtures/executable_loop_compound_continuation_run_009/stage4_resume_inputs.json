@@ -1,0 +1,8 @@
+{
+  "schema_version": "resume_input_overrides_v0",
+  "refresh_recovery_status": "COMPLETE",
+  "refresh_reverification_complete": true,
+  "refresh_event_type": "RECOVERY_EVENT",
+  "refresh_use_bundle": true,
+  "refresh_use_closure": true
+}

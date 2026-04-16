@@ -1,0 +1,43 @@
+{
+  "schema_version": "run_state_v0",
+  "run_id": "EXECUTABLE_LOOP_SELECTED_PREPARED_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "state": "EXECUTION_COMPLETED",
+  "target_surface": {
+    "status": "ATTESTED",
+    "identity": "clean-clone",
+    "baseline_relation": "trusted_clean"
+  },
+  "doctor": {
+    "status": "PASS",
+    "blocking_failure_classes": []
+  },
+  "integrity": {
+    "status": "FAIL",
+    "exact_task_identity_ok": false
+  },
+  "execution": {
+    "status": "COMPLETED",
+    "artifact_bundle_present": true
+  },
+  "proof_bundle": {
+    "status": "PARTIAL",
+    "missing_sections": [
+      "artifact_identity"
+    ]
+  },
+  "closure": {
+    "status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+    "next_allowed_transition": "INTEGRITY_RECONFIRMATION",
+    "narrow_next_safe_step": "reconfirm exact task, prompt, and run-class identity",
+    "missing_sections": [
+      "artifact_identity"
+    ]
+  },
+  "recovery": {
+    "status": "NOT_REQUIRED",
+    "reverification_complete": false
+  },
+  "next_safe_step": "reconfirm exact task, prompt, and run-class identity"
+}

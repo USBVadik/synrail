@@ -1,0 +1,33 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "doctor": {
+    "final_verdict": "ACCEPTABLE_FOR_EXACT_RETRY",
+    "blocking_failure_classes": []
+  },
+  "bundle": {
+    "status": "PARTIAL",
+    "missing_sections": [
+      "readback",
+      "scenario_proof"
+    ]
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "MISSING_PROOF_SECTIONS"
+  },
+  "refresh": {
+    "applied": true,
+    "event_type": "RECOVERY_EVENT",
+    "resulting_closure_status": "CLAIMED_NOT_ACCEPTED"
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "PROOF_BUNDLE_PARTIAL",
+  "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "complete the missing proof sections"
+}

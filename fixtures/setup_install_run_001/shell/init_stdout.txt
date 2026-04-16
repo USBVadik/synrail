@@ -1,0 +1,5 @@
+Synrail initialized.
+Artifact root: /Users/usbdick/Documents/New project/synrail/fixtures/setup_install_run_001/lane
+Detected project type: python
+After the agent leaves final_result.json or final_result.txt, run: synrail check --artifact-root '/Users/usbdick/Documents/New project/synrail/fixtures/setup_install_run_001/lane'
+Optional safe point: synrail save --artifact-root '/Users/usbdick/Documents/New project/synrail/fixtures/setup_install_run_001/lane'

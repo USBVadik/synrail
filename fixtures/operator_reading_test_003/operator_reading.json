@@ -1,0 +1,27 @@
+{
+  "schema_version": "operator_reading_record_v0",
+  "label": "fresh_orchestration_non_resumable_render",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "source_brief_path": "fixtures/operator_brief_run_003/operator_brief.json",
+  "render_is_human_readable": true,
+  "packet_only_entry": true,
+  "requires_author_intuition": false,
+  "expected_reason": "STATE_NOT_RESUMABLE",
+  "primary_action": "FOLLOW_NON_RESUMABLE_BOUNDARY",
+  "next_safe_step": "continue through the governed forward path instead of named resume",
+  "current_step_id": "continue_forward_orchestration",
+  "termination_reason": "NON_RESUMABLE",
+  "required_input_count": 0,
+  "required_markers": [
+    "FOLLOW_NON_RESUMABLE_BOUNDARY",
+    "continue through the governed forward path instead of named resume",
+    "continue_forward_orchestration",
+    "NON_RESUMABLE",
+    "STATE_NOT_RESUMABLE",
+    "continue through the governed forward path instead of named resume"
+  ],
+  "missing_markers": [],
+  "verdict": "FOLLOWABLE_WITH_RENDER",
+  "why": "the bounded continuation contour stays followable when the operator reads the derived render instead of the raw brief alone"
+}

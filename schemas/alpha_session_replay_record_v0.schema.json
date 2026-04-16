@@ -1,0 +1,133 @@
+{
+  "type": "object",
+  "required": [
+    "schema_version",
+    "telemetry_session_id",
+    "tester_id",
+    "created_at",
+    "telemetry_enabled",
+    "platform",
+    "run_id",
+    "task_class",
+    "latest_state",
+    "latest_result",
+    "latest_reason",
+    "next_safe_step",
+    "component_error_class",
+    "repair_attempt_count",
+    "command_count",
+    "command_sequence",
+    "state_at_error",
+    "observability_summary",
+    "continuation_summary",
+    "issue_title",
+    "issue_body"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "alpha_session_replay_record_v0"},
+    "telemetry_session_id": {"type": "string", "minLength": 1},
+    "tester_id": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "minLength": 1},
+    "telemetry_enabled": {"type": "boolean"},
+    "platform": {
+      "type": "object",
+      "required": ["os", "os_release", "platform", "python_version", "synrail_version"],
+      "properties": {
+        "os": {"type": "string", "minLength": 1},
+        "os_release": {"type": "string", "minLength": 1},
+        "platform": {"type": "string", "minLength": 1},
+        "python_version": {"type": "string", "minLength": 1},
+        "synrail_version": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "run_id": {"type": "string"},
+    "task_class": {"type": "string"},
+    "latest_state": {"type": "string"},
+    "latest_result": {"type": "string"},
+    "latest_reason": {"type": "string"},
+    "next_safe_step": {"type": "string"},
+    "component_error_class": {"type": "string"},
+    "repair_attempt_count": {"type": "integer", "minimum": 0},
+    "command_count": {"type": "integer", "minimum": 0},
+    "command_sequence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "event_id",
+          "timestamp",
+          "command_path",
+          "flag_names",
+          "exit_code",
+          "state",
+          "result",
+          "reason",
+          "component_error_class",
+          "repair_attempt_count"
+        ],
+        "properties": {
+          "event_id": {"type": "integer", "minimum": 1},
+          "timestamp": {"type": "string", "minLength": 1},
+          "command_path": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+          "flag_names": {"type": "array", "items": {"type": "string", "minLength": 2}},
+          "exit_code": {"type": "integer", "minimum": 0},
+          "state": {"type": "string"},
+          "result": {"type": "string"},
+          "reason": {"type": "string"},
+          "component_error_class": {"type": "string"},
+          "repair_attempt_count": {"type": "integer", "minimum": 0}
+        },
+        "additionalProperties": false
+      }
+    },
+    "state_at_error": {
+      "type": "object",
+      "required": ["state", "result", "reason", "component_error_class", "repair_attempt_count", "next_safe_step"],
+      "properties": {
+        "state": {"type": "string"},
+        "result": {"type": "string"},
+        "reason": {"type": "string"},
+        "component_error_class": {"type": "string"},
+        "repair_attempt_count": {"type": "integer", "minimum": 0},
+        "next_safe_step": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "observability_summary": {
+      "type": "object",
+      "required": ["transition_count", "repair_attempt_count", "rejection_count"],
+      "properties": {
+        "transition_count": {"type": "integer", "minimum": 0},
+        "repair_attempt_count": {"type": "integer", "minimum": 0},
+        "rejection_count": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "continuation_summary": {
+      "type": "object",
+      "required": ["entry_artifacts", "source_of_truth_precedence", "packet_replay_ready", "current_step_id", "current_step_subsurface_id", "current_step_target_path", "arbiter_resolution_status", "arbiter_conflict_count", "arbiter_current_step_source"],
+      "properties": {
+        "entry_artifacts": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "source_of_truth_precedence": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "packet_replay_ready": {"type": "boolean"},
+        "current_step_id": {"type": "string"},
+        "current_step_subsurface_id": {"type": "string"},
+        "current_step_target_path": {"type": "string"},
+        "arbiter_resolution_status": {"type": "string", "enum": ["", "RESOLVED", "CONFLICT_UNRESOLVED"]},
+        "arbiter_conflict_count": {"type": "integer", "minimum": 0},
+        "arbiter_current_step_source": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "issue_title": {"type": "string", "minLength": 1},
+    "issue_body": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

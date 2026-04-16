@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "repair_family",
+    "outcome_class",
+    "next_step",
+    "restore_available",
+    "suggested_command",
+    "missing_markers",
+    "verdict",
+    "why"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "checkpoint_operator_reading_record_v0"},
+    "run_id": {"type": "string"},
+    "task_class": {"type": "string"},
+    "repair_family": {"type": "string"},
+    "outcome_class": {"type": "string"},
+    "next_step": {"type": "string"},
+    "restore_available": {"type": "boolean"},
+    "suggested_command": {"type": "string"},
+    "missing_markers": {"type": "array", "items": {"type": "string"}},
+    "verdict": {
+      "type": "string",
+      "enum": ["FOLLOWABLE_WITHOUT_OPERATOR_AMBIGUITY", "OPERATOR_AMBIGUITY_REMAINS"]
+    },
+    "why": {"type": "string"}
+  }
+}

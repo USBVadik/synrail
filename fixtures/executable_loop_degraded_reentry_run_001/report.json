@@ -1,0 +1,19 @@
+{
+  "schema_version": "orchestration_report_v0",
+  "run_id": "EXECUTABLE_LOOP_DEGRADED_REENTRY_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "result": "OK",
+  "stopping_stage": "refresh",
+  "reason": "NONE",
+  "doctor_verdict": "ACCEPTABLE_FOR_SUPPORT_RUN",
+  "bundle_status": "COMPLETE",
+  "closure_status": "ACCEPTED",
+  "refresh_applied": true,
+  "refresh_resulting_closure_status": "ACCEPTED",
+  "comparison_applied": false,
+  "comparison_verdict": "",
+  "blockers": [],
+  "dominant_blocker": "",
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "next_safe_step": "NONE"
+}

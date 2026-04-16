@@ -1,0 +1,53 @@
+{
+  "schema_version": "proof_bundle_v0",
+  "run_id": "ACCEPTANCE_INDEPENDENCE_RUN_001",
+  "task_class": "proof_sensitive_fix",
+  "status": "PARTIAL",
+  "structural_status": "PARTIAL",
+  "semantic_status": "NOT_EVALUATED",
+  "final_result": {
+    "present": true,
+    "parseable": true,
+    "status": "success"
+  },
+  "modified_files": {
+    "present": true,
+    "count": 1,
+    "semantically_sufficient": true
+  },
+  "diff_provenance": {
+    "present": true,
+    "non_empty": true,
+    "has_diff_markers": true,
+    "semantically_sufficient": true
+  },
+  "readback": {
+    "present": true,
+    "path": "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane_missing/readback.txt",
+    "non_empty": true,
+    "semantically_sufficient": true
+  },
+  "scenario_proof": {
+    "present": true,
+    "path": "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane_missing/scenario_proof.txt",
+    "non_empty": true,
+    "semantically_sufficient": true
+  },
+  "artifact_identity": {
+    "baseline_identity": "trusted_clean",
+    "execution_surface_identity": "clean-clone",
+    "prompt_identity": "",
+    "task_identity": "",
+    "semantically_sufficient": false
+  },
+  "cleanup_status": {
+    "present": true,
+    "success": true,
+    "semantically_sufficient": true
+  },
+  "missing_sections": [
+    "artifact_identity"
+  ],
+  "semantically_insufficient_sections": [],
+  "semantic_next_safe_step": ""
+}

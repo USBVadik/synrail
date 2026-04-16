@@ -1,0 +1,5 @@
+Status: Accepted
+What happened: The run reached accepted closure.
+What it means: Synrail accepted the result based on the current proof and closure surfaces.
+What to do next: No repair step is required.
+Next command: no next command required

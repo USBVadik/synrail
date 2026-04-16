@@ -1,0 +1,34 @@
+{
+  "schema_version": "consistency_recovery_record_v0",
+  "run_id": "EXECUTABLE_LOOP_MINIMAL_CONTINUATION_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "consistency_result": "INCONSISTENT",
+  "dominant_conflict": "CORRUPT_DERIVED_ARTIFACT",
+  "checkpoint_restore_available": true,
+  "primary_action": "RESTORE_CORRUPT_AND_REEMIT_STALE",
+  "restore_artifact_ids": [
+    "report"
+  ],
+  "reemit_artifact_ids": [
+    "repair_packet"
+  ],
+  "keep_artifact_ids": [],
+  "artifact_plan": [
+    {
+      "artifact_id": "report",
+      "requested_action": "RESTORE_FROM_CHECKPOINT_OR_REEMIT",
+      "concrete_action": "RESTORE_FROM_CHECKPOINT"
+    },
+    {
+      "artifact_id": "repair_packet",
+      "requested_action": "REEMIT_FROM_STATE",
+      "concrete_action": "REEMIT_FROM_STATE"
+    }
+  ],
+  "operator_instructions": [
+    "restore report from the verified checkpoint",
+    "re-emit repair_packet from state_file"
+  ],
+  "ambiguous": false,
+  "why": "the recovery bridge converts consistency failures into a concrete restore-or-reemit plan using the verified checkpoint when it matches the same run/task contour"
+}

@@ -1,0 +1,62 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "started_via",
+    "bootstrap_time_utc",
+    "controlled_mode",
+    "project_root",
+    "artifact_root",
+    "task_identity",
+    "prompt_identity",
+    "bounded_scope",
+    "target_path",
+    "target_classification",
+    "target_identity",
+    "baseline_identity",
+    "execution_surface_identity",
+    "intended_run_class",
+    "intended_proof_path"
+  ],
+  "properties": {
+    "schema_version": {"const": "bootstrap_record_v0"},
+    "run_id": {"type": "string", "minLength": 1},
+    "task_class": {"type": "string", "minLength": 1},
+    "started_via": {"type": "string", "minLength": 1},
+    "bootstrap_time_utc": {"type": "string", "minLength": 1},
+    "controlled_mode": {"type": "boolean"},
+    "project_root": {"type": "string", "minLength": 1},
+    "artifact_root": {"type": "string", "minLength": 1},
+    "task_identity": {"type": "string", "minLength": 1},
+    "prompt_identity": {"type": "string", "minLength": 1},
+    "bounded_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "project_root", "artifact_root"],
+      "properties": {
+        "summary": {"type": "string", "minLength": 1},
+        "project_root": {"type": "string", "minLength": 1},
+        "artifact_root": {"type": "string", "minLength": 1}
+      }
+    },
+    "target_path": {"type": "string", "minLength": 1},
+    "target_classification": {"type": "string", "minLength": 1},
+    "target_identity": {"type": "string", "minLength": 1},
+    "baseline_identity": {"type": "string", "minLength": 1},
+    "execution_surface_identity": {"type": "string", "minLength": 1},
+    "intended_run_class": {"type": "string", "minLength": 1},
+    "intended_proof_path": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["final_result", "readback", "scenario_proof"],
+      "properties": {
+        "final_result": {"type": "string", "minLength": 1},
+        "readback": {"type": "string", "minLength": 1},
+        "scenario_proof": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": "run_state_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_002",
+  "task_class": "bounded_router_trigger_fix",
+  "state": "DOCTOR_BLOCKED",
+  "target_surface": {
+    "status": "ATTESTED",
+    "identity": "compound-reentry-surface",
+    "baseline_relation": "trusted_clean"
+  },
+  "doctor": {
+    "status": "FAIL",
+    "blocking_failure_classes": [
+      "exact-prompt-artifact-missing"
+    ]
+  },
+  "integrity": {
+    "status": "FAIL",
+    "exact_task_identity_ok": false
+  },
+  "execution": {
+    "status": "NOT_RUN",
+    "artifact_bundle_present": false
+  },
+  "proof_bundle": {
+    "status": "MISSING",
+    "missing_sections": []
+  },
+  "closure": {
+    "status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "DOCTOR_NOT_GREEN",
+    "next_allowed_transition": "DOCTOR_READINESS",
+    "narrow_next_safe_step": "restore the exact prompt and task identity artifacts",
+    "missing_sections": []
+  },
+  "recovery": {
+    "status": "NOT_REQUIRED",
+    "reverification_complete": false
+  },
+  "next_safe_step": "restore the exact prompt and task identity artifacts"
+}

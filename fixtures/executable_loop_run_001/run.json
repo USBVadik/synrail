@@ -1,0 +1,28 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "report": {
+    "result": "OK",
+    "stopping_stage": "comparison",
+    "reason": "RECOVERY_REVERIFICATION_INCOMPLETE",
+    "doctor_verdict": "ACCEPTABLE_FOR_SUPPORT_RUN",
+    "bundle_status": "COMPLETE",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": true,
+    "comparison_applied": true,
+    "resulting_state": "RECOVERY_PENDING",
+    "next_safe_step": "run reverification against the attested target surface"
+  },
+  "resulting_state": {
+    "state": "RECOVERY_PENDING",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "RECOVERY_REVERIFICATION_INCOMPLETE",
+    "next_safe_step": "run reverification against the attested target surface"
+  },
+  "worked_envelope": {
+    "resulting_state": "RECOVERY_PENDING",
+    "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+    "next_safe_step": "run reverification against the attested target surface"
+  }
+}

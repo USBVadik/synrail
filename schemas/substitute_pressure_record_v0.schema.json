@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/substitute_pressure_record_v0.schema.json",
+  "title": "Synrail Substitute Pressure Record v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_count",
+    "source_records",
+    "verdict_counts",
+    "substitute_stack_counts",
+    "reading"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "substitute_pressure_record_v0"},
+    "record_count": {"type": "integer", "minimum": 0},
+    "source_records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "scenario_id", "substitute_stack", "verdict"],
+        "properties": {
+          "path": {"type": "string"},
+          "scenario_id": {"type": "string"},
+          "substitute_stack": {"type": "string"},
+          "verdict": {"type": "string"}
+        }
+      }
+    },
+    "verdict_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["SYNRAIL_BETTER", "SUBSTITUTE_GOOD_ENOUGH", "UNCLEAR"],
+      "properties": {
+        "SYNRAIL_BETTER": {"type": "integer"},
+        "SUBSTITUTE_GOOD_ENOUGH": {"type": "integer"},
+        "UNCLEAR": {"type": "integer"}
+      }
+    },
+    "substitute_stack_counts": {
+      "type": "object",
+      "additionalProperties": {"type": "integer"}
+    },
+    "reading": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "strongest_synrail_edge",
+        "clearest_substitute_sufficient_path",
+        "winning_substitute_stacks",
+        "non_winning_substitute_stacks"
+      ],
+      "properties": {
+        "strongest_synrail_edge": {"type": "string"},
+        "clearest_substitute_sufficient_path": {"type": "string"},
+        "winning_substitute_stacks": {"type": "array", "items": {"type": "string"}},
+        "non_winning_substitute_stacks": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

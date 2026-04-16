@@ -1,0 +1,5 @@
+Status: Working Surface Not Trusted
+What happened: Doctor blocked the contour because scope or target identity is not trustworthy.
+What it means: Move back to a clean in-scope execution surface before continuing this run.
+What to do next: Move back to a clean or clearly verified-safe working surface before continuing.
+Next command: synrail next-step

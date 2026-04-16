@@ -1,0 +1,37 @@
+{
+  "schema_version": "proof_bundle_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_004",
+  "task_class": "bounded_router_trigger_fix",
+  "status": "COMPLETE",
+  "final_result": {
+    "present": true,
+    "status": "success"
+  },
+  "modified_files": {
+    "present": true,
+    "count": 1
+  },
+  "diff_provenance": {
+    "present": true,
+    "non_empty": true
+  },
+  "readback": {
+    "present": true,
+    "path": "fixtures/executable_loop_runtime_resume_run_004/readback.txt"
+  },
+  "scenario_proof": {
+    "present": true,
+    "path": "fixtures/executable_loop_runtime_resume_run_004/scenario.txt"
+  },
+  "artifact_identity": {
+    "baseline_identity": "compound-reentry-surface",
+    "execution_surface_identity": "compound-reentry-surface",
+    "prompt_identity": "runtime-resume-004-prompt",
+    "task_identity": "runtime-resume-004-task"
+  },
+  "cleanup_status": {
+    "present": true,
+    "success": true
+  },
+  "missing_sections": []
+}

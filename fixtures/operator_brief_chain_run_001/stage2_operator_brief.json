@@ -1,0 +1,63 @@
+{
+  "schema_version": "operator_brief_record_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "task_class": "bounded_router_trigger_fix",
+  "entrypoint": "resume",
+  "entry_state": "DOCTOR_BLOCKED",
+  "resulting_state": "PROOF_BUNDLE_COMPLETE",
+  "result": "OK",
+  "stopping_stage": "closure",
+  "reason": "RECOVERY_REVERIFICATION_INCOMPLETE",
+  "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "resumability_family": "REPAIRABLE_RECOVERY_PENDING",
+  "active_pressures": [
+    "RECOVERY_PENDING"
+  ],
+  "primary_action": "REPAIR_CURRENT_STEP",
+  "why_action": "the packet still names one current repair step, its required inputs, and the stale sub-surfaces to tighten next",
+  "next_safe_step": "run reverification against the attested target surface",
+  "operator_focus": "move to the next repair step and focus only on the remaining stale sub-surfaces there",
+  "current_step_id": "complete_recovery_reverification",
+  "ready_now_step_ids": [
+    "complete_recovery_reverification"
+  ],
+  "next_step_required_inputs": [
+    "refresh_recovery_complete",
+    "refresh_reverification_complete"
+  ],
+  "next_step_subsurface_ids": [
+    "recovery_status_record",
+    "reverification_completion_record"
+  ],
+  "blockers": [],
+  "dominant_blocker": "",
+  "termination_status": "CONTINUE",
+  "termination_reason": "",
+  "attempt_count": 0,
+  "history_chain_length": 3,
+  "completed_step_ids": [
+    "restore_readiness_truth",
+    "complete_missing_proof_sections"
+  ],
+  "stale_artifact_ids": [
+    "recovery_reverification_surface"
+  ],
+  "stale_subsurface_ids": [
+    "recovery_status_record",
+    "reverification_completion_record"
+  ],
+  "entry_artifacts": [
+    "state_file",
+    "repair_packet"
+  ],
+  "suggested_cli": {
+    "command": "synrail resume",
+    "args": [
+      "--state-file",
+      "fixtures/executable_loop_compound_continuation_run_010/stage2_state.json",
+      "--repair-packet-file",
+      "fixtures/executable_loop_compound_continuation_run_010/stage2_repair_packet.json"
+    ]
+  }
+}

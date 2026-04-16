@@ -1,0 +1,23 @@
+{
+  "schema_version": "thin_output_record_v0",
+  "mode": "default",
+  "run_id": "ALPHA_RUN_20260414T185910Z",
+  "task_class": "bounded_change",
+  "outcome_class": "SCOPE_VIOLATION",
+  "status_label": "Workspace Not Trusted",
+  "summary": "Doctor blocked this run because the workspace or intended task target is not trustworthy.",
+  "diagnosis": "Move back to a clean in-scope workspace before continuing this run.",
+  "what_happened": "Doctor blocked this run because the workspace or intended task target is not trustworthy.",
+  "what_it_means": "Move back to a clean in-scope workspace before continuing this run.",
+  "what_to_do_next": "Move back to a clean or clearly verified-safe workspace before continuing.",
+  "resume_available": true,
+  "next_command": "synrail repair-step",
+  "restore_command": "",
+  "next_step": "move to a clean or explicitly observed-safe execution surface",
+  "restore_available": false,
+  "checkpoint_id": "",
+  "recovery_primary_action": "",
+  "recovery_operator_instructions": [],
+  "suggested_command": "repair the workspace or intended task target, then synrail continue",
+  "technical_lines": []
+}

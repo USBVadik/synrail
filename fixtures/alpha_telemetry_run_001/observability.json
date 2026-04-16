@@ -1,0 +1,39 @@
+{
+  "schema_version": "observability_record_v0",
+  "run_id": "ALPHA_RUN_20260414T112716Z",
+  "task_class": "bounded_change",
+  "resulting_state": "PROOF_BUNDLE_INVALID",
+  "report_summary": {
+    "result": "OK",
+    "stopping_stage": "closure",
+    "reason": "INVALID_PROOF_BUNDLE",
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+  },
+  "event_counts": {
+    "transition_count": 0,
+    "repair_attempt_count": 0,
+    "rejection_count": 0
+  },
+  "state_transition_log": [],
+  "repair_attempt_log": [],
+  "rejection_log": [],
+  "sanitized_session_export": {
+    "sensitive_values_redacted": true,
+    "run_id": "ALPHA_RUN_20260414T112716Z",
+    "task_class": "bounded_change",
+    "state": "PROOF_BUNDLE_INVALID",
+    "result": "OK",
+    "reason": "INVALID_PROOF_BUNDLE",
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "repair_current_step_id": "repair_final_result_artifact",
+    "repair_last_result": "",
+    "artifact_files": [
+      "refresh.json",
+      "repair_packet.json",
+      "repair_receipt.json",
+      "report.json",
+      "state.json"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "request_id": "EXECUTABLE_LOOP_COMPOUND_RUN_001",
+  "status": "success",
+  "modified_files": ["core/router.py"],
+  "git_diff": "diff --git a/core/router.py b/core/router.py\n+compound patch",
+  "cleanup_status": {"success": true}
+}

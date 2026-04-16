@@ -1,0 +1,18 @@
+{
+  "schema_version": "refresh_report_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_RUN_001",
+  "event_type": "RECOVERY_EVENT",
+  "steps_applied": [
+    "proof_bundle_refreshed",
+    "closure_verdict_refreshed",
+    "recovery_status_refreshed"
+  ],
+  "invalidations": [
+    "closure_invalidated_by_partial_bundle",
+    "closure_invalidated_by_recovery"
+  ],
+  "dominant_invalidation": "closure_invalidated_by_partial_bundle",
+  "resulting_state": "PROOF_BUNDLE_PARTIAL",
+  "resulting_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "complete the missing proof sections"
+}

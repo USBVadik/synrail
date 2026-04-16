@@ -1,0 +1,137 @@
+{
+  "schema_version": "artifact_repair_receipt_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "from_state": "DOCTOR_BLOCKED",
+  "resulting_state": "DOCTOR_BLOCKED",
+  "result": "STEP_NOT_COMPLETED",
+  "completed_step_id": "",
+  "completed_artifact_ids": [],
+  "completed_subsurface_ids": [],
+  "remaining_stale_artifact_ids": [
+    "readiness_surface"
+  ],
+  "remaining_stale_subsurface_ids": [
+    "helper_entrypoint_record"
+  ],
+  "remaining_non_resumable_artifact_ids": [],
+  "remaining_non_resumable_subsurface_ids": [],
+  "remaining_stale_hints": [
+    {
+      "artifact_id": "readiness_surface",
+      "quality": "STALE",
+      "repair_step": "restore_readiness_truth",
+      "still_stale_parts": [
+        "helper_entrypoint_record"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "helper_entrypoint_record",
+          "why": "the helper entrypoint required for readiness is still unresolved"
+        }
+      ]
+    }
+  ],
+  "remaining_non_resumable_hints": [],
+  "completed_hints": [],
+  "next_step_id": "restore_readiness_truth",
+  "ready_now_step_ids": [
+    "restore_readiness_truth"
+  ],
+  "next_step_required_inputs": [
+    "helper_path"
+  ],
+  "next_step_hints": [
+    {
+      "artifact_id": "readiness_surface",
+      "quality": "STALE",
+      "repair_step": "restore_readiness_truth",
+      "still_stale_parts": [
+        "helper_entrypoint_record"
+      ],
+      "mapped_inputs": [
+        "helper_path"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "helper_entrypoint_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "helper_path"
+          ],
+          "why": "the helper entrypoint required for readiness is still unresolved"
+        }
+      ]
+    }
+  ],
+  "repair_history": {
+    "applied": false,
+    "completed_step_ids": [],
+    "last_completed_step_id": "",
+    "current_step_id": "restore_readiness_truth",
+    "waiting_step_ids": [
+      "rerun_closure"
+    ]
+  },
+  "repair_history_chain": [
+    {
+      "step_index": 1,
+      "from_state": "DOCTOR_BLOCKED",
+      "resulting_state": "DOCTOR_BLOCKED",
+      "result": "STEP_NOT_COMPLETED",
+      "active_step_id": "restore_readiness_truth",
+      "completed_step_id": "",
+      "next_step_id": "restore_readiness_truth",
+      "completed_subsurface_ids": [],
+      "next_step_subsurface_ids": [
+        "helper_entrypoint_record"
+      ],
+      "remaining_stale_subsurface_ids": [
+        "helper_entrypoint_record"
+      ],
+      "remaining_non_resumable_subsurface_ids": [],
+      "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+    }
+  ],
+  "operator_evidence": {
+    "completed_step_id": "",
+    "completed_artifact_hints": [],
+    "completed_subsurface_ids": [],
+    "next_step_id": "restore_readiness_truth",
+    "next_step_required_inputs": [
+      "helper_path"
+    ],
+    "next_step_artifact_hints": [
+      {
+        "artifact_id": "readiness_surface",
+        "quality": "STALE",
+        "repair_step": "restore_readiness_truth",
+        "still_stale_parts": [
+          "helper_entrypoint_record"
+        ],
+        "mapped_inputs": [
+          "helper_path"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "helper_entrypoint_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "helper_path"
+            ],
+            "why": "the helper entrypoint required for readiness is still unresolved"
+          }
+        ]
+      }
+    ],
+    "next_step_subsurface_ids": [
+      "helper_entrypoint_record"
+    ],
+    "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_DOCTOR_BLOCKED"
+  },
+  "why": "the current repair step is still blocked, so the receipt records no completed step yet"
+}

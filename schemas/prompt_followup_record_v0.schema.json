@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/prompt_followup_record_v0.schema.json",
+  "title": "Synrail Prompt Followup Record v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "current_step_id",
+    "required_inputs",
+    "allowed_scope",
+    "missing_markers",
+    "verdict",
+    "why"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "prompt_followup_record_v0"},
+    "run_id": {"type": "string"},
+    "task_class": {"type": "string"},
+    "current_step_id": {"type": "string"},
+    "required_inputs": {"type": "array", "items": {"type": "string"}},
+    "allowed_scope": {"type": "array", "items": {"type": "string"}},
+    "missing_markers": {"type": "array", "items": {"type": "string"}},
+    "verdict": {"type": "string", "enum": ["FOLLOWUP_SCOPE_PRESERVED", "FOLLOWUP_SCOPE_DRIFT"]},
+    "why": {"type": "string"}
+  }
+}

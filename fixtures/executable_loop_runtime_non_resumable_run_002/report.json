@@ -1,0 +1,43 @@
+{
+  "schema_version": "orchestration_report_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_002",
+  "task_class": "proof_sensitive_fix",
+  "result": "BLOCKED",
+  "stopping_stage": "resume",
+  "reason": "TERMINAL_STATE_NOT_RESUMABLE",
+  "doctor_verdict": "",
+  "resume_applied": true,
+  "resume_from_state": "CLOSURE_ACCEPTED",
+  "selection_applied": false,
+  "selected_mode": "",
+  "selected_with_preparation": false,
+  "preparation_applied": false,
+  "preparation_ready_for_closure": false,
+  "bundle_status": "COMPLETE",
+  "closure_status": "ACCEPTED",
+  "refresh_applied": false,
+  "refresh_resulting_closure_status": "",
+  "comparison_applied": false,
+  "comparison_verdict": "",
+  "blockers": [
+    "TERMINAL_STATE_NOT_RESUMABLE"
+  ],
+  "dominant_blocker": "TERMINAL_STATE_NOT_RESUMABLE",
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "next_safe_step": "start a new run instead of resuming a terminal state",
+  "resumability_status": "NOT_RESUMABLE",
+  "resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+  "resumability_active_pressures": [
+    "TERMINAL_ACCEPTED",
+    "TERMINAL_STATE"
+  ],
+  "resumability_repair_order": [
+    "start_new_run"
+  ],
+  "resumability_requires_new_run": true,
+  "resumability_policy_type": "NON_RESUMABLE_NEXT_STEP",
+  "resumability_policy_next_step": "start_new_run",
+  "resumability_ready_now_steps": [],
+  "resumability_stale_artifact_ids": [],
+  "resumability_stale_subsurface_ids": []
+}

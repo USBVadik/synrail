@@ -1,0 +1,35 @@
+{
+  "schema_version": "acceptance_criteria_record_v0",
+  "criteria_standard_id": "exact_task_acceptance",
+  "criteria_owner": "synrail_closure_v0",
+  "criteria_revision_id": "acceptance_criteria_v0:7358e00fea15",
+  "task_class": "bounded_router_trigger_fix",
+  "project_type": "python",
+  "target_classification": "trusted_clean",
+  "intended_run_class": "core_probe",
+  "required_gate_ids": [
+    "TARGET_SURFACE_ATTESTED",
+    "DOCTOR_GREEN",
+    "TASK_IDENTITY_CONFIRMED",
+    "EXECUTION_COMPLETED",
+    "PROOF_BUNDLE_COMPLETE",
+    "RECOVERY_REVERIFIED_WHEN_PENDING"
+  ],
+  "required_bundle_sections": [
+    "final_result",
+    "modified_files",
+    "diff_provenance",
+    "readback",
+    "scenario_proof",
+    "artifact_identity",
+    "cleanup_status"
+  ],
+  "acceptance_rules": [
+    "The target surface must be attested before acceptance.",
+    "Doctor must be green before acceptance.",
+    "The exact task request and target must still be confirmed.",
+    "Execution must be completed for the current run.",
+    "The proof bundle must be complete and reviewable.",
+    "If recovery is pending, reverification must finish before acceptance."
+  ]
+}

@@ -1,0 +1,244 @@
+{
+  "schema_version": "continuation_arbiter_record_v0",
+  "run_id": "ALPHA_RUN_20260414T185910Z",
+  "task_class": "bounded_change",
+  "entrypoint": "resume",
+  "precedence_order": [
+    "state_file",
+    "repair_packet",
+    "repair_receipt",
+    "repair_history_chain"
+  ],
+  "source_status": {
+    "state_file": {
+      "available": true,
+      "eligible": true,
+      "why": "state file anchors the current run truth"
+    },
+    "repair_packet": {
+      "available": true,
+      "eligible": true,
+      "why": "repair packet anchors the continuation contract"
+    },
+    "repair_receipt": {
+      "available": true,
+      "eligible": true,
+      "why": "repair receipt matches the current continuation contour"
+    },
+    "repair_history_chain": {
+      "available": true,
+      "eligible": true,
+      "why": "latest repair history entry matches the current continuation contour"
+    }
+  },
+  "ignored_sources": [],
+  "conflict_count": 0,
+  "resolution_status": "RESOLVED",
+  "unresolved_surfaces": [],
+  "decision_trace": [
+    {
+      "surface": "resumability_status",
+      "chosen_source": "repair_packet",
+      "chosen_value": "REPAIRABLE",
+      "conflict": false,
+      "candidates": [
+        {
+          "source": "repair_packet",
+          "value": "REPAIRABLE",
+          "eligible": true
+        },
+        {
+          "source": "repair_receipt",
+          "value": "REPAIRABLE",
+          "eligible": true
+        }
+      ],
+      "resolution_rule": "repair_packet resumability wins because it is the stricter continuation contract; repair_receipt can only fill a missing packet value",
+      "why": "the repair packet already names resumability for the active contour"
+    },
+    {
+      "surface": "resumability_family",
+      "chosen_source": "repair_packet",
+      "chosen_value": "REPAIRABLE_DOCTOR_BLOCKED",
+      "conflict": false,
+      "candidates": [
+        {
+          "source": "repair_packet",
+          "value": "REPAIRABLE_DOCTOR_BLOCKED",
+          "eligible": true
+        },
+        {
+          "source": "repair_receipt",
+          "value": "REPAIRABLE_DOCTOR_BLOCKED",
+          "eligible": true
+        }
+      ],
+      "resolution_rule": "repair_packet resumability family wins; repair_receipt can only fill a missing family label",
+      "why": "the repair packet already names the resumability family"
+    },
+    {
+      "surface": "repair_termination",
+      "chosen_source": "repair_packet",
+      "chosen_value": {
+        "status": "TERMINATE",
+        "reason": "NO_PROGRESS_DETECTED"
+      },
+      "conflict": false,
+      "candidates": [
+        {
+          "source": "repair_packet",
+          "value": {
+            "status": "TERMINATE",
+            "reason": "NO_PROGRESS_DETECTED"
+          },
+          "eligible": true
+        },
+        {
+          "source": "repair_receipt",
+          "value": {},
+          "eligible": false
+        }
+      ],
+      "resolution_rule": "repair_packet termination wins; repair_receipt can only surface a missing non-resumable boundary signal",
+      "why": "the repair packet already carries the current termination truth"
+    },
+    {
+      "surface": "current_step_id",
+      "chosen_source": "repair_packet",
+      "chosen_value": "restore_readiness_truth",
+      "conflict": false,
+      "candidates": [
+        {
+          "source": "repair_packet",
+          "value": "restore_readiness_truth",
+          "eligible": true
+        },
+        {
+          "source": "repair_receipt",
+          "value": "restore_readiness_truth",
+          "eligible": true
+        },
+        {
+          "source": "repair_history_chain",
+          "value": "restore_readiness_truth",
+          "eligible": true
+        }
+      ],
+      "resolution_rule": "repair_packet current step wins; repair_receipt and repair_history_chain only fill the gap when the packet does not name a current step",
+      "why": "the repair packet already names the active continuation step"
+    },
+    {
+      "surface": "next_step_required_inputs",
+      "chosen_source": "repair_packet",
+      "chosen_value": [
+        "clean_surface_confirmation"
+      ],
+      "conflict": false,
+      "candidates": [
+        {
+          "source": "repair_packet",
+          "value": [
+            "clean_surface_confirmation"
+          ],
+          "eligible": true
+        },
+        {
+          "source": "repair_receipt",
+          "value": [
+            "clean_surface_confirmation"
+          ],
+          "eligible": true
+        }
+      ],
+      "resolution_rule": "repair_packet required inputs win; repair_receipt can only fill them when the packet leaves them empty",
+      "why": "the repair packet already names the required inputs for the active continuation step"
+    },
+    {
+      "surface": "missing_inputs",
+      "chosen_source": "repair_packet",
+      "chosen_value": [
+        "clean_surface_confirmation"
+      ],
+      "conflict": false,
+      "candidates": [
+        {
+          "source": "repair_packet",
+          "value": [
+            "clean_surface_confirmation"
+          ],
+          "eligible": true
+        }
+      ],
+      "resolution_rule": "repair_packet missing inputs anchor continuation readiness because state and receipt do not carry a stronger missing-input contract",
+      "why": "the repair packet remains the authoritative source for current missing continuation inputs"
+    },
+    {
+      "surface": "operator_focus",
+      "chosen_source": "repair_receipt",
+      "chosen_value": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
+      "conflict": false,
+      "candidates": [
+        {
+          "source": "repair_packet",
+          "value": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
+          "eligible": true
+        },
+        {
+          "source": "repair_receipt",
+          "value": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
+          "eligible": true
+        },
+        {
+          "source": "repair_history_chain",
+          "value": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
+          "eligible": true
+        }
+      ],
+      "resolution_rule": "repair_receipt can refine operator focus for the same contour and step; otherwise the packet focus remains authoritative",
+      "why": "the repair receipt carries fresher step-local operator focus for the same continuation step"
+    },
+    {
+      "surface": "next_safe_step",
+      "chosen_source": "state_file",
+      "chosen_value": "move to a clean or explicitly observed-safe execution surface",
+      "conflict": false,
+      "candidates": [
+        {
+          "source": "state_file",
+          "value": "move to a clean or explicitly observed-safe execution surface",
+          "eligible": true
+        },
+        {
+          "source": "repair_packet",
+          "value": "move to a clean or explicitly observed-safe execution surface",
+          "eligible": true
+        }
+      ],
+      "resolution_rule": "state_file next safe step wins because state anchors the current run truth; the packet mirrors it only when they still agree",
+      "why": "the state file already names the current next safe step"
+    }
+  ],
+  "resolved_decision": {
+    "continuation_status": "AWAITING_INPUTS",
+    "ready_for_resume": false,
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_DOCTOR_BLOCKED",
+    "current_step_id": "restore_readiness_truth",
+    "current_step_source": "repair_packet",
+    "next_step_required_inputs": [
+      "clean_surface_confirmation"
+    ],
+    "missing_inputs": [
+      "clean_surface_confirmation"
+    ],
+    "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order",
+    "operator_focus_source": "repair_receipt",
+    "next_safe_step": "move to a clean or explicitly observed-safe execution surface",
+    "next_safe_step_source": "state_file",
+    "termination_status": "TERMINATE",
+    "termination_reason": "NO_PROGRESS_DETECTED",
+    "latest_step_result": "STEP_NOT_COMPLETED",
+    "packet_replay_ready": true
+  },
+  "why": "the continuation conflict set resolves cleanly under explicit precedence"
+}

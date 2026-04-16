@@ -1,0 +1,45 @@
+{
+  "schema_version": "orchestration_report_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_001",
+  "task_class": "honesty_restoration_guard",
+  "result": "BLOCKED",
+  "stopping_stage": "resume",
+  "reason": "STATE_NOT_RESUMABLE",
+  "doctor_verdict": "",
+  "resume_applied": true,
+  "resume_from_state": "INITIALIZED",
+  "repair_handoff_applied": false,
+  "repair_handoff_from_state": "INITIALIZED",
+  "repair_handoff_required_inputs": [],
+  "missing_continuation_inputs": [],
+  "selection_applied": true,
+  "selected_mode": "LIGHTWEIGHT_BASELINE",
+  "selected_with_preparation": false,
+  "preparation_applied": false,
+  "preparation_ready_for_closure": false,
+  "bundle_status": "MISSING",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "refresh_applied": false,
+  "refresh_resulting_closure_status": "",
+  "comparison_applied": false,
+  "comparison_verdict": "",
+  "blockers": [
+    "NOT_RESUMABLE_SELECTION_BLOCKED"
+  ],
+  "dominant_blocker": "STATE_NOT_RESUMABLE",
+  "resulting_state": "INITIALIZED",
+  "next_safe_step": "follow the selected lighter mode instead of entering governed orchestration",
+  "resumability_status": "NOT_RESUMABLE",
+  "resumability_family": "NOT_RESUMABLE_SELECTION_BLOCKED",
+  "resumability_active_pressures": [
+    "SELECTION_BLOCKED"
+  ],
+  "resumability_repair_order": [
+    "switch_to_lighter_mode"
+  ],
+  "resumability_requires_new_run": false,
+  "resumability_policy_type": "NON_RESUMABLE_NEXT_STEP",
+  "resumability_policy_next_step": "switch_to_lighter_mode",
+  "resumability_ready_now_steps": [],
+  "resumability_stale_artifact_ids": []
+}

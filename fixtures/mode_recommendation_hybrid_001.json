@@ -1,0 +1,25 @@
+{
+  "schema_version": "mode_recommendation_v0",
+  "scenario_class": "medium_risk_ambiguous_closure",
+  "task_class": "medium_risk_reversible_artifact_fix",
+  "risk_inputs": {
+    "false_success_risk": "LOW",
+    "recovery_cost": "MEDIUM",
+    "execution_surface_ambiguous": true,
+    "artifact_truth_nontrivial": false,
+    "explicit_hybrid_ambiguity": "reversible artifact ambiguity"
+  },
+  "evidence_summary": {
+    "class_record_count": 3,
+    "class_verdict": "BASELINE_GOOD_ENOUGH",
+    "hybrid_status": "DEMOTED",
+    "avg_operator_minutes_added_if_synrail": 9,
+    "avg_interventions_added_if_synrail": 1,
+    "avg_closure_latency_minutes_added_if_synrail": 11,
+    "avg_false_green_exposure_reduced_if_synrail": 1
+  },
+  "recommended_mode": "LIGHTWEIGHT_BASELINE",
+  "secondary_exception_mode": "HYBRID_EXCEPTION",
+  "why": "measured class evidence already says baseline is good enough here; using baseline likely avoids about 9 added operator minutes, 1 extra intervention, and 11 extra closure-latency minutes without giving up a decisive safety gain; keep hybrid only as a named exception if this exact ambiguity later proves an earned win",
+  "next_safe_step": "stay baseline by default and only use a bounded hybrid exception if the named ambiguity survives cheap validation"
+}

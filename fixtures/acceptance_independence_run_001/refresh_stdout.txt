@@ -1,0 +1,4 @@
+Acceptance rules refreshed.
+Revision: acceptance_criteria_v0:ba0986de4d86
+Validation: VALID
+Next command: synrail check --artifact-root '/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane'

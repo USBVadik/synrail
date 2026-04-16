@@ -1,0 +1,32 @@
+{
+  "schema_version": "repair_handoff_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_002",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "RECOVERY_PENDING",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "RECOVERY_REVERIFICATION_INCOMPLETE",
+  "continuation_allowed": true,
+  "continuation_entrypoint": "resume",
+  "required_inputs": [
+    {
+      "input_id": "refresh_recovery_complete",
+      "kind": "enum",
+      "cli_flag": "--refresh-recovery-status",
+      "description": "mark recovery as complete before resuming closure acceptance",
+      "required_value": "COMPLETE"
+    },
+    {
+      "input_id": "refresh_reverification_complete",
+      "kind": "flag",
+      "cli_flag": "--refresh-reverification-complete",
+      "description": "confirm recovery reverification is complete before refresh reconciliation",
+      "required_value": "true"
+    }
+  ],
+  "runtime_defaults": {
+    "refresh_event_type": "RECOVERY_EVENT",
+    "refresh_use_bundle": true,
+    "refresh_use_closure": true
+  },
+  "next_safe_step": "run reverification against the attested target surface"
+}

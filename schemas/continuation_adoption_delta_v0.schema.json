@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "before_run_id",
+    "after_run_id",
+    "before_label",
+    "after_label",
+    "side_files_reduced",
+    "packet_only_entry_gained",
+    "doctor_pressure_preserved",
+    "accepted_terminal_truth_preserved",
+    "before_repair_history_chain_length",
+    "after_repair_history_chain_length",
+    "before_root_side_files",
+    "after_root_side_files",
+    "verdict",
+    "why"
+  ],
+  "properties": {
+    "schema_version": {"const": "continuation_adoption_delta_v0"},
+    "before_run_id": {"type": "string", "minLength": 1},
+    "after_run_id": {"type": "string", "minLength": 1},
+    "before_label": {"type": "string", "minLength": 1},
+    "after_label": {"type": "string", "minLength": 1},
+    "side_files_reduced": {"type": "integer"},
+    "packet_only_entry_gained": {"type": "boolean"},
+    "doctor_pressure_preserved": {"type": "boolean"},
+    "accepted_terminal_truth_preserved": {"type": "boolean"},
+    "before_repair_history_chain_length": {"type": "integer", "minimum": 0},
+    "after_repair_history_chain_length": {"type": "integer", "minimum": 0},
+    "before_root_side_files": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "after_root_side_files": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "verdict": {"type": "string", "enum": ["FRICTION_REDUCED_WITHOUT_TRUTH_LOSS", "MIXED"]},
+    "why": {"type": "string", "minLength": 1}
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "schema_version": "observability_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+  "task_class": "bounded_router_trigger_fix",
+  "resulting_state": "DOCTOR_BLOCKED",
+  "report_summary": {
+    "result": "BLOCKED",
+    "stopping_stage": "resume",
+    "reason": "NO_PROGRESS_DETECTED",
+    "next_safe_step": "stop retrying the same repair step without new evidence or inputs"
+  },
+  "event_counts": {
+    "transition_count": 1,
+    "repair_attempt_count": 3,
+    "rejection_count": 1
+  },
+  "state_transition_log": [
+    {
+      "transition_id": 1,
+      "from_state": "DOCTOR_BLOCKED",
+      "to_state": "DOCTOR_BLOCKED",
+      "trigger": "resume",
+      "outcome": "BLOCKED",
+      "why": "NO_PROGRESS_DETECTED"
+    }
+  ],
+  "repair_attempt_log": [
+    {
+      "attempt_number": 1,
+      "step_id": "restore_readiness_truth",
+      "result": "STEP_NOT_COMPLETED"
+    },
+    {
+      "attempt_number": 2,
+      "step_id": "restore_readiness_truth",
+      "result": "STEP_NOT_COMPLETED"
+    },
+    {
+      "attempt_number": 3,
+      "step_id": "restore_readiness_truth",
+      "result": "STEP_PROGRESS_RECORDED"
+    }
+  ],
+  "rejection_log": [
+    {
+      "stage": "resume",
+      "reason": "NO_PROGRESS_DETECTED",
+      "dominant_blocker": "NO_PROGRESS_DETECTED",
+      "next_safe_step": "stop retrying the same repair step without new evidence or inputs"
+    }
+  ],
+  "sanitized_session_export": {
+    "sensitive_values_redacted": true,
+    "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_003",
+    "task_class": "bounded_router_trigger_fix",
+    "state": "DOCTOR_BLOCKED",
+    "result": "BLOCKED",
+    "reason": "NO_PROGRESS_DETECTED",
+    "next_safe_step": "stop retrying the same repair step without new evidence or inputs",
+    "resumability_family": "REPAIRABLE_DOCTOR_BLOCKED",
+    "repair_current_step_id": "restore_readiness_truth",
+    "repair_last_result": "STEP_PROGRESS_RECORDED",
+    "artifact_files": [
+      "final_repair_packet.json",
+      "stage3_refresh.json",
+      "stage3_report.json",
+      "starting_state.json"
+    ]
+  }
+}

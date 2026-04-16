@@ -1,0 +1,188 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "result",
+    "stopping_stage",
+    "reason",
+    "doctor_verdict",
+    "bundle_status",
+    "closure_status",
+    "refresh_applied",
+    "refresh_resulting_closure_status",
+    "comparison_applied",
+    "comparison_verdict",
+    "resulting_state",
+    "next_safe_step"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "orchestration_report_v0"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "OK",
+        "BLOCKED",
+        "ERROR"
+      ]
+    },
+    "stopping_stage": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "type": "string"
+    },
+    "doctor_verdict": {
+      "type": "string"
+    },
+    "resume_applied": {
+      "type": "boolean"
+    },
+    "resume_from_state": {
+      "type": "string"
+    },
+    "repair_handoff_applied": {
+      "type": "boolean"
+    },
+    "repair_handoff_from_state": {
+      "type": "string"
+    },
+    "repair_handoff_required_inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missing_continuation_inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "selection_applied": {
+      "type": "boolean"
+    },
+    "selected_mode": {
+      "type": "string"
+    },
+    "selected_with_preparation": {
+      "type": "boolean"
+    },
+    "preparation_applied": {
+      "type": "boolean"
+    },
+    "preparation_ready_for_closure": {
+      "type": "boolean"
+    },
+    "bundle_status": {
+      "type": "string"
+    },
+    "closure_status": {
+      "type": "string"
+    },
+    "refresh_applied": {
+      "type": "boolean"
+    },
+    "refresh_resulting_closure_status": {
+      "type": "string"
+    },
+    "comparison_applied": {
+      "type": "boolean"
+    },
+    "comparison_verdict": {
+      "type": "string"
+    },
+    "repair_termination_status": {
+      "type": "string"
+    },
+    "repair_termination_reason": {
+      "type": "string"
+    },
+    "repair_attempt_count": {
+      "type": "integer"
+    },
+    "repair_max_attempts": {
+      "type": "integer"
+    },
+    "repair_no_progress_window": {
+      "type": "integer"
+    },
+    "repair_stalled_step_id": {
+      "type": "string"
+    },
+    "resumability_status": {
+      "type": "string"
+    },
+    "resumability_family": {
+      "type": "string"
+    },
+    "resumability_active_pressures": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "resumability_repair_order": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "resumability_requires_new_run": {
+      "type": "boolean"
+    },
+    "resumability_policy_type": {
+      "type": "string"
+    },
+    "resumability_policy_next_step": {
+      "type": "string"
+    },
+    "resumability_ready_now_steps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "resumability_stale_artifact_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "dominant_blocker": {
+      "type": "string"
+    },
+    "resulting_state": {
+      "type": "string",
+      "minLength": 1
+    },
+    "next_safe_step": {
+      "type": "string"
+    },
+    "resumability_stale_subsurface_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

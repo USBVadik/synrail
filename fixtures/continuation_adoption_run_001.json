@@ -1,0 +1,24 @@
+{
+  "schema_version": "continuation_adoption_record_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_009",
+  "label": "packet_first_repeated_doctor_baseline",
+  "fixture_root": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_continuation_run_009",
+  "final_result": "OK",
+  "final_state": "CLOSURE_ACCEPTED",
+  "final_closure_status": "ACCEPTED",
+  "packet_only_root_entry": false,
+  "root_continuation_side_files": [
+    "prompt_identity.txt",
+    "task_identity.txt"
+  ],
+  "root_continuation_side_files_count": 2,
+  "stage_run_count": 5,
+  "repeated_doctor_block_events": 1,
+  "repair_history_available": true,
+  "repair_history_chain_length": 5,
+  "packet_continuation_core_present": false,
+  "packet_core_requires_sibling_discovery": true,
+  "packet_core_selected_with_preparation": false,
+  "packet_core_operator_focus": "",
+  "packet_core_next_step_required_inputs": []
+}

@@ -1,0 +1,10 @@
+{
+  "schema_version": "closure_verdict_v0",
+  "run_id": "EXECUTABLE_LOOP_ACCEPTED_RUN_001",
+  "task_class": "proof_sensitive_fix",
+  "closure_status": "ACCEPTED",
+  "blocking_reason": "",
+  "next_allowed_transition": "NONE",
+  "narrow_next_safe_step": "NONE",
+  "missing_sections": []
+}

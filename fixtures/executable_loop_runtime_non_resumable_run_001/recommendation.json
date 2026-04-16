@@ -1,0 +1,25 @@
+{
+  "schema_version": "mode_recommendation_v0",
+  "scenario_class": "low_risk_honesty_restoration",
+  "task_class": "honesty_restoration_guard",
+  "risk_inputs": {
+    "false_success_risk": "LOW",
+    "recovery_cost": "LOW",
+    "execution_surface_ambiguous": false,
+    "artifact_truth_nontrivial": false,
+    "explicit_hybrid_ambiguity": ""
+  },
+  "evidence_summary": {
+    "class_record_count": 1,
+    "class_verdict": "BASELINE_GOOD_ENOUGH",
+    "hybrid_status": "",
+    "avg_operator_minutes_added_if_synrail": 20,
+    "avg_interventions_added_if_synrail": 3,
+    "avg_closure_latency_minutes_added_if_synrail": 22,
+    "avg_false_green_exposure_reduced_if_synrail": 0
+  },
+  "recommended_mode": "LIGHTWEIGHT_BASELINE",
+  "secondary_exception_mode": "",
+  "why": "measured class evidence already says baseline is good enough here; using baseline likely avoids about 20 added operator minutes, 3 extra interventions, and 22 extra closure-latency minutes without giving up a decisive safety gain",
+  "next_safe_step": "use the lightweight baseline and only escalate if cheap validation leaves a named ambiguity unresolved"
+}

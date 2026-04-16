@@ -1,0 +1,96 @@
+{
+  "schema_version": "repair_handoff_v0",
+  "run_id": "ACCEPTANCE_INDEPENDENCE_RUN_001",
+  "task_class": "proof_sensitive_fix",
+  "from_state": "EXECUTION_COMPLETED",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+  "continuation_allowed": true,
+  "continuation_entrypoint": "resume",
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_PARTIAL_PROOF",
+    "active_pressures": [
+      "PARTIAL_PROOF"
+    ],
+    "recommended_repair_order": [
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "explanation": "the proof surface is partial, but continuation can resume once the missing proof sections are supplied"
+  },
+  "repair_policy": {
+    "policy_type": "MULTI_STEP_REPAIR",
+    "next_step_id": "complete_missing_proof_sections",
+    "ready_now_step_ids": [
+      "complete_missing_proof_sections"
+    ],
+    "ordered_steps": [
+      {
+        "step_id": "complete_missing_proof_sections",
+        "status": "READY_NOW",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "supporting_proof_artifacts"
+        ],
+        "resolves_pressures": [
+          "PARTIAL_PROOF"
+        ],
+        "why": "missing proof sections should be completed before bundle rebuild and closure recheck"
+      },
+      {
+        "step_id": "rebuild_proof_bundle",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "proof_bundle_snapshot"
+        ],
+        "resolves_pressures": [
+          "PARTIAL_PROOF"
+        ],
+        "why": "the bundle should be rebuilt only after the stale proof artifacts above are repaired"
+      },
+      {
+        "step_id": "rerun_closure",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_verdict_surface"
+        ],
+        "resolves_pressures": [
+          "PARTIAL_PROOF"
+        ],
+        "why": "closure should be rechecked only after earlier repair steps finish"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "runtime_state",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "runtime_state_surface"
+      ],
+      "mapped_inputs": [],
+      "repair_step": "inspect_runtime_state",
+      "why": "the bounded runtime sees a resumable contour but does not have a narrower artifact-quality hint yet",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "runtime_state_surface",
+          "status": "STALE",
+          "mapped_inputs": [],
+          "why": "the runtime contour still needs inspection before a narrower stale artifact surface can be named"
+        }
+      ]
+    }
+  ],
+  "required_inputs": [],
+  "runtime_defaults": {
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false
+  },
+  "next_safe_step": "reconfirm exact task, prompt, and run-class identity"
+}

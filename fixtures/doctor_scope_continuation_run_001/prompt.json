@@ -1,0 +1,21 @@
+{
+  "schema_version": "repair_prompt_bridge_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "current_step_id": "restore_readiness_truth",
+  "allowed_scope": [
+    "clean_execution_surface_record"
+  ],
+  "forbidden_scope": [
+    "Do not broaden scope beyond the current repair step.",
+    "Do not modify accepted or terminal-state logic.",
+    "Do not claim closure or acceptance unless the repaired run actually reaches it."
+  ],
+  "must_pass": [
+    "Repair only the current step: restore_readiness_truth",
+    "Keep run_id and task_class consistent with the current contour.",
+    "Do not remove or rewrite existing repair history.",
+    "Supply required repair input: clean_surface_confirmation"
+  ],
+  "prompt": "Repair the current Synrail contour without broadening scope.\nCurrent step: restore_readiness_truth\nBroken truth: DOCTOR_NOT_GREEN\nAllowed scope: clean_execution_surface_record\nRequired inputs: clean_surface_confirmation\nNext safe step: move to a clean or explicitly observed-safe execution surface\nDo not touch unrelated files, state transitions, or acceptance logic.\nReturn only the bounded repair needed for this current step and preserve continuity truth.\nA verified checkpoint is available if this repair path becomes unsafe."
+}

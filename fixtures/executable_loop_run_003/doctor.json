@@ -1,0 +1,42 @@
+{
+  "schema_version": "doctor_record_v0",
+  "doctor_run_id": "DOCTOR_RUN_EXEC_003",
+  "doctor_level": "CORE_DOCTOR",
+  "target_execution_surface": {
+    "path": "/tmp/medium_risk_path",
+    "classification": "observed_checked_path"
+  },
+  "trusted_baseline": {
+    "identity": "trusted_local_state"
+  },
+  "intended_run_class": "core_probe",
+  "gate_results": {
+    "baseline_identity": {
+      "status": "PASS",
+      "note": "trusted baseline identity is present"
+    },
+    "clean_execution_surface": {
+      "status": "PASS",
+      "note": "execution surface is acceptable"
+    },
+    "artifact_viability": {
+      "status": "PASS",
+      "note": "machine-readable artifact path is viable"
+    },
+    "helper_integrity": {
+      "status": "NOT_APPLICABLE",
+      "note": "helper integrity not required for this level"
+    },
+    "credential_surface": {
+      "status": "NOT_APPLICABLE",
+      "note": "credential surface not required for this level"
+    },
+    "prompt_task_identity": {
+      "status": "NOT_APPLICABLE",
+      "note": "prompt/task identity not required for this level"
+    }
+  },
+  "blocking_failure_classes": [],
+  "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+  "recommended_next_safe_step": "run execution"
+}

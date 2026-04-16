@@ -1,0 +1,32 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_BLOCKED_RUN_001",
+  "task_class": "proof_sensitive_fix",
+  "report": {
+    "result": "BLOCKED",
+    "stopping_stage": "ready_transition",
+    "reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+    "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "bundle_status": "MISSING",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": false,
+    "comparison_applied": false,
+    "blockers": [
+      "EXACT_TASK_IDENTITY_NOT_CONFIRMED"
+    ],
+    "dominant_blocker": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+    "resulting_state": "TARGET_SURFACE_ATTESTED",
+    "next_safe_step": "restore exact prompt and task identity"
+  },
+  "resulting_state": {
+    "state": "TARGET_SURFACE_ATTESTED",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+    "next_safe_step": "restore exact prompt and task identity"
+  },
+  "worked_envelope": {
+    "resulting_state": "TARGET_SURFACE_ATTESTED",
+    "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+    "next_safe_step": "restore exact prompt and task identity"
+  }
+}

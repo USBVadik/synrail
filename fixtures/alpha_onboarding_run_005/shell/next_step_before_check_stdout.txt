@@ -1,0 +1,3 @@
+Synrail does not have the next bounded repair instruction yet.
+What to do next: run one check first so Synrail can build the bounded next step.
+Next command: synrail check --artifact-root '/Users/usbdick/Documents/New project/synrail/fixtures/alpha_onboarding_run_005/lane'

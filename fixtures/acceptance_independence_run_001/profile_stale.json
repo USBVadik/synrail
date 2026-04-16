@@ -1,0 +1,21 @@
+{
+  "schema_version": "alpha_project_profile_v0",
+  "project_root": "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane",
+  "project_type": "python",
+  "task_class": "proof_sensitive_fix",
+  "target_path": "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane",
+  "target_classification": "ambiguous_surface",
+  "intended_run_class": "core_probe",
+  "baseline_identity": "trusted_clean",
+  "execution_surface_identity": "clean-clone",
+  "artifact_path": "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane/final_result.json",
+  "final_result_candidates": [
+    "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane/final_result.json"
+  ],
+  "readback_candidates": [
+    "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane/readback.txt"
+  ],
+  "scenario_proof_candidates": [
+    "/Users/usbdick/Documents/New project/synrail/fixtures/acceptance_independence_run_001/lane/scenario_proof.txt"
+  ]
+}

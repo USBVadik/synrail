@@ -1,0 +1,180 @@
+{
+  "schema_version": "repair_handoff_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "PROOF_BUNDLE_INVALID",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "INVALID_PROOF_BUNDLE",
+  "continuation_allowed": true,
+  "continuation_entrypoint": "resume",
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_COMPOUND",
+    "active_pressures": [
+      "INVALID_PROOF",
+      "PARTIAL_PROOF",
+      "RECOVERY_PENDING"
+    ],
+    "recommended_repair_order": [
+      "repair_final_result_artifact",
+      "complete_missing_proof_sections",
+      "rebuild_proof_bundle",
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "explanation": "more than one repairable pressure is active, so continuation should follow the ordered repair sequence before closure is rechecked"
+  },
+  "repair_policy": {
+    "policy_type": "MULTI_STEP_REPAIR",
+    "next_step_id": "repair_final_result_artifact",
+    "ready_now_step_ids": [
+      "repair_final_result_artifact"
+    ],
+    "ordered_steps": [
+      {
+        "step_id": "repair_final_result_artifact",
+        "status": "READY_NOW",
+        "required_inputs": [
+          "final_result"
+        ],
+        "repairs_artifacts": [
+          "final_result_artifact"
+        ],
+        "resolves_pressures": [
+          "INVALID_PROOF"
+        ],
+        "why": "invalid final-result truth should be repaired before later proof or recovery steps run"
+      },
+      {
+        "step_id": "complete_missing_proof_sections",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [
+          "readback",
+          "scenario_proof"
+        ],
+        "repairs_artifacts": [
+          "supporting_proof_artifacts"
+        ],
+        "resolves_pressures": [
+          "PARTIAL_PROOF"
+        ],
+        "why": "missing proof sections should be completed before bundle rebuild and closure recheck"
+      },
+      {
+        "step_id": "rebuild_proof_bundle",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "proof_bundle_snapshot"
+        ],
+        "resolves_pressures": [
+          "INVALID_PROOF",
+          "PARTIAL_PROOF"
+        ],
+        "why": "the bundle should be rebuilt only after the stale proof artifacts above are repaired"
+      },
+      {
+        "step_id": "complete_recovery_reverification",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [
+          "refresh_recovery_complete",
+          "refresh_reverification_complete"
+        ],
+        "repairs_artifacts": [
+          "recovery_reverification_surface"
+        ],
+        "resolves_pressures": [
+          "RECOVERY_PENDING"
+        ],
+        "why": "recovery should be completed before refresh reconciliation can restore closure acceptance"
+      },
+      {
+        "step_id": "run_refresh_reconciliation",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_refresh_surface"
+        ],
+        "resolves_pressures": [
+          "RECOVERY_PENDING"
+        ],
+        "why": "refresh reconciliation should only run once recovery reverification is complete"
+      },
+      {
+        "step_id": "rerun_closure",
+        "status": "WAITING_ON_PREVIOUS_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "closure_verdict_surface"
+        ],
+        "resolves_pressures": [
+          "INVALID_PROOF",
+          "PARTIAL_PROOF",
+          "RECOVERY_PENDING"
+        ],
+        "why": "closure should be rechecked only after earlier repair steps finish"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "final_result_artifact",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "final_result",
+        "diff_provenance",
+        "cleanup_status"
+      ],
+      "mapped_inputs": [
+        "final_result"
+      ],
+      "repair_step": "repair_final_result_artifact",
+      "why": "the final-result truth surface is still stale or incomplete"
+    },
+    {
+      "artifact_id": "supporting_proof_artifacts",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "readback",
+        "scenario_proof"
+      ],
+      "mapped_inputs": [
+        "readback",
+        "scenario_proof"
+      ],
+      "repair_step": "complete_missing_proof_sections",
+      "why": "supporting proof sections are still missing from the current bundle"
+    },
+    {
+      "artifact_id": "recovery_reverification_surface",
+      "quality": "STALE",
+      "still_stale_parts": [
+        "recovery_status",
+        "reverification_complete"
+      ],
+      "mapped_inputs": [
+        "refresh_recovery_complete",
+        "refresh_reverification_complete"
+      ],
+      "repair_step": "complete_recovery_reverification",
+      "why": "recovery was started but reverification has not been completed yet"
+    }
+  ],
+  "required_inputs": [
+    {
+      "input_id": "final_result",
+      "kind": "file",
+      "cli_flag": "--final-result",
+      "description": "supply the final result artifact for bundle repair or closure continuation",
+      "required_value": ""
+    }
+  ],
+  "runtime_defaults": {
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false
+  },
+  "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+}

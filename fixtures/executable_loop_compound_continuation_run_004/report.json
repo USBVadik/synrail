@@ -1,0 +1,42 @@
+{
+  "schema_version": "orchestration_report_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_004",
+  "task_class": "bounded_router_trigger_fix",
+  "result": "OK",
+  "stopping_stage": "refresh",
+  "reason": "NONE",
+  "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+  "resume_applied": true,
+  "resume_from_state": "RECOVERY_PENDING",
+  "repair_handoff_applied": true,
+  "repair_handoff_from_state": "RECOVERY_PENDING",
+  "repair_handoff_required_inputs": [
+    "refresh_recovery_complete",
+    "refresh_reverification_complete"
+  ],
+  "missing_continuation_inputs": [],
+  "selection_applied": true,
+  "selected_mode": "FULL_GOVERNED_PATH",
+  "selected_with_preparation": true,
+  "preparation_applied": true,
+  "preparation_ready_for_closure": true,
+  "bundle_status": "COMPLETE",
+  "closure_status": "ACCEPTED",
+  "refresh_applied": true,
+  "refresh_resulting_closure_status": "ACCEPTED",
+  "comparison_applied": false,
+  "comparison_verdict": "",
+  "blockers": [],
+  "dominant_blocker": "",
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "next_safe_step": "NONE",
+  "resumability_status": "NOT_RESUMABLE",
+  "resumability_family": "NOT_RESUMABLE_TERMINAL",
+  "resumability_active_pressures": [
+    "TERMINAL_STATE"
+  ],
+  "resumability_repair_order": [
+    "start_new_run"
+  ],
+  "resumability_requires_new_run": true
+}

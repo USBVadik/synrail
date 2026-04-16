@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v2",
+  "system": "synrail",
+  "scenario_id": "SUBSTITUTE_SCENARIO_SELECTION_CHAIN_005",
+  "scenario_class": "selection_prepared_multistep_contour",
+  "task_class": "bounded_router_trigger_fix",
+  "path_id": "packet_first_selected_prepared_chain",
+  "closure_result": "ACCEPTED",
+  "blocker_to_closure_cycles": 2,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "MEDIUM",
+  "operator_minutes": 23,
+  "intervention_count": 2,
+  "repair_cycles": 2,
+  "invalidation_count": 1,
+  "closure_latency_minutes": 26,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 93,
+  "notes": "the selected prepared contour now carries repair order, packet-first continuation, and truthful acceptance history without forcing the operator to rebuild the chain from a manual runbook"
+}

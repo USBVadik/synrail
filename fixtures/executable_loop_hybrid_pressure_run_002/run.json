@@ -1,0 +1,30 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_002",
+  "task_class": "medium_risk_conflicting_artifact_fix",
+  "report": {
+    "result": "OK",
+    "stopping_stage": "comparison",
+    "reason": "NONE",
+    "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "bundle_status": "COMPLETE",
+    "closure_status": "ACCEPTED",
+    "refresh_applied": false,
+    "comparison_applied": true,
+    "blockers": [],
+    "dominant_blocker": "",
+    "resulting_state": "CLOSURE_ACCEPTED",
+    "next_safe_step": "NONE"
+  },
+  "resulting_state": {
+    "state": "CLOSURE_ACCEPTED",
+    "closure_status": "ACCEPTED",
+    "blocking_reason": "",
+    "next_safe_step": "NONE"
+  },
+  "worked_envelope": {
+    "resulting_state": "CLOSURE_ACCEPTED",
+    "current_closure_status": "ACCEPTED",
+    "next_safe_step": "NONE"
+  }
+}

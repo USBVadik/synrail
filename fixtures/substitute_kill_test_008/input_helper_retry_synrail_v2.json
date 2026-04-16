@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v2",
+  "system": "synrail",
+  "scenario_id": "SUBSTITUTE_SCENARIO_HELPER_RETRY_STOP_008",
+  "scenario_class": "bounded_helper_retry_stop",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "path_id": "helper_drift_no_progress_stop",
+  "closure_result": "CLAIMED_NOT_ACCEPTED",
+  "blocker_to_closure_cycles": 2,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "MEDIUM",
+  "operator_minutes": 12,
+  "intervention_count": 1,
+  "repair_cycles": 2,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 12,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 90,
+  "notes": "Synrail records the repeated helper step, flips to NO_PROGRESS_DETECTED, and stops the contour before one more blind retry"
+}

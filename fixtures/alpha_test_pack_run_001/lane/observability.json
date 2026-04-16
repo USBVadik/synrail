@@ -1,0 +1,54 @@
+{
+  "schema_version": "observability_record_v0",
+  "run_id": "ALPHA_RUN_20260415T082755Z",
+  "task_class": "bounded_change",
+  "resulting_state": "PROOF_BUNDLE_INVALID",
+  "report_summary": {
+    "result": "OK",
+    "stopping_stage": "closure",
+    "reason": "INVALID_PROOF_BUNDLE",
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+  },
+  "event_counts": {
+    "transition_count": 0,
+    "repair_attempt_count": 0,
+    "rejection_count": 0
+  },
+  "state_transition_log": [],
+  "repair_attempt_log": [],
+  "rejection_log": [],
+  "sanitized_session_export": {
+    "sensitive_values_redacted": true,
+    "run_id": "ALPHA_RUN_20260415T082755Z",
+    "task_class": "bounded_change",
+    "state": "PROOF_BUNDLE_INVALID",
+    "result": "OK",
+    "reason": "INVALID_PROOF_BUNDLE",
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "repair_current_step_id": "repair_final_result_artifact",
+    "repair_last_result": "",
+    "entry_artifacts": [
+      "state_file",
+      "repair_packet"
+    ],
+    "source_of_truth_precedence": [
+      "state_file",
+      "repair_packet",
+      "repair_receipt",
+      "repair_history_chain"
+    ],
+    "packet_replay_ready": true,
+    "latest_repair_receipt_available": false,
+    "arbiter_resolution_status": "RESOLVED",
+    "arbiter_conflict_count": 0,
+    "arbiter_current_step_source": "repair_packet",
+    "artifact_files": [
+      "refresh.json",
+      "repair_packet.json",
+      "repair_receipt.json",
+      "report.json",
+      "state.json"
+    ]
+  }
+}

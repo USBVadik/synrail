@@ -1,0 +1,108 @@
+{
+  "schema_version": "alpha_session_replay_record_v0",
+  "telemetry_session_id": "TELEMETRY_3D357BC4A036",
+  "tester_id": "alpha_pack_smoke",
+  "created_at": "2026-04-15T08:28:00Z",
+  "telemetry_enabled": true,
+  "platform": {
+    "os": "Darwin",
+    "os_release": "24.6.0",
+    "platform": "macOS-15.6.1-arm64-arm-64bit",
+    "python_version": "3.9.6",
+    "synrail_version": "0.1.0"
+  },
+  "run_id": "ALPHA_RUN_20260415T082755Z",
+  "task_class": "bounded_change",
+  "latest_state": "PROOF_BUNDLE_INVALID",
+  "latest_result": "PROOF_INVALID",
+  "latest_reason": "INVALID_PROOF_BUNDLE",
+  "next_safe_step": "repair the final result artifact and rebuild the proof bundle",
+  "component_error_class": "INVALID_PROOF_BUNDLE",
+  "repair_attempt_count": 0,
+  "command_count": 3,
+  "command_sequence": [
+    {
+      "event_id": 1,
+      "timestamp": "2026-04-15T08:27:56Z",
+      "command_path": [
+        "init"
+      ],
+      "flag_names": [
+        "--artifact-root",
+        "--project-root",
+        "--task-identity",
+        "--telemetry-opt-in",
+        "--tester-id"
+      ],
+      "exit_code": 0,
+      "state": "INITIALIZED",
+      "result": "",
+      "reason": "",
+      "component_error_class": "",
+      "repair_attempt_count": 0
+    },
+    {
+      "event_id": 2,
+      "timestamp": "2026-04-15T08:27:59Z",
+      "command_path": [
+        "check"
+      ],
+      "flag_names": [
+        "--artifact-root"
+      ],
+      "exit_code": 0,
+      "state": "PROOF_BUNDLE_INVALID",
+      "result": "PROOF_INVALID",
+      "reason": "INVALID_PROOF_BUNDLE",
+      "component_error_class": "INVALID_PROOF_BUNDLE",
+      "repair_attempt_count": 0
+    },
+    {
+      "event_id": 3,
+      "timestamp": "2026-04-15T08:27:59Z",
+      "command_path": [
+        "repair-step"
+      ],
+      "flag_names": [
+        "--artifact-root"
+      ],
+      "exit_code": 0,
+      "state": "PROOF_BUNDLE_INVALID",
+      "result": "PROOF_INVALID",
+      "reason": "INVALID_PROOF_BUNDLE",
+      "component_error_class": "INVALID_PROOF_BUNDLE",
+      "repair_attempt_count": 0
+    }
+  ],
+  "state_at_error": {
+    "state": "PROOF_BUNDLE_INVALID",
+    "result": "PROOF_INVALID",
+    "reason": "INVALID_PROOF_BUNDLE",
+    "component_error_class": "INVALID_PROOF_BUNDLE",
+    "repair_attempt_count": 0,
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+  },
+  "observability_summary": {
+    "transition_count": 0,
+    "repair_attempt_count": 0,
+    "rejection_count": 0
+  },
+  "continuation_summary": {
+    "entry_artifacts": [
+      "state_file",
+      "repair_packet"
+    ],
+    "source_of_truth_precedence": [
+      "state_file",
+      "repair_packet",
+      "repair_receipt",
+      "repair_history_chain"
+    ],
+    "packet_replay_ready": true,
+    "arbiter_resolution_status": "RESOLVED",
+    "arbiter_conflict_count": 0,
+    "arbiter_current_step_source": "repair_packet"
+  },
+  "issue_title": "[synrail alpha] INVALID_PROOF_BUNDLE on ALPHA_RUN_20260415T082755Z",
+  "issue_body": "# Synrail Alpha Telemetry\n\n## Summary\n- telemetry session: `TELEMETRY_3D357BC4A036`\n- tester id: `alpha_pack_smoke`\n- synrail version: `0.1.0`\n- os: `Darwin 24.6.0`\n- python: `3.9.6`\n- run id: `ALPHA_RUN_20260415T082755Z`\n- task class: `bounded_change`\n- latest state: `PROOF_BUNDLE_INVALID`\n- latest result: `PROOF_INVALID`\n- latest reason: `INVALID_PROOF_BUNDLE`\n- component error class: `INVALID_PROOF_BUNDLE`\n- repair attempt count: `0`\n- next safe step: `repair the final result artifact and rebuild the proof bundle`\n- packet replay ready: `True`\n\n## Command Sequence\n- `init` | exit=`0` | state=`INITIALIZED` | result=`` | error=`` | flags=`--artifact-root --project-root --task-identity --telemetry-opt-in --tester-id`\n- `check` | exit=`0` | state=`PROOF_BUNDLE_INVALID` | result=`PROOF_INVALID` | error=`INVALID_PROOF_BUNDLE` | flags=`--artifact-root`\n- `repair-step` | exit=`0` | state=`PROOF_BUNDLE_INVALID` | result=`PROOF_INVALID` | error=`INVALID_PROOF_BUNDLE` | flags=`--artifact-root`\n\n## Questions\n- What did Synrail decide correctly?\n- Where was the next step unclear?\n- What felt like ceremony instead of help?\n"
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": "repair_prompt_bridge_record_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_009",
+  "task_class": "bounded_router_trigger_fix",
+  "current_step_id": "complete_missing_proof_sections",
+  "allowed_scope": [
+    "readback_record",
+    "scenario_proof_record",
+    "recovery_status_record",
+    "reverification_completion_record"
+  ],
+  "forbidden_scope": [
+    "Do not broaden scope beyond the current repair step.",
+    "Do not modify accepted or terminal-state logic.",
+    "Do not claim closure or acceptance unless the repaired run actually reaches it."
+  ],
+  "must_pass": [
+    "Repair only the current step: complete_missing_proof_sections",
+    "Keep run_id and task_class consistent with the current contour.",
+    "Do not remove or rewrite existing repair history."
+  ],
+  "prompt": "Repair the current Synrail contour without broadening scope.\nCurrent step: complete_missing_proof_sections\nBroken truth: MISSING_PROOF_SECTIONS\nAllowed scope: readback_record, scenario_proof_record, recovery_status_record, reverification_completion_record\nRequired inputs: none\nNext safe step: collect readback from changed sections on the attested surface\nDo not touch unrelated files, state transitions, or acceptance logic.\nReturn only the bounded repair needed for this current step and preserve continuity truth."
+}

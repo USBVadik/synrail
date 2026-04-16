@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v2",
+  "system": "synrail",
+  "scenario_id": "SUBSTITUTE_SCENARIO_ALPHA_INVALID_PROOF_009",
+  "scenario_class": "alpha_invalid_proof_artifact",
+  "task_class": "bounded_change",
+  "path_id": "alpha_plaintext_invalid_proof_lane",
+  "closure_result": "CLAIMED_NOT_ACCEPTED",
+  "blocker_to_closure_cycles": 1,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "MEDIUM",
+  "operator_minutes": 9,
+  "intervention_count": 1,
+  "repair_cycles": 1,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 9,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 91,
+  "notes": "Synrail turns the same plain-text final result into one explicit PROOF_INVALID contour, emits one bounded repair packet for repair_final_result_artifact, and prevents closure from being treated as trustworthy"
+}

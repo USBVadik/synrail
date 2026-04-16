@@ -1,0 +1,13 @@
+{
+  "schema_version": "comparison_input_v0",
+  "system": "baseline",
+  "scenario_id": "SCENARIO_WEAK_001",
+  "task_class": "honesty_restoration_guard",
+  "closure_result": "ACCEPTED",
+  "blocker_to_closure_cycles": 1,
+  "false_success_risk": "LOW",
+  "proof_completeness": "MEDIUM",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "LOW",
+  "notes": "A disciplined lightweight baseline is probably enough for this small honesty-restoration class."
+}

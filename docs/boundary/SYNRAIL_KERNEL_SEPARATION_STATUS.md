@@ -84,19 +84,19 @@ The following remain semi-coupled to the current proving ground:
 
 Current narrowest remaining knot:
 
-- first extraction execution still needs to be carried out carefully without widening the bounded first cut
+- post-extraction hardening still needs to be carried out carefully without widening the bounded first cut
 
 Current narrowest operational dependency inside that knot:
 
 - multiple fresh narrow incidents have now gone through the new incident operator flow and been evaluated honestly
 - multiple accepted live-fix confirmations now exist through the disciplined flow
 - one accepted closure-grade exact-task result now exists under the governed exact-retry path
-- the remaining dependency is disciplined execution of the first bounded extraction move
+- the remaining dependency is disciplined hardening of the extracted repo plus stronger repeatability confidence
 
 This knot matters because it still prevents:
 
-- first extraction-grade operational proof
-- final extraction-grade operational separation
+- higher confidence that the extracted repo can evolve without losing its boundary
+- stronger confidence that exact-task closure is repeatable rather than one-off
 
 ## Current honest reading
 
@@ -109,7 +109,7 @@ The kernel is already separated enough to:
 
 The kernel is not yet separated enough to:
 
-- claim that extraction execution itself has already been completed
+- claim that post-extraction maturity is already complete
 
 ## Current unblock handoff
 
@@ -135,4 +135,4 @@ Do not confuse:
 - operational closure.
 
 `Synrail` is already close to clean kernel extraction structurally, and it now has the missing accepted closed-loop proof under its own rules.
-The next risk is no longer proof absence, but over-widening or overcomplicating the first extraction move.
+The next risk is no longer proof absence, but over-widening or overcomplicating post-extraction hardening.

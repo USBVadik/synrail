@@ -1,0 +1,13 @@
+{
+  "schema_version": "comparison_input_v0",
+  "system": "synrail",
+  "scenario_id": "SCENARIO_HYBRID_001",
+  "task_class": "medium_risk_ambiguous_fix",
+  "closure_result": "CLAIMED_NOT_ACCEPTED",
+  "blocker_to_closure_cycles": 3,
+  "false_success_risk": "LOW",
+  "proof_completeness": "MEDIUM",
+  "recovery_cost": "MEDIUM",
+  "coordination_overhead": "MEDIUM",
+  "notes": "Synrail adds a stronger stop/no-bluff posture, but the comparison is not decisive on this middle path."
+}

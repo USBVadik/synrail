@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v1",
+  "system": "baseline",
+  "scenario_id": "SCENARIO_HYBRID_002",
+  "scenario_class": "medium_risk_ambiguous_closure",
+  "task_class": "medium_risk_conflicting_artifact_fix",
+  "path_id": "lightweight_operator_loop",
+  "closure_result": "ACCEPTED",
+  "blocker_to_closure_cycles": 1,
+  "false_success_risk": "MEDIUM",
+  "proof_completeness": "LOW",
+  "recovery_cost": "HIGH",
+  "coordination_overhead": "LOW",
+  "operator_minutes": 19,
+  "intervention_count": 2,
+  "repair_cycles": 1,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 24,
+  "false_green_exposure": 2,
+  "artifact_completeness_percent": 40,
+  "notes": "The baseline would likely accept after one ambiguous active-artifact check and one bounded fallback."
+}

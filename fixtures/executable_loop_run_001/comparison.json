@@ -1,0 +1,38 @@
+{
+  "schema_version": "baseline_comparison_record_v0",
+  "scenario_id": "SCENARIO_STRONG_001",
+  "task_class": "bounded_router_trigger_fix",
+  "baseline": {
+    "schema_version": "comparison_input_v0",
+    "system": "baseline",
+    "scenario_id": "SCENARIO_STRONG_001",
+    "task_class": "bounded_router_trigger_fix",
+    "closure_result": "ACCEPTED",
+    "blocker_to_closure_cycles": 2,
+    "false_success_risk": "HIGH",
+    "proof_completeness": "LOW",
+    "recovery_cost": "HIGH",
+    "coordination_overhead": "LOW",
+    "notes": "Small disciplined baseline likely feels cheap but remains exposed to narrative-only acceptance."
+  },
+  "synrail": {
+    "schema_version": "comparison_input_v0",
+    "system": "synrail",
+    "scenario_id": "SCENARIO_STRONG_001",
+    "task_class": "bounded_router_trigger_fix",
+    "closure_result": "ACCEPTED",
+    "blocker_to_closure_cycles": 5,
+    "false_success_risk": "LOW",
+    "proof_completeness": "HIGH",
+    "recovery_cost": "LOW",
+    "coordination_overhead": "HIGH",
+    "notes": "Synrail pays more overhead but materially lowers false-success risk and improves proof at decision time."
+  },
+  "verdict": "SYNRAIL_BETTER",
+  "reasons": [
+    "synrail_reduces_false_success_risk",
+    "synrail_improves_proof_completeness",
+    "synrail_lowers_recovery_cost",
+    "synrail_adds_coordination_overhead"
+  ]
+}

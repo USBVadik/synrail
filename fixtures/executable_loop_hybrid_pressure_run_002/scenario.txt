@@ -1,0 +1,1 @@
+scenario replay confirms the stale active-artifact ambiguity is gone after the repaired check

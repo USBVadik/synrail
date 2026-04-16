@@ -1,0 +1,27 @@
+{
+  "schema_version": "second_operator_record_v0",
+  "run_id": "ALPHA_RUN_20260414T185910Z",
+  "task_class": "bounded_change",
+  "entrypoint": "resume",
+  "entry_state": "DOCTOR_BLOCKED",
+  "visible_entry_artifacts": [
+    "state_file",
+    "repair_packet"
+  ],
+  "packet_only_entry": true,
+  "has_explicit_next_step": true,
+  "has_explicit_required_inputs": true,
+  "has_explicit_operator_focus": true,
+  "has_explicit_precedence": true,
+  "packet_replay_ready": true,
+  "arbiter_resolution_status": "RESOLVED",
+  "arbiter_conflict_count": 0,
+  "arbiter_ignored_sources": [],
+  "requires_author_intuition": false,
+  "expected_result": "BLOCKED",
+  "expected_reason": "CONTINUATION_INPUTS_MISSING",
+  "expected_next_safe_step": "move to a clean or explicitly observed-safe execution surface",
+  "repair_family": "REPAIRABLE_DOCTOR_BLOCKED",
+  "verdict": "FOLLOWABLE_BY_SECOND_OPERATOR",
+  "why": "the packet-first continuation path now resolves conflicts through the arbiter, so a second operator can follow the same next step without author memory"
+}

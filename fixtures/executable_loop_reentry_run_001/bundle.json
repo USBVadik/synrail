@@ -1,0 +1,37 @@
+{
+  "schema_version": "proof_bundle_v0",
+  "run_id": "EXECUTABLE_LOOP_REENTRY_RUN_001",
+  "task_class": "proof_sensitive_fix",
+  "status": "COMPLETE",
+  "final_result": {
+    "present": true,
+    "status": "success"
+  },
+  "modified_files": {
+    "present": true,
+    "count": 1
+  },
+  "diff_provenance": {
+    "present": true,
+    "non_empty": true
+  },
+  "readback": {
+    "present": true,
+    "path": "synrail/fixtures/executable_loop_reentry_run_001/readback.txt"
+  },
+  "scenario_proof": {
+    "present": true,
+    "path": "synrail/fixtures/executable_loop_reentry_run_001/scenario.txt"
+  },
+  "artifact_identity": {
+    "baseline_identity": "trusted_clean",
+    "execution_surface_identity": "clean-clone",
+    "prompt_identity": "prompt-v1",
+    "task_identity": "task-v1"
+  },
+  "cleanup_status": {
+    "present": true,
+    "success": true
+  },
+  "missing_sections": []
+}

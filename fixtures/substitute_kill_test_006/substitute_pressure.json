@@ -1,0 +1,28 @@
+{
+  "schema_version": "substitute_pressure_record_v0",
+  "record_count": 1,
+  "source_records": [
+    {
+      "path": "fixtures/substitute_kill_test_006/record_minimal.json",
+      "scenario_id": "SUBSTITUTE_SCENARIO_MINIMAL_CONTINUATION_006",
+      "substitute_stack": "manual_identity_repair_checklist_simple",
+      "verdict": "SYNRAIL_BETTER"
+    }
+  ],
+  "verdict_counts": {
+    "SYNRAIL_BETTER": 1,
+    "SUBSTITUTE_GOOD_ENOUGH": 0,
+    "UNCLEAR": 0
+  },
+  "substitute_stack_counts": {
+    "manual_identity_repair_checklist_simple": 1
+  },
+  "reading": {
+    "strongest_synrail_edge": "SUBSTITUTE_SCENARIO_MINIMAL_CONTINUATION_006",
+    "clearest_substitute_sufficient_path": "",
+    "winning_substitute_stacks": [
+      "manual_identity_repair_checklist_simple"
+    ],
+    "non_winning_substitute_stacks": []
+  }
+}

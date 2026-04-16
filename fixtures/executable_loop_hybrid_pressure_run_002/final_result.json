@@ -1,0 +1,7 @@
+{
+  "request_id": "EXECUTABLE_LOOP_HYBRID_PRESSURE_RUN_002",
+  "status": "success",
+  "modified_files": ["core/active_artifact_guard.py"],
+  "git_diff": "diff --git a/core/active_artifact_guard.py b/core/active_artifact_guard.py\n+hybrid pressure patch",
+  "cleanup_status": {"success": true}
+}

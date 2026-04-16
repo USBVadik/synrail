@@ -1,1 +1,7 @@
 .DS_Store
+.synrail/
+build/
+dist/
+*.egg-info/
+fixtures/alpha_lane_run_001/
+fixtures/alpha_lane_run_002/

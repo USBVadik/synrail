@@ -1,0 +1,45 @@
+{
+  "schema_version": "run_state_v0",
+  "run_id": "EXECUTABLE_LOOP_RUN_002",
+  "task_class": "honesty_restoration_guard",
+  "state": "PROOF_BUNDLE_PARTIAL",
+  "target_surface": {
+    "status": "ATTESTED",
+    "identity": "local_checked_path",
+    "baseline_relation": "trusted_local_state"
+  },
+  "doctor": {
+    "status": "PASS",
+    "blocking_failure_classes": []
+  },
+  "integrity": {
+    "status": "PASS",
+    "exact_task_identity_ok": true
+  },
+  "execution": {
+    "status": "COMPLETED",
+    "artifact_bundle_present": true
+  },
+  "proof_bundle": {
+    "status": "PARTIAL",
+    "missing_sections": [
+      "readback",
+      "scenario_proof"
+    ]
+  },
+  "closure": {
+    "status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "MISSING_PROOF_SECTIONS",
+    "next_allowed_transition": "PROOF_BUNDLE_COMPLETION",
+    "narrow_next_safe_step": "collect readback from changed sections on the attested surface",
+    "missing_sections": [
+      "readback",
+      "scenario_proof"
+    ]
+  },
+  "recovery": {
+    "status": "NOT_REQUIRED",
+    "reverification_complete": false
+  },
+  "next_safe_step": "collect readback from changed sections on the attested surface"
+}

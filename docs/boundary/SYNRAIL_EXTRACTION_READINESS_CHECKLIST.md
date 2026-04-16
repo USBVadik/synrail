@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the minimal checklist that must be satisfied before `Synrail` is extracted into its own dedicated repository.
+Define the minimal checklist that had to be satisfied before `Synrail` was extracted into its own dedicated repository, and record the post-extraction reading of that gate.
 
 This checklist exists so extraction is based on kernel maturity rather than on the mere number of artifacts.
 
@@ -108,7 +108,7 @@ This complements the extraction checklist by separating architectural/product se
 
 Current extraction readiness:
 
-- `READY FOR FIRST EXTRACTION MOVE`
+- `EXTRACTION_MOVE_COMPLETED`
 
 Reason:
 
@@ -116,23 +116,19 @@ Reason:
 - the kernel cut is also substantially clearer now
 - at least one proof-complete exact-task cycle now exists under kernel rules
 - the disciplined incident flow has also already reached multiple accepted live outcomes on fresh narrow incidents
-- the strongest remaining work is no longer readiness proof, but careful execution of the first extraction move
+- the strongest remaining work is no longer readiness proof, but post-extraction hardening and repeatability strengthening
 
 ## Narrow next step
 
-The strongest next step before extraction is:
+The strongest next step after extraction is:
 
-- use:
-  - `docs/boundary/EXTRACTION_EXECUTION_PLAN.md`
-  as the active mechanical move-order
-- use:
-  - `docs/boundary/FIRST_EXTRACTION_COMMIT_PLAN.md`
-  as the first bounded extraction payload
-- keep incident flow discipline in place for fresh runtime issues during extraction prep
-- do not widen the first extraction cut beyond the already-defined allowlist
+- keep the extracted repo bounded while hardening its internal clarity
+- preserve incident-flow discipline for fresh runtime issues on the proving ground
+- improve repeatability confidence for closure-grade exact-task runs
+- add curated examples or fixtures only when they are sanitized and boundary-safe
 
 ## Decision rule
 
-Do not extract if item 4 falls back out of `PASS` or if the first extraction move would exceed the bounded first-cut allowlist.
+Do not treat the extraction as mature if item 4 falls back out of `PASS` or if post-extraction changes start widening the cut beyond the bounded allowlist.
 
-`Synrail` should move into its own repository when the kernel is not only well-described, but also proven to close at least one exact-task cycle under its own acceptance semantics.
+`Synrail` has already moved into its own repository because the kernel was not only well-described, but also proven to close at least one exact-task cycle under its own acceptance semantics.

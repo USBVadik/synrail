@@ -1,0 +1,13 @@
+{
+  "schema_version": "comparison_input_v0",
+  "system": "synrail",
+  "scenario_id": "SCENARIO_WEAK_001",
+  "task_class": "honesty_restoration_guard",
+  "closure_result": "CLAIMED_NOT_ACCEPTED",
+  "blocker_to_closure_cycles": 3,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "HIGH",
+  "notes": "Synrail keeps stronger proof semantics here, but the overhead is harder to justify."
+}

@@ -1,0 +1,31 @@
+{
+  "schema_version": "proof_bundle_plan_v0",
+  "run_id": "GOVERNED_PATH_PLAN_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "governed_mode": "FULL_GOVERNED_PATH",
+  "required_sections": [
+    "final_result",
+    "modified_files",
+    "diff_provenance",
+    "readback",
+    "scenario_proof",
+    "artifact_identity",
+    "cleanup_status"
+  ],
+  "recommended_artifacts": {
+    "final_result": "synrail/fixtures/governed_path_plan_run_001/final_result.json",
+    "readback": "synrail/fixtures/governed_path_plan_run_001/readback.txt",
+    "scenario_proof": "synrail/fixtures/governed_path_plan_run_001/scenario.txt",
+    "bundle_output": "synrail/fixtures/governed_path_plan_run_001/bundle.json",
+    "closure_output": "synrail/fixtures/governed_path_plan_run_001/closure.json",
+    "preparation_receipt_output": "synrail/fixtures/governed_path_plan_run_001/preparation_receipt.json"
+  },
+  "artifact_identity": {
+    "baseline_identity": "trusted_clean",
+    "execution_surface_identity": "clean-clone",
+    "prompt_identity": "prompt-v1",
+    "task_identity": "task-v1"
+  },
+  "planning_status": "READY",
+  "next_safe_step": "collect the planned proof artifacts and assemble the bundle before closure"
+}

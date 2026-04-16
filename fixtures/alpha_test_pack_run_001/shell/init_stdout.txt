@@ -1,0 +1,5 @@
+Synrail initialized.
+Artifact root: /Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane
+Detected project type: generic
+After the agent leaves final_result.json or final_result.txt, run: synrail check --artifact-root '/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane'
+Optional fallback: synrail save --artifact-root '/Users/usbdick/Documents/New project/synrail/fixtures/alpha_test_pack_run_001/lane'

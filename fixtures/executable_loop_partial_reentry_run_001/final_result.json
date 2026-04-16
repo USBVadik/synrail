@@ -1,0 +1,11 @@
+{
+  "request_id": "EXECUTABLE_LOOP_PARTIAL_REENTRY_RUN_001",
+  "status": "success",
+  "modified_files": [
+    "guards/honesty.py"
+  ],
+  "git_diff": "diff --git a/guards/honesty.py b/guards/honesty.py\n+partial reentry patch",
+  "cleanup_status": {
+    "success": true
+  }
+}

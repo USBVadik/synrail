@@ -1,0 +1,57 @@
+{
+  "schema_version": "observability_record_v0",
+  "run_id": "ACCEPTANCE_INDEPENDENCE_MISSING_001",
+  "task_class": "proof_sensitive_fix",
+  "resulting_state": "EXECUTION_COMPLETED",
+  "report_summary": {
+    "result": "OK",
+    "stopping_stage": "closure",
+    "reason": "ACCEPTANCE_CRITERIA_INVALID",
+    "next_safe_step": "repair or rebuild the acceptance criteria before trusting closure"
+  },
+  "event_counts": {
+    "transition_count": 0,
+    "repair_attempt_count": 1,
+    "rejection_count": 0
+  },
+  "state_transition_log": [],
+  "repair_attempt_log": [
+    {
+      "attempt_number": 1,
+      "step_id": "complete_missing_proof_sections",
+      "result": "STEP_PROGRESS_RECORDED"
+    }
+  ],
+  "rejection_log": [],
+  "sanitized_session_export": {
+    "sensitive_values_redacted": true,
+    "run_id": "ACCEPTANCE_INDEPENDENCE_MISSING_001",
+    "task_class": "proof_sensitive_fix",
+    "state": "EXECUTION_COMPLETED",
+    "result": "OK",
+    "reason": "ACCEPTANCE_CRITERIA_INVALID",
+    "next_safe_step": "repair or rebuild the acceptance criteria before trusting closure",
+    "resumability_family": "REPAIRABLE_PARTIAL_PROOF",
+    "repair_current_step_id": "complete_missing_proof_sections",
+    "repair_last_result": "STEP_PROGRESS_RECORDED",
+    "entry_artifacts": [
+      "state_file",
+      "repair_packet"
+    ],
+    "source_of_truth_precedence": [
+      "state_file",
+      "repair_packet",
+      "repair_receipt",
+      "repair_history_chain"
+    ],
+    "packet_replay_ready": true,
+    "latest_repair_receipt_available": true,
+    "artifact_files": [
+      "refresh.json",
+      "repair_packet.json",
+      "repair_receipt.json",
+      "report.json",
+      "state.json"
+    ]
+  }
+}

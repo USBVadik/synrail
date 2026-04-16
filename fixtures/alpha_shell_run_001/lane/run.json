@@ -1,0 +1,140 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "ALPHA_RUN_20260414T134926Z",
+  "task_class": "bounded_change",
+  "report": {
+    "result": "BLOCKED",
+    "stopping_stage": "ready_transition",
+    "reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+    "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "resume_applied": false,
+    "resume_from_state": "",
+    "repair_handoff_applied": false,
+    "repair_handoff_from_state": "",
+    "repair_handoff_required_inputs": [],
+    "missing_continuation_inputs": [],
+    "selection_applied": false,
+    "selected_mode": "",
+    "selected_with_preparation": false,
+    "preparation_applied": false,
+    "preparation_ready_for_closure": false,
+    "bundle_status": "MISSING",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": false,
+    "comparison_applied": false,
+    "blockers": [
+      "EXACT_TASK_IDENTITY_NOT_CONFIRMED"
+    ],
+    "dominant_blocker": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+    "resumability_status": "NOT_RESUMABLE",
+    "resumability_family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
+    "resumability_active_pressures": [
+      "FRESH_ORCHESTRATION"
+    ],
+    "resumability_repair_order": [
+      "continue_forward_orchestration"
+    ],
+    "resumability_requires_new_run": false,
+    "resumability_policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "resumability_policy_next_step": "continue_forward_orchestration",
+    "resumability_ready_now_steps": [],
+    "resumability_stale_artifact_ids": [],
+    "resumability_stale_subsurface_ids": [],
+    "resulting_state": "TARGET_SURFACE_ATTESTED",
+    "next_safe_step": "restore exact prompt and task identity"
+  },
+  "resulting_state": {
+    "state": "TARGET_SURFACE_ATTESTED",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+    "next_safe_step": "restore exact prompt and task identity"
+  },
+  "worked_envelope": {
+    "resulting_state": "TARGET_SURFACE_ATTESTED",
+    "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+    "next_safe_step": "restore exact prompt and task identity"
+  },
+  "repair_packet": {
+    "emitted": true,
+    "from_state": "TARGET_SURFACE_ATTESTED",
+    "ready_for_resume": false,
+    "missing_inputs": [],
+    "selected_with_preparation": false,
+    "resumability_status": "NOT_RESUMABLE",
+    "resumability_family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
+    "active_pressures": [
+      "FRESH_ORCHESTRATION"
+    ],
+    "repair_order": [
+      "continue_forward_orchestration"
+    ],
+    "policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "policy_next_step": "continue_forward_orchestration",
+    "policy_ready_steps": [],
+    "repair_history_applied": false,
+    "repair_history_last_result": "",
+    "repair_history_last_completed_step_id": "",
+    "repair_history_completed_step_ids": [],
+    "repair_history_current_step_id": "continue_forward_orchestration",
+    "repair_history_waiting_step_ids": [],
+    "repair_history_chain_length": 0,
+    "repair_history_chain_results": [],
+    "repair_history_chain_step_ids": [],
+    "repair_termination_status": "TERMINATE",
+    "repair_termination_reason": "NON_RESUMABLE",
+    "repair_attempt_count": 0,
+    "repair_max_attempts": 3,
+    "repair_no_progress_window": 2,
+    "repair_stalled_step_id": "continue_forward_orchestration",
+    "repair_termination_next_action": "stop resuming this contour and follow the named non-resumable boundary",
+    "repair_receipt_last_operator_focus": "",
+    "repair_receipt_next_step_required_inputs": [],
+    "repair_receipt_next_step_subsurface_ids": [],
+    "stale_artifact_ids": [],
+    "non_resumable_artifact_ids": [
+      "runtime_entrypoint_state"
+    ],
+    "stale_subsurface_ids": [],
+    "non_resumable_subsurface_ids": [
+      "forward_orchestration_entrypoint"
+    ]
+  },
+  "repair_history": {
+    "available": true,
+    "from_state": "TARGET_SURFACE_ATTESTED",
+    "last_result": "",
+    "last_completed_step_id": "",
+    "current_step_id": "continue_forward_orchestration",
+    "waiting_step_ids": [],
+    "completed_step_ids": [],
+    "chain_length": 0,
+    "chain_results": [],
+    "chain_step_ids": [],
+    "termination_status": "TERMINATE",
+    "termination_reason": "NON_RESUMABLE",
+    "attempt_count": 0,
+    "max_attempts": 3,
+    "no_progress_window": 2,
+    "stalled_step_id": "continue_forward_orchestration",
+    "termination_next_action": "stop resuming this contour and follow the named non-resumable boundary",
+    "last_operator_focus": "",
+    "next_step_required_inputs": [],
+    "next_step_subsurface_ids": []
+  },
+  "resumability": {
+    "status": "NOT_RESUMABLE",
+    "family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
+    "active_pressures": [
+      "FRESH_ORCHESTRATION"
+    ],
+    "repair_order": [
+      "continue_forward_orchestration"
+    ],
+    "requires_new_run": false,
+    "policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "policy_next_step": "continue_forward_orchestration",
+    "ready_now_steps": [],
+    "stale_artifact_ids": [],
+    "stale_subsurface_ids": []
+  }
+}

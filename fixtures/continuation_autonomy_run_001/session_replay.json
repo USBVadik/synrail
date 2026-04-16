@@ -1,0 +1,69 @@
+{
+  "schema_version": "alpha_session_replay_record_v0",
+  "telemetry_session_id": "TELEMETRY_21074F2574AB",
+  "tester_id": "CONTINUATION_AUTONOMY_001",
+  "created_at": "2026-04-14T21:27:43Z",
+  "telemetry_enabled": true,
+  "platform": {
+    "os": "Darwin",
+    "os_release": "24.6.0",
+    "platform": "macOS-15.6.1-arm64-arm-64bit",
+    "python_version": "3.9.6",
+    "synrail_version": "0.1.0"
+  },
+  "run_id": "ALPHA_RUN_20260414T185910Z",
+  "task_class": "bounded_change",
+  "latest_state": "DOCTOR_BLOCKED",
+  "latest_result": "BLOCKED",
+  "latest_reason": "CONTINUATION_INPUTS_MISSING",
+  "next_safe_step": "move to a clean or explicitly observed-safe execution surface",
+  "component_error_class": "CONTINUATION_INPUTS_MISSING",
+  "repair_attempt_count": 2,
+  "command_count": 1,
+  "command_sequence": [
+    {
+      "event_id": 1,
+      "timestamp": "2026-04-14T21:25:21Z",
+      "command_path": [
+        "session-export"
+      ],
+      "flag_names": [
+        "--artifact-root"
+      ],
+      "exit_code": 0,
+      "state": "DOCTOR_BLOCKED",
+      "result": "BLOCKED",
+      "reason": "CONTINUATION_INPUTS_MISSING",
+      "component_error_class": "CONTINUATION_INPUTS_MISSING",
+      "repair_attempt_count": 2
+    }
+  ],
+  "state_at_error": {
+    "state": "DOCTOR_BLOCKED",
+    "result": "BLOCKED",
+    "reason": "CONTINUATION_INPUTS_MISSING",
+    "component_error_class": "CONTINUATION_INPUTS_MISSING",
+    "repair_attempt_count": 2,
+    "next_safe_step": "move to a clean or explicitly observed-safe execution surface"
+  },
+  "observability_summary": {
+    "transition_count": 0,
+    "repair_attempt_count": 0,
+    "rejection_count": 0
+  },
+  "continuation_summary": {
+    "entry_artifacts": [
+      "state_file",
+      "repair_packet"
+    ],
+    "source_of_truth_precedence": [
+      "state_file",
+      "repair_packet",
+      "repair_receipt",
+      "repair_history_chain"
+    ],
+    "packet_replay_ready": true
+  },
+  "issue_title": "[synrail alpha] CONTINUATION_INPUTS_MISSING on ALPHA_RUN_20260414T185910Z",
+  "issue_body": "# Synrail Alpha Telemetry\n\n## Summary\n- telemetry session: `TELEMETRY_21074F2574AB`\n- tester id: `CONTINUATION_AUTONOMY_001`\n- synrail version: `0.1.0`\n- os: `Darwin 24.6.0`\n- python: `3.9.6`\n- run id: `ALPHA_RUN_20260414T185910Z`\n- task class: `bounded_change`\n- latest state: `DOCTOR_BLOCKED`\n- latest result: `BLOCKED`\n- latest reason: `CONTINUATION_INPUTS_MISSING`\n- component error class: `CONTINUATION_INPUTS_MISSING`\n- repair attempt count: `2`\n- next safe step: `move to a clean or explicitly observed-safe execution surface`\n- packet replay ready: `True`\n\n## Command Sequence\n- `session-export` | exit=`0` | state=`DOCTOR_BLOCKED` | result=`BLOCKED` | error=`CONTINUATION_INPUTS_MISSING` | flags=`--artifact-root`\n\n## Questions\n- What did Synrail decide correctly?\n- Where was the next step unclear?\n- What felt like ceremony instead of help?\n"
+}

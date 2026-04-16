@@ -1,0 +1,43 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_RESUME_RUN_002",
+  "task_class": "bounded_router_trigger_fix",
+  "doctor": {
+    "final_verdict": "ACCEPTABLE_FOR_SUPPORT_RUN",
+    "blocking_failure_classes": []
+  },
+  "resume": {
+    "applied": true,
+    "from_state": "RECOVERY_PENDING"
+  },
+  "selection": {
+    "applied": false,
+    "selected_mode": "",
+    "selected_with_preparation": false
+  },
+  "preparation": {
+    "applied": false,
+    "ready_for_closure": false
+  },
+  "bundle": {
+    "status": "COMPLETE",
+    "missing_sections": []
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "RECOVERY_REVERIFICATION_INCOMPLETE"
+  },
+  "refresh": {
+    "applied": true,
+    "event_type": "RECOVERY_EVENT",
+    "resulting_closure_status": "ACCEPTED"
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "current_closure_status": "ACCEPTED",
+  "next_safe_step": "NONE"
+}

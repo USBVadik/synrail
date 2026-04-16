@@ -1,0 +1,122 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "doctor": {
+    "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "blocking_failure_classes": []
+  },
+  "resume": {
+    "applied": true,
+    "from_state": "PROOF_BUNDLE_INVALID"
+  },
+  "repair_handoff": {
+    "applied": true,
+    "from_state": "PROOF_BUNDLE_COMPLETE",
+    "required_inputs": [
+      "refresh_recovery_complete",
+      "refresh_reverification_complete"
+    ],
+    "missing_inputs": []
+  },
+  "repair_packet": {
+    "emitted": true,
+    "from_state": "PROOF_BUNDLE_COMPLETE",
+    "ready_for_resume": false,
+    "missing_inputs": [
+      "refresh_recovery_complete",
+      "refresh_reverification_complete"
+    ],
+    "selected_with_preparation": true,
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_RECOVERY_PENDING",
+    "active_pressures": [
+      "RECOVERY_PENDING"
+    ],
+    "repair_order": [
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "policy_type": "MULTI_STEP_REPAIR",
+    "policy_next_step": "complete_recovery_reverification",
+    "policy_ready_steps": [
+      "complete_recovery_reverification"
+    ],
+    "repair_history_applied": true,
+    "repair_history_last_result": "STEP_COMPLETED",
+    "repair_history_last_completed_step_id": "repair_final_result_artifact",
+    "repair_history_completed_step_ids": [
+      "repair_final_result_artifact"
+    ],
+    "repair_history_current_step_id": "complete_recovery_reverification",
+    "repair_history_waiting_step_ids": [
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "stale_artifact_ids": [
+      "recovery_reverification_surface"
+    ],
+    "non_resumable_artifact_ids": [],
+    "stale_subsurface_ids": [
+      "recovery_status_record",
+      "reverification_completion_record"
+    ],
+    "non_resumable_subsurface_ids": []
+  },
+  "resumability": {
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_RECOVERY_PENDING",
+    "resumability_active_pressures": [
+      "RECOVERY_PENDING"
+    ],
+    "resumability_repair_order": [
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "resumability_requires_new_run": false,
+    "resumability_policy_type": "MULTI_STEP_REPAIR",
+    "resumability_policy_next_step": "complete_recovery_reverification",
+    "resumability_ready_now_steps": [
+      "complete_recovery_reverification"
+    ],
+    "resumability_stale_artifact_ids": [
+      "recovery_reverification_surface"
+    ],
+    "resumability_stale_subsurface_ids": [
+      "recovery_status_record",
+      "reverification_completion_record"
+    ]
+  },
+  "selection": {
+    "applied": true,
+    "selected_mode": "FULL_GOVERNED_PATH",
+    "selected_with_preparation": true
+  },
+  "preparation": {
+    "applied": true,
+    "ready_for_closure": true
+  },
+  "bundle": {
+    "status": "COMPLETE",
+    "missing_sections": []
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "RECOVERY_REVERIFICATION_INCOMPLETE"
+  },
+  "refresh": {
+    "applied": false,
+    "event_type": "",
+    "resulting_closure_status": ""
+  },
+  "comparison": {
+    "applied": false,
+    "verdict": "",
+    "reasons": []
+  },
+  "resulting_state": "PROOF_BUNDLE_COMPLETE",
+  "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "run reverification against the attested target surface"
+}

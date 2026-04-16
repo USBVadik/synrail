@@ -1,0 +1,153 @@
+{
+  "schema_version": "artifact_repair_receipt_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "DOCTOR_BLOCKED",
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "result": "NON_RESUMABLE_BOUNDARY_REACHED",
+  "completed_step_id": "restore_readiness_truth",
+  "completed_artifact_ids": [
+    "readiness_surface"
+  ],
+  "completed_subsurface_ids": [
+    "target_identity_record"
+  ],
+  "remaining_stale_artifact_ids": [],
+  "remaining_stale_subsurface_ids": [],
+  "remaining_non_resumable_artifact_ids": [
+    "terminal_run_state"
+  ],
+  "remaining_non_resumable_subsurface_ids": [
+    "accepted_terminal_state"
+  ],
+  "remaining_stale_hints": [],
+  "remaining_non_resumable_hints": [
+    {
+      "artifact_id": "terminal_run_state",
+      "quality": "NON_RESUMABLE",
+      "repair_step": "start_new_run",
+      "still_stale_parts": [
+        "accepted_terminal_state"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "accepted_terminal_state",
+          "why": "the accepted closure state is terminal and should not be resumed"
+        }
+      ]
+    }
+  ],
+  "completed_hints": [
+    {
+      "artifact_id": "readiness_surface",
+      "quality": "STALE",
+      "repair_step": "restore_readiness_truth",
+      "still_stale_parts": [
+        "target_identity_record"
+      ],
+      "mapped_inputs": [
+        "target_identity_file"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "target_identity_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "target_identity_file"
+          ],
+          "why": "target identity evidence is missing or does not match the expected target surface"
+        }
+      ]
+    }
+  ],
+  "next_step_id": "start_new_run",
+  "ready_now_step_ids": [],
+  "next_step_required_inputs": [],
+  "next_step_hints": [
+    {
+      "artifact_id": "terminal_run_state",
+      "quality": "NON_RESUMABLE",
+      "repair_step": "start_new_run",
+      "still_stale_parts": [
+        "accepted_terminal_state"
+      ],
+      "mapped_inputs": [],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "accepted_terminal_state",
+          "status": "NON_RESUMABLE",
+          "mapped_inputs": [],
+          "why": "the accepted closure state is terminal and should not be resumed"
+        }
+      ]
+    }
+  ],
+  "repair_history": {
+    "applied": false,
+    "completed_step_ids": [
+      "restore_readiness_truth"
+    ],
+    "last_completed_step_id": "restore_readiness_truth",
+    "current_step_id": "start_new_run",
+    "waiting_step_ids": []
+  },
+  "operator_evidence": {
+    "completed_step_id": "restore_readiness_truth",
+    "completed_artifact_hints": [
+      {
+        "artifact_id": "readiness_surface",
+        "quality": "STALE",
+        "repair_step": "restore_readiness_truth",
+        "still_stale_parts": [
+          "target_identity_record"
+        ],
+        "mapped_inputs": [
+          "target_identity_file"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "target_identity_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "target_identity_file"
+            ],
+            "why": "target identity evidence is missing or does not match the expected target surface"
+          }
+        ]
+      }
+    ],
+    "completed_subsurface_ids": [
+      "target_identity_record"
+    ],
+    "next_step_id": "start_new_run",
+    "next_step_required_inputs": [],
+    "next_step_artifact_hints": [
+      {
+        "artifact_id": "terminal_run_state",
+        "quality": "NON_RESUMABLE",
+        "repair_step": "start_new_run",
+        "still_stale_parts": [
+          "accepted_terminal_state"
+        ],
+        "mapped_inputs": [],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "accepted_terminal_state",
+            "status": "NON_RESUMABLE",
+            "mapped_inputs": [],
+            "why": "the accepted closure state is terminal and should not be resumed"
+          }
+        ]
+      }
+    ],
+    "next_step_subsurface_ids": [
+      "accepted_terminal_state"
+    ],
+    "operator_focus": "stop trying to continue this contour and follow the named non-resumable boundary instead"
+  },
+  "resumability": {
+    "status": "NOT_RESUMABLE",
+    "family": "NOT_RESUMABLE_TERMINAL_ACCEPTED"
+  },
+  "why": "the continuation crossed into a non-resumable boundary, so the next move is no longer another repair step"
+}

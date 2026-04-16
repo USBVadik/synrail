@@ -1,0 +1,36 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "label",
+    "run_id",
+    "task_class",
+    "contour_reason",
+    "packet_only_entry",
+    "requires_author_intuition",
+    "dimensions_passed",
+    "uncovered_risks",
+    "reproducibility_verdict",
+    "second_operator_verdict",
+    "operator_reading_verdict",
+    "verdict",
+    "why"
+  ],
+  "properties": {
+    "schema_version": {"const": "externality_pressure_record_v0"},
+    "label": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "task_class": {"type": "string", "minLength": 1},
+    "contour_reason": {"type": "string"},
+    "packet_only_entry": {"type": "boolean"},
+    "requires_author_intuition": {"type": "boolean"},
+    "dimensions_passed": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "uncovered_risks": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "reproducibility_verdict": {"type": "string", "minLength": 1},
+    "second_operator_verdict": {"type": "string", "minLength": 1},
+    "operator_reading_verdict": {"type": "string", "minLength": 1},
+    "verdict": {"type": "string", "enum": ["SURVIVES_SHORT_EXTERNAL_PRESSURE", "MIXED"]},
+    "why": {"type": "string", "minLength": 1}
+  }
+}

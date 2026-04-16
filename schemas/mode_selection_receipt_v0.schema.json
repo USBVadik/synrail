@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/mode_selection_receipt_v0.schema.json",
+  "title": "Synrail Mode Selection Receipt v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "recommendation_file",
+    "scenario_class",
+    "task_class",
+    "recommended_mode",
+    "selected_mode",
+    "secondary_exception_mode",
+    "followed_recommendation",
+    "heavier_contour_entered",
+    "estimated_avoided_operator_minutes",
+    "estimated_avoided_interventions",
+    "estimated_avoided_closure_latency_minutes",
+    "why",
+    "next_safe_step"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "mode_selection_receipt_v0"
+    },
+    "recommendation_file": {
+      "type": "string"
+    },
+    "scenario_class": {
+      "type": "string"
+    },
+    "task_class": {
+      "type": "string"
+    },
+    "recommended_mode": {
+      "type": "string",
+      "enum": ["FULL_GOVERNED_PATH", "LIGHTWEIGHT_BASELINE", "HYBRID_EXCEPTION"]
+    },
+    "selected_mode": {
+      "type": "string",
+      "enum": ["FULL_GOVERNED_PATH", "LIGHTWEIGHT_BASELINE", "HYBRID_EXCEPTION"]
+    },
+    "secondary_exception_mode": {
+      "type": "string",
+      "enum": ["", "HYBRID_EXCEPTION"]
+    },
+    "governed_preparation_recommended": {
+      "type": "boolean"
+    },
+    "selected_with_preparation": {
+      "type": "boolean"
+    },
+    "followed_recommendation": {
+      "type": "boolean"
+    },
+    "heavier_contour_entered": {
+      "type": "boolean"
+    },
+    "estimated_avoided_operator_minutes": {
+      "type": "integer"
+    },
+    "estimated_avoided_interventions": {
+      "type": "integer"
+    },
+    "estimated_avoided_closure_latency_minutes": {
+      "type": "integer"
+    },
+    "why": {
+      "type": "string"
+    },
+    "next_safe_step": {
+      "type": "string"
+    }
+  }
+}

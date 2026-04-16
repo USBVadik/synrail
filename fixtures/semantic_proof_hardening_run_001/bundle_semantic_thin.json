@@ -1,0 +1,141 @@
+{
+  "schema_version": "proof_bundle_v0",
+  "run_id": "SEMANTIC_PROOF_HARDENING_THIN_001",
+  "task_class": "proof_sensitive_fix",
+  "status": "STRUCTURALLY_COMPLETE",
+  "structural_status": "COMPLETE",
+  "semantic_status": "INSUFFICIENT",
+  "final_result": {
+    "present": true,
+    "parseable": true,
+    "status": "success"
+  },
+  "modified_files": {
+    "present": true,
+    "count": 1,
+    "semantically_sufficient": true
+  },
+  "diff_provenance": {
+    "present": true,
+    "non_empty": true,
+    "has_diff_markers": false,
+    "semantically_sufficient": false
+  },
+  "readback": {
+    "present": true,
+    "path": "fixtures/semantic_proof_hardening_run_001/readback.txt",
+    "non_empty": true,
+    "semantically_sufficient": true
+  },
+  "scenario_proof": {
+    "present": true,
+    "path": "fixtures/semantic_proof_hardening_run_001/scenario.txt",
+    "non_empty": true,
+    "semantically_sufficient": true
+  },
+  "artifact_identity": {
+    "baseline_identity": "trusted_clean",
+    "execution_surface_identity": "clean-clone",
+    "prompt_identity": "prompt-001",
+    "task_identity": "task-001",
+    "semantically_sufficient": true
+  },
+  "cleanup_status": {
+    "present": true,
+    "success": true,
+    "semantically_sufficient": true
+  },
+  "missing_sections": [],
+  "semantically_insufficient_sections": [
+    "diff_provenance"
+  ],
+  "semantic_next_safe_step": "capture non-empty diff or provenance evidence for the changed files",
+  "structural_decision_trace": [
+    {
+      "section": "final_result",
+      "present": true,
+      "structurally_complete": true,
+      "why": "the final result artifact is present and parseable"
+    },
+    {
+      "section": "modified_files",
+      "present": true,
+      "structurally_complete": true,
+      "why": "the modified-files section is present in the final result artifact"
+    },
+    {
+      "section": "diff_provenance",
+      "present": true,
+      "structurally_complete": true,
+      "why": "diff or provenance evidence is present in the final result artifact"
+    },
+    {
+      "section": "readback",
+      "present": true,
+      "structurally_complete": true,
+      "why": "readback evidence file is present"
+    },
+    {
+      "section": "scenario_proof",
+      "present": true,
+      "structurally_complete": true,
+      "why": "scenario-proof evidence file is present"
+    },
+    {
+      "section": "artifact_identity",
+      "present": true,
+      "structurally_complete": true,
+      "why": "baseline, surface, prompt, and task identity fields are all present"
+    },
+    {
+      "section": "cleanup_status",
+      "present": true,
+      "structurally_complete": true,
+      "why": "cleanup status is present in the final result artifact"
+    }
+  ],
+  "semantic_decision_trace": [
+    {
+      "section": "modified_files",
+      "evaluated": true,
+      "semantically_sufficient": true,
+      "why": "the modified-files list names at least one concrete changed file",
+      "recommended_action": "record the actual changed files in the final result artifact"
+    },
+    {
+      "section": "diff_provenance",
+      "evaluated": true,
+      "semantically_sufficient": false,
+      "why": "diff or provenance evidence is present but too thin to prove the change",
+      "recommended_action": "capture non-empty diff or provenance evidence for the changed files"
+    },
+    {
+      "section": "readback",
+      "evaluated": true,
+      "semantically_sufficient": true,
+      "why": "readback evidence is substantive enough to indicate observed change truth",
+      "recommended_action": "record substantive readback from the changed sections on the attested surface"
+    },
+    {
+      "section": "scenario_proof",
+      "evaluated": true,
+      "semantically_sufficient": true,
+      "why": "scenario-proof evidence names a concrete scenario outcome",
+      "recommended_action": "record an explicit scenario-proof result for the attested target surface"
+    },
+    {
+      "section": "artifact_identity",
+      "evaluated": true,
+      "semantically_sufficient": true,
+      "why": "baseline, surface, prompt, and task identity fields are all non-empty",
+      "recommended_action": "repair baseline, surface, prompt, and task identity fields"
+    },
+    {
+      "section": "cleanup_status",
+      "evaluated": true,
+      "semantically_sufficient": true,
+      "why": "cleanup status explicitly reports success",
+      "recommended_action": "record a successful cleanup status for the execution surface"
+    }
+  ]
+}

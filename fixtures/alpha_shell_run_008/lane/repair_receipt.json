@@ -1,0 +1,155 @@
+{
+  "schema_version": "artifact_repair_receipt_v0",
+  "run_id": "ALPHA_RUN_20260414T185910Z",
+  "task_class": "bounded_change",
+  "from_state": "DOCTOR_BLOCKED",
+  "resulting_state": "DOCTOR_BLOCKED",
+  "result": "STEP_NOT_COMPLETED",
+  "completed_step_id": "",
+  "completed_artifact_ids": [],
+  "completed_subsurface_ids": [],
+  "remaining_stale_artifact_ids": [
+    "readiness_surface"
+  ],
+  "remaining_stale_subsurface_ids": [
+    "clean_execution_surface_record"
+  ],
+  "remaining_non_resumable_artifact_ids": [],
+  "remaining_non_resumable_subsurface_ids": [],
+  "remaining_stale_hints": [
+    {
+      "artifact_id": "readiness_surface",
+      "quality": "STALE",
+      "repair_step": "restore_readiness_truth",
+      "still_stale_parts": [
+        "clean_execution_surface_record"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "clean_execution_surface_record",
+          "why": "the execution surface still looks dirty or not explicitly safe for continuation"
+        }
+      ]
+    }
+  ],
+  "remaining_non_resumable_hints": [],
+  "completed_hints": [],
+  "next_step_id": "restore_readiness_truth",
+  "ready_now_step_ids": [
+    "restore_readiness_truth"
+  ],
+  "next_step_required_inputs": [
+    "clean_surface_confirmation"
+  ],
+  "next_step_hints": [
+    {
+      "artifact_id": "readiness_surface",
+      "quality": "STALE",
+      "repair_step": "restore_readiness_truth",
+      "still_stale_parts": [
+        "clean_execution_surface_record"
+      ],
+      "mapped_inputs": [
+        "clean_surface_confirmation"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "clean_execution_surface_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "clean_surface_confirmation"
+          ],
+          "why": "the execution surface still looks dirty or not explicitly safe for continuation"
+        }
+      ]
+    }
+  ],
+  "repair_history": {
+    "applied": true,
+    "completed_step_ids": [],
+    "last_completed_step_id": "",
+    "current_step_id": "restore_readiness_truth",
+    "waiting_step_ids": [
+      "rerun_closure"
+    ]
+  },
+  "repair_history_chain": [
+    {
+      "step_index": 1,
+      "from_state": "DOCTOR_BLOCKED",
+      "resulting_state": "DOCTOR_BLOCKED",
+      "result": "STEP_PROGRESS_RECORDED",
+      "active_step_id": "restore_readiness_truth",
+      "completed_step_id": "",
+      "next_step_id": "restore_readiness_truth",
+      "completed_subsurface_ids": [],
+      "next_step_subsurface_ids": [
+        "clean_execution_surface_record"
+      ],
+      "remaining_stale_subsurface_ids": [
+        "clean_execution_surface_record"
+      ],
+      "remaining_non_resumable_subsurface_ids": [],
+      "operator_focus": "the same repair step is still active, so keep tightening the remaining stale sub-surfaces there"
+    },
+    {
+      "step_index": 2,
+      "from_state": "DOCTOR_BLOCKED",
+      "resulting_state": "DOCTOR_BLOCKED",
+      "result": "STEP_NOT_COMPLETED",
+      "active_step_id": "restore_readiness_truth",
+      "completed_step_id": "",
+      "next_step_id": "restore_readiness_truth",
+      "completed_subsurface_ids": [],
+      "next_step_subsurface_ids": [
+        "clean_execution_surface_record"
+      ],
+      "remaining_stale_subsurface_ids": [
+        "clean_execution_surface_record"
+      ],
+      "remaining_non_resumable_subsurface_ids": [],
+      "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+    }
+  ],
+  "operator_evidence": {
+    "completed_step_id": "",
+    "completed_artifact_hints": [],
+    "completed_subsurface_ids": [],
+    "next_step_id": "restore_readiness_truth",
+    "next_step_required_inputs": [
+      "clean_surface_confirmation"
+    ],
+    "next_step_artifact_hints": [
+      {
+        "artifact_id": "readiness_surface",
+        "quality": "STALE",
+        "repair_step": "restore_readiness_truth",
+        "still_stale_parts": [
+          "clean_execution_surface_record"
+        ],
+        "mapped_inputs": [
+          "clean_surface_confirmation"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "clean_execution_surface_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "clean_surface_confirmation"
+            ],
+            "why": "the execution surface still looks dirty or not explicitly safe for continuation"
+          }
+        ]
+      }
+    ],
+    "next_step_subsurface_ids": [
+      "clean_execution_surface_record"
+    ],
+    "operator_focus": "stay on the current repair step until the missing continuation inputs are supplied in the right order"
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_DOCTOR_BLOCKED"
+  },
+  "why": "the current repair step is still blocked, so the receipt records no completed step yet"
+}

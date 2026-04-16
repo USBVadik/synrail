@@ -1,0 +1,46 @@
+{
+  "schema_version": "observability_record_v0",
+  "run_id": "ALPHA_RUN_20260414T134926Z",
+  "task_class": "bounded_change",
+  "resulting_state": "TARGET_SURFACE_ATTESTED",
+  "report_summary": {
+    "result": "BLOCKED",
+    "stopping_stage": "ready_transition",
+    "reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+    "next_safe_step": "restore exact prompt and task identity"
+  },
+  "event_counts": {
+    "transition_count": 0,
+    "repair_attempt_count": 0,
+    "rejection_count": 1
+  },
+  "state_transition_log": [],
+  "repair_attempt_log": [],
+  "rejection_log": [
+    {
+      "stage": "ready_transition",
+      "reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+      "dominant_blocker": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+      "next_safe_step": "restore exact prompt and task identity"
+    }
+  ],
+  "sanitized_session_export": {
+    "sensitive_values_redacted": true,
+    "run_id": "ALPHA_RUN_20260414T134926Z",
+    "task_class": "bounded_change",
+    "state": "TARGET_SURFACE_ATTESTED",
+    "result": "BLOCKED",
+    "reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+    "next_safe_step": "restore exact prompt and task identity",
+    "resumability_family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
+    "repair_current_step_id": "continue_forward_orchestration",
+    "repair_last_result": "",
+    "artifact_files": [
+      "refresh.json",
+      "repair_packet.json",
+      "repair_receipt.json",
+      "report.json",
+      "state.json"
+    ]
+  }
+}

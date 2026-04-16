@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/proof_bundle_v0.schema.json",
+  "title": "Synrail Proof Bundle v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "status",
+    "structural_status",
+    "semantic_status",
+    "final_result",
+    "modified_files",
+    "diff_provenance",
+    "readback",
+    "scenario_proof",
+    "artifact_identity",
+    "cleanup_status",
+    "missing_sections",
+    "structural_decision_trace",
+    "semantic_decision_trace"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "proof_bundle_v0"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "task_class": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "COMPLETE",
+        "STRUCTURALLY_COMPLETE",
+        "PARTIAL",
+        "INVALID"
+      ]
+    },
+    "structural_status": {
+      "type": "string",
+      "enum": [
+        "COMPLETE",
+        "PARTIAL",
+        "INVALID",
+        "MISSING"
+      ]
+    },
+    "semantic_status": {
+      "type": "string",
+      "enum": [
+        "SUFFICIENT",
+        "INSUFFICIENT",
+        "NOT_EVALUATED",
+        "MISSING"
+      ]
+    },
+    "final_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "status"],
+      "properties": {
+        "present": {"type": "boolean"},
+        "status": {"type": "string"},
+        "parseable": {"type": "boolean"}
+      }
+    },
+    "modified_files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "count"],
+      "properties": {
+        "present": {"type": "boolean"},
+        "count": {"type": "integer", "minimum": 0},
+        "semantically_sufficient": {"type": "boolean"}
+      }
+    },
+    "diff_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "non_empty"],
+      "properties": {
+        "present": {"type": "boolean"},
+        "non_empty": {"type": "boolean"},
+        "has_diff_markers": {"type": "boolean"},
+        "semantically_sufficient": {"type": "boolean"}
+      }
+    },
+    "readback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "path"],
+      "properties": {
+        "present": {"type": "boolean"},
+        "path": {"type": "string"},
+        "non_empty": {"type": "boolean"},
+        "semantically_sufficient": {"type": "boolean"}
+      }
+    },
+    "scenario_proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "path"],
+      "properties": {
+        "present": {"type": "boolean"},
+        "path": {"type": "string"},
+        "non_empty": {"type": "boolean"},
+        "semantically_sufficient": {"type": "boolean"}
+      }
+    },
+    "artifact_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_identity",
+        "execution_surface_identity",
+        "prompt_identity",
+        "task_identity"
+      ],
+      "properties": {
+        "baseline_identity": {"type": "string"},
+        "execution_surface_identity": {"type": "string"},
+        "prompt_identity": {"type": "string"},
+        "task_identity": {"type": "string"},
+        "semantically_sufficient": {"type": "boolean"}
+      }
+    },
+    "cleanup_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "success"],
+      "properties": {
+        "present": {"type": "boolean"},
+        "success": {"type": "boolean"},
+        "semantically_sufficient": {"type": "boolean"}
+      }
+    },
+    "missing_sections": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "structural_decision_trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["section", "present", "structurally_complete", "why"],
+        "properties": {
+          "section": {"type": "string", "minLength": 1},
+          "present": {"type": "boolean"},
+          "structurally_complete": {"type": "boolean"},
+          "why": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "semantic_decision_trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["section", "evaluated", "semantically_sufficient", "why", "recommended_action"],
+        "properties": {
+          "section": {"type": "string", "minLength": 1},
+          "evaluated": {"type": "boolean"},
+          "semantically_sufficient": {"type": "boolean"},
+          "why": {"type": "string", "minLength": 1},
+          "recommended_action": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "semantically_insufficient_sections": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "semantic_next_safe_step": {
+      "type": "string"
+    }
+  }
+}

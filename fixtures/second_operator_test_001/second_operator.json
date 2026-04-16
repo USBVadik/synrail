@@ -1,0 +1,22 @@
+{
+  "schema_version": "second_operator_record_v0",
+  "run_id": "EXECUTABLE_LOOP_MINIMAL_CONTINUATION_RUN_001",
+  "task_class": "bounded_router_trigger_fix",
+  "entrypoint": "resume",
+  "entry_state": "DOCTOR_BLOCKED",
+  "visible_entry_artifacts": [
+    "state_file",
+    "repair_packet"
+  ],
+  "packet_only_entry": true,
+  "has_explicit_next_step": true,
+  "has_explicit_required_inputs": true,
+  "has_explicit_operator_focus": true,
+  "requires_author_intuition": false,
+  "expected_result": "OK",
+  "expected_reason": "NONE",
+  "expected_next_safe_step": "NONE",
+  "repair_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+  "verdict": "FOLLOWABLE_BY_SECOND_OPERATOR",
+  "why": "the packet-first continuation path exposes enough next-step and input truth to be followed without author memory"
+}

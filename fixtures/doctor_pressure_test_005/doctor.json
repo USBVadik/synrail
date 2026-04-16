@@ -1,0 +1,46 @@
+{
+  "schema_version": "doctor_record_v0",
+  "doctor_run_id": "DOCTOR_PRESSURE_TEST_005",
+  "doctor_level": "SUPPORT_DOCTOR",
+  "target_execution_surface": {
+    "path": "/Users/usbdick/Documents/New project/synrail/fixtures/doctor_pressure_test_005",
+    "classification": "support_surface",
+    "observed_identity": "",
+    "expected_identity": ""
+  },
+  "trusted_baseline": {
+    "identity": "trusted-baseline-doctor"
+  },
+  "intended_run_class": "support_run",
+  "gate_results": {
+    "baseline_identity": {
+      "status": "PASS",
+      "note": "trusted baseline identity is present"
+    },
+    "clean_execution_surface": {
+      "status": "PASS",
+      "note": "execution surface is acceptable"
+    },
+    "artifact_viability": {
+      "status": "PASS",
+      "note": "machine-readable artifact path is viable"
+    },
+    "helper_integrity": {
+      "status": "PASS",
+      "note": "helper surface is trusted or safely bypassed"
+    },
+    "credential_surface": {
+      "status": "FAIL",
+      "note": "credential env still uses placeholder values: PLACEHOLDER_API_KEY"
+    },
+    "prompt_task_identity": {
+      "status": "NOT_APPLICABLE",
+      "note": "prompt/task identity not required for this level"
+    }
+  },
+  "blocking_failure_classes": [
+    "credential-surface missing"
+  ],
+  "final_verdict": "NOT_ACCEPTABLE_CREDENTIAL_SURFACE",
+  "recommended_next_safe_step": "restore required provider credentials"
+}

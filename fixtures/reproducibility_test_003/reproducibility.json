@@ -1,0 +1,34 @@
+{
+  "schema_version": "reproducibility_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "run_a_path": "fixtures/executable_loop_runtime_non_resumable_run_004/run.json",
+  "run_b_path": "/tmp/synrail_non_resumable_sync_004/run.json",
+  "key_truth_a": {
+    "result": "BLOCKED",
+    "stopping_stage": "resume",
+    "reason": "STATE_NOT_RESUMABLE",
+    "resulting_state": "READY",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "repair_history_chain_length": 1,
+    "repair_history_termination_reason": "NON_RESUMABLE",
+    "repair_packet_family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
+    "repair_packet_termination_reason": "NON_RESUMABLE",
+    "next_safe_step": "continue through the governed forward path instead of named resume"
+  },
+  "key_truth_b": {
+    "result": "BLOCKED",
+    "stopping_stage": "resume",
+    "reason": "STATE_NOT_RESUMABLE",
+    "resulting_state": "READY",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "repair_history_chain_length": 1,
+    "repair_history_termination_reason": "NON_RESUMABLE",
+    "repair_packet_family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
+    "repair_packet_termination_reason": "NON_RESUMABLE",
+    "next_safe_step": "continue through the governed forward path instead of named resume"
+  },
+  "mismatches": [],
+  "verdict": "REPRODUCIBLE_ON_KEY_TRUTH",
+  "why": "the paired runs preserve the same blocking, state, repair-history, and next-step truth"
+}

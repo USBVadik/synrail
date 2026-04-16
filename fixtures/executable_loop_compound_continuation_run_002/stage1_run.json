@@ -1,0 +1,44 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_002",
+  "task_class": "bounded_router_trigger_fix",
+  "report": {
+    "result": "OK",
+    "stopping_stage": "closure",
+    "reason": "INVALID_PROOF_BUNDLE",
+    "doctor_verdict": "ACCEPTABLE_FOR_EXACT_RETRY",
+    "resume_applied": true,
+    "resume_from_state": "DOCTOR_BLOCKED",
+    "repair_handoff_applied": true,
+    "repair_handoff_from_state": "DOCTOR_BLOCKED",
+    "repair_handoff_required_inputs": [
+      "prompt_identity",
+      "task_identity"
+    ],
+    "missing_continuation_inputs": [],
+    "selection_applied": false,
+    "selected_mode": "",
+    "selected_with_preparation": false,
+    "preparation_applied": false,
+    "preparation_ready_for_closure": false,
+    "bundle_status": "INVALID",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": false,
+    "comparison_applied": false,
+    "blockers": [],
+    "dominant_blocker": "",
+    "resulting_state": "PROOF_BUNDLE_INVALID",
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+  },
+  "resulting_state": {
+    "state": "PROOF_BUNDLE_INVALID",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "INVALID_PROOF_BUNDLE",
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+  },
+  "worked_envelope": {
+    "resulting_state": "PROOF_BUNDLE_INVALID",
+    "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+    "next_safe_step": "repair the final result artifact and rebuild the proof bundle"
+  }
+}

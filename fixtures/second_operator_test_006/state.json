@@ -1,0 +1,39 @@
+{
+  "schema_version": "run_state_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "state": "READY",
+  "target_surface": {
+    "status": "ATTESTED",
+    "identity": "clean-clone",
+    "baseline_relation": "trusted_clean"
+  },
+  "doctor": {
+    "status": "PASS",
+    "blocking_failure_classes": []
+  },
+  "integrity": {
+    "status": "PASS",
+    "exact_task_identity_ok": true
+  },
+  "execution": {
+    "status": "NOT_RUN",
+    "artifact_bundle_present": false
+  },
+  "proof_bundle": {
+    "status": "MISSING",
+    "missing_sections": []
+  },
+  "closure": {
+    "status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "FORWARD_ORCHESTRATION_CONTINUES",
+    "next_allowed_transition": "EXECUTE_FORWARD",
+    "narrow_next_safe_step": "continue through the governed forward path instead of named resume",
+    "missing_sections": []
+  },
+  "recovery": {
+    "status": "NOT_REQUIRED",
+    "reverification_complete": false
+  },
+  "next_safe_step": "continue through the governed forward path instead of named resume"
+}

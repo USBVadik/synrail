@@ -1,0 +1,70 @@
+{
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "stage_count",
+    "source_briefs",
+    "action_counts",
+    "repairable_stage_ids",
+    "continue_stage_ids",
+    "stop_stage_ids",
+    "final_action",
+    "final_next_safe_step",
+    "final_resumability_family",
+    "stage_summaries",
+    "why"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "operator_brief_chain_record_v0"},
+    "run_id": {"type": "string", "minLength": 1},
+    "task_class": {"type": "string", "minLength": 1},
+    "stage_count": {"type": "integer", "minimum": 1},
+    "source_briefs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "stage_id", "primary_action"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "stage_id": {"type": "string", "minLength": 1},
+          "primary_action": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "action_counts": {"type": "object"},
+    "repairable_stage_ids": {"type": "array", "items": {"type": "string"}},
+    "continue_stage_ids": {"type": "array", "items": {"type": "string"}},
+    "stop_stage_ids": {"type": "array", "items": {"type": "string"}},
+    "final_action": {"type": "string", "minLength": 1},
+    "final_next_safe_step": {"type": "string"},
+    "final_resumability_family": {"type": "string"},
+    "stage_summaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["stage_id", "resulting_state", "result", "stopping_stage", "reason", "primary_action", "next_safe_step", "current_step_id", "current_step_subsurface_id", "current_step_target_path", "current_step_action_instruction", "next_step_required_inputs", "termination_reason"],
+        "properties": {
+          "stage_id": {"type": "string", "minLength": 1},
+          "resulting_state": {"type": "string", "minLength": 1},
+          "result": {"type": "string", "minLength": 1},
+          "stopping_stage": {"type": "string"},
+          "reason": {"type": "string"},
+          "primary_action": {"type": "string", "minLength": 1},
+          "next_safe_step": {"type": "string"},
+          "current_step_id": {"type": "string"},
+          "current_step_subsurface_id": {"type": "string"},
+          "current_step_target_path": {"type": "string"},
+          "current_step_action_instruction": {"type": "string"},
+          "next_step_required_inputs": {"type": "array", "items": {"type": "string"}},
+          "termination_reason": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "why": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

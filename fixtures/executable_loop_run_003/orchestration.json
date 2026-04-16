@@ -1,0 +1,34 @@
+{
+  "schema_version": "worked_orchestration_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_RUN_003",
+  "task_class": "medium_risk_ambiguous_fix",
+  "doctor": {
+    "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "blocking_failure_classes": []
+  },
+  "bundle": {
+    "status": "PARTIAL",
+    "missing_sections": [
+      "scenario_proof"
+    ]
+  },
+  "closure": {
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "MISSING_PROOF_SECTIONS"
+  },
+  "refresh": {
+    "applied": false,
+    "event_type": "",
+    "resulting_closure_status": ""
+  },
+  "comparison": {
+    "applied": true,
+    "verdict": "UNCLEAR",
+    "reasons": [
+      "synrail_improves_proof_completeness"
+    ]
+  },
+  "resulting_state": "PROOF_BUNDLE_PARTIAL",
+  "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+  "next_safe_step": "rerun the scenario check against the attested target surface"
+}

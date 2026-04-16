@@ -1,0 +1,5 @@
+Status: Workspace Not Trusted
+What happened: Doctor blocked this run because the workspace or requested target is not trustworthy.
+What it means: Move back to a clean in-scope workspace before continuing this run.
+What to do next: Move back to a clean or clearly verified-safe workspace before continuing.
+Next command: synrail next-step

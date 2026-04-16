@@ -1,0 +1,15 @@
+{
+  "schema_version": "prompt_followup_record_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "current_step_id": "restore_readiness_truth",
+  "required_inputs": [
+    "clean_surface_confirmation"
+  ],
+  "allowed_scope": [
+    "clean_execution_surface_record"
+  ],
+  "missing_markers": [],
+  "verdict": "FOLLOWUP_SCOPE_PRESERVED",
+  "why": "the generated prompt preserves the bounded repair step, scope, and must-pass constraints for the next agent call"
+}

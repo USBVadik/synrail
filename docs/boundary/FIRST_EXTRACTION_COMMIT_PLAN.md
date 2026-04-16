@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Describe the first realistic commit that should land in a new dedicated `Synrail` repository once extraction is operationally unlocked.
+Describe the first realistic commit shape that was intended to land in a new dedicated `Synrail` repository once extraction was operationally unlocked.
 
 This document exists so the first commit is intentionally small, clean, and identity-defining.
 
@@ -129,6 +129,6 @@ Before creating the first commit in the new repo, verify:
 
 ## Decision rule
 
-This plan becomes actionable only after the operational extraction gate opens.
+This plan became actionable once the operational extraction gate opened.
 
-Until then, it should be treated as a final staging artifact, not as permission to move files.
+It should now be treated as a first-cut reference artifact, not as permission to keep widening the extracted repo casually.

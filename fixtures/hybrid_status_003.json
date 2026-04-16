@@ -1,0 +1,24 @@
+{
+  "schema_version": "hybrid_status_v0",
+  "source_cost_record": "synrail/fixtures/cost_of_control_003.json",
+  "hybrid_record_paths": [
+    "synrail/fixtures/executable_loop_run_003/comparison_economics.json",
+    "synrail/fixtures/executable_loop_hybrid_pressure_run_002/comparison_economics.json",
+    "synrail/fixtures/executable_loop_hybrid_pressure_run_003/comparison_economics.json"
+  ],
+  "evidence_count": 3,
+  "current_verdicts": [
+    "UNCLEAR",
+    "SYNRAIL_BETTER",
+    "BASELINE_GOOD_ENOUGH"
+  ],
+  "current_status": "DEMOTED",
+  "decision": "DEMOTE_HYBRID_FROM_DEFAULT_POLICY",
+  "default_policy": "do not treat hybrid as a default middle mode; reach for baseline unless one explicit hybrid pressure-test justifies the extra control",
+  "promotion_requirements": [
+    "add at least one more economics-aware hybrid comparison record",
+    "add one uglier hybrid pressure-test instead of another clean policy example",
+    "only promote hybrid if the class-level measured signal stops staying unclear"
+  ],
+  "next_action": "keep baseline as the default middle-path choice and only revisit hybrid when a named ambiguity produces a decisive measured win"
+}

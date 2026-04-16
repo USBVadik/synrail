@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v1",
+  "system": "synrail",
+  "scenario_id": "SCENARIO_COMPOUND_001",
+  "scenario_class": "compound_proof_sensitive_repair",
+  "task_class": "bounded_router_trigger_fix",
+  "path_id": "full_governed_path",
+  "closure_result": "ACCEPTED",
+  "blocker_to_closure_cycles": 6,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "MEDIUM",
+  "coordination_overhead": "HIGH",
+  "operator_minutes": 57,
+  "intervention_count": 6,
+  "repair_cycles": 3,
+  "invalidation_count": 2,
+  "closure_latency_minutes": 74,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 100,
+  "notes": "Synrail costs materially more here, but compound repair remains honest all the way back to accepted closure."
+}

@@ -1,0 +1,102 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_002",
+  "task_class": "proof_sensitive_fix",
+  "report": {
+    "result": "BLOCKED",
+    "stopping_stage": "resume",
+    "reason": "TERMINAL_STATE_NOT_RESUMABLE",
+    "doctor_verdict": "",
+    "resume_applied": true,
+    "resume_from_state": "CLOSURE_ACCEPTED",
+    "repair_handoff_applied": false,
+    "repair_handoff_from_state": "",
+    "repair_handoff_required_inputs": [],
+    "missing_continuation_inputs": [],
+    "selection_applied": false,
+    "selected_mode": "",
+    "selected_with_preparation": false,
+    "preparation_applied": false,
+    "preparation_ready_for_closure": false,
+    "bundle_status": "COMPLETE",
+    "closure_status": "ACCEPTED",
+    "refresh_applied": false,
+    "comparison_applied": false,
+    "blockers": [
+      "TERMINAL_STATE_NOT_RESUMABLE"
+    ],
+    "dominant_blocker": "TERMINAL_STATE_NOT_RESUMABLE",
+    "resumability_status": "NOT_RESUMABLE",
+    "resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+    "resumability_active_pressures": [
+      "TERMINAL_ACCEPTED",
+      "TERMINAL_STATE"
+    ],
+    "resumability_repair_order": [
+      "start_new_run"
+    ],
+    "resumability_requires_new_run": true,
+    "resumability_policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "resumability_policy_next_step": "start_new_run",
+    "resumability_ready_now_steps": [],
+    "resumability_stale_artifact_ids": [],
+    "resumability_stale_subsurface_ids": [],
+    "resulting_state": "CLOSURE_ACCEPTED",
+    "next_safe_step": "start a new run instead of resuming a terminal state"
+  },
+  "resulting_state": {
+    "state": "CLOSURE_ACCEPTED",
+    "closure_status": "ACCEPTED",
+    "blocking_reason": "TERMINAL_STATE_NOT_RESUMABLE",
+    "next_safe_step": "start a new run instead of resuming a terminal state"
+  },
+  "worked_envelope": {
+    "resulting_state": "CLOSURE_ACCEPTED",
+    "current_closure_status": "ACCEPTED",
+    "next_safe_step": "start a new run instead of resuming a terminal state"
+  },
+  "repair_packet": {
+    "emitted": false,
+    "from_state": "",
+    "ready_for_resume": false,
+    "missing_inputs": [],
+    "selected_with_preparation": false,
+    "resumability_status": "NOT_RESUMABLE",
+    "resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+    "active_pressures": [
+      "TERMINAL_ACCEPTED",
+      "TERMINAL_STATE"
+    ],
+    "repair_order": [
+      "start_new_run"
+    ],
+    "policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "policy_next_step": "start_new_run",
+    "policy_ready_steps": [],
+    "stale_artifact_ids": [],
+    "non_resumable_artifact_ids": [
+      "terminal_run_state"
+    ],
+    "stale_subsurface_ids": [],
+    "non_resumable_subsurface_ids": [
+      "accepted_terminal_state"
+    ]
+  },
+  "resumability": {
+    "status": "NOT_RESUMABLE",
+    "family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+    "active_pressures": [
+      "TERMINAL_ACCEPTED",
+      "TERMINAL_STATE"
+    ],
+    "repair_order": [
+      "start_new_run"
+    ],
+    "requires_new_run": true,
+    "policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "policy_next_step": "start_new_run",
+    "ready_now_steps": [],
+    "stale_artifact_ids": [],
+    "stale_subsurface_ids": []
+  }
+}

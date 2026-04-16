@@ -1,0 +1,21 @@
+Status: Proof Incomplete
+What happened: The proof bundle is still incomplete.
+What it means: Supply the missing proof sections and continue only the current bounded repair step.
+What to do next: Add the missing proof inputs, then ask Synrail for the next bounded repair step.
+Next command: synrail repair-step
+
+Bounded repair summary:
+The next bounded repair instruction is ready.
+What failed: the acceptance rules could not be trusted
+Current repair task: fill in the missing proof sections
+Stale artifacts: runtime_state
+Stale subsurfaces: runtime_state_surface
+Allowed scope: runtime state surface
+Required inputs: none
+Do not touch: Do not broaden scope beyond the current repair step., Do not modify accepted or terminal-state logic., Do not claim closure or acceptance unless the repaired run actually reaches it.
+Must pass:
+- Repair only this task: fill in the missing proof sections
+- Keep this repair on the same run and task.
+- Do not rewrite previous repair progress.
+- Keep the next safe step aligned with: repair or rebuild the acceptance criteria before trusting closure
+After this repair, run: synrail retry

@@ -1,0 +1,123 @@
+{
+  "schema_version": "doctor_coverage_corpus_v0",
+  "doctor_version": "synrail_doctor_v1",
+  "cases": [
+    {
+      "case_id": "WRONG_TARGET_IDENTITY_MISMATCH_001",
+      "fail_mode_id": "wrong_target_identity_mismatch",
+      "doctor_record": "fixtures/doctor_pressure_test_002/target_identity_mismatch.json",
+      "expected_final_verdict": "NOT_ACCEPTABLE_BASELINE_IDENTITY",
+      "expected_blocking_failure_class": "baseline-identity ambiguous",
+      "expected_failing_gate": "baseline_identity",
+      "expected_note_contains": "target identity artifact does not match the expected target surface"
+    },
+    {
+      "case_id": "DIRTY_EXECUTION_SURFACE_UNDER_GIT_001",
+      "fail_mode_id": "dirty_execution_surface_under_git",
+      "doctor_record": "fixtures/alpha_shell_run_009/doctor.json",
+      "expected_final_verdict": "NOT_ACCEPTABLE_DIRTY_SURFACE",
+      "expected_blocking_failure_class": "dirty-surface unsafe",
+      "expected_failing_gate": "clean_execution_surface",
+      "expected_note_contains": "execution surface has uncommitted changes"
+    },
+    {
+      "case_id": "OUT_OF_SCOPE_MODIFIED_FILES_001",
+      "fail_mode_id": "out_of_scope_modified_files_on_observed_safe_surface",
+      "doctor_record": "fixtures/doctor_pressure_test_007/doctor.json",
+      "expected_final_verdict": "NOT_ACCEPTABLE_DIRTY_SURFACE",
+      "expected_blocking_failure_class": "dirty-surface unsafe",
+      "expected_failing_gate": "clean_execution_surface",
+      "expected_note_contains": "out-of-scope modifications"
+    },
+    {
+      "case_id": "HELPER_ENTRYPOINT_MISSING_001",
+      "fail_mode_id": "helper_entrypoint_missing",
+      "doctor_record": "fixtures/doctor_measured_coverage_run_001/helper_missing_doctor.json",
+      "expected_final_verdict": "NOT_ACCEPTABLE_HELPER_INTEGRITY",
+      "expected_blocking_failure_class": "helper-integrity unknown",
+      "expected_failing_gate": "helper_integrity",
+      "expected_note_contains": "helper entrypoint is missing"
+    },
+    {
+      "case_id": "HELPER_ENTRYPOINT_SYNTAX_INVALID_001",
+      "fail_mode_id": "helper_entrypoint_syntax_invalid",
+      "doctor_record": "fixtures/doctor_pressure_test_003/doctor.json",
+      "expected_final_verdict": "NOT_ACCEPTABLE_HELPER_INTEGRITY",
+      "expected_blocking_failure_class": "helper-integrity unknown",
+      "expected_failing_gate": "helper_integrity",
+      "expected_note_contains": "python syntax is invalid"
+    },
+    {
+      "case_id": "HELPER_ENTRYPOINT_MISSING_IMPORT_001",
+      "fail_mode_id": "helper_entrypoint_missing_module_import",
+      "doctor_record": "fixtures/doctor_pressure_test_006/doctor.json",
+      "expected_final_verdict": "NOT_ACCEPTABLE_HELPER_INTEGRITY",
+      "expected_blocking_failure_class": "helper-integrity unknown",
+      "expected_failing_gate": "helper_integrity",
+      "expected_note_contains": "imports a missing module"
+    },
+    {
+      "case_id": "CREDENTIAL_ENV_MISSING_001",
+      "fail_mode_id": "credential_env_missing",
+      "doctor_record": "fixtures/doctor_measured_coverage_run_001/credential_env_missing_doctor.json",
+      "expected_final_verdict": "NOT_ACCEPTABLE_CREDENTIAL_SURFACE",
+      "expected_blocking_failure_class": "credential-surface missing",
+      "expected_failing_gate": "credential_surface",
+      "expected_note_contains": "missing credential env"
+    },
+    {
+      "case_id": "CREDENTIAL_ENV_PLACEHOLDER_001",
+      "fail_mode_id": "credential_env_placeholder_value",
+      "doctor_record": "fixtures/doctor_pressure_test_005/doctor.json",
+      "expected_final_verdict": "NOT_ACCEPTABLE_CREDENTIAL_SURFACE",
+      "expected_blocking_failure_class": "credential-surface missing",
+      "expected_failing_gate": "credential_surface",
+      "expected_note_contains": "placeholder values"
+    },
+    {
+      "case_id": "CREDENTIAL_PATH_MISSING_001",
+      "fail_mode_id": "credential_path_missing",
+      "doctor_record": "fixtures/doctor_pressure_test_001/credential_path_missing.json",
+      "expected_final_verdict": "NOT_ACCEPTABLE_CREDENTIAL_SURFACE",
+      "expected_blocking_failure_class": "credential-surface missing",
+      "expected_failing_gate": "credential_surface",
+      "expected_note_contains": "missing path"
+    },
+    {
+      "case_id": "CREDENTIAL_JSON_MALFORMED_001",
+      "fail_mode_id": "credential_json_malformed",
+      "doctor_record": "fixtures/doctor_pressure_test_004/doctor.json",
+      "expected_final_verdict": "NOT_ACCEPTABLE_CREDENTIAL_SURFACE",
+      "expected_blocking_failure_class": "credential-surface missing",
+      "expected_failing_gate": "credential_surface",
+      "expected_note_contains": "invalid json"
+    },
+    {
+      "case_id": "ARTIFACT_PATH_PARENT_MISSING_001",
+      "fail_mode_id": "artifact_path_parent_missing",
+      "doctor_record": "fixtures/doctor_measured_coverage_run_001/artifact_parent_missing_doctor.json",
+      "expected_final_verdict": "NOT_ACCEPTABLE_ARTIFACT_PATH",
+      "expected_blocking_failure_class": "artifact-viability missing",
+      "expected_failing_gate": "artifact_viability",
+      "expected_note_contains": "artifact path parent does not exist"
+    },
+    {
+      "case_id": "EXACT_PROMPT_OR_TASK_IDENTITY_MISSING_001",
+      "fail_mode_id": "exact_prompt_or_task_identity_missing",
+      "doctor_record": "fixtures/executable_loop_compound_run_001/stage1_doctor.json",
+      "expected_final_verdict": "NOT_ACCEPTABLE_EXACT_PROMPT_MISSING",
+      "expected_blocking_failure_class": "exact-prompt-artifact-missing",
+      "expected_failing_gate": "prompt_task_identity",
+      "expected_note_contains": "exact prompt identity file is not specified"
+    },
+    {
+      "case_id": "EXACT_PROMPT_OR_TASK_IDENTITY_MISMATCHED_001",
+      "fail_mode_id": "exact_prompt_or_task_identity_mismatched",
+      "doctor_record": "fixtures/doctor_pressure_test_001/task_identity_mismatch.json",
+      "expected_final_verdict": "NOT_ACCEPTABLE_EXACT_PROMPT_MISSING",
+      "expected_blocking_failure_class": "exact-prompt-artifact-missing",
+      "expected_failing_gate": "prompt_task_identity",
+      "expected_note_contains": "does not match the expected task identity"
+    }
+  ]
+}

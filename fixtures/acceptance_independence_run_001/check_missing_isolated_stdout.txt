@@ -1,0 +1,5 @@
+Status: Acceptance Rules Need Refresh
+What happened: The acceptance rules for this run are not trustworthy yet.
+What it means: Refresh the acceptance rules for the current project state before trusting closure again.
+What to do next: Run synrail refresh-acceptance, then rerun synrail check.
+Next command: synrail refresh-acceptance

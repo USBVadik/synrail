@@ -1,0 +1,49 @@
+{
+  "schema_version": "repair_prompt_bridge_record_v0",
+  "run_id": "ALPHA_RUN_20260414T185910Z",
+  "task_class": "bounded_change",
+  "current_step_id": "restore_readiness_truth",
+  "current_step_label": "restore a trustworthy workspace",
+  "failure_reason": "CONTINUATION_INPUTS_MISSING",
+  "failure_label": "the next repair step is still missing required inputs",
+  "stale_artifact_ids": [
+    "readiness_surface"
+  ],
+  "stale_subsurface_ids": [
+    "clean_execution_surface_record"
+  ],
+  "allowed_scope": [
+    "clean_execution_surface_record"
+  ],
+  "allowed_scope_labels": [
+    "the current workspace for this run"
+  ],
+  "required_inputs": [
+    "clean_surface_confirmation"
+  ],
+  "required_input_labels": [
+    "confirmation that the workspace is clean and safe to use"
+  ],
+  "forbidden_scope": [
+    "Do not broaden scope beyond the current repair step.",
+    "Do not modify accepted or terminal-state logic.",
+    "Do not claim closure or acceptance unless the repaired run actually reaches it."
+  ],
+  "must_pass": [
+    "Repair only this task: restore a trustworthy workspace",
+    "Keep this repair on the same run and task.",
+    "Do not rewrite previous repair progress.",
+    "Provide required input: confirmation that the workspace is clean and safe to use",
+    "Keep the next safe step aligned with: move back to a clean or clearly verified-safe workspace"
+  ],
+  "acceptance_criteria": [
+    "Repair only this task: restore a trustworthy workspace",
+    "Keep this repair on the same run and task.",
+    "Do not rewrite previous repair progress.",
+    "Provide required input: confirmation that the workspace is clean and safe to use",
+    "Keep the next safe step aligned with: move back to a clean or clearly verified-safe workspace"
+  ],
+  "next_safe_step_label": "move back to a clean or clearly verified-safe workspace",
+  "next_command": "",
+  "prompt": "Repair the current run without broadening scope.\nCurrent repair task: restore a trustworthy workspace.\nWhat failed: the next repair step is still missing required inputs.\nStale artifacts: readiness_surface\nStale subsurfaces: clean_execution_surface_record\nAllowed scope: the current workspace for this run\nRequired inputs: confirmation that the workspace is clean and safe to use\nWhat must be true after repair: move back to a clean or clearly verified-safe workspace\nDo not touch unrelated files, state transitions, or acceptance logic.\nReturn only the bounded repair needed for this current step and keep this same repair path intact."
+}

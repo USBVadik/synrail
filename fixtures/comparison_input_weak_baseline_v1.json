@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v1",
+  "system": "baseline",
+  "scenario_id": "SCENARIO_WEAK_001",
+  "scenario_class": "low_risk_honesty_restoration",
+  "task_class": "honesty_restoration_guard",
+  "path_id": "lightweight_operator_loop",
+  "closure_result": "ACCEPTED",
+  "blocker_to_closure_cycles": 1,
+  "false_success_risk": "LOW",
+  "proof_completeness": "MEDIUM",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "LOW",
+  "operator_minutes": 8,
+  "intervention_count": 1,
+  "repair_cycles": 0,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 10,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 60,
+  "notes": "Disciplined lightweight handling is already good enough on this small class."
+}

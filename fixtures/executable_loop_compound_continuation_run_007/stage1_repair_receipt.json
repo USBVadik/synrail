@@ -1,0 +1,239 @@
+{
+  "schema_version": "artifact_repair_receipt_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "from_state": "PROOF_BUNDLE_INVALID",
+  "resulting_state": "PROOF_BUNDLE_COMPLETE",
+  "result": "STEP_COMPLETED",
+  "completed_step_id": "repair_final_result_artifact",
+  "completed_artifact_ids": [
+    "final_result_artifact"
+  ],
+  "completed_subsurface_ids": [
+    "final_result_payload",
+    "diff_provenance_record",
+    "cleanup_status_record"
+  ],
+  "remaining_stale_artifact_ids": [
+    "recovery_reverification_surface"
+  ],
+  "remaining_stale_subsurface_ids": [
+    "recovery_status_record",
+    "reverification_completion_record"
+  ],
+  "remaining_non_resumable_artifact_ids": [],
+  "remaining_non_resumable_subsurface_ids": [],
+  "remaining_stale_hints": [
+    {
+      "artifact_id": "recovery_reverification_surface",
+      "quality": "STALE",
+      "repair_step": "complete_recovery_reverification",
+      "still_stale_parts": [
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "recovery_status_record",
+          "why": "the recovery status is still pending rather than complete"
+        },
+        {
+          "subsurface_id": "reverification_completion_record",
+          "why": "the recovery reverification completion flag is still missing"
+        }
+      ]
+    }
+  ],
+  "remaining_non_resumable_hints": [],
+  "completed_hints": [
+    {
+      "artifact_id": "final_result_artifact",
+      "quality": "STALE",
+      "repair_step": "repair_final_result_artifact",
+      "still_stale_parts": [
+        "final_result_payload",
+        "diff_provenance_record",
+        "cleanup_status_record"
+      ],
+      "mapped_inputs": [
+        "final_result"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "final_result_payload",
+          "status": "STALE",
+          "mapped_inputs": [
+            "final_result"
+          ],
+          "why": "the final result artifact is missing, empty, or not yet trusted for bundle repair"
+        },
+        {
+          "subsurface_id": "diff_provenance_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "final_result"
+          ],
+          "why": "diff provenance still cannot be reconstructed from the current final result artifact"
+        },
+        {
+          "subsurface_id": "cleanup_status_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "final_result"
+          ],
+          "why": "cleanup status still cannot be trusted from the current final result artifact"
+        }
+      ]
+    }
+  ],
+  "next_step_id": "complete_recovery_reverification",
+  "ready_now_step_ids": [
+    "complete_recovery_reverification"
+  ],
+  "next_step_required_inputs": [
+    "refresh_recovery_complete",
+    "refresh_reverification_complete"
+  ],
+  "next_step_hints": [
+    {
+      "artifact_id": "recovery_reverification_surface",
+      "quality": "STALE",
+      "repair_step": "complete_recovery_reverification",
+      "still_stale_parts": [
+        "recovery_status_record",
+        "reverification_completion_record"
+      ],
+      "mapped_inputs": [
+        "refresh_recovery_complete",
+        "refresh_reverification_complete"
+      ],
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "recovery_status_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "refresh_recovery_complete"
+          ],
+          "why": "the recovery status is still pending rather than complete"
+        },
+        {
+          "subsurface_id": "reverification_completion_record",
+          "status": "STALE",
+          "mapped_inputs": [
+            "refresh_reverification_complete"
+          ],
+          "why": "the recovery reverification completion flag is still missing"
+        }
+      ]
+    }
+  ],
+  "repair_history": {
+    "applied": false,
+    "completed_step_ids": [
+      "repair_final_result_artifact"
+    ],
+    "last_completed_step_id": "repair_final_result_artifact",
+    "current_step_id": "complete_recovery_reverification",
+    "waiting_step_ids": [
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ]
+  },
+  "operator_evidence": {
+    "completed_step_id": "repair_final_result_artifact",
+    "completed_artifact_hints": [
+      {
+        "artifact_id": "final_result_artifact",
+        "quality": "STALE",
+        "repair_step": "repair_final_result_artifact",
+        "still_stale_parts": [
+          "final_result_payload",
+          "diff_provenance_record",
+          "cleanup_status_record"
+        ],
+        "mapped_inputs": [
+          "final_result"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "final_result_payload",
+            "status": "STALE",
+            "mapped_inputs": [
+              "final_result"
+            ],
+            "why": "the final result artifact is missing, empty, or not yet trusted for bundle repair"
+          },
+          {
+            "subsurface_id": "diff_provenance_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "final_result"
+            ],
+            "why": "diff provenance still cannot be reconstructed from the current final result artifact"
+          },
+          {
+            "subsurface_id": "cleanup_status_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "final_result"
+            ],
+            "why": "cleanup status still cannot be trusted from the current final result artifact"
+          }
+        ]
+      }
+    ],
+    "completed_subsurface_ids": [
+      "final_result_payload",
+      "diff_provenance_record",
+      "cleanup_status_record"
+    ],
+    "next_step_id": "complete_recovery_reverification",
+    "next_step_required_inputs": [
+      "refresh_recovery_complete",
+      "refresh_reverification_complete"
+    ],
+    "next_step_artifact_hints": [
+      {
+        "artifact_id": "recovery_reverification_surface",
+        "quality": "STALE",
+        "repair_step": "complete_recovery_reverification",
+        "still_stale_parts": [
+          "recovery_status_record",
+          "reverification_completion_record"
+        ],
+        "mapped_inputs": [
+          "refresh_recovery_complete",
+          "refresh_reverification_complete"
+        ],
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "recovery_status_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "refresh_recovery_complete"
+            ],
+            "why": "the recovery status is still pending rather than complete"
+          },
+          {
+            "subsurface_id": "reverification_completion_record",
+            "status": "STALE",
+            "mapped_inputs": [
+              "refresh_reverification_complete"
+            ],
+            "why": "the recovery reverification completion flag is still missing"
+          }
+        ]
+      }
+    ],
+    "next_step_subsurface_ids": [
+      "recovery_status_record",
+      "reverification_completion_record"
+    ],
+    "operator_focus": "move to the next repair step and focus only on the remaining stale sub-surfaces there"
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_RECOVERY_PENDING"
+  },
+  "why": "the current repair step no longer leads the policy order, so the runtime records it as completed"
+}

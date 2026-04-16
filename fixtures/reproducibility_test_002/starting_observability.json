@@ -1,0 +1,70 @@
+{
+  "schema_version": "observability_record_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "task_class": "bounded_router_trigger_fix",
+  "resulting_state": "DOCTOR_BLOCKED",
+  "report_summary": {
+    "result": "BLOCKED",
+    "stopping_stage": "doctor",
+    "reason": "DOCTOR_NOT_GREEN",
+    "next_safe_step": "restore the trusted baseline and expected target-surface identity"
+  },
+  "event_counts": {
+    "transition_count": 1,
+    "repair_attempt_count": 3,
+    "rejection_count": 1
+  },
+  "state_transition_log": [
+    {
+      "transition_id": 1,
+      "from_state": "DOCTOR_BLOCKED",
+      "to_state": "DOCTOR_BLOCKED",
+      "trigger": "resume",
+      "outcome": "BLOCKED",
+      "why": "DOCTOR_NOT_GREEN"
+    }
+  ],
+  "repair_attempt_log": [
+    {
+      "attempt_number": 1,
+      "step_id": "restore_readiness_truth",
+      "result": "STEP_COMPLETED"
+    },
+    {
+      "attempt_number": 2,
+      "step_id": "complete_missing_proof_sections",
+      "result": "STEP_COMPLETED"
+    },
+    {
+      "attempt_number": 3,
+      "step_id": "complete_missing_proof_sections",
+      "result": "STEP_PROGRESS_RECORDED"
+    }
+  ],
+  "rejection_log": [
+    {
+      "stage": "doctor",
+      "reason": "DOCTOR_NOT_GREEN",
+      "dominant_blocker": "DOCTOR_NOT_GREEN",
+      "next_safe_step": "restore the trusted baseline and expected target-surface identity"
+    }
+  ],
+  "sanitized_session_export": {
+    "sensitive_values_redacted": true,
+    "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+    "task_class": "bounded_router_trigger_fix",
+    "state": "DOCTOR_BLOCKED",
+    "result": "BLOCKED",
+    "reason": "DOCTOR_NOT_GREEN",
+    "next_safe_step": "restore the trusted baseline and expected target-surface identity",
+    "resumability_family": "REPAIRABLE_COMPOUND",
+    "repair_current_step_id": "restore_readiness_truth",
+    "repair_last_result": "STEP_PROGRESS_RECORDED",
+    "artifact_files": [
+      "starting_refresh.json",
+      "starting_repair_packet.json",
+      "starting_report.json",
+      "starting_state.json"
+    ]
+  }
+}

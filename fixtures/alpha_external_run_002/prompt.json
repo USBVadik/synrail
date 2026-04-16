@@ -1,0 +1,25 @@
+{
+  "schema_version": "repair_prompt_bridge_record_v0",
+  "run_id": "ALPHA_RUN_20260414T110539Z",
+  "task_class": "bounded_change",
+  "current_step_id": "repair_final_result_artifact",
+  "allowed_scope": [
+    "final_result_payload",
+    "diff_provenance_record",
+    "cleanup_status_record",
+    "readback_record",
+    "scenario_proof_record"
+  ],
+  "forbidden_scope": [
+    "Do not broaden scope beyond the current repair step.",
+    "Do not modify accepted or terminal-state logic.",
+    "Do not claim closure or acceptance unless the repaired run actually reaches it."
+  ],
+  "must_pass": [
+    "Repair only the current step: repair_final_result_artifact",
+    "Keep run_id and task_class consistent with the current contour.",
+    "Do not remove or rewrite existing repair history.",
+    "Supply required repair input: final_result"
+  ],
+  "prompt": "Repair the current Synrail contour without broadening scope.\nCurrent step: repair_final_result_artifact\nBroken truth: INVALID_PROOF_BUNDLE\nAllowed scope: final_result_payload, diff_provenance_record, cleanup_status_record, readback_record, scenario_proof_record\nRequired inputs: final_result\nNext safe step: repair the final result artifact and rebuild the proof bundle\nDo not touch unrelated files, state transitions, or acceptance logic.\nReturn only the bounded repair needed for this current step and preserve continuity truth."
+}

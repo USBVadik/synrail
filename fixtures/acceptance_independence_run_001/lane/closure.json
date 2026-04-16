@@ -1,0 +1,16 @@
+{
+  "schema_version": "closure_verdict_v0",
+  "run_id": "ACCEPTANCE_INDEPENDENCE_RUN_001",
+  "task_class": "proof_sensitive_fix",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "blocking_reason": "EXACT_TASK_IDENTITY_NOT_CONFIRMED",
+  "next_allowed_transition": "INTEGRITY_RECONFIRMATION",
+  "narrow_next_safe_step": "reconfirm exact task, prompt, and run-class identity",
+  "missing_sections": [
+    "artifact_identity"
+  ],
+  "semantically_insufficient_sections": [],
+  "acceptance_criteria_revision_id": "acceptance_criteria_v0:ba0986de4d86",
+  "acceptance_criteria_status": "VALID",
+  "acceptance_criteria_reason": "CRITERIA_VALID"
+}

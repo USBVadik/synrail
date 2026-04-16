@@ -1,0 +1,66 @@
+{
+  "schema_version": "operator_brief_record_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_010",
+  "task_class": "bounded_router_trigger_fix",
+  "entrypoint": "resume",
+  "entry_state": "DOCTOR_BLOCKED",
+  "resulting_state": "PROOF_BUNDLE_PARTIAL",
+  "result": "OK",
+  "stopping_stage": "closure",
+  "reason": "MISSING_PROOF_SECTIONS",
+  "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+  "closure_status": "CLAIMED_NOT_ACCEPTED",
+  "resumability_family": "REPAIRABLE_COMPOUND",
+  "active_pressures": [
+    "PARTIAL_PROOF",
+    "RECOVERY_PENDING"
+  ],
+  "primary_action": "REPAIR_CURRENT_STEP",
+  "why_action": "the packet still names one current repair step, its required inputs, and the stale sub-surfaces to tighten next",
+  "next_safe_step": "collect readback from changed sections on the attested surface",
+  "operator_focus": "move to the next repair step and focus only on the remaining stale sub-surfaces there",
+  "current_step_id": "complete_missing_proof_sections",
+  "ready_now_step_ids": [
+    "complete_missing_proof_sections"
+  ],
+  "next_step_required_inputs": [
+    "readback",
+    "scenario_proof"
+  ],
+  "next_step_subsurface_ids": [
+    "readback_record",
+    "scenario_proof_record"
+  ],
+  "blockers": [],
+  "dominant_blocker": "",
+  "termination_status": "CONTINUE",
+  "termination_reason": "",
+  "attempt_count": 0,
+  "history_chain_length": 1,
+  "completed_step_ids": [
+    "restore_readiness_truth"
+  ],
+  "stale_artifact_ids": [
+    "supporting_proof_artifacts",
+    "recovery_reverification_surface"
+  ],
+  "stale_subsurface_ids": [
+    "readback_record",
+    "scenario_proof_record",
+    "recovery_status_record",
+    "reverification_completion_record"
+  ],
+  "entry_artifacts": [
+    "state_file",
+    "repair_packet"
+  ],
+  "suggested_cli": {
+    "command": "synrail resume",
+    "args": [
+      "--state-file",
+      "fixtures/executable_loop_compound_continuation_run_010/stage0_state.json",
+      "--repair-packet-file",
+      "fixtures/executable_loop_compound_continuation_run_010/stage0_repair_packet.json"
+    ]
+  }
+}

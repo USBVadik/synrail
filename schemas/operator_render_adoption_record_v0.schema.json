@@ -1,0 +1,40 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "label",
+    "source_kind",
+    "source_path",
+    "render_path",
+    "run_id",
+    "task_class",
+    "source_line_count",
+    "render_line_count",
+    "line_reduction",
+    "render_is_shorter",
+    "key_marker_count",
+    "missing_markers",
+    "truth_preserved",
+    "verdict",
+    "why"
+  ],
+  "properties": {
+    "schema_version": {"const": "operator_render_adoption_record_v0"},
+    "label": {"type": "string", "minLength": 1},
+    "source_kind": {"type": "string", "enum": ["BRIEF", "CHAIN"]},
+    "source_path": {"type": "string", "minLength": 1},
+    "render_path": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "task_class": {"type": "string", "minLength": 1},
+    "source_line_count": {"type": "integer", "minimum": 1},
+    "render_line_count": {"type": "integer", "minimum": 1},
+    "line_reduction": {"type": "integer"},
+    "render_is_shorter": {"type": "boolean"},
+    "key_marker_count": {"type": "integer", "minimum": 1},
+    "missing_markers": {"type": "array", "items": {"type": "string"}},
+    "truth_preserved": {"type": "boolean"},
+    "verdict": {"type": "string", "enum": ["READING_TAX_REDUCED_WITHOUT_TRUTH_LOSS", "MIXED"]},
+    "why": {"type": "string", "minLength": 1}
+  }
+}

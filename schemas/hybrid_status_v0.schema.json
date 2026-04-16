@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/hybrid_status_v0.schema.json",
+  "title": "Synrail Hybrid Status v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_cost_record",
+    "hybrid_record_paths",
+    "evidence_count",
+    "current_verdicts",
+    "current_status",
+    "decision",
+    "default_policy",
+    "promotion_requirements",
+    "next_action"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "hybrid_status_v0"
+    },
+    "source_cost_record": {
+      "type": "string"
+    },
+    "hybrid_record_paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "current_verdicts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["SYNRAIL_BETTER", "BASELINE_GOOD_ENOUGH", "UNCLEAR"]
+      }
+    },
+    "current_status": {
+      "type": "string",
+      "enum": ["JUSTIFIED", "PROVISIONAL", "DEMOTED"]
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["KEEP_HYBRID_ACTIVE", "KEEP_HYBRID_SECONDARY", "DEMOTE_HYBRID_FROM_DEFAULT_POLICY"]
+    },
+    "default_policy": {
+      "type": "string"
+    },
+    "promotion_requirements": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "next_action": {
+      "type": "string"
+    }
+  }
+}

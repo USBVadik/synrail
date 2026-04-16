@@ -1,0 +1,5 @@
+Status: Current Repair Step Still Incomplete
+What happened: The current repair step is still incomplete.
+What it means: Finish only the current bounded repair step before trying synrail continue again.
+What to do next: Finish the current bounded repair from synrail next-step, then run synrail continue.
+Suggested path: run synrail next-step, finish only that repair, then synrail continue

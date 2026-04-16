@@ -1,0 +1,22 @@
+{
+  "schema_version": "comparison_input_v2",
+  "system": "synrail",
+  "scenario_id": "SUBSTITUTE_SCENARIO_CONVERGENCE_002",
+  "scenario_class": "stalled_repair_loop_control",
+  "task_class": "bounded_router_trigger_fix",
+  "path_id": "packet_first_resume_with_termination",
+  "closure_result": "BLOCKED",
+  "blocker_to_closure_cycles": 3,
+  "false_success_risk": "LOW",
+  "proof_completeness": "HIGH",
+  "recovery_cost": "LOW",
+  "coordination_overhead": "MEDIUM",
+  "operator_minutes": 22,
+  "intervention_count": 3,
+  "repair_cycles": 2,
+  "invalidation_count": 0,
+  "closure_latency_minutes": 24,
+  "false_green_exposure": 0,
+  "artifact_completeness_percent": 95,
+  "notes": "synrail now stops a stalled repair loop with explicit convergence truth"
+}

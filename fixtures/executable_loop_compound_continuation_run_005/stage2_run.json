@@ -1,0 +1,112 @@
+{
+  "schema_version": "canonical_run_artifact_v0",
+  "run_id": "EXECUTABLE_LOOP_COMPOUND_CONTINUATION_RUN_005",
+  "task_class": "bounded_router_trigger_fix",
+  "report": {
+    "result": "OK",
+    "stopping_stage": "refresh",
+    "reason": "RECOVERY_REVERIFICATION_INCOMPLETE",
+    "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "resume_applied": true,
+    "resume_from_state": "DOCTOR_BLOCKED",
+    "repair_handoff_applied": true,
+    "repair_handoff_from_state": "DOCTOR_BLOCKED",
+    "repair_handoff_required_inputs": [
+      "artifact_path"
+    ],
+    "missing_continuation_inputs": [],
+    "selection_applied": true,
+    "selected_mode": "FULL_GOVERNED_PATH",
+    "selected_with_preparation": true,
+    "preparation_applied": true,
+    "preparation_ready_for_closure": true,
+    "bundle_status": "COMPLETE",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "refresh_applied": true,
+    "comparison_applied": false,
+    "blockers": [],
+    "dominant_blocker": "",
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_RECOVERY_PENDING",
+    "resumability_active_pressures": [
+      "RECOVERY_PENDING"
+    ],
+    "resumability_repair_order": [
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "resumability_requires_new_run": false,
+    "resumability_policy_type": "MULTI_STEP_REPAIR",
+    "resumability_policy_next_step": "complete_recovery_reverification",
+    "resumability_ready_now_steps": [
+      "complete_recovery_reverification"
+    ],
+    "resumability_stale_artifact_ids": [
+      "recovery_reverification_surface"
+    ],
+    "resulting_state": "RECOVERY_PENDING",
+    "next_safe_step": "run reverification against the attested target surface"
+  },
+  "resulting_state": {
+    "state": "RECOVERY_PENDING",
+    "closure_status": "CLAIMED_NOT_ACCEPTED",
+    "blocking_reason": "RECOVERY_REVERIFICATION_INCOMPLETE",
+    "next_safe_step": "run reverification against the attested target surface"
+  },
+  "worked_envelope": {
+    "resulting_state": "RECOVERY_PENDING",
+    "current_closure_status": "CLAIMED_NOT_ACCEPTED",
+    "next_safe_step": "run reverification against the attested target surface"
+  },
+  "repair_packet": {
+    "emitted": true,
+    "from_state": "RECOVERY_PENDING",
+    "ready_for_resume": false,
+    "missing_inputs": [
+      "refresh_recovery_complete",
+      "refresh_reverification_complete"
+    ],
+    "selected_with_preparation": true,
+    "resumability_status": "REPAIRABLE",
+    "resumability_family": "REPAIRABLE_RECOVERY_PENDING",
+    "active_pressures": [
+      "RECOVERY_PENDING"
+    ],
+    "repair_order": [
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "policy_type": "MULTI_STEP_REPAIR",
+    "policy_next_step": "complete_recovery_reverification",
+    "policy_ready_steps": [
+      "complete_recovery_reverification"
+    ],
+    "stale_artifact_ids": [
+      "recovery_reverification_surface"
+    ],
+    "non_resumable_artifact_ids": []
+  },
+  "resumability": {
+    "status": "REPAIRABLE",
+    "family": "REPAIRABLE_RECOVERY_PENDING",
+    "active_pressures": [
+      "RECOVERY_PENDING"
+    ],
+    "repair_order": [
+      "complete_recovery_reverification",
+      "run_refresh_reconciliation",
+      "rerun_closure"
+    ],
+    "requires_new_run": false,
+    "policy_type": "MULTI_STEP_REPAIR",
+    "policy_next_step": "complete_recovery_reverification",
+    "ready_now_steps": [
+      "complete_recovery_reverification"
+    ],
+    "stale_artifact_ids": [
+      "recovery_reverification_surface"
+    ]
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/closure_verdict_v0.schema.json",
+  "title": "Synrail Closure Verdict v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_class",
+    "closure_status",
+    "blocking_reason",
+    "next_allowed_transition",
+    "narrow_next_safe_step",
+    "missing_sections"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "closure_verdict_v0"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "task_class": {
+      "type": "string"
+    },
+    "closure_status": {
+      "type": "string",
+      "enum": [
+        "ACCEPTED",
+        "CLAIMED_NOT_ACCEPTED",
+        "REJECTED"
+      ]
+    },
+    "blocking_reason": {
+      "type": "string"
+    },
+    "next_allowed_transition": {
+      "type": "string"
+    },
+    "narrow_next_safe_step": {
+      "type": "string"
+    },
+    "acceptance_criteria_revision_id": {
+      "type": "string"
+    },
+    "acceptance_criteria_status": {
+      "type": "string"
+    },
+    "acceptance_criteria_reason": {
+      "type": "string"
+    },
+    "missing_sections": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "semantically_insufficient_sections": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

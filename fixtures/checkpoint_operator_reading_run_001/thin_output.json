@@ -1,0 +1,16 @@
+{
+  "schema_version": "thin_output_record_v0",
+  "mode": "default",
+  "run_id": "EXECUTABLE_LOOP_RUNTIME_NON_RESUMABLE_RUN_004",
+  "task_class": "proof_sensitive_fresh_orchestration_case",
+  "outcome_class": "NON_RESUMABLE",
+  "summary": "This contour should not continue through resume.",
+  "diagnosis": "Continue through the governed forward path instead of named resume. A verified checkpoint is available.",
+  "next_step": "continue through the governed forward path instead of named resume",
+  "restore_available": true,
+  "checkpoint_id": "CHECKPOINT_RUN_003",
+  "recovery_primary_action": "",
+  "recovery_operator_instructions": [],
+  "suggested_command": "continue governed forward path, not resume",
+  "technical_lines": []
+}

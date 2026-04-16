@@ -1,0 +1,15 @@
+{
+  "schema_version": "alpha_project_profile_v0",
+  "project_root": "/Users/usbdick/Documents/New project/synrail",
+  "project_type": "python",
+  "task_class": "bounded_router_trigger_fix",
+  "target_path": "/Users/usbdick/Documents/New project/synrail",
+  "target_classification": "trusted_clean",
+  "intended_run_class": "core_probe",
+  "baseline_identity": "trusted_clean",
+  "execution_surface_identity": "clean-clone",
+  "artifact_path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_selected_prepared_run_001/final_result.json",
+  "final_result_candidates": [],
+  "readback_candidates": [],
+  "scenario_proof_candidates": []
+}

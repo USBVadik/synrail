@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synrail.local/schemas/acceptance_criteria_validation_record_v0.schema.json",
+  "title": "Synrail Acceptance Criteria Validation Record v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "criteria_revision_id",
+    "status",
+    "reason",
+    "task_class_matches",
+    "project_type_matches",
+    "target_classification_matches",
+    "intended_run_class_matches",
+    "required_gate_ids_match",
+    "required_bundle_sections_match",
+    "criteria_standard_matches",
+    "criteria_owner_matches",
+    "project_profile_fingerprint_matches",
+    "criteria_revision_matches",
+    "provenance_complete",
+    "provenance_profile_fingerprint_matches"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "acceptance_criteria_validation_record_v0"},
+    "criteria_revision_id": {"type": "string"},
+    "status": {"type": "string", "enum": ["VALID", "STALE", "INVALID"]},
+    "reason": {"type": "string", "minLength": 1},
+    "task_class_matches": {"type": "boolean"},
+    "project_type_matches": {"type": "boolean"},
+    "target_classification_matches": {"type": "boolean"},
+    "intended_run_class_matches": {"type": "boolean"},
+    "required_gate_ids_match": {"type": "boolean"},
+    "required_bundle_sections_match": {"type": "boolean"},
+    "criteria_standard_matches": {"type": "boolean"},
+    "criteria_owner_matches": {"type": "boolean"},
+    "project_profile_fingerprint_matches": {"type": "boolean"},
+    "criteria_revision_matches": {"type": "boolean"},
+    "provenance_complete": {"type": "boolean"},
+    "provenance_profile_fingerprint_matches": {"type": "boolean"}
+  }
+}
