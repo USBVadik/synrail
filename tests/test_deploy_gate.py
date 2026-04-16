@@ -1,0 +1,228 @@
+#!/usr/bin/env python3
+"""Tests for the deploy gate — synrail deploy and synrail deploy-check."""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+ALPHA_ENTRY = REPO_ROOT / "alpha.py"
+
+
+def load_json(path: Path) -> dict:
+    return json.loads(path.read_text())
+
+
+def write_json(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+
+
+class DeployGateTests(unittest.TestCase):
+    def run_alpha(self, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        env = dict(os.environ)
+        existing = env.get("PYTHONPATH", "")
+        repo_path = str(REPO_ROOT)
+        env["PYTHONPATH"] = repo_path if not existing else repo_path + os.pathsep + existing
+        return subprocess.run(
+            [sys.executable, str(ALPHA_ENTRY), *args],
+            cwd=cwd or REPO_ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+
+    def _start_run(self, project_root: Path) -> None:
+        result = self.run_alpha(
+            "start",
+            "--artifact-root", ".synrail",
+            "--project-root", str(project_root),
+            "--task-identity", "Test deploy gate task.",
+            cwd=project_root,
+        )
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_deploy_blocks_before_acceptance(self) -> None:
+        """Deploy must be blocked when run is not CLOSURE_ACCEPTED."""
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_block_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(2, deploy.returncode)
+            self.assertIn("deploy blocked", deploy.stdout.lower())
+            self.assertIn("CLOSURE_ACCEPTED", deploy.stdout)
+
+    def test_deploy_succeeds_after_acceptance(self) -> None:
+        """Deploy must succeed when state is CLOSURE_ACCEPTED."""
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_accept_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            # Set state to CLOSURE_ACCEPTED
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "CLOSURE_ACCEPTED"
+            write_json(artifact_root / "state.json", state)
+
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(0, deploy.returncode)
+            self.assertIn("deploy authorized", deploy.stdout.lower())
+
+            # Verify receipt was written
+            receipt = load_json(artifact_root / "deploy_receipt.json")
+            self.assertEqual("DEPLOY_AUTHORIZED", receipt["result"])
+            self.assertEqual(state["run_id"], receipt["run_id"])
+
+    def test_deploy_blocks_on_rejected(self) -> None:
+        """Deploy must be blocked when state is CLOSURE_REJECTED."""
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_reject_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "CLOSURE_REJECTED"
+            write_json(artifact_root / "state.json", state)
+
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(2, deploy.returncode)
+            self.assertIn("deploy blocked", deploy.stdout.lower())
+
+    def test_deploy_blocks_on_run_id_mismatch(self) -> None:
+        """Deploy must be blocked when deploy-run-id doesn't match state."""
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_runid_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "CLOSURE_ACCEPTED"
+            write_json(artifact_root / "state.json", state)
+
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                "--deploy-run-id", "WRONG_RUN_ID",
+                cwd=project_root,
+            )
+            self.assertEqual(2, deploy.returncode)
+            self.assertIn("deploy blocked", deploy.stdout.lower())
+
+    def test_deploy_dev_mode_returns_json(self) -> None:
+        """In dev mode, deploy gate returns structured JSON."""
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_dev_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            # Blocked case
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                "--mode", "dev",
+                cwd=project_root,
+            )
+            self.assertEqual(2, deploy.returncode)
+            result = json.loads(deploy.stdout.strip())
+            self.assertEqual("BLOCKED", result["result"])
+            self.assertEqual("DEPLOY_REQUIRES_ACCEPTED_CLOSURE", result["reason"])
+
+    def test_deploy_check_without_receipt_blocks(self) -> None:
+        """deploy-check must block when no deploy receipt exists."""
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_check_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            check = self.run_alpha(
+                "deploy-check", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(2, check.returncode)
+            result = json.loads(check.stdout.strip())
+            self.assertEqual("BLOCKED", result["result"])
+            self.assertEqual("NO_DEPLOY_RECEIPT", result["reason"])
+
+    def test_deploy_check_with_valid_receipt_passes(self) -> None:
+        """deploy-check must pass when a valid deploy receipt exists for the current run."""
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_check_ok_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "CLOSURE_ACCEPTED"
+            write_json(artifact_root / "state.json", state)
+
+            # First deploy to create receipt
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(0, deploy.returncode)
+
+            # Then check
+            check = self.run_alpha(
+                "deploy-check", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(0, check.returncode)
+            result = json.loads(check.stdout.strip())
+            self.assertEqual("OK", result["result"])
+
+    def test_deploy_check_blocks_stale_receipt(self) -> None:
+        """deploy-check must block when receipt run_id doesn't match current state."""
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_check_stale_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "CLOSURE_ACCEPTED"
+            write_json(artifact_root / "state.json", state)
+
+            # Create receipt for this run
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(0, deploy.returncode)
+
+            # Now change the state run_id to simulate a new run
+            state["run_id"] = "DIFFERENT_RUN"
+            write_json(artifact_root / "state.json", state)
+
+            check = self.run_alpha(
+                "deploy-check", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(2, check.returncode)
+            result = json.loads(check.stdout.strip())
+            self.assertEqual("BLOCKED", result["result"])
+            self.assertEqual("DEPLOY_RECEIPT_RUN_ID_STALE", result["reason"])
+
+
+if __name__ == "__main__":
+    unittest.main()

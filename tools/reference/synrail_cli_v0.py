@@ -138,6 +138,7 @@ ALPHA_FILE_NAMES = {
     "thin_output": "thin_output.json",
     "prompt": "prompt.json",
     "checkpoint_restore": "checkpoint_restore.json",
+    "deploy_receipt": "deploy_receipt.json",
 }
 CHECKPOINT_RECORD_BASENAME = "checkpoint_record.json"
 CHECKPOINT_VERIFY_BASENAME = "checkpoint_verify.json"
@@ -2154,6 +2155,145 @@ def cmd_session_export(args: argparse.Namespace) -> int:
     return cmd_observability(args)
 
 
+def cmd_deploy(args: argparse.Namespace) -> int:
+    """Gate deployment side effects behind accepted closure."""
+    root = alpha_root_from_args(args)
+    if not root:
+        print(json.dumps({"result": "ERROR", "reason": "ARTIFACT_ROOT_REQUIRED"}, ensure_ascii=True))
+        return 2
+
+    state_file = Path(getattr(args, "state_file", "") or str(alpha_file(root, "state")))
+    if not state_file.exists():
+        if getattr(args, "mode", "default") == "dev":
+            print(json.dumps({"result": "ERROR", "reason": "NO_STATE_FILE"}, ensure_ascii=True))
+        else:
+            print("Synrail deploy blocked.")
+            print("What happened: no run state found. Start a controlled run first.")
+            print("What to do next: synrail start")
+        return 2
+
+    state = load_json(state_file)
+    run_id = state.get("run_id", "")
+    current_state = state.get("state", "")
+
+    # Gate 1: state must be CLOSURE_ACCEPTED
+    if current_state != "CLOSURE_ACCEPTED":
+        if getattr(args, "mode", "default") == "dev":
+            print(json.dumps({
+                "result": "BLOCKED",
+                "reason": "DEPLOY_REQUIRES_ACCEPTED_CLOSURE",
+                "current_state": current_state,
+                "run_id": run_id,
+            }, ensure_ascii=True))
+        else:
+            print("Synrail deploy blocked.")
+            print(f"What happened: the current run is in state '{current_state}', not 'CLOSURE_ACCEPTED'.")
+            print("Deployment is only allowed after Synrail has accepted the proof bundle.")
+            if current_state in ("CLOSURE_REJECTED",):
+                print("What to do next: fix the issues identified in the proof bundle, then rerun synrail check.")
+            else:
+                print("What to do next: complete the proof cycle (synrail check) until the run is accepted.")
+        return 2
+
+    # Gate 2: verify run_id matches if provided
+    deploy_run_id = getattr(args, "deploy_run_id", "") or ""
+    if deploy_run_id and deploy_run_id != run_id:
+        if getattr(args, "mode", "default") == "dev":
+            print(json.dumps({
+                "result": "BLOCKED",
+                "reason": "DEPLOY_RUN_ID_MISMATCH",
+                "expected_run_id": deploy_run_id,
+                "actual_run_id": run_id,
+            }, ensure_ascii=True))
+        else:
+            print("Synrail deploy blocked.")
+            print(f"What happened: deploy requested for run '{deploy_run_id}' but accepted run is '{run_id}'.")
+            print("What to do next: verify you are deploying the correct run.")
+        return 2
+
+    # Gate 3: verify target binding if provided
+    deploy_target = getattr(args, "deploy_target", "") or ""
+    bootstrap_file = alpha_file(root, "bootstrap")
+    if deploy_target and bootstrap_file.exists():
+        bootstrap = load_bootstrap_json(bootstrap_file)
+        bootstrap_target = bootstrap.get("task_identity", "").strip()
+        if bootstrap_target and deploy_target not in bootstrap_target:
+            if getattr(args, "mode", "default") == "dev":
+                print(json.dumps({
+                    "result": "BLOCKED",
+                    "reason": "DEPLOY_TARGET_MISMATCH",
+                    "deploy_target": deploy_target,
+                    "bootstrap_task_identity": bootstrap_target,
+                }, ensure_ascii=True))
+            else:
+                print("Synrail deploy blocked.")
+                print(f"What happened: deploy target '{deploy_target}' does not match the task identity of this run.")
+                print("What to do next: verify you are deploying to the correct target.")
+            return 2
+
+    # All gates passed — record the deploy receipt
+    deploy_receipt = {
+        "schema_version": "deploy_receipt_v0",
+        "result": "DEPLOY_AUTHORIZED",
+        "run_id": run_id,
+        "task_class": state.get("task_class", ""),
+        "closure_state": current_state,
+        "deploy_target": deploy_target,
+        "deploy_time_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "deploy_authorized_by": "synrail deploy gate",
+    }
+
+    receipt_path = alpha_file(root, "deploy_receipt")
+    save_json(receipt_path, deploy_receipt)
+
+    if getattr(args, "mode", "default") == "dev":
+        print(json.dumps(deploy_receipt, ensure_ascii=True))
+    else:
+        print("Synrail deploy authorized.")
+        print(f"Run: {run_id}")
+        print(f"State: {current_state}")
+        if deploy_target:
+            print(f"Target: {deploy_target}")
+        print(f"Receipt: {display_path(receipt_path)}")
+        print("You may now proceed with the deployment side effect.")
+
+    return 0
+
+
+def cmd_deploy_check(args: argparse.Namespace) -> int:
+    """Check whether a valid deploy receipt exists (for use by external guards)."""
+    root = alpha_root_from_args(args)
+    if not root:
+        print(json.dumps({"result": "BLOCKED", "reason": "ARTIFACT_ROOT_REQUIRED"}, ensure_ascii=True))
+        return 2
+
+    receipt_path = alpha_file(root, "deploy_receipt")
+    if not receipt_path.exists():
+        print(json.dumps({"result": "BLOCKED", "reason": "NO_DEPLOY_RECEIPT"}, ensure_ascii=True))
+        return 2
+
+    receipt = load_json(receipt_path)
+    if receipt.get("result") != "DEPLOY_AUTHORIZED":
+        print(json.dumps({"result": "BLOCKED", "reason": "DEPLOY_NOT_AUTHORIZED", "receipt": receipt}, ensure_ascii=True))
+        return 2
+
+    # Cross-check against current state
+    state_file = Path(getattr(args, "state_file", "") or str(alpha_file(root, "state")))
+    if state_file.exists():
+        state = load_json(state_file)
+        if state.get("run_id", "") != receipt.get("run_id", ""):
+            print(json.dumps({
+                "result": "BLOCKED",
+                "reason": "DEPLOY_RECEIPT_RUN_ID_STALE",
+                "receipt_run_id": receipt.get("run_id", ""),
+                "current_run_id": state.get("run_id", ""),
+            }, ensure_ascii=True))
+            return 2
+
+    print(json.dumps({"result": "OK", "deploy_receipt": receipt}, ensure_ascii=True))
+    return 0
+
+
 def cmd_bug_packet(args: argparse.Namespace) -> int:
     root = alpha_root_from_args(args)
     if root:
@@ -3335,6 +3475,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_session_export.add_argument("--repair-receipt-file")
     p_session_export.add_argument("--refresh-file")
     p_session_export.set_defaults(func=cmd_session_export)
+
+    p_deploy = sub.add_parser("deploy")
+    p_deploy.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_deploy.add_argument("--state-file")
+    p_deploy.add_argument("--deploy-run-id")
+    p_deploy.add_argument("--deploy-target")
+    p_deploy.add_argument("--mode", default="default", choices=["default", "dev"])
+    p_deploy.set_defaults(func=cmd_deploy)
+
+    p_deploy_check = sub.add_parser("deploy-check")
+    p_deploy_check.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_deploy_check.add_argument("--state-file")
+    p_deploy_check.set_defaults(func=cmd_deploy_check)
 
     p_bug_packet = sub.add_parser("bug-packet")
     p_bug_packet.add_argument("--artifact-root")
