@@ -314,6 +314,52 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
         self.assertEqual("PROOF_BUNDLE_STRENGTHENING", verdict["next_allowed_transition"])
 
+    def test_narrative_proof_bundle_is_semantically_blocked(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_narrative_proof_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "success",
+                "modified_files": ["core/router.py", "tools/cinematic.py"],
+                "git_diff": "--- a/core/router.py\n+++ b/core/router.py\n+from tools.cinematic import generate_cinematic_zoom\n",
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Bot restarted on Node 2 with new feature enabled.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text(
+                "Implemented the cinematic zoom flow and wired it into the router for the new feature.\n"
+            )
+            scenario.write_text(
+                "Scenario passed and the bot should now handle zoom requests after restart.\n"
+            )
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
+        self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
+        self.assertEqual(
+            ["diff_provenance", "readback", "scenario_proof", "cleanup_status"],
+            bundle["semantically_insufficient_sections"],
+        )
+        self.assertEqual(
+            "capture non-empty diff or provenance evidence for the changed files",
+            bundle["semantic_next_safe_step"],
+        )
+        self.assertEqual("CLAIMED_NOT_ACCEPTED", verdict["closure_status"])
+        self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
+
 
 if __name__ == "__main__":
     unittest.main()

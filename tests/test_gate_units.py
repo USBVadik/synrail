@@ -735,9 +735,9 @@ class TestCliBoolArgDefaults(unittest.TestCase):
 
 
 class TestDoctorCoverageDeployment(unittest.TestCase):
-    """Coverage gate must pass when fixture files are absent (deployment context)."""
+    """Coverage bypass must require explicit deployment context."""
 
-    def test_all_missing_evidence_passes_as_deployment(self) -> None:
+    def test_all_missing_evidence_passes_only_with_explicit_deployment_context(self) -> None:
         from synrail_doctor_coverage_v0 import build_coverage_record
         profile = {
             "critical_fail_modes": ["mode_a", "mode_b"],
@@ -764,13 +764,18 @@ class TestDoctorCoverageDeployment(unittest.TestCase):
             ],
         }
         from pathlib import Path
-        record = build_coverage_record(profile, corpus, corpus_file=Path("/nonexistent/corpus.json"))
+        record = build_coverage_record(
+            profile,
+            corpus,
+            corpus_file=Path("/nonexistent/corpus.json"),
+            deployment_context=True,
+        )
         self.assertTrue(record["threshold_met"])
         self.assertEqual("PASS", record["gate_status"])
         self.assertEqual("COVERAGE_CORPUS_NOT_AVAILABLE_IN_DEPLOYMENT", record["gate_reason"])
+        self.assertTrue(record["deployment_context_confirmed"])
 
-    def test_partial_evidence_still_blocks(self) -> None:
-        """If some fixtures exist and some don't, it's a real dev-repo problem."""
+    def test_all_missing_evidence_blocks_without_explicit_deployment_context(self) -> None:
         from synrail_doctor_coverage_v0 import build_coverage_record
         profile = {
             "critical_fail_modes": ["mode_a"],
@@ -794,8 +799,57 @@ class TestDoctorCoverageDeployment(unittest.TestCase):
         }
         from pathlib import Path
         record = build_coverage_record(profile, corpus, corpus_file=Path("/nonexistent/corpus.json"))
-        # Single case missing is still all_missing → deployment pass
-        self.assertTrue(record["threshold_met"])
+        self.assertFalse(record["threshold_met"])
+        self.assertEqual("BLOCKED", record["gate_status"])
+        self.assertEqual("CRITICAL_FAIL_MODE_MEASURED_COVERAGE_MISSING_EVIDENCE", record["gate_reason"])
+        self.assertFalse(record["deployment_context_confirmed"])
+
+    def test_partial_evidence_still_blocks_even_in_deployment_context(self) -> None:
+        """If some fixtures exist and some don't, it's still a real coverage gap."""
+        from synrail_doctor_coverage_v0 import build_coverage_record
+        from tempfile import TemporaryDirectory
+
+        profile = {
+            "critical_fail_modes": ["mode_a"],
+            "covered_fail_modes": ["mode_a"],
+            "partial_fail_modes": [],
+            "uncovered_fail_modes": [],
+            "coverage_threshold_policy": "ALL_CRITICAL_FAIL_MODES_COVERED",
+        }
+
+        with TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            doctor_record = tmp_path / "doctor.json"
+            doctor_record.write_text(
+                '{"final_verdict":"NOT_ACCEPTABLE","blocking_failure_classes":[],"gate_results":{}}\n'
+            )
+            corpus = {
+                "schema_version": "doctor_coverage_corpus_v0",
+                "cases": [
+                    {
+                        "case_id": "CASE_A",
+                        "fail_mode_id": "mode_a",
+                        "doctor_record": str(doctor_record),
+                        "expected_final_verdict": "NOT_ACCEPTABLE",
+                    },
+                    {
+                        "case_id": "CASE_B",
+                        "fail_mode_id": "mode_a",
+                        "doctor_record": str(tmp_path / "missing_doctor.json"),
+                        "expected_final_verdict": "NOT_ACCEPTABLE",
+                    },
+                ],
+            }
+            record = build_coverage_record(
+                profile,
+                corpus,
+                corpus_file=tmp_path / "coverage_corpus.json",
+                deployment_context=True,
+            )
+        self.assertFalse(record["threshold_met"])
+        self.assertEqual("BLOCKED", record["gate_status"])
+        self.assertEqual("CRITICAL_FAIL_MODE_MEASURED_COVERAGE_INCOMPLETE", record["gate_reason"])
+        self.assertTrue(record["deployment_context_confirmed"])
 
     def test_dev_repo_with_fixtures_still_validates(self) -> None:
         """In the dev repo where fixtures exist, normal validation applies."""
@@ -807,6 +861,7 @@ class TestDoctorCoverageDeployment(unittest.TestCase):
         self.assertTrue(record["threshold_met"])
         self.assertEqual("PASS", record["gate_status"])
         self.assertEqual("CRITICAL_FAIL_MODE_MEASURED_COVERAGE_MET", record["gate_reason"])
+        self.assertFalse(record["deployment_context_confirmed"])
 
 
 if __name__ == "__main__":

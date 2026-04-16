@@ -66,18 +66,10 @@ Current alpha support boundary:
 Preferred install path today:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install .
+python3 tools/reference/synrail_install_v0.py --venv .venv
 ```
 
-This is now the trusted alpha tester path on the current toolchain.
-
-If you are iterating on Synrail itself, editable install is also supported:
-
-```bash
-.venv/bin/python -m pip install -e .
-```
-No extra pip flags are required on the current supported install path.
+This is now the trusted alpha tester path on the current toolchain. It does not require network access or setuptools in a fresh venv.
 
 Then the smallest usable path depends on whether you already have one verified working state.
 

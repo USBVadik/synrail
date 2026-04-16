@@ -116,8 +116,7 @@ Start here for live runnable and fixture-backed review:
 Install:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install .
+python3 tools/reference/synrail_install_v0.py --venv .venv
 ```
 
 Run the full current test suite:

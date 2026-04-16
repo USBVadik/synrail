@@ -18,8 +18,7 @@ The goal of this pack is simple:
 Preferred tester install path:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install .
+python3 tools/reference/synrail_install_v0.py --venv .venv
 ```
 
 ## 10-Minute Quickstart

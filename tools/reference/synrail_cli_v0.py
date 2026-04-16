@@ -11,6 +11,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
 try:
@@ -187,8 +188,8 @@ def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path
 
 
 def default_alpha_run_id() -> str:
-    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    return f"ALPHA_RUN_{stamp}"
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    return f"ALPHA_RUN_{stamp}_{uuid.uuid4().hex[:6]}"
 
 
 def project_profile_file(root: Path) -> Path:
@@ -243,6 +244,21 @@ def load_text_if_exists(path: Path) -> str:
     if not path.exists():
         return ""
     return path.read_text().strip()
+
+
+def expected_target_identity_for_root(root: Path) -> str:
+    target_identity = load_text_if_exists(root / "target_identity.txt")
+    if target_identity:
+        return target_identity
+    bootstrap_file = alpha_file(root, "bootstrap")
+    if bootstrap_file.exists():
+        bootstrap = load_bootstrap_json(bootstrap_file)
+        for field in ["target_identity", "execution_surface_identity"]:
+            value = (bootstrap.get(field, "") or "").strip()
+            if value:
+                return value
+    profile = load_project_profile(root) or {}
+    return (profile.get("execution_surface_identity", "") or "").strip()
 
 
 def load_project_profile(root: Path | None) -> dict | None:
@@ -1140,7 +1156,7 @@ def cmd_start(args: argparse.Namespace) -> int:
     existing_state_path = Path(args.output)
     existing_state = load_json(existing_state_path) if existing_state_path.exists() else None
     if not getattr(args, "run_id", None):
-        args.run_id = existing_state.get("run_id", "") if existing_state else default_alpha_run_id()
+        args.run_id = default_alpha_run_id()
     if not getattr(args, "task_class", None):
         args.task_class = existing_state.get("task_class", DEFAULT_ALPHA_TASK_CLASS) if existing_state else DEFAULT_ALPHA_TASK_CLASS
 
@@ -2211,25 +2227,35 @@ def cmd_deploy(args: argparse.Namespace) -> int:
             print("What to do next: verify you are deploying the correct run.")
         return 2
 
-    # Gate 3: verify target binding if provided
-    deploy_target = getattr(args, "deploy_target", "") or ""
-    bootstrap_file = alpha_file(root, "bootstrap")
-    if deploy_target and bootstrap_file.exists():
-        bootstrap = load_bootstrap_json(bootstrap_file)
-        bootstrap_target = bootstrap.get("task_identity", "").strip()
-        if bootstrap_target and deploy_target not in bootstrap_target:
-            if getattr(args, "mode", "default") == "dev":
-                print(json.dumps({
-                    "result": "BLOCKED",
-                    "reason": "DEPLOY_TARGET_MISMATCH",
-                    "deploy_target": deploy_target,
-                    "bootstrap_task_identity": bootstrap_target,
-                }, ensure_ascii=True))
-            else:
-                print("Synrail deploy blocked.")
-                print(f"What happened: deploy target '{deploy_target}' does not match the task identity of this run.")
-                print("What to do next: verify you are deploying to the correct target.")
-            return 2
+    # Gate 3: verify stable target identity binding
+    expected_target_identity = expected_target_identity_for_root(root)
+    if not expected_target_identity:
+        if getattr(args, "mode", "default") == "dev":
+            print(json.dumps({
+                "result": "BLOCKED",
+                "reason": "DEPLOY_TARGET_IDENTITY_MISSING",
+                "run_id": run_id,
+            }, ensure_ascii=True))
+        else:
+            print("Synrail deploy blocked.")
+            print("What happened: this run does not have a stable target identity record.")
+            print("What to do next: restart the controlled run and keep the target identity attested before deployment.")
+        return 2
+
+    deploy_target = (getattr(args, "deploy_target", "") or "").strip()
+    if deploy_target and deploy_target != expected_target_identity:
+        if getattr(args, "mode", "default") == "dev":
+            print(json.dumps({
+                "result": "BLOCKED",
+                "reason": "DEPLOY_TARGET_MISMATCH",
+                "deploy_target": deploy_target,
+                "expected_target_identity": expected_target_identity,
+            }, ensure_ascii=True))
+        else:
+            print("Synrail deploy blocked.")
+            print(f"What happened: deploy target '{deploy_target}' does not match the attested target identity '{expected_target_identity}'.")
+            print("What to do next: verify you are deploying to the correct target.")
+        return 2
 
     # All gates passed — record the deploy receipt
     deploy_receipt = {
@@ -2238,6 +2264,7 @@ def cmd_deploy(args: argparse.Namespace) -> int:
         "run_id": run_id,
         "task_class": state.get("task_class", ""),
         "closure_state": current_state,
+        "target_identity": expected_target_identity,
         "deploy_target": deploy_target,
         "deploy_time_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "deploy_authorized_by": "synrail deploy gate",
@@ -2252,8 +2279,7 @@ def cmd_deploy(args: argparse.Namespace) -> int:
         print("Synrail deploy authorized.")
         print(f"Run: {run_id}")
         print(f"State: {current_state}")
-        if deploy_target:
-            print(f"Target: {deploy_target}")
+        print(f"Target identity: {expected_target_identity}")
         print(f"Receipt: {display_path(receipt_path)}")
         print("You may now proceed with the deployment side effect.")
 
@@ -2279,16 +2305,43 @@ def cmd_deploy_check(args: argparse.Namespace) -> int:
 
     # Cross-check against current state
     state_file = Path(getattr(args, "state_file", "") or str(alpha_file(root, "state")))
-    if state_file.exists():
-        state = load_json(state_file)
-        if state.get("run_id", "") != receipt.get("run_id", ""):
-            print(json.dumps({
-                "result": "BLOCKED",
-                "reason": "DEPLOY_RECEIPT_RUN_ID_STALE",
-                "receipt_run_id": receipt.get("run_id", ""),
-                "current_run_id": state.get("run_id", ""),
-            }, ensure_ascii=True))
-            return 2
+    if not state_file.exists():
+        print(json.dumps({"result": "BLOCKED", "reason": "NO_STATE_FILE"}, ensure_ascii=True))
+        return 2
+
+    state = load_json(state_file)
+    if state.get("state", "") != "CLOSURE_ACCEPTED":
+        print(json.dumps({
+            "result": "BLOCKED",
+            "reason": "DEPLOY_CURRENT_STATE_NOT_ACCEPTED",
+            "current_state": state.get("state", ""),
+        }, ensure_ascii=True))
+        return 2
+    if state.get("run_id", "") != receipt.get("run_id", ""):
+        print(json.dumps({
+            "result": "BLOCKED",
+            "reason": "DEPLOY_RECEIPT_RUN_ID_STALE",
+            "receipt_run_id": receipt.get("run_id", ""),
+            "current_run_id": state.get("run_id", ""),
+        }, ensure_ascii=True))
+        return 2
+
+    expected_target_identity = expected_target_identity_for_root(root)
+    receipt_target_identity = (receipt.get("target_identity", "") or "").strip()
+    if not receipt_target_identity:
+        print(json.dumps({"result": "BLOCKED", "reason": "DEPLOY_RECEIPT_TARGET_IDENTITY_MISSING"}, ensure_ascii=True))
+        return 2
+    if not expected_target_identity:
+        print(json.dumps({"result": "BLOCKED", "reason": "DEPLOY_TARGET_IDENTITY_MISSING"}, ensure_ascii=True))
+        return 2
+    if receipt_target_identity != expected_target_identity:
+        print(json.dumps({
+            "result": "BLOCKED",
+            "reason": "DEPLOY_RECEIPT_TARGET_IDENTITY_STALE",
+            "receipt_target_identity": receipt_target_identity,
+            "current_target_identity": expected_target_identity,
+        }, ensure_ascii=True))
+        return 2
 
     print(json.dumps({"result": "OK", "deploy_receipt": receipt}, ensure_ascii=True))
     return 0

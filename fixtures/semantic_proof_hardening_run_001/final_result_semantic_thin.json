@@ -3,5 +3,8 @@
   "status": "success",
   "modified_files": ["core/router.py"],
   "git_diff": "patched router branch",
-  "cleanup_status": {"success": true}
+  "cleanup_status": {
+    "success": true,
+    "summary": "workspace clean after updating only core/router.py with no unintended changes"
+  }
 }

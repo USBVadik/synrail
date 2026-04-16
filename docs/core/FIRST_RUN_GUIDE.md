@@ -5,8 +5,7 @@ Synrail governs one bounded change at a time. It blocks false-green closure and 
 ## Install
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install .
+python3 tools/reference/synrail_install_v0.py --venv .venv
 ```
 
 ## Five Steps

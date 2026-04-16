@@ -1,1 +1,1 @@
-readback ok
+core/router.py: read back the changed branch and confirmed it imports the cinematic helper on the zoom path.

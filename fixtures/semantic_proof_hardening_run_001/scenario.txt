@@ -1,1 +1,2 @@
-scenario ok
+scenario: cinematic zoom trigger
+status: passed after the router change returned the expected handler path.

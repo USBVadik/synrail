@@ -39,17 +39,10 @@ That replay stays bounded to command sequence, error class, and next safe step.
 The currently verified alpha install path is:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install .
+python3 tools/reference/synrail_install_v0.py --venv .venv
 ```
 
-This is now the trusted tester path on the current toolchain.
-
-If you are iterating on Synrail itself rather than just running the alpha lane, editable install is also supported:
-
-```bash
-.venv/bin/python -m pip install -e .
-```
+This is now the trusted tester path on the current toolchain. It links the repo into a local venv without depending on setuptools or network access.
 
 The reference smoke for this document was run through the installed `synrail` console script, not by calling helper files directly.
 

@@ -10,10 +10,11 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+INSTALLER = REPO_ROOT / "tools" / "reference" / "synrail_install_v0.py"
 
 
 class InstallSmokeTests(unittest.TestCase):
-    def _assert_installed_start_path(self, python_bin: Path, synrail_bin: Path, project_root: Path) -> None:
+    def _assert_installed_start_path(self, synrail_bin: Path, project_root: Path) -> None:
         artifact_root = project_root / ".synrail"
 
         help_result = subprocess.run(
@@ -62,67 +63,45 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertTrue((artifact_root / "task_identity.txt").exists())
         self.assertTrue((artifact_root / "prompt_identity.txt").exists())
 
-    def test_default_install_path_boots_synrail_start(self) -> None:
+    def test_supported_installer_boots_synrail_start(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_install_smoke_") as tmpdir:
             root = Path(tmpdir)
             venv_dir = root / "venv"
             project_root = root / "project"
 
             subprocess.run(
-                ["python3", "-m", "venv", str(venv_dir)],
-                check=True,
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-            )
-            subprocess.run(
-                [
-                    str(venv_dir / "bin" / "python"),
-                    "-m",
-                    "pip",
-                    "install",
-                    str(REPO_ROOT),
-                ],
+                ["python3", str(INSTALLER), "--venv", str(venv_dir)],
                 check=True,
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
             )
             self._assert_installed_start_path(
-                venv_dir / "bin" / "python",
                 venv_dir / "bin" / "synrail",
                 project_root,
             )
 
-    def test_editable_install_path_boots_synrail_start(self) -> None:
+    def test_supported_installer_is_idempotent(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_editable_install_smoke_") as tmpdir:
             root = Path(tmpdir)
             venv_dir = root / "venv"
             project_root = root / "project"
 
             subprocess.run(
-                ["python3", "-m", "venv", str(venv_dir)],
+                ["python3", str(INSTALLER), "--venv", str(venv_dir)],
                 check=True,
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
             )
             subprocess.run(
-                [
-                    str(venv_dir / "bin" / "python"),
-                    "-m",
-                    "pip",
-                    "install",
-                    "-e",
-                    str(REPO_ROOT),
-                ],
+                ["python3", str(INSTALLER), "--venv", str(venv_dir)],
                 check=True,
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
             )
             self._assert_installed_start_path(
-                venv_dir / "bin" / "python",
                 venv_dir / "bin" / "synrail",
                 project_root,
             )

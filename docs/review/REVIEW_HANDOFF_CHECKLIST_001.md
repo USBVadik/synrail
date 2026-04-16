@@ -31,8 +31,7 @@ I want blunt criticism on:
 ## Commands to include
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install .
+python3 tools/reference/synrail_install_v0.py --venv .venv
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 

@@ -258,6 +258,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
 
             # Simulate completed run: modify proof files and set terminal state
             state = load_json(artifact_root / "state.json")
+            first_run_id = state["run_id"]
             state["state"] = "CLOSURE_ACCEPTED"
             write_json(artifact_root / "state.json", state)
             (artifact_root / "final_result.json").write_text(
@@ -276,6 +277,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
             )
             self.assertEqual(0, start2.returncode, start2.stdout + start2.stderr)
             self.assertIn("Controlled run started.", start2.stdout)
+            next_state = load_json(artifact_root / "state.json")
+            self.assertNotEqual(first_run_id, next_state["run_id"])
 
     def test_start_after_active_run_still_blocks(self) -> None:
         """Mid-run proof artifacts should still block a new start."""

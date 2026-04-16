@@ -65,6 +65,104 @@ def contains_any_keyword(value: str, keywords: list[str]) -> bool:
     return any(keyword in lowered for keyword in keywords)
 
 
+def non_empty_lines(value: str) -> list[str]:
+    return [line.strip() for line in value.splitlines() if line.strip()]
+
+
+def references_modified_file(value: str, modified_files: list[str]) -> bool:
+    lowered = value.lower()
+    for path in modified_files:
+        normalized = (path or "").strip().lower()
+        if not normalized:
+            continue
+        basename = Path(normalized).name
+        if normalized in lowered or basename in lowered:
+            return True
+    return False
+
+
+def contains_patch_lines(value: str) -> bool:
+    return any(
+        line.startswith("+") or line.startswith("-")
+        for line in non_empty_lines(value)
+        if not line.startswith("+++") and not line.startswith("---")
+    )
+
+
+def diff_mentions_modified_files(value: str, modified_files: list[str]) -> bool:
+    if not modified_files:
+        return False
+    return references_modified_file(value, modified_files)
+
+
+def readback_is_semantically_sufficient(value: str, modified_files: list[str]) -> bool:
+    if not value:
+        return False
+    lines = non_empty_lines(value)
+    if not lines or len(value.strip()) < 32:
+        return False
+    if not references_modified_file(value, modified_files):
+        return False
+    return any(
+        contains_any_keyword(
+            line,
+            [
+                "read back",
+                "readback",
+                "observed",
+                "confirmed",
+                "contains",
+                "returns",
+                "imports",
+                "branch",
+                "handler",
+                "route",
+                "function",
+                "class",
+                "line",
+            ],
+        )
+        for line in lines
+    )
+
+
+def scenario_is_semantically_sufficient(value: str) -> bool:
+    if not value:
+        return False
+    lines = non_empty_lines(value)
+    if not lines or len(value.strip()) < 32:
+        return False
+    has_context = any(
+        contains_any_keyword(line, ["scenario:", "status:", "result:", "observed", "returned", "response", "output"])
+        for line in lines
+    )
+    has_outcome = any(
+        contains_any_keyword(line, ["pass", "passed", "fail", "failed", "success", "succeeded", "blocked"])
+        for line in lines
+    )
+    return has_context and has_outcome
+
+
+def cleanup_is_semantically_sufficient(cleanup: dict) -> bool:
+    if not cleanup.get("success", False):
+        return False
+    summary = (cleanup.get("summary", "") or "").strip()
+    if len(summary) < 24:
+        return False
+    return contains_any_keyword(
+        summary,
+        [
+            "clean",
+            "no extra",
+            "no stray",
+            "no unintended",
+            "unchanged",
+            "restored",
+            "only intended",
+        ],
+    )
+
+
 def first_semantic_step(semantically_insufficient_sections: list[str]) -> str:
     for section in semantically_insufficient_sections:
         if section in SEMANTIC_SECTION_STEPS:
@@ -118,15 +216,18 @@ def build_bundle(args: argparse.Namespace) -> dict:
         and all(isinstance(item, str) and bool(item.strip()) for item in modified_files)
     )
     diff_has_markers = contains_diff_markers(git_diff)
-    diff_semantically_sufficient = bool(git_diff) and diff_has_markers
-    readback_semantically_sufficient = bool(readback_text) and (
-        contains_any_keyword(readback_text, ["readback", "read back", "confirm", "confirmed", "changed", "patch"])
-        or len(readback_text) >= 24
+    diff_semantically_sufficient = (
+        bool(git_diff)
+        and "diff --git" in git_diff
+        and "@@" in git_diff
+        and contains_patch_lines(git_diff)
+        and diff_mentions_modified_files(git_diff, modified_files if isinstance(modified_files, list) else [])
     )
-    scenario_semantically_sufficient = bool(scenario_text) and (
-        contains_any_keyword(scenario_text, ["scenario", "pass", "passed", "success", "ready", "confirm", "confirmed"])
-        or len(scenario_text) >= 24
+    readback_semantically_sufficient = readback_is_semantically_sufficient(
+        readback_text,
+        modified_files if isinstance(modified_files, list) else [],
     )
+    scenario_semantically_sufficient = scenario_is_semantically_sufficient(scenario_text)
     identity_values = [
         args.baseline_identity or "",
         args.execution_surface_identity or "",
@@ -134,7 +235,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
         args.task_identity or "",
     ]
     identity_semantically_sufficient = all(bool(value.strip()) for value in identity_values)
-    cleanup_semantically_sufficient = "cleanup_status" in final and bool(cleanup.get("success", False))
+    cleanup_semantically_sufficient = "cleanup_status" in final and cleanup_is_semantically_sufficient(cleanup)
 
     bundle = {
         "schema_version": "proof_bundle_v0",
@@ -320,9 +421,9 @@ def build_bundle(args: argparse.Namespace) -> dict:
             evaluated=not missing,
             semantically_sufficient=diff_semantically_sufficient,
             why=(
-                "diff or provenance evidence contains recognizable diff markers"
+                "diff or provenance evidence contains a concrete patch for the named modified files"
                 if diff_semantically_sufficient
-                else "diff or provenance evidence is present but too thin to prove the change"
+                else "diff or provenance evidence is present but does not yet prove a concrete patch on the named files"
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["diff_provenance"],
         ),
@@ -331,9 +432,9 @@ def build_bundle(args: argparse.Namespace) -> dict:
             evaluated=not missing,
             semantically_sufficient=readback_semantically_sufficient,
             why=(
-                "readback evidence is substantive enough to indicate observed change truth"
+                "readback evidence names the changed surface and records an observed property of it"
                 if readback_semantically_sufficient
-                else "readback evidence is too thin to confirm the changed surface"
+                else "readback evidence does not yet name the changed surface with an observed readback"
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["readback"],
         ),
@@ -342,9 +443,9 @@ def build_bundle(args: argparse.Namespace) -> dict:
             evaluated=not missing,
             semantically_sufficient=scenario_semantically_sufficient,
             why=(
-                "scenario-proof evidence names a concrete scenario outcome"
+                "scenario-proof evidence records a concrete scenario context and outcome"
                 if scenario_semantically_sufficient
-                else "scenario-proof evidence is too thin to confirm the target scenario outcome"
+                else "scenario-proof evidence does not yet record a concrete scenario context and outcome"
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["scenario_proof"],
         ),
@@ -364,9 +465,9 @@ def build_bundle(args: argparse.Namespace) -> dict:
             evaluated=not missing,
             semantically_sufficient=cleanup_semantically_sufficient,
             why=(
-                "cleanup status explicitly reports success"
+                "cleanup status reports success with an explicit clean-surface summary"
                 if cleanup_semantically_sufficient
-                else "cleanup status is present but does not prove successful cleanup"
+                else "cleanup status is present but does not prove a clean post-change surface"
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["cleanup_status"],
         ),

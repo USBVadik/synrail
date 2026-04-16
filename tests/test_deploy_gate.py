@@ -14,6 +14,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ALPHA_ENTRY = REPO_ROOT / "alpha.py"
+DEPLOY_GUARD = REPO_ROOT / "tools" / "reference" / "synrail_deploy_guard.sh"
+GUARDED_SIDE_EFFECT = REPO_ROOT / "tools" / "reference" / "synrail_guarded_side_effect_v0.sh"
 
 
 def load_json(path: Path) -> dict:
@@ -48,6 +50,24 @@ class DeployGateTests(unittest.TestCase):
             cwd=project_root,
         )
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def run_guard(self, artifact_root: str, *, cwd: Path) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["bash", str(DEPLOY_GUARD), "--artifact-root", artifact_root],
+            cwd=cwd,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+    def run_guarded_side_effect(self, artifact_root: str, *, cwd: Path, command: list[str]) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["bash", str(GUARDED_SIDE_EFFECT), "--artifact-root", artifact_root, "--", *command],
+            cwd=cwd,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
 
     def test_deploy_blocks_before_acceptance(self) -> None:
         """Deploy must be blocked when run is not CLOSURE_ACCEPTED."""
@@ -88,6 +108,7 @@ class DeployGateTests(unittest.TestCase):
             receipt = load_json(artifact_root / "deploy_receipt.json")
             self.assertEqual("DEPLOY_AUTHORIZED", receipt["result"])
             self.assertEqual(state["run_id"], receipt["run_id"])
+            self.assertEqual((artifact_root / "target_identity.txt").read_text().strip(), receipt["target_identity"])
 
     def test_deploy_blocks_on_rejected(self) -> None:
         """Deploy must be blocked when state is CLOSURE_REJECTED."""
@@ -147,6 +168,25 @@ class DeployGateTests(unittest.TestCase):
             self.assertEqual("BLOCKED", result["result"])
             self.assertEqual("DEPLOY_REQUIRES_ACCEPTED_CLOSURE", result["reason"])
 
+    def test_deploy_blocks_on_target_identity_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_target_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "CLOSURE_ACCEPTED"
+            write_json(artifact_root / "state.json", state)
+
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                "--deploy-target", "WRONG_TARGET_IDENTITY",
+                cwd=project_root,
+            )
+            self.assertEqual(2, deploy.returncode)
+            self.assertIn("deploy blocked", deploy.stdout.lower())
+
     def test_deploy_check_without_receipt_blocks(self) -> None:
         """deploy-check must block when no deploy receipt exists."""
         with tempfile.TemporaryDirectory(prefix="synrail_deploy_check_") as tmpdir:
@@ -191,6 +231,35 @@ class DeployGateTests(unittest.TestCase):
             result = json.loads(check.stdout.strip())
             self.assertEqual("OK", result["result"])
 
+    def test_deploy_check_blocks_when_current_state_regresses(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_check_regress_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "CLOSURE_ACCEPTED"
+            write_json(artifact_root / "state.json", state)
+
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(0, deploy.returncode)
+
+            state["state"] = "CLOSURE_REJECTED"
+            write_json(artifact_root / "state.json", state)
+
+            check = self.run_alpha(
+                "deploy-check", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(2, check.returncode)
+            result = json.loads(check.stdout.strip())
+            self.assertEqual("BLOCKED", result["result"])
+            self.assertEqual("DEPLOY_CURRENT_STATE_NOT_ACCEPTED", result["reason"])
+
     def test_deploy_check_blocks_stale_receipt(self) -> None:
         """deploy-check must block when receipt run_id doesn't match current state."""
         with tempfile.TemporaryDirectory(prefix="synrail_deploy_check_stale_") as tmpdir:
@@ -222,6 +291,98 @@ class DeployGateTests(unittest.TestCase):
             result = json.loads(check.stdout.strip())
             self.assertEqual("BLOCKED", result["result"])
             self.assertEqual("DEPLOY_RECEIPT_RUN_ID_STALE", result["reason"])
+
+    def test_deploy_check_blocks_stale_target_identity(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_check_target_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "CLOSURE_ACCEPTED"
+            write_json(artifact_root / "state.json", state)
+
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(0, deploy.returncode)
+
+            (artifact_root / "target_identity.txt").write_text("DIFFERENT_TARGET\n")
+
+            check = self.run_alpha(
+                "deploy-check", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(2, check.returncode)
+            result = json.loads(check.stdout.strip())
+            self.assertEqual("BLOCKED", result["result"])
+            self.assertEqual("DEPLOY_RECEIPT_TARGET_IDENTITY_STALE", result["reason"])
+
+    def test_deploy_guard_blocks_when_current_state_regresses(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_guard_regress_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "CLOSURE_ACCEPTED"
+            write_json(artifact_root / "state.json", state)
+
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(0, deploy.returncode)
+
+            state["state"] = "CLOSURE_REJECTED"
+            write_json(artifact_root / "state.json", state)
+
+            guard = self.run_guard(".synrail", cwd=project_root)
+            self.assertEqual(1, guard.returncode)
+            self.assertIn("not 'CLOSURE_ACCEPTED'", guard.stdout)
+
+    def test_guarded_side_effect_blocks_without_authorization(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_guarded_side_effect_block_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            guarded = self.run_guarded_side_effect(
+                ".synrail",
+                cwd=project_root,
+                command=["python3", "-c", "print('SIDE_EFFECT_RAN')"],
+            )
+            self.assertEqual(1, guarded.returncode)
+            self.assertIn("DEPLOY BLOCKED", guarded.stdout)
+            self.assertNotIn("SIDE_EFFECT_RAN", guarded.stdout)
+
+    def test_guarded_side_effect_runs_after_authorization(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_guarded_side_effect_ok_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "CLOSURE_ACCEPTED"
+            write_json(artifact_root / "state.json", state)
+
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(0, deploy.returncode)
+
+            guarded = self.run_guarded_side_effect(
+                ".synrail",
+                cwd=project_root,
+                command=["python3", "-c", "print('SIDE_EFFECT_RAN')"],
+            )
+            self.assertEqual(0, guarded.returncode)
+            self.assertIn("SIDE_EFFECT_RAN", guarded.stdout)
 
 
 if __name__ == "__main__":

@@ -370,6 +370,7 @@ def probe_prompt_task_identity(args: argparse.Namespace) -> dict:
 
 
 def build_record(args: argparse.Namespace) -> dict:
+    deployment_context = getattr(args, "deployment_context", False)
     baseline_identity_gate, observed_target_identity, expected_target_identity = probe_baseline_identity(args)
     gates = {
         "baseline_identity": baseline_identity_gate,
@@ -386,7 +387,12 @@ def build_record(args: argparse.Namespace) -> dict:
         profile=coverage_profile,
         profile_file=coverage_profile_file,
     )
-    coverage = build_coverage_record(coverage_profile, coverage_corpus, corpus_file=coverage_corpus_file)
+    coverage = build_coverage_record(
+        coverage_profile,
+        coverage_corpus,
+        corpus_file=coverage_corpus_file,
+        deployment_context=deployment_context,
+    )
 
     blocking_failure_classes = []
     final_verdict = PASS_VERDICT[args.doctor_level]
@@ -468,6 +474,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--allowed-scope-path", action="append", default=[])
     parser.add_argument("--coverage-profile-file")
     parser.add_argument("--coverage-corpus-file")
+    parser.add_argument("--deployment-context", action="store_true")
     return parser
 
 

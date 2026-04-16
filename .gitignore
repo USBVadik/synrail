@@ -3,5 +3,7 @@
 build/
 dist/
 *.egg-info/
+__pycache__/
+*.py[cod]
 fixtures/alpha_lane_run_001/
 fixtures/alpha_lane_run_002/

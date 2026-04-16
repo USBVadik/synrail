@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -193,7 +194,19 @@ def build_decision_trace(
     return trace
 
 
-def build_coverage_record(profile: dict, corpus: dict, *, corpus_file: Path = DEFAULT_CORPUS) -> dict:
+def deployment_context_confirmed(explicit: bool = False) -> bool:
+    if explicit:
+        return True
+    return os.environ.get("SYNRAIL_DEPLOYMENT_CONTEXT", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def build_coverage_record(
+    profile: dict,
+    corpus: dict,
+    *,
+    corpus_file: Path = DEFAULT_CORPUS,
+    deployment_context: bool = False,
+) -> dict:
     critical = list(profile.get("critical_fail_modes", []))
     declared_covered = list(profile.get("covered_fail_modes", []))
     declared_partial = list(profile.get("partial_fail_modes", []))
@@ -215,14 +228,18 @@ def build_coverage_record(profile: dict, corpus: dict, *, corpus_file: Path = DE
     critical_without_evidence = [mode for mode in critical if mode in uncovered]
     critical_mismatched = [mode for mode in critical if mode in partial]
     all_missing = measured_cases and all(c["status"] == "MISSING_EVIDENCE" for c in measured_cases)
+    deployment_context_ok = deployment_context_confirmed(deployment_context)
     threshold_met = len(critical_missing) == 0 if threshold_policy == "ALL_CRITICAL_FAIL_MODES_COVERED" else False
     if threshold_met:
         gate_status = "PASS"
         gate_reason = "CRITICAL_FAIL_MODE_MEASURED_COVERAGE_MET"
-    elif all_missing:
+    elif all_missing and deployment_context_ok:
         gate_status = "PASS"
         gate_reason = "COVERAGE_CORPUS_NOT_AVAILABLE_IN_DEPLOYMENT"
         threshold_met = True
+    elif all_missing:
+        gate_status = "BLOCKED"
+        gate_reason = "CRITICAL_FAIL_MODE_MEASURED_COVERAGE_MISSING_EVIDENCE"
     elif critical_without_evidence:
         gate_status = "BLOCKED"
         gate_reason = "CRITICAL_FAIL_MODE_MEASURED_COVERAGE_MISSING_EVIDENCE"
@@ -255,6 +272,7 @@ def build_coverage_record(profile: dict, corpus: dict, *, corpus_file: Path = DE
         "critical_missing_fail_modes": critical_missing,
         "critical_modes_without_measured_evidence": critical_without_evidence,
         "critical_modes_with_mismatched_evidence": critical_mismatched,
+        "deployment_context_confirmed": deployment_context_ok,
         "threshold_met": threshold_met,
         "gate_status": gate_status,
         "gate_reason": gate_reason,
@@ -287,6 +305,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="synrail-doctor-coverage-v0")
     parser.add_argument("--profile-file")
     parser.add_argument("--corpus-file")
+    parser.add_argument("--deployment-context", action="store_true")
     parser.add_argument("--output", required=True)
     return parser
 
@@ -301,7 +320,12 @@ def main() -> int:
         profile=profile,
         profile_file=profile_file,
     )
-    record = build_coverage_record(profile, corpus, corpus_file=corpus_file)
+    record = build_coverage_record(
+        profile,
+        corpus,
+        corpus_file=corpus_file,
+        deployment_context=args.deployment_context,
+    )
     save_json(Path(args.output), record)
     print(
         json.dumps(
