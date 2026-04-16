@@ -51,6 +51,8 @@ If you want local coding agents to discover Synrail in the current repo without 
 synrail install-agent-files --project-root "$(pwd)"
 ```
 
+If `AGENTS.md` or `GEMINI.md` already exists, Synrail appends one managed block instead of failing or overwriting the rest of the file.
+
 The current verified restore-capable alpha lane is:
 
 ```bash

@@ -16,7 +16,7 @@ If you want local coding agents to discover Synrail naturally in this repo, writ
 synrail install-agent-files --project-root "$(pwd)"
 ```
 
-This creates `AGENTS.md` and `GEMINI.md` in the repo root. It is optional for humans, but useful when you want the local agent workflow to start in controlled mode without adding Synrail instructions to every prompt.
+This creates missing `AGENTS.md` / `GEMINI.md` files in the repo root and appends a managed Synrail block to existing ones. It is optional for humans, but useful when you want the local agent workflow to start in controlled mode without adding Synrail instructions to every prompt.
 
 ## Five Steps
 

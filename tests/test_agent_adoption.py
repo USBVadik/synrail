@@ -57,7 +57,7 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("synrail start --artifact-root", gemini)
             self.assertIn("synrail repair-step --artifact-root", gemini)
 
-    def test_install_agent_files_is_idempotent_and_requires_force_for_conflicts(self) -> None:
+    def test_install_agent_files_is_idempotent_and_merges_existing_gemini_file(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_agent_adoption_force_") as tmpdir:
             project_root = Path(tmpdir) / "project"
             project_root.mkdir(parents=True, exist_ok=True)
@@ -78,16 +78,19 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("AGENTS.md: unchanged", second.stdout)
             self.assertIn("GEMINI.md: unchanged", second.stdout)
 
-            (project_root / "AGENTS.md").write_text("# custom policy\n")
+            (project_root / "GEMINI.md").write_text("# Existing Gemini Context\n\nKeep this repo focused on product work.\n")
 
-            blocked = self.run_alpha(
+            merged = self.run_alpha(
                 "install-agent-files",
                 "--project-root",
                 str(project_root),
             )
-            self.assertEqual(2, blocked.returncode, blocked.stdout + blocked.stderr)
-            self.assertIn("did not overwrite", blocked.stdout)
-            self.assertIn("--force", blocked.stdout)
+            self.assertEqual(0, merged.returncode, merged.stdout + merged.stderr)
+            self.assertIn("GEMINI.md: appended", merged.stdout)
+            gemini = (project_root / "GEMINI.md").read_text()
+            self.assertIn("# Existing Gemini Context", gemini)
+            self.assertIn("<!-- SYNRAIL_GEMINI_START -->", gemini)
+            self.assertIn("Use Synrail as the default local control path", gemini)
 
             forced = self.run_alpha(
                 "install-agent-files",
@@ -96,8 +99,9 @@ class AgentAdoptionTests(unittest.TestCase):
                 "--force",
             )
             self.assertEqual(0, forced.returncode, forced.stdout + forced.stderr)
-            self.assertIn("AGENTS.md: written", forced.stdout)
-            self.assertIn("synrail start --artifact-root", (project_root / "AGENTS.md").read_text())
+            self.assertIn("GEMINI.md: written", forced.stdout)
+            self.assertNotIn("<!-- SYNRAIL_GEMINI_START -->", (project_root / "GEMINI.md").read_text())
+            self.assertIn("Use Synrail as the default local control path", (project_root / "GEMINI.md").read_text())
 
 
 if __name__ == "__main__":

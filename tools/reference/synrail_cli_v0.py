@@ -327,14 +327,80 @@ def render_gemini_policy_markdown(*, artifact_root: str) -> str:
     return "\n".join(lines)
 
 
-def write_agent_policy_file(path: Path, content: str, *, force: bool) -> tuple[bool, str]:
+def render_agent_policy_block(*, title: str, intro: str, artifact_root: str) -> str:
+    lines = [
+        f"## {title}",
+        "",
+        intro,
+        "",
+        "```bash",
+        f'ARTIFACT_ROOT="$(pwd)/{artifact_root}"',
+        'synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Describe the bounded local change."',
+        "```",
+        "",
+        "Before claiming success, run:",
+        "",
+        "```bash",
+        'synrail check --artifact-root "$ARTIFACT_ROOT"',
+        "```",
+        "",
+        'If non-green, run `synrail repair-step --artifact-root "$ARTIFACT_ROOT"` and repair only the named gap before re-checking.',
+        "",
+        "Do not bypass Synrail and do not claim success without real local verification.",
+    ]
+    return "\n".join(lines)
+
+
+def managed_policy_markers(path: Path) -> tuple[str, str]:
+    stem = path.stem.upper().replace(".", "_")
+    return (f"<!-- SYNRAIL_{stem}_START -->", f"<!-- SYNRAIL_{stem}_END -->")
+
+
+def wrap_managed_policy_block(path: Path, body: str) -> str:
+    start_marker, end_marker = managed_policy_markers(path)
+    return f"{start_marker}\n{body.rstrip()}\n{end_marker}\n"
+
+
+def upsert_managed_policy_block(current: str, *, path: Path, block: str) -> tuple[str, str]:
+    start_marker, end_marker = managed_policy_markers(path)
+    current_text = current or ""
+    managed_block = wrap_managed_policy_block(path, block)
+    if start_marker in current_text and end_marker in current_text:
+        prefix, rest = current_text.split(start_marker, 1)
+        _, suffix = rest.split(end_marker, 1)
+        updated = prefix.rstrip() + "\n\n" + managed_block + suffix.lstrip("\n")
+        state = "updated"
+    elif current_text.strip():
+        updated = current_text.rstrip() + "\n\n" + managed_block
+        state = "appended"
+    else:
+        updated = managed_block
+        state = "written"
+    if updated == current_text:
+        return current_text, "unchanged"
+    return updated, state
+
+
+def write_agent_policy_file(
+    path: Path,
+    full_content: str,
+    *,
+    managed_block: str,
+    force: bool,
+) -> tuple[bool, str]:
     if path.exists():
         current = path.read_text()
-        if current == content:
+        if current == full_content:
             return False, "unchanged"
-        if not force:
-            raise FileExistsError(f"{path.name} already exists with different content")
-    path.write_text(content)
+        if force:
+            path.write_text(full_content)
+            return True, "written"
+        updated, state = upsert_managed_policy_block(current, path=path, block=managed_block)
+        if state == "unchanged":
+            return False, state
+        path.write_text(updated)
+        return True, state
+    path.write_text(full_content)
     return True, "written"
 
 
@@ -349,22 +415,38 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
 
     agents_content = render_agent_policy_markdown(artifact_root=artifact_root)
     gemini_content = render_gemini_policy_markdown(artifact_root=artifact_root)
+    agents_block = render_agent_policy_block(
+        title="Synrail Local Workflow",
+        intro="This repo uses Synrail to keep one bounded local change inside one controlled run.",
+        artifact_root=artifact_root,
+    )
+    gemini_block = render_agent_policy_block(
+        title="Synrail Local Workflow",
+        intro="Use Synrail as the default local control path for this repo.",
+        artifact_root=artifact_root,
+    )
 
-    try:
-        agents_written, agents_state = write_agent_policy_file(agents_path, agents_content, force=args.force)
-        gemini_written, gemini_state = write_agent_policy_file(gemini_path, gemini_content, force=args.force)
-    except FileExistsError as exc:
-        print("Synrail did not overwrite an existing agent policy file.")
-        print(f"What happened: {exc}")
-        print("What to do next: rerun with --force if you want Synrail to replace the existing file.")
-        return 2
+    agents_written, agents_state = write_agent_policy_file(
+        agents_path,
+        agents_content,
+        managed_block=agents_block,
+        force=args.force,
+    )
+    gemini_written, gemini_state = write_agent_policy_file(
+        gemini_path,
+        gemini_content,
+        managed_block=gemini_block,
+        force=args.force,
+    )
 
     print("Agent adoption files are ready.")
     print(f"Project root: {project_root}")
     print(f"Artifact root hint: {artifact_root}")
     print(f"AGENTS.md: {agents_state}")
     print(f"GEMINI.md: {gemini_state}")
-    if agents_written or gemini_written:
+    if agents_state in {"appended", "updated"} or gemini_state in {"appended", "updated"}:
+        print("What to do next: review the managed Synrail block added to the existing agent file and commit it if the wording fits the repo.")
+    elif agents_written or gemini_written:
         print("What to do next: commit these files into the repo so local agents discover Synrail before editing.")
     else:
         print("What to do next: keep these files committed so local agents continue discovering the same Synrail entrypoint.")
