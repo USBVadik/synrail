@@ -51,8 +51,16 @@ def scalar_arg(current: str | None, fallback: str) -> str:
     return current if current not in {None, ""} else fallback
 
 
-def bool_arg(current: bool, fallback: bool) -> bool:
-    return current or fallback
+def bool_arg(current: bool | None, fallback: bool) -> bool:
+    """Merge a boolean flag with a fallback from a previous packet.
+
+    When *current* is ``None`` (flag not passed on the CLI), inherit *fallback*.
+    When *current* is ``True`` or ``False`` (explicitly provided), use it.
+    This prevents previously-True values from being irrevocable.
+    """
+    if current is None:
+        return fallback
+    return current
 
 
 def merge_previous_packet_context(args: argparse.Namespace, previous_packet: dict) -> argparse.Namespace:
@@ -616,7 +624,11 @@ def build_packet_from_runtime_truth(
         repair_receipt=repair_receipt,
     )
     selection_context = build_selection_context(selection_receipt)
-    ready_for_resume = handoff.get("continuation_allowed", False) and not missing_ids
+    ready_for_resume = (
+        handoff.get("continuation_allowed", False)
+        and not missing_ids
+        and repair_termination.get("status") != "TERMINATE"
+    )
 
     packet = {
         "schema_version": "repair_packet_v0",
@@ -797,23 +809,23 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--final-result", default="")
     parser.add_argument("--prompt-identity", default="")
     parser.add_argument("--task-identity", default="")
-    parser.add_argument("--prompt-identity-ok", action="store_true")
+    parser.add_argument("--prompt-identity-ok", action="store_true", default=None)
     parser.add_argument("--readback")
     parser.add_argument("--scenario-proof")
     parser.add_argument("--target-identity-file")
-    parser.add_argument("--clean-surface", action="store_true")
-    parser.add_argument("--artifact-viable", action="store_true")
-    parser.add_argument("--helper-ok", action="store_true")
-    parser.add_argument("--credentials-ok", action="store_true")
+    parser.add_argument("--clean-surface", action="store_true", default=None)
+    parser.add_argument("--artifact-viable", action="store_true", default=None)
+    parser.add_argument("--helper-ok", action="store_true", default=None)
+    parser.add_argument("--credentials-ok", action="store_true", default=None)
     parser.add_argument("--artifact-path")
     parser.add_argument("--helper-path")
     parser.add_argument("--credential-env", action="append", default=[])
     parser.add_argument("--refresh-output")
     parser.add_argument("--refresh-event-type")
     parser.add_argument("--refresh-recovery-status", choices=["NOT_REQUIRED", "PENDING", "COMPLETE"], default="NOT_REQUIRED")
-    parser.add_argument("--refresh-reverification-complete", action="store_true")
-    parser.add_argument("--refresh-use-bundle", action="store_true")
-    parser.add_argument("--refresh-use-closure", action="store_true")
+    parser.add_argument("--refresh-reverification-complete", action="store_true", default=None)
+    parser.add_argument("--refresh-use-bundle", action="store_true", default=None)
+    parser.add_argument("--refresh-use-closure", action="store_true", default=None)
     return parser
 
 

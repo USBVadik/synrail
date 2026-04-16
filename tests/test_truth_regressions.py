@@ -231,6 +231,74 @@ class TruthRegressionTests(unittest.TestCase):
             record["coverage"]["critical_modes_without_measured_evidence"],
         )
 
+    def test_doctor_identity_silent_pass_is_now_blocked(self) -> None:
+        """Expected target identity specified but no target_identity_file → must FAIL."""
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_identity_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.expected_target_identity = "EXPECTED_SURFACE_001"
+            args.target_identity_file = ""
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_BASELINE_IDENTITY", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["baseline_identity"]["status"])
+        self.assertIn("expected target identity specified", record["gate_results"]["baseline_identity"]["note"])
+
+    def test_doctor_identity_matching_passes(self) -> None:
+        """Expected target identity + matching file → must PASS the identity gate."""
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_identity_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            identity_file = tmp / "target_identity.txt"
+            identity_file.write_text("EXPECTED_SURFACE_001\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.expected_target_identity = "EXPECTED_SURFACE_001"
+            args.target_identity_file = str(identity_file)
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("PASS", record["gate_results"]["baseline_identity"]["status"])
+        self.assertIn("matches expectation", record["gate_results"]["baseline_identity"]["note"])
+
+    def test_doctor_identity_mismatch_fails(self) -> None:
+        """Expected target identity + non-matching file → must FAIL."""
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_identity_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            identity_file = tmp / "target_identity.txt"
+            identity_file.write_text("WRONG_SURFACE_999\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.expected_target_identity = "EXPECTED_SURFACE_001"
+            args.target_identity_file = str(identity_file)
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_BASELINE_IDENTITY", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["baseline_identity"]["status"])
+        self.assertIn("does not match", record["gate_results"]["baseline_identity"]["note"])
+
     def test_closure_blocks_on_semantically_thin_proof(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_semantic_thin.json"))
         bundle = build_bundle(

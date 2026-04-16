@@ -83,7 +83,7 @@ def build_manifest(args: argparse.Namespace, checkpoint_root: Path) -> list[dict
             {
                 "artifact_id": artifact_id,
                 "path": str(destination.relative_to(checkpoint_root)),
-                "required": True if always_required else True,
+                "required": always_required,
                 "kind": kind,
             }
         )

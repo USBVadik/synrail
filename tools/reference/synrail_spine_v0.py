@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import os
 import subprocess
@@ -69,6 +70,64 @@ TRANSITION_PRECEDENCE = {
         "RECOVERY_REVERIFICATION_INCOMPLETE",
     ],
 }
+
+
+@dataclasses.dataclass
+class OrchestrationContext:
+    """Shared mutable state for orchestration phases."""
+    state: dict
+    state_path: Path
+    resume_applied: bool = False
+    resume_from_state: str = ""
+    repair_handoff: dict | None = None
+    repair_handoff_applied: bool = False
+    continuation_missing_inputs: list = dataclasses.field(default_factory=list)
+    starting_repair_packet: dict | None = None
+    previous_repair_receipt: dict | None = None
+    selection_receipt: dict | None = None
+    selection_applied: bool = False
+    selected_mode: str = ""
+    selected_with_preparation: bool = False
+    preparation_receipt: dict | None = None
+    preparation_applied: bool = False
+    preparation_ready_for_closure: bool = False
+    doctor_record: dict | None = None
+    bundle: dict | None = None
+    closure: dict | None = None
+    refresh_report: dict | None = None
+    comparison: dict | None = None
+    refresh_applied: bool = False
+    comparison_applied: bool = False
+    refresh_resulting_closure_status: str = ""
+    comparison_verdict: str = ""
+    stopping_stage: str = ""
+    reason: str = ""
+
+
+def _finalize_and_exit(ctx: OrchestrationContext, args: argparse.Namespace, report: dict, result_json: dict, *, save: bool = True, exit_code: int = 0) -> int:
+    if save:
+        save_state(ctx.state_path, ctx.state)
+    save_json(Path(args.report_output), report)
+    finalize_runtime_outputs(
+        args,
+        state=ctx.state,
+        report=report,
+        doctor_record=ctx.doctor_record,
+        resume_applied=ctx.resume_applied,
+        resume_from_state=ctx.resume_from_state,
+        repair_handoff=ctx.repair_handoff,
+        missing_continuation_inputs=ctx.continuation_missing_inputs,
+        selection_receipt=ctx.selection_receipt,
+        preparation_receipt=ctx.preparation_receipt,
+        starting_repair_packet=ctx.starting_repair_packet,
+        previous_repair_receipt=ctx.previous_repair_receipt,
+        bundle=ctx.bundle,
+        closure=ctx.closure,
+        refresh_report=ctx.refresh_report,
+        comparison=ctx.comparison,
+    )
+    print(json.dumps(result_json, ensure_ascii=True))
+    return exit_code
 
 
 def default_state(run_id: str, task_class: str) -> dict:
@@ -1562,454 +1621,397 @@ def cmd_apply_closure(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_orchestrate(args: argparse.Namespace) -> int:
-    state_path = Path(args.state_file)
-    state = load_state(state_path)
-    resume_applied = bool(args.resume_from_state)
-    resume_from_state = args.resume_from_state or ""
-    repair_handoff = None
-    repair_handoff_applied = False
-    continuation_missing_inputs: list[str] = []
-    starting_repair_packet = None
-    previous_repair_receipt = None
-    selection_receipt = None
-    selection_applied = False
-    selected_mode = ""
-    selected_with_preparation = False
-    preparation_receipt = None
-    preparation_applied = False
-    preparation_ready_for_closure = False
-
+def _phase_init(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Load mode_selection_receipt and repair_receipt."""
     if args.mode_selection_receipt:
         try:
-            selection_receipt = load_mode_selection_receipt(Path(args.mode_selection_receipt))
+            ctx.selection_receipt = load_mode_selection_receipt(Path(args.mode_selection_receipt))
         except ValueError:
-            report = build_error_report(state, reason="INVALID_MODE_SELECTION_RECEIPT", stopping_stage="selection")
-            report["resume_applied"] = resume_applied
-            report["resume_from_state"] = resume_from_state
+            report = build_error_report(ctx.state, reason="INVALID_MODE_SELECTION_RECEIPT", stopping_stage="selection")
+            report["resume_applied"] = ctx.resume_applied
+            report["resume_from_state"] = ctx.resume_from_state
             save_json(Path(args.report_output), report)
             finalize_runtime_outputs(
                 args,
-                state=state,
+                state=ctx.state,
                 report=report,
-                resume_applied=resume_applied,
-                resume_from_state=resume_from_state,
-                repair_handoff=repair_handoff,
-                missing_continuation_inputs=continuation_missing_inputs,
+                resume_applied=ctx.resume_applied,
+                resume_from_state=ctx.resume_from_state,
+                repair_handoff=ctx.repair_handoff,
+                missing_continuation_inputs=ctx.continuation_missing_inputs,
             )
             return 2
-        selection_applied = True
-        selected_mode = selection_receipt["selected_mode"]
-        selected_with_preparation = bool(selection_receipt.get("selected_with_preparation", False))
+        ctx.selection_applied = True
+        ctx.selected_mode = ctx.selection_receipt["selected_mode"]
+        ctx.selected_with_preparation = bool(ctx.selection_receipt.get("selected_with_preparation", False))
 
     if getattr(args, "repair_receipt_file", None):
         try:
-            previous_repair_receipt = load_repair_receipt(Path(args.repair_receipt_file))
+            ctx.previous_repair_receipt = load_repair_receipt(Path(args.repair_receipt_file))
         except ValueError:
-            previous_repair_receipt = None
+            ctx.previous_repair_receipt = None
 
-    if resume_applied:
-        if getattr(args, "repair_packet_file", None):
-            try:
-                starting_repair_packet = load_repair_packet(Path(args.repair_packet_file))
-            except ValueError:
-                report = build_error_report(state, reason="INVALID_REPAIR_PACKET", stopping_stage="repair_packet")
-                report["resume_applied"] = True
-                report["resume_from_state"] = resume_from_state
-                report["selection_applied"] = selection_applied
-                report["selected_mode"] = selected_mode
-                report["selected_with_preparation"] = selected_with_preparation
-                save_json(Path(args.report_output), report)
-                finalize_runtime_outputs(
-                    args,
-                    state=state,
-                    report=report,
-                    resume_applied=True,
-                    resume_from_state=resume_from_state,
-                    selection_receipt=selection_receipt,
-                    previous_repair_receipt=previous_repair_receipt,
-                )
-                return 2
-            if not selection_receipt and starting_repair_packet.get("selection_receipt"):
-                selection_receipt = dict(starting_repair_packet["selection_receipt"])
-                selection_applied = True
-                selected_mode = selection_receipt.get("selected_mode", "")
-                selected_with_preparation = bool(selection_receipt.get("selected_with_preparation", False))
-            if previous_repair_receipt is None and starting_repair_packet.get("repair_receipt"):
-                previous_repair_receipt = dict(starting_repair_packet["repair_receipt"])
-            repair_termination = dict(starting_repair_packet.get("repair_termination") or {})
-            if repair_termination.get("status") == "TERMINATE" and repair_termination.get("reason") in {
-                "NON_RESUMABLE",
-                "MAX_REPAIR_ATTEMPTS",
-                "NO_PROGRESS_DETECTED",
-            }:
-                state["closure"]["status"] = state["closure"]["status"] or "CLAIMED_NOT_ACCEPTED"
-                state["closure"]["blocking_reason"] = repair_termination["reason"]
-                state["closure"]["next_allowed_transition"] = "NONE"
-                state["closure"]["narrow_next_safe_step"] = repair_termination.get(
-                    "next_action",
-                    "stop this repair loop and start a new run instead",
-                )
-                state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
-                report = {
-                    "schema_version": "orchestration_report_v0",
-                    "run_id": state["run_id"],
-                    "task_class": state["task_class"],
-                    "result": "BLOCKED",
-                    "stopping_stage": "resume",
-                    "reason": repair_termination["reason"],
-                    "doctor_verdict": "",
-                    "resume_applied": True,
-                    "resume_from_state": resume_from_state,
-                    "selection_applied": selection_applied,
-                    "selected_mode": selected_mode,
-                    "selected_with_preparation": selected_with_preparation,
-                    "preparation_applied": False,
-                    "preparation_ready_for_closure": False,
-                    "bundle_status": state["proof_bundle"]["status"],
-                    "closure_status": state["closure"]["status"],
-                    "refresh_applied": False,
-                    "refresh_resulting_closure_status": "",
-                    "comparison_applied": False,
-                    "comparison_verdict": "",
-                    "repair_termination_status": repair_termination.get("status", ""),
-                    "repair_termination_reason": repair_termination.get("reason", ""),
-                    "repair_attempt_count": repair_termination.get("attempt_count", 0),
-                    "repair_max_attempts": repair_termination.get("max_attempts", 0),
-                    "repair_no_progress_window": repair_termination.get("no_progress_window", 0),
-                    "repair_stalled_step_id": repair_termination.get("stalled_step_id", ""),
-                    "blockers": [repair_termination["reason"]],
-                    "dominant_blocker": repair_termination["reason"],
-                    "resulting_state": state["state"],
-                    "next_safe_step": state["next_safe_step"],
-                }
-                save_state(state_path, state)
-                save_json(Path(args.report_output), report)
-                finalize_runtime_outputs(
-                    args,
-                    state=state,
-                    report=report,
-                    resume_applied=True,
-                    resume_from_state=resume_from_state,
-                    selection_receipt=selection_receipt,
-                    starting_repair_packet=starting_repair_packet,
-                    previous_repair_receipt=previous_repair_receipt,
-                )
-                print(
-                    json.dumps(
-                        {
-                            "result": "BLOCKED",
-                            "stopping_stage": "resume",
-                            "reason": repair_termination["reason"],
-                        },
-                        ensure_ascii=True,
-                    )
-                )
-                return 0
-        if state["state"] != resume_from_state:
-            report = build_error_report(state, reason="RESUME_STATE_MISMATCH", stopping_stage="resume")
-            report["resume_applied"] = True
-            report["resume_from_state"] = resume_from_state
-            report["selection_applied"] = selection_applied
-            report["selected_mode"] = selected_mode
-            report["selected_with_preparation"] = selected_with_preparation
-            save_json(Path(args.report_output), report)
-            finalize_runtime_outputs(
-                args,
-                state=state,
-                report=report,
-                resume_applied=True,
-                resume_from_state=resume_from_state,
-                selection_receipt=selection_receipt,
-                starting_repair_packet=starting_repair_packet,
-                previous_repair_receipt=previous_repair_receipt,
-            )
-            return 2
-        if state["state"] in TERMINAL_STATES:
-            state["closure"]["status"] = state["closure"]["status"] or "CLAIMED_NOT_ACCEPTED"
-            state["closure"]["blocking_reason"] = "TERMINAL_STATE_NOT_RESUMABLE"
-            state["closure"]["next_allowed_transition"] = "NONE"
-            state["closure"]["narrow_next_safe_step"] = "start a new run instead of resuming a terminal state"
-            state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
-            report = {
-                "schema_version": "orchestration_report_v0",
-                "run_id": state["run_id"],
-                "task_class": state["task_class"],
-                "result": "BLOCKED",
-                "stopping_stage": "resume",
-                "reason": "TERMINAL_STATE_NOT_RESUMABLE",
-                "doctor_verdict": "",
-                "resume_applied": True,
-                "resume_from_state": resume_from_state,
-                "selection_applied": selection_applied,
-                "selected_mode": selected_mode,
-                "selected_with_preparation": selected_with_preparation,
-                "preparation_applied": False,
-                "preparation_ready_for_closure": False,
-                "bundle_status": state["proof_bundle"]["status"],
-                "closure_status": state["closure"]["status"],
-                "refresh_applied": False,
-                "refresh_resulting_closure_status": "",
-                "comparison_applied": False,
-                "comparison_verdict": "",
-                "blockers": ["TERMINAL_STATE_NOT_RESUMABLE"],
-                "dominant_blocker": "TERMINAL_STATE_NOT_RESUMABLE",
-                "resulting_state": state["state"],
-                "next_safe_step": state["next_safe_step"],
-            }
-            save_state(state_path, state)
-            save_json(Path(args.report_output), report)
-            finalize_runtime_outputs(
-                args,
-                state=state,
-                report=report,
-                resume_applied=True,
-                resume_from_state=resume_from_state,
-                selection_receipt=selection_receipt,
-                starting_repair_packet=starting_repair_packet,
-                previous_repair_receipt=previous_repair_receipt,
-            )
-            print(json.dumps({"result": "BLOCKED", "stopping_stage": "resume", "reason": "TERMINAL_STATE_NOT_RESUMABLE"}, ensure_ascii=True))
-            return 0
-        if getattr(args, "repair_handoff_file", None):
-            try:
-                repair_handoff = load_repair_handoff(Path(args.repair_handoff_file))
-            except ValueError:
-                report = build_error_report(state, reason="INVALID_REPAIR_HANDOFF", stopping_stage="repair_handoff")
-                report["resume_applied"] = True
-                report["resume_from_state"] = resume_from_state
-                report["repair_handoff_applied"] = True
-                report["repair_handoff_from_state"] = state["state"]
-                report["repair_handoff_required_inputs"] = []
-                report["missing_continuation_inputs"] = []
-                report["selection_applied"] = selection_applied
-                report["selected_mode"] = selected_mode
-                report["selected_with_preparation"] = selected_with_preparation
-                save_json(Path(args.report_output), report)
-                finalize_runtime_outputs(
-                    args,
-                    state=state,
-                    report=report,
-                    resume_applied=True,
-                    resume_from_state=resume_from_state,
-                    missing_continuation_inputs=continuation_missing_inputs,
-                    selection_receipt=selection_receipt,
-                    starting_repair_packet=starting_repair_packet,
-                    previous_repair_receipt=previous_repair_receipt,
-                )
-                return 2
-            repair_handoff_applied = True
-            if repair_handoff["run_id"] != state["run_id"] or repair_handoff["from_state"] != state["state"]:
-                report = build_error_report(state, reason="REPAIR_HANDOFF_STATE_MISMATCH", stopping_stage="repair_handoff")
-                report["resume_applied"] = True
-                report["resume_from_state"] = resume_from_state
-                report["repair_handoff_applied"] = True
-                report["repair_handoff_from_state"] = repair_handoff["from_state"]
-                report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(repair_handoff)
-                report["missing_continuation_inputs"] = []
-                report["selection_applied"] = selection_applied
-                report["selected_mode"] = selected_mode
-                report["selected_with_preparation"] = selected_with_preparation
-                save_json(Path(args.report_output), report)
-                finalize_runtime_outputs(
-                    args,
-                    state=state,
-                    report=report,
-                    resume_applied=True,
-                    resume_from_state=resume_from_state,
-                    repair_handoff=repair_handoff,
-                    selection_receipt=selection_receipt,
-                    starting_repair_packet=starting_repair_packet,
-                    previous_repair_receipt=previous_repair_receipt,
-                )
-                return 2
-        if repair_handoff is None and starting_repair_packet and starting_repair_packet.get("repair_handoff"):
-            candidate_handoff = dict(starting_repair_packet["repair_handoff"])
-            if candidate_handoff.get("run_id") == state["run_id"] and candidate_handoff.get("from_state") == state["state"]:
-                repair_handoff = candidate_handoff
-                repair_handoff_applied = True
-        current_resume_handoff = repair_handoff or build_repair_handoff(state)
-        repair_handoff = current_resume_handoff
-        if not current_resume_handoff.get("continuation_allowed", False):
-            report = {
-                "schema_version": "orchestration_report_v0",
-                "run_id": state["run_id"],
-                "task_class": state["task_class"],
-                "result": "BLOCKED",
-                "stopping_stage": "resume",
-                "reason": "STATE_NOT_RESUMABLE",
-                "doctor_verdict": "",
-                "resume_applied": True,
-                "resume_from_state": resume_from_state,
-                "repair_handoff_applied": repair_handoff_applied,
-                "repair_handoff_from_state": current_resume_handoff["from_state"],
-                "repair_handoff_required_inputs": repair_handoff_required_input_ids(current_resume_handoff),
-                "missing_continuation_inputs": [],
-                "selection_applied": selection_applied,
-                "selected_mode": selected_mode,
-                "selected_with_preparation": selected_with_preparation,
-                "preparation_applied": False,
-                "preparation_ready_for_closure": False,
-                "bundle_status": state["proof_bundle"]["status"],
-                "closure_status": state["closure"]["status"],
-                "refresh_applied": False,
-                "refresh_resulting_closure_status": "",
-                "comparison_applied": False,
-                "comparison_verdict": "",
-                "blockers": [current_resume_handoff["resumability"]["family"]],
-                "dominant_blocker": "STATE_NOT_RESUMABLE",
-                "resulting_state": state["state"],
-                "next_safe_step": state["next_safe_step"],
-            }
-            save_state(state_path, state)
-            save_json(Path(args.report_output), report)
-            finalize_runtime_outputs(
-                args,
-                state=state,
-                report=report,
-                resume_applied=True,
-                resume_from_state=resume_from_state,
-                repair_handoff=current_resume_handoff,
-                selection_receipt=selection_receipt,
-                starting_repair_packet=starting_repair_packet,
-                previous_repair_receipt=previous_repair_receipt,
-            )
-            print(json.dumps({"result": "BLOCKED", "stopping_stage": "resume", "reason": "STATE_NOT_RESUMABLE"}, ensure_ascii=True))
-            return 0
-        apply_repair_handoff_defaults(args, current_resume_handoff)
-        continuation_missing_inputs = missing_continuation_inputs(args, current_resume_handoff)
-        if continuation_missing_inputs:
-            out_of_order_steps = repair_policy_out_of_order_steps(args, current_resume_handoff, continuation_missing_inputs)
-            if out_of_order_steps:
-                report = {
-                    "schema_version": "orchestration_report_v0",
-                    "run_id": state["run_id"],
-                    "task_class": state["task_class"],
-                    "result": "BLOCKED",
-                    "stopping_stage": "repair_handoff",
-                    "reason": "REPAIR_POLICY_STEP_OUT_OF_ORDER",
-                    "doctor_verdict": "",
-                    "resume_applied": True,
-                    "resume_from_state": resume_from_state,
-                    "repair_handoff_applied": repair_handoff_applied,
-                    "repair_handoff_from_state": current_resume_handoff["from_state"],
-                    "repair_handoff_required_inputs": repair_handoff_required_input_ids(current_resume_handoff),
-                    "missing_continuation_inputs": list(continuation_missing_inputs),
-                    "selection_applied": selection_applied,
-                    "selected_mode": selected_mode,
-                    "selected_with_preparation": selected_with_preparation,
-                    "preparation_applied": False,
-                    "preparation_ready_for_closure": False,
-                    "bundle_status": state["proof_bundle"]["status"],
-                    "closure_status": state["closure"]["status"],
-                    "refresh_applied": False,
-                    "refresh_resulting_closure_status": "",
-                    "comparison_applied": False,
-                    "comparison_verdict": "",
-                    "blockers": list(out_of_order_steps),
-                    "dominant_blocker": "REPAIR_POLICY_STEP_OUT_OF_ORDER",
-                    "resulting_state": state["state"],
-                    "next_safe_step": state["next_safe_step"],
-                }
-                save_state(state_path, state)
-                save_json(Path(args.report_output), report)
-                finalize_runtime_outputs(
-                    args,
-                    state=state,
-                    report=report,
-                    resume_applied=True,
-                    resume_from_state=resume_from_state,
-                    repair_handoff=current_resume_handoff,
-                    missing_continuation_inputs=continuation_missing_inputs,
-                    selection_receipt=selection_receipt,
-                    starting_repair_packet=starting_repair_packet,
-                    previous_repair_receipt=previous_repair_receipt,
-                )
-                print(json.dumps({"result": "BLOCKED", "stopping_stage": "repair_handoff", "reason": "REPAIR_POLICY_STEP_OUT_OF_ORDER"}, ensure_ascii=True))
-                return 0
-            report = build_repair_handoff_blocked_report(
-                state,
-                doctor_verdict="",
-                resume_applied=True,
-                resume_from_state=resume_from_state,
-                repair_handoff=current_resume_handoff,
-                missing_inputs=continuation_missing_inputs,
-                selection_applied=selection_applied,
-                selected_mode=selected_mode,
-                selected_with_preparation=selected_with_preparation,
-                preparation_applied=False,
-                preparation_ready_for_closure=False,
-            )
-            save_state(state_path, state)
-            save_json(Path(args.report_output), report)
-            finalize_runtime_outputs(
-                args,
-                state=state,
-                report=report,
-                resume_applied=True,
-                resume_from_state=resume_from_state,
-                repair_handoff=current_resume_handoff,
-                missing_continuation_inputs=continuation_missing_inputs,
-                selection_receipt=selection_receipt,
-                starting_repair_packet=starting_repair_packet,
-                previous_repair_receipt=previous_repair_receipt,
-            )
-            print(json.dumps({"result": "BLOCKED", "stopping_stage": "repair_handoff", "reason": "CONTINUATION_INPUTS_MISSING"}, ensure_ascii=True))
-            return 0
+    return None
 
-    if selection_applied and selected_mode != "FULL_GOVERNED_PATH":
-        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
-        state["closure"]["blocking_reason"] = "MODE_SELECTION_NOT_GOVERNED"
-        state["closure"]["next_allowed_transition"] = "FOLLOW_SELECTED_MODE"
-        state["closure"]["narrow_next_safe_step"] = "follow the selected lighter mode instead of entering governed orchestration"
-        state["next_safe_step"] = state["closure"]["narrow_next_safe_step"]
+
+def _resume_early_exit(
+    ctx: OrchestrationContext,
+    args: argparse.Namespace,
+    report: dict,
+    *,
+    save_state_first: bool = False,
+    print_summary: dict | None = None,
+) -> int:
+    """Centralized early-exit helper for resume/handoff phase."""
+    if save_state_first:
+        save_state(ctx.state_path, ctx.state)
+    save_json(Path(args.report_output), report)
+    finalize_runtime_outputs(
+        args,
+        state=ctx.state,
+        report=report,
+        resume_applied=True,
+        resume_from_state=ctx.resume_from_state,
+        repair_handoff=ctx.repair_handoff,
+        missing_continuation_inputs=ctx.continuation_missing_inputs,
+        selection_receipt=ctx.selection_receipt,
+        starting_repair_packet=ctx.starting_repair_packet,
+        previous_repair_receipt=ctx.previous_repair_receipt,
+    )
+    if print_summary:
+        print(json.dumps(print_summary, ensure_ascii=True))
+    return 0 if save_state_first else 2
+
+
+def _resume_load_packet(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Load repair packet and extract embedded selection/receipt context."""
+    if not getattr(args, "repair_packet_file", None):
+        return None
+    try:
+        ctx.starting_repair_packet = load_repair_packet(Path(args.repair_packet_file))
+    except ValueError:
+        report = build_error_report(ctx.state, reason="INVALID_REPAIR_PACKET", stopping_stage="repair_packet")
+        report["resume_applied"] = True
+        report["resume_from_state"] = ctx.resume_from_state
+        report["selection_applied"] = ctx.selection_applied
+        report["selected_mode"] = ctx.selected_mode
+        report["selected_with_preparation"] = ctx.selected_with_preparation
+        return _resume_early_exit(ctx, args, report)
+    if not ctx.selection_receipt and ctx.starting_repair_packet.get("selection_receipt"):
+        ctx.selection_receipt = dict(ctx.starting_repair_packet["selection_receipt"])
+        ctx.selection_applied = True
+        ctx.selected_mode = ctx.selection_receipt.get("selected_mode", "")
+        ctx.selected_with_preparation = bool(ctx.selection_receipt.get("selected_with_preparation", False))
+    if ctx.previous_repair_receipt is None and ctx.starting_repair_packet.get("repair_receipt"):
+        ctx.previous_repair_receipt = dict(ctx.starting_repair_packet["repair_receipt"])
+    return None
+
+
+def _resume_check_termination(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Block if the repair packet says TERMINATE."""
+    if not ctx.starting_repair_packet:
+        return None
+    repair_termination = dict(ctx.starting_repair_packet.get("repair_termination") or {})
+    if repair_termination.get("status") != "TERMINATE":
+        return None
+    if repair_termination.get("reason") not in {"NON_RESUMABLE", "MAX_REPAIR_ATTEMPTS", "NO_PROGRESS_DETECTED"}:
+        return None
+    ctx.state["closure"]["status"] = ctx.state["closure"]["status"] or "CLAIMED_NOT_ACCEPTED"
+    ctx.state["closure"]["blocking_reason"] = repair_termination["reason"]
+    ctx.state["closure"]["next_allowed_transition"] = "NONE"
+    ctx.state["closure"]["narrow_next_safe_step"] = repair_termination.get(
+        "next_action", "stop this repair loop and start a new run instead",
+    )
+    ctx.state["next_safe_step"] = ctx.state["closure"]["narrow_next_safe_step"]
+    report = {
+        "schema_version": "orchestration_report_v0",
+        "run_id": ctx.state["run_id"],
+        "task_class": ctx.state["task_class"],
+        "result": "BLOCKED",
+        "stopping_stage": "resume",
+        "reason": repair_termination["reason"],
+        "doctor_verdict": "",
+        "resume_applied": True,
+        "resume_from_state": ctx.resume_from_state,
+        "selection_applied": ctx.selection_applied,
+        "selected_mode": ctx.selected_mode,
+        "selected_with_preparation": ctx.selected_with_preparation,
+        "preparation_applied": False,
+        "preparation_ready_for_closure": False,
+        "bundle_status": ctx.state["proof_bundle"]["status"],
+        "closure_status": ctx.state["closure"]["status"],
+        "refresh_applied": False,
+        "refresh_resulting_closure_status": "",
+        "comparison_applied": False,
+        "comparison_verdict": "",
+        "repair_termination_status": repair_termination.get("status", ""),
+        "repair_termination_reason": repair_termination.get("reason", ""),
+        "repair_attempt_count": repair_termination.get("attempt_count", 0),
+        "repair_max_attempts": repair_termination.get("max_attempts", 0),
+        "repair_no_progress_window": repair_termination.get("no_progress_window", 0),
+        "repair_stalled_step_id": repair_termination.get("stalled_step_id", ""),
+        "blockers": [repair_termination["reason"]],
+        "dominant_blocker": repair_termination["reason"],
+        "resulting_state": ctx.state["state"],
+        "next_safe_step": ctx.state["next_safe_step"],
+    }
+    return _resume_early_exit(
+        ctx, args, report, save_state_first=True,
+        print_summary={"result": "BLOCKED", "stopping_stage": "resume", "reason": repair_termination["reason"]},
+    )
+
+
+def _resume_validate_state(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Check state mismatch and terminal-state conditions."""
+    if ctx.state["state"] != ctx.resume_from_state:
+        report = build_error_report(ctx.state, reason="RESUME_STATE_MISMATCH", stopping_stage="resume")
+        report["resume_applied"] = True
+        report["resume_from_state"] = ctx.resume_from_state
+        report["selection_applied"] = ctx.selection_applied
+        report["selected_mode"] = ctx.selected_mode
+        report["selected_with_preparation"] = ctx.selected_with_preparation
+        return _resume_early_exit(ctx, args, report)
+    if ctx.state["state"] in TERMINAL_STATES:
+        ctx.state["closure"]["status"] = ctx.state["closure"]["status"] or "CLAIMED_NOT_ACCEPTED"
+        ctx.state["closure"]["blocking_reason"] = "TERMINAL_STATE_NOT_RESUMABLE"
+        ctx.state["closure"]["next_allowed_transition"] = "NONE"
+        ctx.state["closure"]["narrow_next_safe_step"] = "start a new run instead of resuming a terminal state"
+        ctx.state["next_safe_step"] = ctx.state["closure"]["narrow_next_safe_step"]
         report = {
             "schema_version": "orchestration_report_v0",
-            "run_id": state["run_id"],
-            "task_class": state["task_class"],
+            "run_id": ctx.state["run_id"],
+            "task_class": ctx.state["task_class"],
+            "result": "BLOCKED",
+            "stopping_stage": "resume",
+            "reason": "TERMINAL_STATE_NOT_RESUMABLE",
+            "doctor_verdict": "",
+            "resume_applied": True,
+            "resume_from_state": ctx.resume_from_state,
+            "selection_applied": ctx.selection_applied,
+            "selected_mode": ctx.selected_mode,
+            "selected_with_preparation": ctx.selected_with_preparation,
+            "preparation_applied": False,
+            "preparation_ready_for_closure": False,
+            "bundle_status": ctx.state["proof_bundle"]["status"],
+            "closure_status": ctx.state["closure"]["status"],
+            "refresh_applied": False,
+            "refresh_resulting_closure_status": "",
+            "comparison_applied": False,
+            "comparison_verdict": "",
+            "blockers": ["TERMINAL_STATE_NOT_RESUMABLE"],
+            "dominant_blocker": "TERMINAL_STATE_NOT_RESUMABLE",
+            "resulting_state": ctx.state["state"],
+            "next_safe_step": ctx.state["next_safe_step"],
+        }
+        return _resume_early_exit(
+            ctx, args, report, save_state_first=True,
+            print_summary={"result": "BLOCKED", "stopping_stage": "resume", "reason": "TERMINAL_STATE_NOT_RESUMABLE"},
+        )
+    return None
+
+
+def _resume_resolve_handoff(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Load explicit handoff, fall back to packet-embedded or freshly built one."""
+    if getattr(args, "repair_handoff_file", None):
+        try:
+            ctx.repair_handoff = load_repair_handoff(Path(args.repair_handoff_file))
+        except ValueError:
+            report = build_error_report(ctx.state, reason="INVALID_REPAIR_HANDOFF", stopping_stage="repair_handoff")
+            report["resume_applied"] = True
+            report["resume_from_state"] = ctx.resume_from_state
+            report["repair_handoff_applied"] = True
+            report["repair_handoff_from_state"] = ctx.state["state"]
+            report["repair_handoff_required_inputs"] = []
+            report["missing_continuation_inputs"] = []
+            report["selection_applied"] = ctx.selection_applied
+            report["selected_mode"] = ctx.selected_mode
+            report["selected_with_preparation"] = ctx.selected_with_preparation
+            return _resume_early_exit(ctx, args, report)
+        ctx.repair_handoff_applied = True
+        if ctx.repair_handoff["run_id"] != ctx.state["run_id"] or ctx.repair_handoff["from_state"] != ctx.state["state"]:
+            report = build_error_report(ctx.state, reason="REPAIR_HANDOFF_STATE_MISMATCH", stopping_stage="repair_handoff")
+            report["resume_applied"] = True
+            report["resume_from_state"] = ctx.resume_from_state
+            report["repair_handoff_applied"] = True
+            report["repair_handoff_from_state"] = ctx.repair_handoff["from_state"]
+            report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(ctx.repair_handoff)
+            report["missing_continuation_inputs"] = []
+            report["selection_applied"] = ctx.selection_applied
+            report["selected_mode"] = ctx.selected_mode
+            report["selected_with_preparation"] = ctx.selected_with_preparation
+            return _resume_early_exit(ctx, args, report)
+    if ctx.repair_handoff is None and ctx.starting_repair_packet and ctx.starting_repair_packet.get("repair_handoff"):
+        candidate_handoff = dict(ctx.starting_repair_packet["repair_handoff"])
+        if candidate_handoff.get("run_id") == ctx.state["run_id"] and candidate_handoff.get("from_state") == ctx.state["state"]:
+            ctx.repair_handoff = candidate_handoff
+            ctx.repair_handoff_applied = True
+    current_resume_handoff = ctx.repair_handoff or build_repair_handoff(ctx.state)
+    ctx.repair_handoff = current_resume_handoff
+    if not current_resume_handoff.get("continuation_allowed", False):
+        report = {
+            "schema_version": "orchestration_report_v0",
+            "run_id": ctx.state["run_id"],
+            "task_class": ctx.state["task_class"],
+            "result": "BLOCKED",
+            "stopping_stage": "resume",
+            "reason": "STATE_NOT_RESUMABLE",
+            "doctor_verdict": "",
+            "resume_applied": True,
+            "resume_from_state": ctx.resume_from_state,
+            "repair_handoff_applied": ctx.repair_handoff_applied,
+            "repair_handoff_from_state": current_resume_handoff["from_state"],
+            "repair_handoff_required_inputs": repair_handoff_required_input_ids(current_resume_handoff),
+            "missing_continuation_inputs": [],
+            "selection_applied": ctx.selection_applied,
+            "selected_mode": ctx.selected_mode,
+            "selected_with_preparation": ctx.selected_with_preparation,
+            "preparation_applied": False,
+            "preparation_ready_for_closure": False,
+            "bundle_status": ctx.state["proof_bundle"]["status"],
+            "closure_status": ctx.state["closure"]["status"],
+            "refresh_applied": False,
+            "refresh_resulting_closure_status": "",
+            "comparison_applied": False,
+            "comparison_verdict": "",
+            "blockers": [current_resume_handoff["resumability"]["family"]],
+            "dominant_blocker": "STATE_NOT_RESUMABLE",
+            "resulting_state": ctx.state["state"],
+            "next_safe_step": ctx.state["next_safe_step"],
+        }
+        return _resume_early_exit(
+            ctx, args, report, save_state_first=True,
+            print_summary={"result": "BLOCKED", "stopping_stage": "resume", "reason": "STATE_NOT_RESUMABLE"},
+        )
+    return None
+
+
+def _resume_validate_inputs(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Check missing continuation inputs and out-of-order repair steps."""
+    apply_repair_handoff_defaults(args, ctx.repair_handoff)
+    ctx.continuation_missing_inputs = missing_continuation_inputs(args, ctx.repair_handoff)
+    if not ctx.continuation_missing_inputs:
+        return None
+    out_of_order_steps = repair_policy_out_of_order_steps(args, ctx.repair_handoff, ctx.continuation_missing_inputs)
+    if out_of_order_steps:
+        report = {
+            "schema_version": "orchestration_report_v0",
+            "run_id": ctx.state["run_id"],
+            "task_class": ctx.state["task_class"],
+            "result": "BLOCKED",
+            "stopping_stage": "repair_handoff",
+            "reason": "REPAIR_POLICY_STEP_OUT_OF_ORDER",
+            "doctor_verdict": "",
+            "resume_applied": True,
+            "resume_from_state": ctx.resume_from_state,
+            "repair_handoff_applied": ctx.repair_handoff_applied,
+            "repair_handoff_from_state": ctx.repair_handoff["from_state"],
+            "repair_handoff_required_inputs": repair_handoff_required_input_ids(ctx.repair_handoff),
+            "missing_continuation_inputs": list(ctx.continuation_missing_inputs),
+            "selection_applied": ctx.selection_applied,
+            "selected_mode": ctx.selected_mode,
+            "selected_with_preparation": ctx.selected_with_preparation,
+            "preparation_applied": False,
+            "preparation_ready_for_closure": False,
+            "bundle_status": ctx.state["proof_bundle"]["status"],
+            "closure_status": ctx.state["closure"]["status"],
+            "refresh_applied": False,
+            "refresh_resulting_closure_status": "",
+            "comparison_applied": False,
+            "comparison_verdict": "",
+            "blockers": list(out_of_order_steps),
+            "dominant_blocker": "REPAIR_POLICY_STEP_OUT_OF_ORDER",
+            "resulting_state": ctx.state["state"],
+            "next_safe_step": ctx.state["next_safe_step"],
+        }
+        return _resume_early_exit(
+            ctx, args, report, save_state_first=True,
+            print_summary={"result": "BLOCKED", "stopping_stage": "repair_handoff", "reason": "REPAIR_POLICY_STEP_OUT_OF_ORDER"},
+        )
+    report = build_repair_handoff_blocked_report(
+        ctx.state,
+        doctor_verdict="",
+        resume_applied=True,
+        resume_from_state=ctx.resume_from_state,
+        repair_handoff=ctx.repair_handoff,
+        missing_inputs=ctx.continuation_missing_inputs,
+        selection_applied=ctx.selection_applied,
+        selected_mode=ctx.selected_mode,
+        selected_with_preparation=ctx.selected_with_preparation,
+        preparation_applied=False,
+        preparation_ready_for_closure=False,
+    )
+    return _resume_early_exit(
+        ctx, args, report, save_state_first=True,
+        print_summary={"result": "BLOCKED", "stopping_stage": "repair_handoff", "reason": "CONTINUATION_INPUTS_MISSING"},
+    )
+
+
+def _phase_resume_and_handoff(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Resume validation + repair packet + handoff section."""
+    if not ctx.resume_applied:
+        return None
+    for step in [_resume_load_packet, _resume_check_termination, _resume_validate_state, _resume_resolve_handoff, _resume_validate_inputs]:
+        code = step(ctx, args)
+        if code is not None:
+            return code
+    return None
+
+
+def _phase_mode_governance(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Mode selection check + prep output defaults."""
+    if ctx.selection_applied and ctx.selected_mode != "FULL_GOVERNED_PATH":
+        ctx.state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+        ctx.state["closure"]["blocking_reason"] = "MODE_SELECTION_NOT_GOVERNED"
+        ctx.state["closure"]["next_allowed_transition"] = "FOLLOW_SELECTED_MODE"
+        ctx.state["closure"]["narrow_next_safe_step"] = "follow the selected lighter mode instead of entering governed orchestration"
+        ctx.state["next_safe_step"] = ctx.state["closure"]["narrow_next_safe_step"]
+        report = {
+            "schema_version": "orchestration_report_v0",
+            "run_id": ctx.state["run_id"],
+            "task_class": ctx.state["task_class"],
             "result": "BLOCKED",
             "stopping_stage": "selection",
             "reason": "MODE_SELECTION_NOT_GOVERNED",
             "doctor_verdict": "",
-            "resume_applied": resume_applied,
-            "resume_from_state": resume_from_state,
-            "repair_handoff_applied": repair_handoff_applied,
-            "repair_handoff_from_state": repair_handoff["from_state"] if repair_handoff else "",
-            "repair_handoff_required_inputs": repair_handoff_required_input_ids(repair_handoff),
-            "missing_continuation_inputs": list(continuation_missing_inputs),
+            "resume_applied": ctx.resume_applied,
+            "resume_from_state": ctx.resume_from_state,
+            "repair_handoff_applied": ctx.repair_handoff_applied,
+            "repair_handoff_from_state": ctx.repair_handoff["from_state"] if ctx.repair_handoff else "",
+            "repair_handoff_required_inputs": repair_handoff_required_input_ids(ctx.repair_handoff),
+            "missing_continuation_inputs": list(ctx.continuation_missing_inputs),
             "selection_applied": True,
-            "selected_mode": selected_mode,
-            "selected_with_preparation": selected_with_preparation,
+            "selected_mode": ctx.selected_mode,
+            "selected_with_preparation": ctx.selected_with_preparation,
             "preparation_applied": False,
             "preparation_ready_for_closure": False,
             "bundle_status": "",
-            "closure_status": state["closure"]["status"],
+            "closure_status": ctx.state["closure"]["status"],
             "refresh_applied": False,
             "refresh_resulting_closure_status": "",
             "comparison_applied": False,
             "comparison_verdict": "",
             "blockers": ["MODE_SELECTION_NOT_GOVERNED"],
             "dominant_blocker": "MODE_SELECTION_NOT_GOVERNED",
-            "resulting_state": state["state"],
-            "next_safe_step": state["next_safe_step"],
+            "resulting_state": ctx.state["state"],
+            "next_safe_step": ctx.state["next_safe_step"],
         }
-        save_state(state_path, state)
+        save_state(ctx.state_path, ctx.state)
         save_json(Path(args.report_output), report)
         finalize_runtime_outputs(
             args,
-            state=state,
+            state=ctx.state,
             report=report,
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_receipt=selection_receipt,
-            starting_repair_packet=starting_repair_packet,
-            previous_repair_receipt=previous_repair_receipt,
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_receipt=ctx.selection_receipt,
+            starting_repair_packet=ctx.starting_repair_packet,
+            previous_repair_receipt=ctx.previous_repair_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "selection", "reason": "MODE_SELECTION_NOT_GOVERNED"}, ensure_ascii=True))
         return 0
-    if selected_with_preparation:
+    if ctx.selected_with_preparation:
         if not args.plan_output:
             args.plan_output = str(Path(args.report_output).with_name("plan.json"))
         if not args.preparation_receipt_output:
@@ -2017,46 +2019,56 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         if not args.preparation_artifact_root:
             args.preparation_artifact_root = str(Path(args.report_output).parent)
 
-    state = apply_target_surface(
-        state,
+    return None
+
+
+def _phase_target_surface(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Target surface attestation transition."""
+    ctx.state = apply_target_surface(
+        ctx.state,
         identity=args.execution_surface_identity,
         baseline_relation=args.baseline_identity,
     )
-    code, state, block_report = maybe_advance_to_target_surface_attested(state)
+    code, ctx.state, block_report = maybe_advance_to_target_surface_attested(ctx.state)
     if code != 0:
         report = build_transition_blocked_report(
-            state,
+            ctx.state,
             stopping_stage="target_surface_transition",
             doctor_verdict="",
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_applied=selection_applied,
-            selected_mode=selected_mode,
-            selected_with_preparation=selected_with_preparation,
-            preparation_applied=preparation_applied,
-            preparation_ready_for_closure=preparation_ready_for_closure,
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_applied=ctx.selection_applied,
+            selected_mode=ctx.selected_mode,
+            selected_with_preparation=ctx.selected_with_preparation,
+            preparation_applied=ctx.preparation_applied,
+            preparation_ready_for_closure=ctx.preparation_ready_for_closure,
             block_report=block_report,
         )
-        save_state(state_path, state)
+        save_state(ctx.state_path, ctx.state)
         save_json(Path(args.report_output), report)
         finalize_runtime_outputs(
             args,
-            state=state,
+            state=ctx.state,
             report=report,
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_receipt=selection_receipt,
-            starting_repair_packet=starting_repair_packet,
-            previous_repair_receipt=previous_repair_receipt,
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_receipt=ctx.selection_receipt,
+            starting_repair_packet=ctx.starting_repair_packet,
+            previous_repair_receipt=ctx.previous_repair_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "target_surface_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
-    save_state(state_path, state)
+    save_state(ctx.state_path, ctx.state)
 
+    return None
+
+
+def _phase_doctor(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Doctor execution + application."""
     doctor_args = [
         "--doctor-run-id", args.doctor_run_id,
         "--doctor-level", args.doctor_level,
@@ -2090,169 +2102,180 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
 
     code, _ = run_python_capture(DOCTOR, doctor_args)
     if code != 0:
-        report = build_error_report(state, reason="DOCTOR_EXECUTION_FAILED")
-        report["resume_applied"] = resume_applied
-        report["resume_from_state"] = resume_from_state
-        report["repair_handoff_applied"] = repair_handoff_applied
-        report["repair_handoff_from_state"] = repair_handoff["from_state"] if repair_handoff else ""
-        report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(repair_handoff)
-        report["missing_continuation_inputs"] = list(continuation_missing_inputs)
-        report["selection_applied"] = selection_applied
-        report["selected_mode"] = selected_mode
-        report["selected_with_preparation"] = selected_with_preparation
+        report = build_error_report(ctx.state, reason="DOCTOR_EXECUTION_FAILED")
+        report["resume_applied"] = ctx.resume_applied
+        report["resume_from_state"] = ctx.resume_from_state
+        report["repair_handoff_applied"] = ctx.repair_handoff_applied
+        report["repair_handoff_from_state"] = ctx.repair_handoff["from_state"] if ctx.repair_handoff else ""
+        report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(ctx.repair_handoff)
+        report["missing_continuation_inputs"] = list(ctx.continuation_missing_inputs)
+        report["selection_applied"] = ctx.selection_applied
+        report["selected_mode"] = ctx.selected_mode
+        report["selected_with_preparation"] = ctx.selected_with_preparation
         save_json(Path(args.report_output), report)
         finalize_runtime_outputs(
             args,
-            state=state,
+            state=ctx.state,
             report=report,
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_receipt=selection_receipt,
-            starting_repair_packet=starting_repair_packet,
-            previous_repair_receipt=previous_repair_receipt,
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_receipt=ctx.selection_receipt,
+            starting_repair_packet=ctx.starting_repair_packet,
+            previous_repair_receipt=ctx.previous_repair_receipt,
         )
         return code
 
-    doctor_record = load_json(Path(args.doctor_output))
-    code, state, block_report = apply_doctor(load_state(state_path), doctor_record)
+    ctx.doctor_record = load_json(Path(args.doctor_output))
+    code, ctx.state, block_report = apply_doctor(load_state(ctx.state_path), ctx.doctor_record)
     if code != 0:
-        save_state(state_path, state)
-        report = build_error_report(state, reason=block_report["dominant_blocker"], stopping_stage="doctor_apply")
-        report["resume_applied"] = resume_applied
-        report["resume_from_state"] = resume_from_state
-        report["repair_handoff_applied"] = repair_handoff_applied
-        report["repair_handoff_from_state"] = repair_handoff["from_state"] if repair_handoff else ""
-        report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(repair_handoff)
-        report["missing_continuation_inputs"] = list(continuation_missing_inputs)
-        report["selection_applied"] = selection_applied
-        report["selected_mode"] = selected_mode
-        report["selected_with_preparation"] = selected_with_preparation
+        save_state(ctx.state_path, ctx.state)
+        report = build_error_report(ctx.state, reason=block_report["dominant_blocker"], stopping_stage="doctor_apply")
+        report["resume_applied"] = ctx.resume_applied
+        report["resume_from_state"] = ctx.resume_from_state
+        report["repair_handoff_applied"] = ctx.repair_handoff_applied
+        report["repair_handoff_from_state"] = ctx.repair_handoff["from_state"] if ctx.repair_handoff else ""
+        report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(ctx.repair_handoff)
+        report["missing_continuation_inputs"] = list(ctx.continuation_missing_inputs)
+        report["selection_applied"] = ctx.selection_applied
+        report["selected_mode"] = ctx.selected_mode
+        report["selected_with_preparation"] = ctx.selected_with_preparation
         save_json(Path(args.report_output), report)
         finalize_runtime_outputs(
             args,
-            state=state,
+            state=ctx.state,
             report=report,
-            doctor_record=doctor_record,
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_receipt=selection_receipt,
-            starting_repair_packet=starting_repair_packet,
-            previous_repair_receipt=previous_repair_receipt,
+            doctor_record=ctx.doctor_record,
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_receipt=ctx.selection_receipt,
+            starting_repair_packet=ctx.starting_repair_packet,
+            previous_repair_receipt=ctx.previous_repair_receipt,
         )
         print(json.dumps({"result": "ERROR", "stopping_stage": "doctor_apply", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
-    state = apply_integrity(
-        state,
+
+    return None
+
+
+def _phase_integrity_and_readiness(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Integrity + advance to ready + doctor block check."""
+    ctx.state = apply_integrity(
+        ctx.state,
         prompt_identity=args.prompt_identity,
         task_identity=args.task_identity,
         bootstrap_provenance_ok=getattr(args, "bootstrap_provenance_ok", False),
         bootstrap_provenance_reason=getattr(args, "bootstrap_provenance_reason", ""),
     )
-    code, state, block_report = maybe_advance_to_ready(state)
+    code, ctx.state, block_report = maybe_advance_to_ready(ctx.state)
     if code != 0:
-        save_state(state_path, state)
+        save_state(ctx.state_path, ctx.state)
         report = build_transition_blocked_report(
-            state,
+            ctx.state,
             stopping_stage="ready_transition",
-            doctor_verdict=doctor_record["final_verdict"],
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_applied=selection_applied,
-            selected_mode=selected_mode,
-            selected_with_preparation=selected_with_preparation,
-            preparation_applied=preparation_applied,
-            preparation_ready_for_closure=preparation_ready_for_closure,
+            doctor_verdict=ctx.doctor_record["final_verdict"],
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_applied=ctx.selection_applied,
+            selected_mode=ctx.selected_mode,
+            selected_with_preparation=ctx.selected_with_preparation,
+            preparation_applied=ctx.preparation_applied,
+            preparation_ready_for_closure=ctx.preparation_ready_for_closure,
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
         finalize_runtime_outputs(
             args,
-            state=state,
+            state=ctx.state,
             report=report,
-            doctor_record=doctor_record,
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_receipt=selection_receipt,
-            starting_repair_packet=starting_repair_packet,
-            previous_repair_receipt=previous_repair_receipt,
+            doctor_record=ctx.doctor_record,
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_receipt=ctx.selection_receipt,
+            starting_repair_packet=ctx.starting_repair_packet,
+            previous_repair_receipt=ctx.previous_repair_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "ready_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
-    save_state(state_path, state)
-    if state["doctor"]["status"] != "PASS":
-        report = build_blocked_report(state, doctor_record)
-        report["resume_applied"] = resume_applied
-        report["resume_from_state"] = resume_from_state
-        report["repair_handoff_applied"] = repair_handoff_applied
-        report["repair_handoff_from_state"] = repair_handoff["from_state"] if repair_handoff else ""
-        report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(repair_handoff)
-        report["missing_continuation_inputs"] = list(continuation_missing_inputs)
-        report["selection_applied"] = selection_applied
-        report["selected_mode"] = selected_mode
-        report["selected_with_preparation"] = selected_with_preparation
+    save_state(ctx.state_path, ctx.state)
+    if ctx.state["doctor"]["status"] != "PASS":
+        report = build_blocked_report(ctx.state, ctx.doctor_record)
+        report["resume_applied"] = ctx.resume_applied
+        report["resume_from_state"] = ctx.resume_from_state
+        report["repair_handoff_applied"] = ctx.repair_handoff_applied
+        report["repair_handoff_from_state"] = ctx.repair_handoff["from_state"] if ctx.repair_handoff else ""
+        report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(ctx.repair_handoff)
+        report["missing_continuation_inputs"] = list(ctx.continuation_missing_inputs)
+        report["selection_applied"] = ctx.selection_applied
+        report["selected_mode"] = ctx.selected_mode
+        report["selected_with_preparation"] = ctx.selected_with_preparation
         save_json(Path(args.report_output), report)
         finalize_runtime_outputs(
             args,
-            state=state,
+            state=ctx.state,
             report=report,
-            doctor_record=doctor_record,
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_receipt=selection_receipt,
-            starting_repair_packet=starting_repair_packet,
-            previous_repair_receipt=previous_repair_receipt,
+            doctor_record=ctx.doctor_record,
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_receipt=ctx.selection_receipt,
+            starting_repair_packet=ctx.starting_repair_packet,
+            previous_repair_receipt=ctx.previous_repair_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "doctor"}, ensure_ascii=True))
         return 0
 
-    code, state, block_report = maybe_advance_to_execution_completed(load_state(state_path))
+    return None
+
+
+def _phase_execution_and_proof(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Execution transition, planning, bundle, preparation receipt, bundle application."""
+    code, ctx.state, block_report = maybe_advance_to_execution_completed(load_state(ctx.state_path))
     if code != 0:
-        save_state(state_path, state)
+        save_state(ctx.state_path, ctx.state)
         report = build_transition_blocked_report(
-            state,
+            ctx.state,
             stopping_stage="execution_transition",
-            doctor_verdict=doctor_record["final_verdict"],
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_applied=selection_applied,
-            selected_mode=selected_mode,
-            selected_with_preparation=selected_with_preparation,
-            preparation_applied=preparation_applied,
-            preparation_ready_for_closure=preparation_ready_for_closure,
+            doctor_verdict=ctx.doctor_record["final_verdict"],
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_applied=ctx.selection_applied,
+            selected_mode=ctx.selected_mode,
+            selected_with_preparation=ctx.selected_with_preparation,
+            preparation_applied=ctx.preparation_applied,
+            preparation_ready_for_closure=ctx.preparation_ready_for_closure,
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
         finalize_runtime_outputs(
             args,
-            state=state,
+            state=ctx.state,
             report=report,
-            doctor_record=doctor_record,
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_receipt=selection_receipt,
+            doctor_record=ctx.doctor_record,
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_receipt=ctx.selection_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "execution_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
-    save_state(state_path, state)
+    save_state(ctx.state_path, ctx.state)
 
     if args.plan_output:
         artifact_root = args.preparation_artifact_root or str(Path(args.plan_output).parent)
         plan_args = [
-            "--run-id", state["run_id"],
+            "--run-id", ctx.state["run_id"],
             "--task-class", args.task_class,
             "--artifact-root", artifact_root,
             "--baseline-identity", args.baseline_identity,
@@ -2263,25 +2286,25 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ]
         code, _ = run_python_capture(PROOF_PLAN, plan_args)
         if code != 0:
-            report = build_error_report(state, reason="PROOF_PLAN_EXECUTION_FAILED", stopping_stage="preparation")
-            report["resume_applied"] = resume_applied
-            report["resume_from_state"] = resume_from_state
-            report["repair_handoff_applied"] = repair_handoff_applied
-            report["repair_handoff_from_state"] = repair_handoff["from_state"] if repair_handoff else ""
-            report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(repair_handoff)
-            report["missing_continuation_inputs"] = list(continuation_missing_inputs)
-            report["selection_applied"] = selection_applied
-            report["selected_mode"] = selected_mode
-            report["selected_with_preparation"] = selected_with_preparation
+            report = build_error_report(ctx.state, reason="PROOF_PLAN_EXECUTION_FAILED", stopping_stage="preparation")
+            report["resume_applied"] = ctx.resume_applied
+            report["resume_from_state"] = ctx.resume_from_state
+            report["repair_handoff_applied"] = ctx.repair_handoff_applied
+            report["repair_handoff_from_state"] = ctx.repair_handoff["from_state"] if ctx.repair_handoff else ""
+            report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(ctx.repair_handoff)
+            report["missing_continuation_inputs"] = list(ctx.continuation_missing_inputs)
+            report["selection_applied"] = ctx.selection_applied
+            report["selected_mode"] = ctx.selected_mode
+            report["selected_with_preparation"] = ctx.selected_with_preparation
             save_json(Path(args.report_output), report)
             return code
-        preparation_applied = True
+        ctx.preparation_applied = True
 
     bundle_args = [
         "--final-result", args.final_result,
         "--task-class", args.task_class,
         "--output", args.bundle_output,
-        "--run-id", state["run_id"],
+        "--run-id", ctx.state["run_id"],
         "--baseline-identity", args.baseline_identity,
         "--execution-surface-identity", args.execution_surface_identity,
         "--prompt-identity", args.prompt_identity,
@@ -2295,7 +2318,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     if code != 0:
         return code
 
-    bundle = load_json(Path(args.bundle_output))
+    ctx.bundle = load_json(Path(args.bundle_output))
     if args.plan_output and args.preparation_receipt_output:
         code, _ = run_python_capture(
             PREPARATION_RECEIPT,
@@ -2306,59 +2329,64 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
             ],
         )
         if code != 0:
-            report = build_error_report(state, reason="PREPARATION_RECEIPT_EXECUTION_FAILED", stopping_stage="preparation")
-            report["resume_applied"] = resume_applied
-            report["resume_from_state"] = resume_from_state
-            report["repair_handoff_applied"] = repair_handoff_applied
-            report["repair_handoff_from_state"] = repair_handoff["from_state"] if repair_handoff else ""
-            report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(repair_handoff)
-            report["missing_continuation_inputs"] = list(continuation_missing_inputs)
-            report["selection_applied"] = selection_applied
-            report["selected_mode"] = selected_mode
-            report["selected_with_preparation"] = selected_with_preparation
+            report = build_error_report(ctx.state, reason="PREPARATION_RECEIPT_EXECUTION_FAILED", stopping_stage="preparation")
+            report["resume_applied"] = ctx.resume_applied
+            report["resume_from_state"] = ctx.resume_from_state
+            report["repair_handoff_applied"] = ctx.repair_handoff_applied
+            report["repair_handoff_from_state"] = ctx.repair_handoff["from_state"] if ctx.repair_handoff else ""
+            report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(ctx.repair_handoff)
+            report["missing_continuation_inputs"] = list(ctx.continuation_missing_inputs)
+            report["selection_applied"] = ctx.selection_applied
+            report["selected_mode"] = ctx.selected_mode
+            report["selected_with_preparation"] = ctx.selected_with_preparation
             save_json(Path(args.report_output), report)
             return code
-        preparation_receipt = load_json(Path(args.preparation_receipt_output))
-        preparation_ready_for_closure = preparation_receipt["ready_for_closure"]
+        ctx.preparation_receipt = load_json(Path(args.preparation_receipt_output))
+        ctx.preparation_ready_for_closure = ctx.preparation_receipt["ready_for_closure"]
 
-    code, state, block_report = apply_bundle(load_state(state_path), bundle)
+    code, ctx.state, block_report = apply_bundle(load_state(ctx.state_path), ctx.bundle)
     if code != 0:
-        save_state(state_path, state)
+        save_state(ctx.state_path, ctx.state)
         report = build_transition_blocked_report(
-            state,
+            ctx.state,
             stopping_stage="proof_bundle_transition",
-            doctor_verdict=doctor_record["final_verdict"],
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_applied=selection_applied,
-            selected_mode=selected_mode,
-            selected_with_preparation=selected_with_preparation,
-            preparation_applied=preparation_applied,
-            preparation_ready_for_closure=preparation_ready_for_closure,
+            doctor_verdict=ctx.doctor_record["final_verdict"],
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_applied=ctx.selection_applied,
+            selected_mode=ctx.selected_mode,
+            selected_with_preparation=ctx.selected_with_preparation,
+            preparation_applied=ctx.preparation_applied,
+            preparation_ready_for_closure=ctx.preparation_ready_for_closure,
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
         finalize_runtime_outputs(
             args,
-            state=state,
+            state=ctx.state,
             report=report,
-            doctor_record=doctor_record,
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_receipt=selection_receipt,
-            preparation_receipt=preparation_receipt,
-            bundle=bundle,
-            starting_repair_packet=starting_repair_packet,
-            previous_repair_receipt=previous_repair_receipt,
+            doctor_record=ctx.doctor_record,
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_receipt=ctx.selection_receipt,
+            preparation_receipt=ctx.preparation_receipt,
+            bundle=ctx.bundle,
+            starting_repair_packet=ctx.starting_repair_packet,
+            previous_repair_receipt=ctx.previous_repair_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "proof_bundle_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
-    save_state(state_path, state)
+    save_state(ctx.state_path, ctx.state)
 
+    return None
+
+
+def _phase_closure(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Acceptance validation + closure application."""
     closure_args = ["--state-file", args.state_file, "--bundle-file", args.bundle_output, "--output", args.closure_output]
     if args.acceptance_validation_output and args.project_profile_file:
         if args.acceptance_criteria_file and Path(args.acceptance_criteria_file).exists():
@@ -2382,55 +2410,54 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     if code != 0:
         return code
 
-    closure = load_json(Path(args.closure_output))
-    code, state, block_report = apply_closure(load_state(state_path), closure)
+    ctx.closure = load_json(Path(args.closure_output))
+    code, ctx.state, block_report = apply_closure(load_state(ctx.state_path), ctx.closure)
     if code != 0:
-        save_state(state_path, state)
+        save_state(ctx.state_path, ctx.state)
         report = build_transition_blocked_report(
-            state,
+            ctx.state,
             stopping_stage="closure_transition",
-            doctor_verdict=doctor_record["final_verdict"],
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_applied=selection_applied,
-            selected_mode=selected_mode,
-            selected_with_preparation=selected_with_preparation,
-            preparation_applied=preparation_applied,
-            preparation_ready_for_closure=preparation_ready_for_closure,
+            doctor_verdict=ctx.doctor_record["final_verdict"],
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_applied=ctx.selection_applied,
+            selected_mode=ctx.selected_mode,
+            selected_with_preparation=ctx.selected_with_preparation,
+            preparation_applied=ctx.preparation_applied,
+            preparation_ready_for_closure=ctx.preparation_ready_for_closure,
             block_report=block_report,
         )
         save_json(Path(args.report_output), report)
         finalize_runtime_outputs(
             args,
-            state=state,
+            state=ctx.state,
             report=report,
-            doctor_record=doctor_record,
-            resume_applied=resume_applied,
-            resume_from_state=resume_from_state,
-            repair_handoff=repair_handoff,
-            missing_continuation_inputs=continuation_missing_inputs,
-            selection_receipt=selection_receipt,
-            preparation_receipt=preparation_receipt,
-            bundle=bundle,
-            closure=closure,
-            starting_repair_packet=starting_repair_packet,
-            previous_repair_receipt=previous_repair_receipt,
+            doctor_record=ctx.doctor_record,
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_receipt=ctx.selection_receipt,
+            preparation_receipt=ctx.preparation_receipt,
+            bundle=ctx.bundle,
+            closure=ctx.closure,
+            starting_repair_packet=ctx.starting_repair_packet,
+            previous_repair_receipt=ctx.previous_repair_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "closure_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
-    save_state(state_path, state)
+    save_state(ctx.state_path, ctx.state)
 
-    state = load_state(state_path)
-    refresh_report = None
-    comparison = None
-    refresh_applied = False
-    refresh_resulting_closure_status = ""
-    comparison_applied = False
-    comparison_verdict = ""
-    stopping_stage = "closure" if closure["closure_status"] != "ACCEPTED" else "accepted"
-    reason = closure["blocking_reason"] or "NONE"
+    return None
+
+
+def _phase_refresh_and_comparison(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Refresh + comparison."""
+    ctx.state = load_state(ctx.state_path)
+    ctx.stopping_stage = "closure" if ctx.closure["closure_status"] != "ACCEPTED" else "accepted"
+    ctx.reason = ctx.closure["blocking_reason"] or "NONE"
 
     if args.refresh_output and args.refresh_event_type:
         refresh_args = [
@@ -2452,12 +2479,12 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         code, _ = run_python_capture(REFRESH, refresh_args)
         if code != 0:
             return code
-        state = load_state(state_path)
-        refresh_report = load_json(Path(args.refresh_output))
-        refresh_applied = True
-        refresh_resulting_closure_status = refresh_report["resulting_closure_status"]
-        stopping_stage = "refresh"
-        reason = state["closure"]["blocking_reason"] or "NONE"
+        ctx.state = load_state(ctx.state_path)
+        ctx.refresh_report = load_json(Path(args.refresh_output))
+        ctx.refresh_applied = True
+        ctx.refresh_resulting_closure_status = ctx.refresh_report["resulting_closure_status"]
+        ctx.stopping_stage = "refresh"
+        ctx.reason = ctx.state["closure"]["blocking_reason"] or "NONE"
 
     if args.comparison_output and args.baseline_file and args.synrail_file:
         try:
@@ -2467,62 +2494,92 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         code, _ = run_python_capture(harness, ["--baseline-file", args.baseline_file, "--synrail-file", args.synrail_file, "--output", args.comparison_output])
         if code != 0:
             return code
-        comparison = load_json(Path(args.comparison_output))
-        comparison_applied = True
-        comparison_verdict = comparison["verdict"]
-        stopping_stage = "comparison"
+        ctx.comparison = load_json(Path(args.comparison_output))
+        ctx.comparison_applied = True
+        ctx.comparison_verdict = ctx.comparison["verdict"]
+        ctx.stopping_stage = "comparison"
 
+    return None
+
+
+def _phase_final_report(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
+    """Final report building."""
     report = {
         "schema_version": "orchestration_report_v0",
-        "run_id": state["run_id"],
-        "task_class": state["task_class"],
+        "run_id": ctx.state["run_id"],
+        "task_class": ctx.state["task_class"],
         "result": "OK",
-        "stopping_stage": stopping_stage,
-        "reason": reason,
-        "doctor_verdict": doctor_record["final_verdict"],
-        "resume_applied": resume_applied,
-        "resume_from_state": resume_from_state,
-        "repair_handoff_applied": repair_handoff_applied,
-        "repair_handoff_from_state": repair_handoff["from_state"] if repair_handoff else "",
-        "repair_handoff_required_inputs": repair_handoff_required_input_ids(repair_handoff),
-        "missing_continuation_inputs": list(continuation_missing_inputs),
-        "selection_applied": selection_applied,
-        "selected_mode": selected_mode,
-        "selected_with_preparation": selected_with_preparation,
-        "preparation_applied": preparation_applied,
-        "preparation_ready_for_closure": preparation_ready_for_closure,
-        "bundle_status": bundle["status"],
-        "closure_status": state["closure"]["status"],
-        "refresh_applied": refresh_applied,
-        "refresh_resulting_closure_status": refresh_resulting_closure_status,
-        "comparison_applied": comparison_applied,
-        "comparison_verdict": comparison_verdict,
+        "stopping_stage": ctx.stopping_stage,
+        "reason": ctx.reason,
+        "doctor_verdict": ctx.doctor_record["final_verdict"],
+        "resume_applied": ctx.resume_applied,
+        "resume_from_state": ctx.resume_from_state,
+        "repair_handoff_applied": ctx.repair_handoff_applied,
+        "repair_handoff_from_state": ctx.repair_handoff["from_state"] if ctx.repair_handoff else "",
+        "repair_handoff_required_inputs": repair_handoff_required_input_ids(ctx.repair_handoff),
+        "missing_continuation_inputs": list(ctx.continuation_missing_inputs),
+        "selection_applied": ctx.selection_applied,
+        "selected_mode": ctx.selected_mode,
+        "selected_with_preparation": ctx.selected_with_preparation,
+        "preparation_applied": ctx.preparation_applied,
+        "preparation_ready_for_closure": ctx.preparation_ready_for_closure,
+        "bundle_status": ctx.bundle["status"],
+        "closure_status": ctx.state["closure"]["status"],
+        "refresh_applied": ctx.refresh_applied,
+        "refresh_resulting_closure_status": ctx.refresh_resulting_closure_status,
+        "comparison_applied": ctx.comparison_applied,
+        "comparison_verdict": ctx.comparison_verdict,
         "blockers": [],
         "dominant_blocker": "",
-        "resulting_state": state["state"],
-        "next_safe_step": state["next_safe_step"],
+        "resulting_state": ctx.state["state"],
+        "next_safe_step": ctx.state["next_safe_step"],
     }
     save_json(Path(args.report_output), report)
     finalize_runtime_outputs(
         args,
-        state=state,
+        state=ctx.state,
         report=report,
-        doctor_record=doctor_record,
-        resume_applied=resume_applied,
-        resume_from_state=resume_from_state,
-        repair_handoff=repair_handoff,
-        missing_continuation_inputs=continuation_missing_inputs,
-        selection_receipt=selection_receipt,
-        preparation_receipt=preparation_receipt,
-        bundle=bundle,
-        closure=closure,
-        refresh_report=refresh_report,
-        comparison=comparison,
-        starting_repair_packet=starting_repair_packet,
-        previous_repair_receipt=previous_repair_receipt,
+        doctor_record=ctx.doctor_record,
+        resume_applied=ctx.resume_applied,
+        resume_from_state=ctx.resume_from_state,
+        repair_handoff=ctx.repair_handoff,
+        missing_continuation_inputs=ctx.continuation_missing_inputs,
+        selection_receipt=ctx.selection_receipt,
+        preparation_receipt=ctx.preparation_receipt,
+        bundle=ctx.bundle,
+        closure=ctx.closure,
+        refresh_report=ctx.refresh_report,
+        comparison=ctx.comparison,
+        starting_repair_packet=ctx.starting_repair_packet,
+        previous_repair_receipt=ctx.previous_repair_receipt,
     )
 
-    print(json.dumps({"result": "OK", "closure_status": state["closure"]["status"]}, ensure_ascii=True))
+    print(json.dumps({"result": "OK", "closure_status": ctx.state["closure"]["status"]}, ensure_ascii=True))
+    return 0
+
+
+def cmd_orchestrate(args: argparse.Namespace) -> int:
+    ctx = OrchestrationContext(
+        state=load_state(Path(args.state_file)),
+        state_path=Path(args.state_file),
+        resume_applied=bool(args.resume_from_state),
+        resume_from_state=args.resume_from_state or "",
+    )
+    for phase in [
+        _phase_init,
+        _phase_resume_and_handoff,
+        _phase_mode_governance,
+        _phase_target_surface,
+        _phase_doctor,
+        _phase_integrity_and_readiness,
+        _phase_execution_and_proof,
+        _phase_closure,
+        _phase_refresh_and_comparison,
+        _phase_final_report,
+    ]:
+        code = phase(ctx, args)
+        if code is not None:
+            return code
     return 0
 
 

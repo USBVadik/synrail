@@ -149,6 +149,8 @@ def probe_baseline_identity(args: argparse.Namespace) -> tuple[dict, str, str]:
             return gate("FAIL", "target identity artifact is missing or empty"), "", args.expected_target_identity or ""
 
     expected_target_identity = (args.expected_target_identity or "").strip()
+    if expected_target_identity and not observed_target_identity:
+        return gate("FAIL", "expected target identity specified but target identity artifact not provided"), "", expected_target_identity
     if observed_target_identity and expected_target_identity and observed_target_identity != expected_target_identity:
         return (
             gate("FAIL", "target identity artifact does not match the expected target surface"),

@@ -54,9 +54,16 @@ def first_semantic_step(semantically_insufficient_sections: list[str]) -> str:
 def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = None) -> dict:
     missing_sections = list(bundle.get("missing_sections", []))
     semantically_insufficient_sections = list(bundle.get("semantically_insufficient_sections", []))
-    run_id = state.get("run_id", bundle.get("run_id", ""))
+    state_run_id = state.get("run_id", "")
+    bundle_run_id = bundle.get("run_id", "")
+    run_id = state_run_id or bundle_run_id
     task_class = state.get("task_class", bundle.get("task_class", ""))
     criteria_validation = criteria_validation or {}
+
+    # Cross-artifact identity binding: if both state and bundle carry a run_id,
+    # they must agree.  A mismatch means the bundle was built from a different
+    # run and cannot be trusted for closure.
+    run_id_mismatch = bool(state_run_id and bundle_run_id and state_run_id != bundle_run_id)
 
     verdict = {
         "schema_version": "closure_verdict_v0",
@@ -72,6 +79,12 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         "acceptance_criteria_status": criteria_validation.get("status", ""),
         "acceptance_criteria_reason": criteria_validation.get("reason", ""),
     }
+
+    if run_id_mismatch:
+        verdict["blocking_reason"] = "RUN_ID_MISMATCH"
+        verdict["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
+        verdict["narrow_next_safe_step"] = "rebuild the proof bundle for the current run"
+        return verdict
 
     criteria_status = criteria_validation.get("status", "")
     if criteria_status == "STALE":
