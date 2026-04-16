@@ -1155,13 +1155,21 @@ def cmd_start(args: argparse.Namespace) -> int:
 
     existing_proof = existing_preferred_proof_artifacts(root)
     if existing_proof:
-        if args.mode == "dev":
-            print(json.dumps({"result": "ERROR", "reason": "CONTROLLED_START_REQUIRES_CLEAN_PROOF_SURFACE", "existing_proof_artifacts": existing_proof}, ensure_ascii=True))
-        else:
-            print("Synrail could not start this run in controlled mode yet.")
-            print("What happened: proof artifacts already exist, so this looks like a post-hoc run instead of a controlled start.")
-            print("What to do next: clear those proof artifacts or begin a fresh run before trusting Synrail acceptance.")
-        return 2
+        previous_state = existing_state.get("state", "") if existing_state else ""
+        if previous_state in ("CLOSURE_ACCEPTED", "CLOSURE_REJECTED"):
+            for _aid, path in preferred_proof_artifact_paths(root).items():
+                path.unlink(missing_ok=True)
+            proof_request_path = alpha_file(root, "proof_request")
+            proof_request_path.unlink(missing_ok=True)
+            existing_proof = []
+        if existing_proof:
+            if args.mode == "dev":
+                print(json.dumps({"result": "ERROR", "reason": "CONTROLLED_START_REQUIRES_CLEAN_PROOF_SURFACE", "existing_proof_artifacts": existing_proof}, ensure_ascii=True))
+            else:
+                print("Synrail could not start this run in controlled mode yet.")
+                print("What happened: proof artifacts already exist, so this looks like a post-hoc run instead of a controlled start.")
+                print("What to do next: clear those proof artifacts or begin a fresh run before trusting Synrail acceptance.")
+            return 2
 
     forwarded = [
         "init",
