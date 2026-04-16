@@ -390,6 +390,7 @@ class DeployGateTests(unittest.TestCase):
             DEPLOY_EXAMPLES / "deploy_with_synrail_guard.sh",
             DEPLOY_EXAMPLES / "deploy_with_synrail_wrapper.sh",
             DEPLOY_EXAMPLES / "pm2_pre_restart_with_synrail.sh",
+            DEPLOY_EXAMPLES / "systemd_restart_with_synrail.sh",
         ]
         for script in scripts:
             self.assertTrue(script.exists(), f"missing example script: {script}")
@@ -405,6 +406,12 @@ class DeployGateTests(unittest.TestCase):
                 "synrail_deploy_guard.sh" in text or "synrail_guarded_side_effect_v0.sh" in text,
                 f"example script does not reference a Synrail guard helper: {script}",
             )
+
+        override = DEPLOY_EXAMPLES / "systemd_service_override.conf"
+        self.assertTrue(override.exists(), f"missing systemd override example: {override}")
+        override_text = override.read_text()
+        self.assertIn("ExecStartPre=", override_text)
+        self.assertIn("synrail_deploy_guard.sh", override_text)
 
 
 if __name__ == "__main__":

@@ -20,6 +20,10 @@ Included examples:
   - uses the wrapper helper for each side effect
 - `pm2_pre_restart_with_synrail.sh`
   - smallest host-local restart gate
+- `systemd_restart_with_synrail.sh`
+  - smallest host-local guarded `systemctl restart` example
+- `systemd_service_override.conf`
+  - example `systemd` drop-in showing `ExecStartPre` with the Synrail deploy guard
 
 Related docs:
 
