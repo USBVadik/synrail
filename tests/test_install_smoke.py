@@ -106,6 +106,37 @@ class InstallSmokeTests(unittest.TestCase):
                 project_root,
             )
 
+    def test_supported_installer_can_install_agent_files_into_project(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_install_agent_files_smoke_") as tmpdir:
+            root = Path(tmpdir)
+            venv_dir = root / "venv"
+            project_root = root / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "GEMINI.md").write_text("# Existing Gemini Context\n\nKeep this repo focused.\n")
+
+            result = subprocess.run(
+                [
+                    "python3",
+                    str(INSTALLER),
+                    "--venv",
+                    str(venv_dir),
+                    "--project-root",
+                    str(project_root),
+                ],
+                check=True,
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertIn("Agent adoption files are ready.", result.stdout)
+            self.assertIn("Agent files installed into:", result.stdout)
+            self.assertTrue((project_root / "AGENTS.md").exists())
+            gemini = (project_root / "GEMINI.md").read_text()
+            self.assertIn("# Existing Gemini Context", gemini)
+            self.assertIn("<!-- SYNRAIL_GEMINI_START -->", gemini)
+            self.assertIn("Use Synrail as the default local control path", gemini)
+
 
 if __name__ == "__main__":
     unittest.main()

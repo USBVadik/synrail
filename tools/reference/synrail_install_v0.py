@@ -97,6 +97,15 @@ def verify_install(synrail_bin: Path) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Install the current Synrail alpha lane into a local venv without pip build isolation.")
     parser.add_argument("--venv", default=".venv", help="Virtualenv path to create or reuse. Default: .venv")
+    parser.add_argument(
+        "--project-root",
+        help="Optional project root where the freshly installed synrail should immediately run `install-agent-files`.",
+    )
+    parser.add_argument(
+        "--force-agent-files",
+        action="store_true",
+        help="If --project-root is set, pass --force to `synrail install-agent-files` after creating the venv.",
+    )
     parser.add_argument("--skip-verify", action="store_true", help="Skip the final `synrail start --help` verification.")
     return parser
 
@@ -115,12 +124,34 @@ def main(argv: list[str] | None = None) -> int:
     if not args.skip_verify:
         verify_install(synrail_bin)
 
+    project_root: Path | None = None
+    if args.project_root:
+        project_root = Path(args.project_root).resolve()
+        project_root.mkdir(parents=True, exist_ok=True)
+        install_cmd = [
+            str(synrail_bin),
+            "install-agent-files",
+            "--project-root",
+            str(project_root),
+        ]
+        if args.force_agent_files:
+            install_cmd.append("--force")
+        subprocess.run(
+            install_cmd,
+            check=True,
+            capture_output=False,
+            text=True,
+        )
+
     rel_venv = os.path.relpath(venv_root, Path.cwd())
     rel_synrail = os.path.relpath(synrail_bin, Path.cwd())
     print("Synrail alpha install complete.")
     print(f"Virtualenv: {rel_venv}")
     print(f"Repo path linked via: {pth_file}")
     print(f"Command: {rel_synrail}")
+    if project_root is not None:
+        rel_project = os.path.relpath(project_root, Path.cwd())
+        print(f"Agent files installed into: {rel_project}")
     print("Next step: run `synrail start --artifact-root .synrail --project-root \"$(pwd)\" --task-identity \"...\"` inside your project.")
     return 0
 

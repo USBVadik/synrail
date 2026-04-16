@@ -10,13 +10,13 @@ python3 tools/reference/synrail_install_v0.py --venv .venv
 
 ## Optional One-Time Repo Setup For Local Agents
 
-If you want local coding agents to discover Synrail naturally in this repo, write the repo-native hints once:
+If you want local coding agents to discover Synrail naturally in this repo, bootstrap the repo-native hints in one step:
 
 ```bash
-synrail install-agent-files --project-root "$(pwd)"
+python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd)"
 ```
 
-This creates missing `AGENTS.md` / `GEMINI.md` files in the repo root and appends a managed Synrail block to existing ones. If you later rerun with `--force`, Synrail first writes a timestamped `.synrail.bak.*` backup of the existing policy file before replacing it. It is optional for humans, but useful when you want the local agent workflow to start in controlled mode without adding Synrail instructions to every prompt.
+This installs the current Synrail CLI into `.venv` and immediately creates missing `AGENTS.md` / `GEMINI.md` files in the repo root or appends a managed Synrail block to existing ones. If you later rerun with `--force`, Synrail first writes a timestamped `.synrail.bak.*` backup of the existing policy file before replacing it. It is optional for humans, but useful when you want the local agent workflow to start in controlled mode without adding Synrail instructions to every prompt.
 
 ## Five Steps
 
