@@ -16,6 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ALPHA_ENTRY = REPO_ROOT / "alpha.py"
 DEPLOY_GUARD = REPO_ROOT / "tools" / "reference" / "synrail_deploy_guard.sh"
 GUARDED_SIDE_EFFECT = REPO_ROOT / "tools" / "reference" / "synrail_guarded_side_effect_v0.sh"
+DEPLOY_EXAMPLES = REPO_ROOT / "examples" / "deploy_guard"
 
 
 def load_json(path: Path) -> dict:
@@ -383,6 +384,27 @@ class DeployGateTests(unittest.TestCase):
             )
             self.assertEqual(0, guarded.returncode)
             self.assertIn("SIDE_EFFECT_RAN", guarded.stdout)
+
+    def test_deploy_guard_examples_parse_and_reference_guard_helpers(self) -> None:
+        scripts = [
+            DEPLOY_EXAMPLES / "deploy_with_synrail_guard.sh",
+            DEPLOY_EXAMPLES / "deploy_with_synrail_wrapper.sh",
+            DEPLOY_EXAMPLES / "pm2_pre_restart_with_synrail.sh",
+        ]
+        for script in scripts:
+            self.assertTrue(script.exists(), f"missing example script: {script}")
+            parsed = subprocess.run(
+                ["bash", "-n", str(script)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(0, parsed.returncode, parsed.stderr)
+            text = script.read_text()
+            self.assertTrue(
+                "synrail_deploy_guard.sh" in text or "synrail_guarded_side_effect_v0.sh" in text,
+                f"example script does not reference a Synrail guard helper: {script}",
+            )
 
 
 if __name__ == "__main__":

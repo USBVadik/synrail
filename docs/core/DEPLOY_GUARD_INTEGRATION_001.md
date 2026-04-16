@@ -62,6 +62,7 @@ Current reusable helpers:
 
 - [`tools/reference/synrail_deploy_guard.sh`](/Users/usbdick/Documents/New%20project/synrail/tools/reference/synrail_deploy_guard.sh)
 - [`tools/reference/synrail_guarded_side_effect_v0.sh`](/Users/usbdick/Documents/New%20project/synrail/tools/reference/synrail_guarded_side_effect_v0.sh)
+- [`examples/deploy_guard/README.md`](/Users/usbdick/Documents/New%20project/synrail/examples/deploy_guard/README.md)
 
 ## Smallest Manual Pattern
 
