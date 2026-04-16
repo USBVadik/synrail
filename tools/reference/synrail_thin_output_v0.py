@@ -279,6 +279,23 @@ def current_repair_action_instruction(repair_packet: dict | None) -> str:
     )
 
 
+SEMANTIC_SECTION_HINTS = {
+    "modified_files": "record the actual changed files in the final result artifact",
+    "diff_provenance": "capture non-empty diff or provenance evidence for the changed files",
+    "readback": "record substantive readback from the changed sections on the attested surface",
+    "scenario_proof": "record an explicit scenario-proof result for the attested target surface",
+    "artifact_identity": "repair baseline, surface, prompt, and task identity fields",
+    "cleanup_status": "record a successful cleanup status for the execution surface",
+}
+
+
+def thin_section_guidance(state: dict) -> list[str]:
+    guidance: list[str] = []
+    for section in state.get("proof_bundle", {}).get("semantically_insufficient_sections", []):
+        guidance.append(f"{section}: {SEMANTIC_SECTION_HINTS.get(section, humanize_token(section))}")
+    return guidance
+
+
 def action_now_text(*, next_command: str, outcome_class: str, report: dict, repair_packet: dict | None) -> str:
     focused_action = current_repair_action_instruction(repair_packet)
     if next_command == "synrail repair-step" and focused_action:
@@ -425,6 +442,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         suggested_command = "use synrail restore or rerun from a clearer starting point before trusting continuation"
     next_step = report.get("next_safe_step", "") or state.get("next_safe_step", "")
     focused_summary = current_repair_focus_summary(repair_packet)
+    thin_guidance = thin_section_guidance(state) if outcome_class == "PROOF_THIN" else []
     if outcome_class == "ACCEPTED":
         next_step = "No repair step is required."
     what_to_do_next = human_next_step(
@@ -473,6 +491,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "action_now": action_now,
         "current_step_action_instruction": current_repair_action_instruction(repair_packet),
         "focused_repair_summary": focused_summary,
+        "thin_section_guidance": thin_guidance,
         "resume_available": can_resume,
         "next_command": next_command,
         "restore_command": restore_command,

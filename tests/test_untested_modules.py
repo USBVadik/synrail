@@ -63,6 +63,7 @@ from synrail_validate_v0 import validate_document
 
 # --- thin_output imports ---
 from synrail_thin_output_v0 import (
+    build_record as build_thin_output_record,
     classify_outcome,
     status_label,
     human_next_step,
@@ -410,6 +411,24 @@ class TestBuildRepairPolicy(unittest.TestCase):
         policy = build_repair_policy(resumability, hints)
         self.assertEqual("NON_RESUMABLE_NEXT_STEP", policy["policy_type"])
         self.assertEqual("TERMINAL_NEXT_STEP", policy["ordered_steps"][0]["status"])
+
+    def test_final_result_only_partial_proof_promotes_final_result_repair(self) -> None:
+        resumability = {
+            "status": "REPAIRABLE",
+            "recommended_repair_order": ["complete_missing_proof_sections", "rebuild_proof_bundle", "rerun_closure"],
+            "active_pressures": ["PARTIAL_PROOF"],
+        }
+        hints = [
+            {
+                "artifact_id": "final_result_artifact",
+                "repair_step": "repair_final_result_artifact",
+                "mapped_inputs": ["final_result"],
+            }
+        ]
+        policy = build_repair_policy(resumability, hints)
+        self.assertEqual("repair_final_result_artifact", policy["next_step_id"])
+        self.assertEqual("READY_NOW", policy["ordered_steps"][0]["status"])
+        self.assertEqual(["final_result"], policy["ordered_steps"][0]["required_inputs"])
 
 
 class TestBuildRequiredInputIds(unittest.TestCase):
@@ -1051,6 +1070,34 @@ class TestSummaryFor(unittest.TestCase):
     def test_proof_thin(self) -> None:
         summary, diagnosis = summary_for("PROOF_THIN", restore_available=False, recovery=None, report={}, repair_packet=None)
         self.assertIn("not strong enough", summary.lower())
+
+
+class TestThinOutputBuildRecord(unittest.TestCase):
+    """build_record should surface exact thin proof sections."""
+
+    def test_includes_thin_section_guidance(self) -> None:
+        state = default_state("R1", "bounded_change")
+        state["state"] = "PROOF_BUNDLE_STRUCTURALLY_COMPLETE"
+        state["proof_bundle"]["status"] = "STRUCTURALLY_COMPLETE"
+        state["proof_bundle"]["semantically_insufficient_sections"] = ["diff_provenance", "scenario_proof"]
+        report = {"reason": "SEMANTIC_PROOF_INSUFFICIENT", "result": "NON_GREEN"}
+        record = build_thin_output_record(
+            state=state,
+            report=report,
+            mode="default",
+            repair_packet=None,
+            doctor=None,
+            checkpoint=None,
+            recovery=None,
+        )
+        self.assertIn(
+            "diff_provenance: capture non-empty diff or provenance evidence for the changed files",
+            record["thin_section_guidance"],
+        )
+        self.assertIn(
+            "scenario_proof: record an explicit scenario-proof result for the attested target surface",
+            record["thin_section_guidance"],
+        )
 
 
 class TestCheckpointRestoreAvailable(unittest.TestCase):

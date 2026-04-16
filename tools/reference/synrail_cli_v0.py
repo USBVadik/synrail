@@ -1106,6 +1106,10 @@ def print_thin_output_summary(output_file: Path) -> None:
     focused_repair_summary = payload.get("focused_repair_summary", "")
     if focused_repair_summary:
         lines.append(f"Repair target: {focused_repair_summary}")
+    thin_sections = list(payload.get("thin_section_guidance", []))
+    if thin_sections:
+        lines.append("Thin proof sections:")
+        lines.extend([f"- {item}" for item in thin_sections])
     next_command = payload.get("next_command", "")
     restore_command = payload.get("restore_command", "")
     if next_command:

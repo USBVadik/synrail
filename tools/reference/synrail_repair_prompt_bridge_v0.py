@@ -95,7 +95,7 @@ def human_scope_label(scope_id: str, *, repair_packet: dict | None = None) -> st
 
 def human_required_input(input_id: str) -> str:
     labels = {
-        "clean_surface_confirmation": "confirmation that the workspace is clean and safe to use",
+        "clean_surface_confirmation": "confirmation that the workspace is clean and safe to use (`--clean-surface` on the next retry)",
         "helper_path": "the blocking helper path",
         "prompt_identity_file": "the original task request record",
         "target_identity_file": "the task target record",
@@ -130,6 +130,8 @@ def focused_step_details(repair_packet: dict, current_step_id: str, stale_subsur
         }
         if subsurface_id:
             return labels.get(subsurface_id, human_step_label(current_step_id)), subsurface_id, target_path
+    if current_step_id == "restore_readiness_truth" and subsurface_id:
+        return human_step_label(current_step_id), subsurface_id, target_path
     return human_step_label(current_step_id), "", ""
 
 

@@ -638,6 +638,16 @@ def build_repair_policy(resumability: dict, artifact_quality_hints: list[dict]) 
             add_unique(step_inputs, input_id)
 
     ordered_ids = list(resumability["recommended_repair_order"])
+    stale_artifact_ids = {hint["artifact_id"] for hint in artifact_quality_hints}
+    if (
+        ordered_ids
+        and ordered_ids[0] == "complete_missing_proof_sections"
+        and "final_result_artifact" in stale_artifact_ids
+        and "supporting_proof_artifacts" not in stale_artifact_ids
+    ):
+        ordered_ids = ["repair_final_result_artifact"] + [
+            step_id for step_id in ordered_ids if step_id != "repair_final_result_artifact"
+        ]
     policy_type = "MULTI_STEP_REPAIR" if resumability["status"] == "REPAIRABLE" else "NON_RESUMABLE_NEXT_STEP"
     for index, step_id in enumerate(ordered_ids):
         if resumability["status"] == "REPAIRABLE":

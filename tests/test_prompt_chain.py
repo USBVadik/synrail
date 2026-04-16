@@ -144,7 +144,8 @@ class TestHumanScopeLabel(unittest.TestCase):
 class TestHumanRequiredInput(unittest.TestCase):
     def test_clean_surface(self) -> None:
         result = human_required_input("clean_surface_confirmation")
-        self.assertEqual("confirmation that the workspace is clean and safe to use", result)
+        self.assertIn("workspace is clean and safe to use", result)
+        self.assertIn("--clean-surface", result)
 
     def test_unknown_input(self) -> None:
         result = human_required_input("some_new_input")
@@ -218,6 +219,16 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertGreater(len(record["prompt"]), 0)
         self.assertGreater(len(record["must_pass"]), 0)
         self.assertGreater(len(record["forbidden_scope"]), 0)
+
+    def test_readiness_focus_mentions_clean_surface_flag(self) -> None:
+        packet = _minimal_packet(
+            required_inputs=["clean_surface_confirmation"],
+            subsurface_ids=["clean_execution_surface_record"],
+        )
+        record = build_prompt_bridge(repair_packet=packet)
+        self.assertIn("--clean-surface", record["current_step_focus_summary"])
+        self.assertIn("--clean-surface", record["current_step_action_instruction"])
+        self.assertTrue(any("--clean-surface" in item for item in record["required_input_labels"]))
 
     def test_prompt_contains_guardrails(self) -> None:
         packet = _minimal_packet()

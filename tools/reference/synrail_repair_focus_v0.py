@@ -32,6 +32,8 @@ def proof_target_paths(*, artifact_root: str, target_path: str) -> dict[str, str
 
 
 def focused_repair_summary(*, current_step_id: str, current_step_subsurface_id: str, current_step_target_path: str) -> str:
+    if current_step_subsurface_id == "clean_execution_surface_record":
+        return "confirm the workspace is clean for this run via --clean-surface on the next retry"
     if current_step_subsurface_id == "final_result_payload":
         return f"update the result payload in {current_step_target_path}"
     if current_step_subsurface_id == "diff_provenance_record":
@@ -100,6 +102,12 @@ def focused_repair_surface(
         ]
         if len(matching) == 1:
             return matching[0]
+
+    if current_step_id == "restore_readiness_truth" and "clean_execution_surface_record" in stale_set:
+        return {
+            "current_step_subsurface_id": "clean_execution_surface_record",
+            "current_step_target_path": "",
+        }
 
     return {
         "current_step_subsurface_id": "",
