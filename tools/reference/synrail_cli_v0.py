@@ -240,6 +240,137 @@ def save_alpha_target_identity_file(root: Path, *, target_identity: str) -> None
         (root / "target_identity.txt").write_text(text + "\n")
 
 
+def relative_artifact_root_for_project(*, project_root: Path, artifact_root: str) -> str:
+    artifact_path = Path(artifact_root)
+    if artifact_path.is_absolute():
+        try:
+            return str(artifact_path.relative_to(project_root))
+        except ValueError:
+            return str(artifact_path)
+    return str(artifact_path)
+
+
+def render_agent_policy_markdown(*, artifact_root: str) -> str:
+    lines = [
+        "# Agent Workflow",
+        "",
+        "This repo uses Synrail to keep one bounded local change inside one controlled run.",
+        "",
+        "## Before You Edit",
+        "",
+        "1. Start one controlled run before mutating code:",
+        "```bash",
+        f'ARTIFACT_ROOT="$(pwd)/{artifact_root}"',
+        'synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Describe the bounded local change."',
+        "```",
+        "",
+        "2. Keep the change local and bounded to the stated task.",
+        f"3. Edit the starter proof files under `{artifact_root}/` in place as the work becomes real.",
+        "4. Run the local commands needed to verify the change honestly.",
+        "",
+        "## Before You Claim Success",
+        "",
+        "```bash",
+        'synrail check --artifact-root "$ARTIFACT_ROOT"',
+        "```",
+        "",
+        "If Synrail is non-green, run:",
+        "",
+        "```bash",
+        'synrail repair-step --artifact-root "$ARTIFACT_ROOT"',
+        "```",
+        "",
+        "Then repair only the named gap and re-check.",
+        "",
+        "## Important",
+        "",
+        "- Do not skip Synrail and try to legalize edits afterward.",
+        "- Do not claim success without real local verification.",
+        "- If `synrail` is unavailable on this machine, stop and report that the control tool is missing instead of bypassing it.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def render_gemini_policy_markdown(*, artifact_root: str) -> str:
+    lines = [
+        "# Gemini Workflow",
+        "",
+        "Use Synrail as the default local control path for this repo.",
+        "",
+        "## Start",
+        "",
+        "Before editing code, start one controlled run:",
+        "",
+        "```bash",
+        f'ARTIFACT_ROOT="$(pwd)/{artifact_root}"',
+        'synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Describe the bounded local change."',
+        "```",
+        "",
+        "## Work",
+        "",
+        f"- Keep edits bounded and local to this repo.",
+        f"- Update the starter proof files in `{artifact_root}/` as the change becomes real.",
+        "- Run the local verification commands needed for the task.",
+        "",
+        "## Finish",
+        "",
+        "```bash",
+        'synrail check --artifact-root "$ARTIFACT_ROOT"',
+        "```",
+        "",
+        "If non-green, run `synrail repair-step --artifact-root \"$ARTIFACT_ROOT\"`, repair only the named gap, and re-check.",
+        "",
+        "Do not bypass Synrail and do not claim success without real local verification.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def write_agent_policy_file(path: Path, content: str, *, force: bool) -> tuple[bool, str]:
+    if path.exists():
+        current = path.read_text()
+        if current == content:
+            return False, "unchanged"
+        if not force:
+            raise FileExistsError(f"{path.name} already exists with different content")
+    path.write_text(content)
+    return True, "written"
+
+
+def cmd_install_agent_files(args: argparse.Namespace) -> int:
+    project_root = Path(args.project_root or ".").resolve()
+    artifact_root = relative_artifact_root_for_project(
+        project_root=project_root,
+        artifact_root=args.artifact_root,
+    )
+    agents_path = project_root / "AGENTS.md"
+    gemini_path = project_root / "GEMINI.md"
+
+    agents_content = render_agent_policy_markdown(artifact_root=artifact_root)
+    gemini_content = render_gemini_policy_markdown(artifact_root=artifact_root)
+
+    try:
+        agents_written, agents_state = write_agent_policy_file(agents_path, agents_content, force=args.force)
+        gemini_written, gemini_state = write_agent_policy_file(gemini_path, gemini_content, force=args.force)
+    except FileExistsError as exc:
+        print("Synrail did not overwrite an existing agent policy file.")
+        print(f"What happened: {exc}")
+        print("What to do next: rerun with --force if you want Synrail to replace the existing file.")
+        return 2
+
+    print("Agent adoption files are ready.")
+    print(f"Project root: {project_root}")
+    print(f"Artifact root hint: {artifact_root}")
+    print(f"AGENTS.md: {agents_state}")
+    print(f"GEMINI.md: {gemini_state}")
+    if agents_written or gemini_written:
+        print("What to do next: commit these files into the repo so local agents discover Synrail before editing.")
+    else:
+        print("What to do next: keep these files committed so local agents continue discovering the same Synrail entrypoint.")
+    return 0
+
+
 def load_text_if_exists(path: Path) -> str:
     if not path.exists():
         return ""
@@ -3179,6 +3310,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_start.add_argument("--mode", default="default", choices=["default", "dev"])
     p_start.add_argument("--output")
     p_start.set_defaults(func=cmd_start)
+
+    p_install_agent_files = sub.add_parser("install-agent-files")
+    p_install_agent_files.add_argument("--project-root", default=".")
+    p_install_agent_files.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_install_agent_files.add_argument("--force", action="store_true")
+    p_install_agent_files.set_defaults(func=cmd_install_agent_files)
 
     p_refresh_acceptance = sub.add_parser("refresh-acceptance", aliases=["acceptance-refresh"])
     p_refresh_acceptance.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)

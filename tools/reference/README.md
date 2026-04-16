@@ -45,6 +45,12 @@ The current verified local install path is:
 python3 tools/reference/synrail_install_v0.py --venv .venv
 ```
 
+If you want local coding agents to discover Synrail in the current repo without per-task prompt instructions, write the repo-native hints once:
+
+```bash
+synrail install-agent-files --project-root "$(pwd)"
+```
+
 The current verified restore-capable alpha lane is:
 
 ```bash

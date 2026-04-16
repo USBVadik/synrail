@@ -8,6 +8,16 @@ Synrail governs one bounded change at a time. It blocks false-green closure and 
 python3 tools/reference/synrail_install_v0.py --venv .venv
 ```
 
+## Optional One-Time Repo Setup For Local Agents
+
+If you want local coding agents to discover Synrail naturally in this repo, write the repo-native hints once:
+
+```bash
+synrail install-agent-files --project-root "$(pwd)"
+```
+
+This creates `AGENTS.md` and `GEMINI.md` in the repo root. It is optional for humans, but useful when you want the local agent workflow to start in controlled mode without adding Synrail instructions to every prompt.
+
 ## Five Steps
 
 ```bash

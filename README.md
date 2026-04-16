@@ -6,6 +6,14 @@ Proof-first control kernel for agentic work.
 
 **New here?** Start with [Your First Synrail Run](docs/core/FIRST_RUN_GUIDE.md) -- one page, five steps, ten minutes.
 
+**Using a local coding agent in another repo?** Add repo-native hints once:
+
+```bash
+synrail install-agent-files --project-root "$(pwd)"
+```
+
+This writes `AGENTS.md` and `GEMINI.md` so local agents discover the same `synrail start -> work -> synrail check` path without per-task prompt instructions.
+
 ## Wedge
 
 Claims are not accepted reality without proof.

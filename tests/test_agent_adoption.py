@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""Smoke tests for repo-native agent adoption files."""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+ALPHA_ENTRY = REPO_ROOT / "alpha.py"
+
+
+class AgentAdoptionTests(unittest.TestCase):
+    def run_alpha(self, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        env = dict(os.environ)
+        existing = env.get("PYTHONPATH", "")
+        repo_path = str(REPO_ROOT)
+        env["PYTHONPATH"] = repo_path if not existing else repo_path + os.pathsep + existing
+        return subprocess.run(
+            [sys.executable, str(ALPHA_ENTRY), *args],
+            cwd=cwd or REPO_ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+
+    def test_install_agent_files_writes_repo_native_guidance(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_agent_adoption_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            result = self.run_alpha(
+                "install-agent-files",
+                "--project-root",
+                str(project_root),
+                "--artifact-root",
+                ".synrail",
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("Agent adoption files are ready.", result.stdout)
+
+            agents = (project_root / "AGENTS.md").read_text()
+            gemini = (project_root / "GEMINI.md").read_text()
+
+            self.assertIn("synrail start --artifact-root", agents)
+            self.assertIn("synrail check --artifact-root", agents)
+            self.assertIn("Do not skip Synrail", agents)
+            self.assertIn('ARTIFACT_ROOT="$(pwd)/.synrail"', agents)
+
+            self.assertIn("Use Synrail as the default local control path", gemini)
+            self.assertIn("synrail start --artifact-root", gemini)
+            self.assertIn("synrail repair-step --artifact-root", gemini)
+
+    def test_install_agent_files_is_idempotent_and_requires_force_for_conflicts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_agent_adoption_force_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            first = self.run_alpha(
+                "install-agent-files",
+                "--project-root",
+                str(project_root),
+            )
+            self.assertEqual(0, first.returncode, first.stdout + first.stderr)
+
+            second = self.run_alpha(
+                "install-agent-files",
+                "--project-root",
+                str(project_root),
+            )
+            self.assertEqual(0, second.returncode, second.stdout + second.stderr)
+            self.assertIn("AGENTS.md: unchanged", second.stdout)
+            self.assertIn("GEMINI.md: unchanged", second.stdout)
+
+            (project_root / "AGENTS.md").write_text("# custom policy\n")
+
+            blocked = self.run_alpha(
+                "install-agent-files",
+                "--project-root",
+                str(project_root),
+            )
+            self.assertEqual(2, blocked.returncode, blocked.stdout + blocked.stderr)
+            self.assertIn("did not overwrite", blocked.stdout)
+            self.assertIn("--force", blocked.stdout)
+
+            forced = self.run_alpha(
+                "install-agent-files",
+                "--project-root",
+                str(project_root),
+                "--force",
+            )
+            self.assertEqual(0, forced.returncode, forced.stdout + forced.stderr)
+            self.assertIn("AGENTS.md: written", forced.stdout)
+            self.assertIn("synrail start --artifact-root", (project_root / "AGENTS.md").read_text())
+
+
+if __name__ == "__main__":
+    unittest.main()
