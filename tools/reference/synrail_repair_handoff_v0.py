@@ -180,6 +180,9 @@ def make_hint(
 
 def merged_missing_sections(state: dict) -> list[str]:
     missing_sections = list(state.get("proof_bundle", {}).get("missing_sections", []))
+    for section in state.get("proof_bundle", {}).get("semantically_insufficient_sections", []):
+        if section not in missing_sections:
+            missing_sections.append(section)
     for section in state.get("closure", {}).get("missing_sections", []):
         if section not in missing_sections:
             missing_sections.append(section)
@@ -410,7 +413,7 @@ def build_artifact_quality_hints(state: dict) -> list[dict]:
         )
 
     missing_sections = merged_missing_sections(state)
-    final_result_parts = [part for part in ["final_result_payload", "diff_provenance_record", "artifact_identity_record", "cleanup_status_record"] if False]
+    final_result_parts = [part for part in ["final_result_payload", "scope_alignment_record", "diff_provenance_record", "artifact_identity_record", "cleanup_status_record"] if False]
     final_result_subsurfaces: list[dict] = []
     if "final_result" in missing_sections or state.get("closure", {}).get("blocking_reason") in {"ARTIFACT_BUNDLE_MISSING", "INVALID_PROOF_BUNDLE"}:
         add_unique(final_result_parts, "final_result_payload")
@@ -430,6 +433,16 @@ def build_artifact_quality_hints(state: dict) -> list[dict]:
                 status="STALE",
                 mapped_inputs=["final_result"],
                 why="diff provenance still cannot be reconstructed from the current final result artifact",
+            )
+        )
+    if "scope_alignment" in missing_sections:
+        add_unique(final_result_parts, "scope_alignment_record")
+        final_result_subsurfaces.append(
+            make_subsurface(
+                "scope_alignment_record",
+                status="STALE",
+                mapped_inputs=["final_result"],
+                why="the current proof still includes adjacent edits outside the requested additive scope",
             )
         )
     if "artifact_identity" in missing_sections:

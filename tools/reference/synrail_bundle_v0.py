@@ -21,6 +21,7 @@ REQUIRED_SECTION_NAMES = [
 
 SEMANTIC_SECTION_STEPS = {
     "modified_files": "record the actual changed files in the final result artifact, or mark the run as already_satisfied only when the requested state was already present before edits",
+    "scope_alignment": "keep the implementation inside the requested additive scope and remove unrelated adjacent rewrites or spacing tweaks",
     "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record, or use a truthful already_satisfied observation record when no edit was required",
     "readback": "record substantive readback from the changed sections on the attested surface",
     "scenario_proof": "record an explicit scenario-proof result for the attested target surface",
@@ -102,6 +103,16 @@ def contains_patch_lines(value: str) -> bool:
     )
 
 
+def removed_patch_lines(value: str) -> list[str]:
+    removed: list[str] = []
+    for raw_line in value.splitlines():
+        if raw_line.startswith(("diff --git", "@@", "---", "+++")):
+            continue
+        if raw_line.startswith("-"):
+            removed.append(raw_line[1:].strip())
+    return removed
+
+
 def non_empty_string(value: object) -> str:
     if not isinstance(value, str):
         return ""
@@ -120,6 +131,62 @@ def diff_mentions_modified_files(value: str, modified_files: list[str]) -> bool:
     if not modified_files:
         return False
     return references_modified_file(value, modified_files)
+
+
+def additive_only_scope_requested(*values: object) -> bool:
+    text = " ".join(non_empty_string(value).lower() for value in values if non_empty_string(value))
+    if not text:
+        return False
+    additive_verbs = ["add", "insert", "append"]
+    small_target = [
+        "subtitle",
+        "caption",
+        "label",
+        "helper text",
+        "tagline",
+        "badge",
+        "note",
+        "copy",
+        "text",
+    ]
+    broader_change_markers = [
+        "margin",
+        "padding",
+        "spacing",
+        "class",
+        "style",
+        "layout",
+        "css",
+        "refactor",
+        "rename",
+        "remove",
+        "replace",
+        "rewrite",
+        "restyle",
+        "cleanup",
+        "format",
+    ]
+    asks_for_addition = any(marker in text for marker in additive_verbs)
+    names_small_target = any(marker in text for marker in small_target)
+    broadens_scope = any(marker in text for marker in broader_change_markers)
+    return asks_for_addition and names_small_target and not broadens_scope
+
+
+def scope_alignment_is_semantically_sufficient(
+    *,
+    change_disposition: str,
+    git_diff: str,
+    diff_provenance_record: object,
+    task_identity_text: str,
+) -> tuple[bool, bool]:
+    evaluated = additive_only_scope_requested(task_identity_text)
+    if not evaluated or change_disposition == "already_satisfied":
+        return evaluated, True
+    if removed_patch_lines(git_diff):
+        return True, False
+    if isinstance(diff_provenance_record, dict) and non_empty_string(diff_provenance_record.get("removed_line", "")):
+        return True, False
+    return True, True
 
 
 def structured_diff_provenance_is_semantically_sufficient(
@@ -316,6 +383,13 @@ def build_bundle(args: argparse.Namespace) -> dict:
     )
     prompt_identity = first_non_empty(args.prompt_identity, artifact_identity_record.get("prompt_identity", ""))
     task_identity = first_non_empty(args.task_identity, artifact_identity_record.get("task_identity", ""))
+    scope_task_text = first_non_empty(task_identity, prompt_identity)
+    scope_alignment_evaluated, scope_alignment_semantically_sufficient = scope_alignment_is_semantically_sufficient(
+        change_disposition=change_disposition,
+        git_diff=git_diff,
+        diff_provenance_record=diff_provenance_record,
+        task_identity_text=scope_task_text,
+    )
     identity_values = [
         baseline_identity,
         execution_surface_identity,
@@ -345,6 +419,10 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "present": isinstance(modified_files, list),
             "count": len(modified_files) if isinstance(modified_files, list) else 0,
             "semantically_sufficient": modified_files_semantically_sufficient,
+        },
+        "scope_alignment": {
+            "evaluated": scope_alignment_evaluated,
+            "semantically_sufficient": scope_alignment_semantically_sufficient,
         },
         "diff_provenance": {
             "present": "git_diff" in final or "diff_provenance" in final,
@@ -489,6 +567,8 @@ def build_bundle(args: argparse.Namespace) -> dict:
     if not missing and final_present and final_parseable:
         if not modified_files_semantically_sufficient:
             semantically_insufficient_sections.append("modified_files")
+        if scope_alignment_evaluated and not scope_alignment_semantically_sufficient:
+            semantically_insufficient_sections.append("scope_alignment")
         if not diff_semantically_sufficient:
             semantically_insufficient_sections.append("diff_provenance")
         if not readback_semantically_sufficient:
@@ -525,6 +605,17 @@ def build_bundle(args: argparse.Namespace) -> dict:
                 )
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["modified_files"],
+        ),
+        semantic_trace_entry(
+            section="scope_alignment",
+            evaluated=not missing and scope_alignment_evaluated,
+            semantically_sufficient=scope_alignment_semantically_sufficient,
+            why=(
+                "the task reads like an add-only request and the proof stays additive without rewriting adjacent existing lines"
+                if scope_alignment_semantically_sufficient
+                else "the task reads like an add-only request, but the proof shows adjacent rewrites or removals beyond the requested insertion"
+            ),
+            recommended_action=SEMANTIC_SECTION_STEPS["scope_alignment"],
         ),
         semantic_trace_entry(
             section="diff_provenance",

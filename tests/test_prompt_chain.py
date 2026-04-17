@@ -297,6 +297,19 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertIn("artifact_identity.baseline_identity", record["prompt"])
         self.assertIn("low-level bundle-check reproducible", record["prompt"])
 
+    def test_scope_alignment_subsurface_includes_checklist(self) -> None:
+        packet = _minimal_packet(
+            current_step_id="repair_final_result_artifact",
+            reason="SEMANTIC_PROOF_INSUFFICIENT",
+            subsurface_ids=["scope_alignment_record"],
+            stale_artifact_ids=["final_result_artifact"],
+        )
+        record = build_prompt_bridge(repair_packet=packet)
+        self.assertEqual("scope_alignment_record", record["current_step_subsurface_id"])
+        self.assertIn("Keep only the user-requested additive change in scope", record["prompt"])
+        self.assertIn("margin, padding, class, or layout", record["prompt"])
+        self.assertIn("synrail final-result-template", record["prompt"])
+
     def test_scenario_subsurface_includes_checklist(self) -> None:
         packet = _minimal_packet(
             current_step_id="complete_missing_proof_sections",

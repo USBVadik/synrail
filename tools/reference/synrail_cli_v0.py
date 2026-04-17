@@ -287,8 +287,30 @@ def policy_command_examples_for_binary(*, artifact_root: str, command: str) -> d
     }
 
 
-def render_agent_policy_markdown(*, artifact_root: str, command: str = "synrail") -> str:
+def policy_workspace_note_lines(*, workspace_isolation_note: str, prefer_runtime_helper: bool, command: str) -> list[str]:
+    lines: list[str] = []
+    if workspace_isolation_note:
+        lines.append(f"- {workspace_isolation_note}")
+    if prefer_runtime_helper:
+        lines.append(
+            f"- For UI or rendered-output tasks, prefer `{command} runtime-helper` and a simple curl or template-render check before browser automation."
+        )
+    return lines
+
+
+def render_agent_policy_markdown(
+    *,
+    artifact_root: str,
+    command: str = "synrail",
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
     commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
+    note_lines = policy_workspace_note_lines(
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+        command=command,
+    )
     lines = [
         "# Agent Workflow",
         "",
@@ -333,11 +355,25 @@ def render_agent_policy_markdown(*, artifact_root: str, command: str = "synrail"
         "- If `synrail` is unavailable on this machine, stop and report that the control tool is missing instead of bypassing it.",
         "",
     ]
+    lines.extend(note_lines)
+    if note_lines:
+        lines.append("")
     return "\n".join(lines)
 
 
-def render_gemini_policy_markdown(*, artifact_root: str, command: str = "synrail") -> str:
+def render_gemini_policy_markdown(
+    *,
+    artifact_root: str,
+    command: str = "synrail",
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
     commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
+    note_lines = policy_workspace_note_lines(
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+        command=command,
+    )
     lines = [
         "# Gemini Workflow",
         "",
@@ -378,11 +414,25 @@ def render_gemini_policy_markdown(*, artifact_root: str, command: str = "synrail
         "Do not bypass Synrail and do not claim success without real local verification.",
         "",
     ]
+    lines.extend(note_lines)
+    if note_lines:
+        lines.append("")
     return "\n".join(lines)
 
 
-def render_claude_policy_markdown(*, artifact_root: str, command: str = "synrail") -> str:
+def render_claude_policy_markdown(
+    *,
+    artifact_root: str,
+    command: str = "synrail",
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
     commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
+    note_lines = policy_workspace_note_lines(
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+        command=command,
+    )
     lines = [
         "# Claude Workflow",
         "",
@@ -423,11 +473,27 @@ def render_claude_policy_markdown(*, artifact_root: str, command: str = "synrail
         "Do not bypass Synrail and do not claim success without real local verification.",
         "",
     ]
+    lines.extend(note_lines)
+    if note_lines:
+        lines.append("")
     return "\n".join(lines)
 
 
-def render_agent_policy_block(*, title: str, intro: str, artifact_root: str, command: str = "synrail") -> str:
+def render_agent_policy_block(
+    *,
+    title: str,
+    intro: str,
+    artifact_root: str,
+    command: str = "synrail",
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
     commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
+    note_lines = policy_workspace_note_lines(
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+        command=command,
+    )
     lines = [
         f"## {title}",
         "",
@@ -455,6 +521,7 @@ def render_agent_policy_block(*, title: str, intro: str, artifact_root: str, com
         "",
         "Do not bypass Synrail and do not claim success without real local verification.",
     ]
+    lines.extend(note_lines)
     return "\n".join(lines)
 
 
@@ -526,30 +593,54 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         artifact_root=args.artifact_root,
     )
     command = preferred_synrail_command()
+    git_context = workspace_git_context(project_root)
+    workspace_isolation_note = git_context.get("workspace_isolation_note", "")
+    prefer_runtime_helper = project_prefers_runtime_evidence(project_root)
     agents_path = project_root / "AGENTS.md"
     gemini_path = project_root / "GEMINI.md"
     claude_path = project_root / "CLAUDE.md"
 
-    agents_content = render_agent_policy_markdown(artifact_root=artifact_root, command=command)
-    gemini_content = render_gemini_policy_markdown(artifact_root=artifact_root, command=command)
-    claude_content = render_claude_policy_markdown(artifact_root=artifact_root, command=command)
+    agents_content = render_agent_policy_markdown(
+        artifact_root=artifact_root,
+        command=command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+    )
+    gemini_content = render_gemini_policy_markdown(
+        artifact_root=artifact_root,
+        command=command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+    )
+    claude_content = render_claude_policy_markdown(
+        artifact_root=artifact_root,
+        command=command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+    )
     agents_block = render_agent_policy_block(
         title="Synrail Local Workflow",
         intro="This repo uses Synrail to keep one bounded local change inside one controlled run.",
         artifact_root=artifact_root,
         command=command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
     )
     gemini_block = render_agent_policy_block(
         title="Synrail Local Workflow",
         intro="Use Synrail as the default local control path for this repo.",
         artifact_root=artifact_root,
         command=command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
     )
     claude_block = render_agent_policy_block(
         title="Synrail Local Workflow",
         intro="Use Synrail as the default local control path for this repo.",
         artifact_root=artifact_root,
         command=command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
     )
 
     agents_written, agents_state, agents_backup = write_agent_policy_file(
@@ -575,6 +666,10 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
     print(f"Project root: {project_root}")
     print(f"Artifact root hint: {artifact_root}")
     print(f"Synrail command: {command}")
+    if workspace_isolation_note:
+        print(f"Workspace note: {workspace_isolation_note}")
+    if prefer_runtime_helper:
+        print(f"Runtime note: use `{command} runtime-helper` for a small curl or template-render verification path.")
     print(f"AGENTS.md: {agents_state}")
     print(f"GEMINI.md: {gemini_state}")
     print(f"CLAUDE.md: {claude_state}")
@@ -655,8 +750,45 @@ def candidate_paths(project_root: Path, root: Path, names: list[str]) -> list[st
     return [str(path) for path in ordered]
 
 
+def find_enclosing_git_root(project_root: Path) -> Path | None:
+    resolved = project_root.resolve()
+    for candidate in [resolved, *resolved.parents]:
+        if (candidate / ".git").exists():
+            return candidate
+    return None
+
+
+def workspace_git_context(project_root: Path) -> dict:
+    enclosing_git_root = find_enclosing_git_root(project_root)
+    if enclosing_git_root is None:
+        return {
+            "workspace_git_mode": "no_git",
+            "workspace_git_root": "",
+            "parent_git_root": "",
+            "workspace_isolation_note": "",
+        }
+    if enclosing_git_root == project_root.resolve():
+        return {
+            "workspace_git_mode": "workspace_git_root",
+            "workspace_git_root": str(enclosing_git_root),
+            "parent_git_root": "",
+            "workspace_isolation_note": "",
+        }
+    return {
+        "workspace_git_mode": "nested_parent_git",
+        "workspace_git_root": str(enclosing_git_root),
+        "parent_git_root": str(enclosing_git_root),
+        "workspace_isolation_note": (
+            f"Parent git repo detected above the project root at {enclosing_git_root}. "
+            "Treat only this project root as the execution surface for the run. "
+            "If git status or git diff climbs to the parent repo, do not use that parent output as proof here."
+        ),
+    }
+
+
 def build_project_profile(*, project_root: Path, root: Path, task_class: str) -> dict:
     project_type = detect_project_type(project_root)
+    git_context = workspace_git_context(project_root)
     return {
         "schema_version": "alpha_project_profile_v0",
         "project_root": str(project_root),
@@ -672,6 +804,7 @@ def build_project_profile(*, project_root: Path, root: Path, task_class: str) ->
         "final_result_candidates": candidate_paths(project_root, root, ["final_result.json", "final_result.txt", "result.json", "result.txt"]),
         "readback_candidates": candidate_paths(project_root, root, ["readback.json", "readback.txt"]),
         "scenario_proof_candidates": candidate_paths(project_root, root, ["scenario_proof.json", "scenario_proof.md", "scenario_proof.txt"]),
+        **git_context,
     }
 
 
@@ -1329,6 +1462,10 @@ def print_init_summary(*, root: Path, state_file: Path) -> None:
         "Quick status: " + shell_command(root, project_root=Path.cwd().resolve()),
         'Start a controlled run: ' + shell_command(root, "start", "Describe the bounded local change.", project_root=Path.cwd().resolve()),
     ]
+    if profile.get("workspace_isolation_note", ""):
+        lines.append("Workspace note: " + profile["workspace_isolation_note"])
+    if profile.get("prefers_runtime_evidence", False):
+        lines.append("Runtime helper: synrail runtime-helper")
     checkpoint_suggestion = shell_command(root, "save", project_root=Path.cwd().resolve())
     lines.append(f"Optional safety fallback: {checkpoint_suggestion}")
     print("\n".join(lines))
@@ -1338,6 +1475,7 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
     state = load_json(state_file)
     proof_request = load_bootstrap_json(alpha_file(root, "proof_request"))
     preferred = proof_request.get("preferred_artifacts", {})
+    profile = load_project_profile(root) or {}
     lines = [
         "Controlled run started.",
         "Do this now: Edit only the starter proof files below in place. Leave every other surface unchanged.",
@@ -1350,6 +1488,10 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
         "Then run: " + shell_command(root, "check", project_root=project_root),
         "Optional safety fallback: " + shell_command(root, "save", project_root=project_root),
     ]
+    if profile.get("workspace_isolation_note", ""):
+        lines.append("Workspace note: " + profile["workspace_isolation_note"])
+    if profile.get("prefers_runtime_evidence", False):
+        lines.append("Runtime helper: synrail runtime-helper")
     print("\n".join(lines))
 
 
@@ -1455,6 +1597,7 @@ def build_workspace_status(root: Path, *, project_root: Path, state_path: Path |
         "artifact_root": display_path_from_base(root, base=project_root),
         "project_type": profile.get("project_type", detect_project_type(project_root)),
         "agent_wiring": agent_wiring_label(project_root),
+        "workspace_warning": profile.get("workspace_isolation_note", ""),
         "active_run": format_run_label(state) if active_run else "none",
         "last_run": format_run_label(state),
         "next_step": human_next_step,
@@ -1479,6 +1622,8 @@ def print_workspace_dashboard(summary: dict) -> None:
         f"Start new run: {summary['start_command']}",
         f"Full help: {summary['help_command']}",
     ]
+    if summary.get("workspace_warning", ""):
+        lines.insert(8, f"Workspace note: {summary['workspace_warning']}")
     print("\n".join(lines))
 
 
@@ -1492,6 +1637,18 @@ def final_result_template_payload(*, root: Path | None) -> dict:
     baseline_identity = (profile.get("baseline_identity", "") or "").strip()
     execution_surface_identity = (profile.get("execution_surface_identity", "") or "").strip()
     changed_file = "path/to/changed_file.ext"
+    notes = [
+        "Replace the sample changed file path with the actual file paths for this run.",
+        "Set change_disposition to already_satisfied only when the requested state was already present before any edit.",
+        "Keep the scope tight: do not smuggle adjacent spacing, class, or layout tweaks into a task that only asked you to add or insert a small surface change.",
+        "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers when you can produce one.",
+        "If git_diff is unavailable, keep diff_provenance explicit with changed_file, changed lines, and verification command plus result.",
+        "For an already_satisfied no-op, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.",
+        "artifact_identity can mirror the current run identities so low-level bundle-check stays reproducible too.",
+        "Use synrail explain-proof after a check to see exact semantic gaps and reasons.",
+    ]
+    if profile.get("workspace_isolation_note", ""):
+        notes.append(profile["workspace_isolation_note"])
     return {
         "request_id": state.get("run_id", "RUN_ID_FOR_THIS_CONTROLLED_RUN"),
         "task_class": state.get("task_class", DEFAULT_ALPHA_TASK_CLASS),
@@ -1532,17 +1689,53 @@ def final_result_template_payload(*, root: Path | None) -> dict:
         "_synrail": {
             "template_mode": True,
             "task_identity": task_identity,
-            "notes": [
-                "Replace the sample changed file path with the actual file paths for this run.",
-                "Set change_disposition to already_satisfied only when the requested state was already present before any edit.",
-                "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers when you can produce one.",
-                "If git_diff is unavailable, keep diff_provenance explicit with changed_file, changed lines, and verification command plus result.",
-                "For an already_satisfied no-op, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.",
-                "artifact_identity can mirror the current run identities so low-level bundle-check stays reproducible too.",
-                "Use synrail explain-proof after a check to see exact semantic gaps and reasons.",
-            ],
+            "notes": notes,
         },
     }
+
+
+def runtime_helper_text(*, root: Path | None) -> str:
+    profile = load_project_profile(root) or {}
+    project_root = Path(profile.get("project_root", "") or Path.cwd()).resolve()
+    project_type = profile.get("project_type", detect_project_type(project_root))
+    prefers_runtime = bool(profile.get("prefers_runtime_evidence", False) or project_prefers_runtime_evidence(project_root))
+    lines = [
+        "Synrail runtime helper",
+        f"Project root: {display_path(project_root)}",
+    ]
+    workspace_note = (profile.get("workspace_isolation_note", "") or "").strip()
+    if workspace_note:
+        lines.append(f"Workspace note: {workspace_note}")
+    if not prefers_runtime:
+        lines.extend(
+            [
+                "This repo does not look render-first.",
+                "Use the smallest local verification you already trust for this task.",
+                "If you still need UI or rendered-output evidence, prefer curl or direct template render before browser automation.",
+            ]
+        )
+        return "\n".join(lines) + "\n"
+
+    lines.extend(
+        [
+            "For UI, route, or rendered-output tasks, prefer a small local response/render check before browser automation.",
+            "Try one of these paths first:",
+            "1. HTTP path (if the local app is already running):",
+            "   curl -s http://localhost:8000/ | grep -C 2 'needle'",
+        ]
+    )
+    template_root = project_root / "templates"
+    if template_root.exists() or any((child / "templates").exists() for child in project_root.iterdir() if child.is_dir()):
+        lines.extend(
+            [
+                "2. Template/render path (no browser required):",
+                "   python3 -c \"from jinja2 import Environment, FileSystemLoader; env = Environment(loader=FileSystemLoader('templates')); html = env.get_template('index.html').render(); print('needle' in html)\"",
+            ]
+        )
+    if project_type == "python":
+        lines.append("If you need the running app first, start the same local Python entrypoint you already use for this repo and then use curl.")
+    lines.append("Reach for Playwright or browser automation only after one of the smaller local paths above is blocked.")
+    return "\n".join(lines) + "\n"
 
 
 def scenario_proof_template_text(*, root: Path | None) -> str:
@@ -1561,7 +1754,7 @@ def scenario_proof_template_text(*, root: Path | None) -> str:
         "Observed: paste the concrete output, rendered fragment, or behavior that was seen",
     ]
     if profile.get("prefers_runtime_evidence", False):
-        lines.append("Runtime hint: prefer a local request, rendered response, or observed runtime output over a source-only grep when possible")
+        lines.append("Runtime hint: prefer a local request, rendered response, or observed runtime output over a source-only grep when possible; run `synrail runtime-helper` for a small curl or template-render path before browser automation")
     lines.extend(["Status: PASSED", ""])
     return "\n".join(lines)
 
@@ -1587,7 +1780,7 @@ def readback_template_text(*, root: Path | None) -> str:
         "Observed: describe what this changed surface now contains, returns, or renders",
     ]
     if profile.get("prefers_runtime_evidence", False):
-        lines.append("Runtime hint: for UI, route, or rendered output changes, prefer a local response or rendered fragment over source-only grep when possible")
+        lines.append("Runtime hint: for UI, route, or rendered output changes, prefer a local response or rendered fragment over source-only grep when possible; run `synrail runtime-helper` for a small curl or template-render path before browser automation")
     lines.append("")
     return "\n".join(lines)
 
@@ -1618,11 +1811,15 @@ def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
         helper_commands.append("synrail readback-template")
     if any(section["section"] == "scenario_proof" for section in structural_gaps + semantic_gaps):
         helper_commands.append("synrail scenario-proof-template")
+    profile = load_project_profile(root) or {}
+    if profile.get("prefers_runtime_evidence", False) and any(
+        section["section"] in {"readback", "scenario_proof"} for section in structural_gaps + semantic_gaps
+    ):
+        helper_commands.append("synrail runtime-helper")
     helper_commands.append("synrail repair-step")
     final_result_target = display_path(root / "final_result.json") if root else "final_result.json"
     readback_target = display_path(root / "readback.txt") if root else "readback.txt"
     scenario_proof_target = display_path(root / "scenario_proof.txt") if root else "scenario_proof.txt"
-    profile = load_project_profile(root) or {}
     identity_sources = {
         "baseline_identity": (profile.get("baseline_identity", "") or "").strip(),
         "execution_surface_identity": (profile.get("execution_surface_identity", "") or "").strip(),
@@ -1672,6 +1869,8 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  Concrete fix: ensure baseline_identity, execution_surface_identity, prompt_identity, and task_identity are all non-empty for this run.")
             if gap["section"] == "modified_files":
                 lines.append("  No-op fix: if no file had to change because the requested state already existed, set change_disposition to already_satisfied and keep modified_files empty instead of inventing a changed file list.")
+            if gap["section"] == "scope_alignment":
+                lines.append("  Concrete fix: keep only the requested additive change. Remove adjacent spacing, class, or layout rewrites unless the task explicitly asked for them.")
     if semantic_gaps:
         lines.append("Semantic gaps:")
         for gap in semantic_gaps:
@@ -1687,6 +1886,8 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  Concrete fix: ensure baseline_identity, execution_surface_identity, prompt_identity, and task_identity are all non-empty for this run.")
             if gap["section"] == "modified_files":
                 lines.append("  No-op fix: if no file had to change because the requested state already existed, set change_disposition to already_satisfied and keep modified_files empty instead of inventing a changed file list.")
+            if gap["section"] == "scope_alignment":
+                lines.append("  Concrete fix: keep only the requested additive change. Remove adjacent spacing, class, or layout rewrites unless the task explicitly asked for them.")
     if not structural_gaps and not semantic_gaps:
         lines.append("Synrail did not find structural or semantic proof gaps in the current bundle.")
     if any(gap["section"] in {"final_result", "modified_files", "diff_provenance", "artifact_identity", "cleanup_status"} for gap in structural_gaps + semantic_gaps):
@@ -1702,6 +1903,10 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
         lines.append(f"readback target: {explanation['readback_target']}")
     if any(gap["section"] == "scenario_proof" for gap in structural_gaps + semantic_gaps):
         lines.append(f"scenario_proof target: {explanation['scenario_proof_target']}")
+    if any(gap["section"] in {"readback", "scenario_proof"} for gap in structural_gaps + semantic_gaps):
+        profile = load_project_profile(root) or {}
+        if profile.get("prefers_runtime_evidence", False):
+            lines.append("Runtime nudge: prefer `synrail runtime-helper` and a small curl or template-render check before browser automation.")
     if explanation.get("helper_commands", []):
         lines.append("Helpful commands:")
         for command in explanation["helper_commands"]:
@@ -1891,6 +2096,18 @@ def cmd_readback_template(args: argparse.Namespace) -> int:
         target = Path(args.output).expanduser().resolve()
         target.write_text(text)
         print(f"Wrote canonical readback template to {display_path(target)}")
+    else:
+        print(text, end="")
+    return 0
+
+
+def cmd_runtime_helper(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
+    text = runtime_helper_text(root=root if root.exists() else None)
+    if getattr(args, "output", None):
+        target = Path(args.output).expanduser().resolve()
+        target.write_text(text)
+        print(f"Wrote runtime helper guidance to {display_path(target)}")
     else:
         print(text, end="")
     return 0
@@ -2853,6 +3070,9 @@ def cmd_check(args: argparse.Namespace) -> int:
                     print("Need a canonical readback shape? run synrail readback-template")
                     print("Need a canonical final_result shape? run synrail final-result-template")
                     print("Need a canonical scenario_proof shape? run synrail scenario-proof-template")
+                    profile = load_project_profile(root) or {}
+                    if profile.get("prefers_runtime_evidence", False):
+                        print("Need a small UI/runtime verification path? run synrail runtime-helper")
                 else:
                     profile = load_project_profile(root)
                     candidates = (profile or {}).get("final_result_candidates", [])
@@ -4169,6 +4389,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_scenario_proof_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_scenario_proof_template.add_argument("--output")
     p_scenario_proof_template.set_defaults(func=cmd_scenario_proof_template)
+
+    p_runtime_helper = sub.add_parser("runtime-helper")
+    p_runtime_helper.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_runtime_helper.add_argument("--output")
+    p_runtime_helper.set_defaults(func=cmd_runtime_helper)
 
     p_bundle = sub.add_parser("bundle-check")
     p_bundle.add_argument("--final-result", required=True)

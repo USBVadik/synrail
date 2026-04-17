@@ -103,6 +103,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                         "synrail explain-proof",
                         "synrail final-result-template",
                     ],
+                    "scope_hint": "Keep the implementation inside the requested scope. If the task only asked you to add or insert something, do not also tweak adjacent spacing, classes, or layout unless the task explicitly asked for it.",
                     "diff_provenance_hint": "if git_diff is unavailable, use diff_provenance with changed_file, added_line or removed_line, and verification_command plus verification_result; if the requested state was already present before edits, set change_disposition to already_satisfied, keep git_diff empty, and use observed_line plus provenance_note instead of inventing a patch",
                     "artifact_identity_hint": "mirror the current run baseline, execution surface, prompt, and task identity values here when low-level bundle-check needs them",
                     "no_op_hint": "If the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and attest the observed line truthfully through diff_provenance.",
@@ -113,6 +114,10 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
         ensure_ascii=True,
     ) + "\n"
     runtime_hint = project_prefers_runtime_evidence(project_root)
+    if runtime_hint:
+        starter_guidance = json.loads(final_result)
+        starter_guidance["_synrail"]["starter_guidance"]["helper_commands"].append("synrail runtime-helper")
+        final_result = json.dumps(starter_guidance, indent=2, ensure_ascii=True) + "\n"
     readback_lines = [
         f"### READBACK: {task_identity.strip()}",
         "Changed surface: path/to/changed_file.ext",
@@ -120,7 +125,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
     ]
     if runtime_hint:
         readback_lines.append(
-            "Runtime hint: for UI, route, or rendered output changes, prefer a local response or rendered fragment over source-only grep when possible"
+            "Runtime hint: for UI, route, or rendered output changes, prefer a local response or rendered fragment over source-only grep when possible; run `synrail runtime-helper` if you want a small curl or template-render path before browser automation"
         )
     scenario_lines = [
         f"### SCENARIO PROOF: {task_identity.strip()}",
@@ -130,7 +135,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
     ]
     if runtime_hint:
         scenario_lines.append(
-            "Runtime hint: prefer a local request, rendered response, or observed runtime output over a source-only grep when possible"
+            "Runtime hint: prefer a local request, rendered response, or observed runtime output over a source-only grep when possible; run `synrail runtime-helper` if you want a small curl or template-render path before browser automation"
         )
     scenario_lines.append("Status: PASSED")
     readback = "\n".join(readback_lines) + "\n"

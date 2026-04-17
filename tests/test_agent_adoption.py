@@ -167,6 +167,26 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertNotIn("<!-- SYNRAIL_CLAUDE_START -->", (project_root / "CLAUDE.md").read_text())
             self.assertIn("Use Synrail as the default local control path", (project_root / "CLAUDE.md").read_text())
 
+    def test_install_agent_files_adds_nested_git_and_runtime_notes(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_agent_nested_git_") as tmpdir:
+            parent_root = Path(tmpdir) / "parent"
+            project_root = parent_root / "project"
+            (parent_root / ".git").mkdir(parents=True, exist_ok=True)
+            (project_root / "templates").mkdir(parents=True, exist_ok=True)
+
+            result = self.run_alpha(
+                "install-agent-files",
+                "--project-root",
+                str(project_root),
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("Workspace note:", result.stdout)
+            self.assertIn("Runtime note:", result.stdout)
+
+            claude = (project_root / "CLAUDE.md").read_text()
+            self.assertIn("Parent git repo detected above the project root", claude)
+            self.assertIn("runtime-helper", claude)
+
 
 if __name__ == "__main__":
     unittest.main()

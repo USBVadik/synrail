@@ -84,6 +84,7 @@ def human_scope_label(scope_id: str, *, repair_packet: dict | None = None) -> st
         "proof_bundle_surface": "the proof bundle for this run",
         "final_result_artifact": "the final result artifact for this run",
         "final_result_payload": f"the result payload in {proof_paths['final_result']}",
+        "scope_alignment_record": f"the scope-alignment section in {proof_paths['final_result']}",
         "diff_provenance_record": f"the diff provenance section in {proof_paths['final_result']}",
         "artifact_identity_record": f"the artifact identity section in {proof_paths['final_result']}",
         "cleanup_status_record": f"the cleanup status section in {proof_paths['final_result']}",
@@ -119,6 +120,7 @@ def focused_step_details(repair_packet: dict, current_step_id: str, stale_subsur
     if current_step_id == "repair_final_result_artifact":
         labels = {
             "final_result_payload": f"repair the result payload in {proof_paths['final_result']}",
+            "scope_alignment_record": f"remove unrelated adjacent edits in {proof_paths['final_result']}",
             "diff_provenance_record": f"record diff provenance in {proof_paths['final_result']}",
             "artifact_identity_record": f"record artifact identity in {proof_paths['final_result']}",
             "cleanup_status_record": f"record cleanup status in {proof_paths['final_result']}",
@@ -144,6 +146,7 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
         f"Checklist for {current_step_target_path}:",
         "- change_disposition: use modified for a real edit, or already_satisfied only when the requested state was already present before any edit",
         "- modified_files: list each concrete changed file path, or keep [] only for a truthful already_satisfied no-op attestation",
+        "- scope: if the task only asked you to add or insert something, do not also rewrite adjacent spacing, classes, or layout just to make room for it",
         "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files when you can produce one; keep it empty for a truthful already_satisfied no-op attestation",
         "- diff_provenance: if git_diff is unavailable or the file is untracked, record method, changed_file, added_line or removed_line, and verification_command plus verification_result",
         "- diff_provenance for already_satisfied: record changed_file, observed_line, verification_command, verification_result, and provenance_note instead of inventing a patch",
@@ -155,6 +158,16 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
     ]
     if current_step_subsurface_id == "final_result_payload":
         return common
+    if current_step_subsurface_id == "scope_alignment_record":
+        return [
+            f"Checklist for {current_step_target_path}:",
+            "- Keep only the user-requested additive change in scope",
+            "- If the task asked for a small inserted label, subtitle, or caption, do not also tweak adjacent margin, padding, class, or layout lines unless the task explicitly asked for that too",
+            "- modified_files and git_diff should describe only the requested additive change",
+            "- If the requested state was already present before any edit, use change_disposition=already_satisfied instead of inventing cleanup edits",
+            "- Need a canonical shape? run `synrail final-result-template`",
+            "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+        ]
     if current_step_subsurface_id == "diff_provenance_record":
         return [
             f"Checklist for {current_step_target_path}:",
@@ -202,6 +215,7 @@ def readback_repair_checklist(*, current_step_subsurface_id: str, current_step_t
         "- Changed surface: name the changed file or surface explicitly",
         "- Observed: describe the concrete property that was seen on that changed surface",
         "- For UI, route, or rendered output changes, prefer local runtime or response evidence over source-only grep when possible",
+        "- Need a quick local path? run `synrail runtime-helper` and prefer curl or template-render checks before browser automation",
         "- Need a canonical shape? run `synrail readback-template`",
         "- Need exact semantic reasons after a check? run `synrail explain-proof`",
     ]
@@ -219,6 +233,7 @@ def scenario_proof_repair_checklist(*, current_step_subsurface_id: str, current_
         "- Observed: include the concrete output, rendered fragment, or behavior that was seen",
         "- Status: PASSED when the expected outcome was observed; otherwise use FAILED or BLOCKED truthfully",
         "- For UI, route, or rendered output changes, prefer local runtime or response evidence over source-only grep when possible",
+        "- Need a quick local path? run `synrail runtime-helper` and prefer curl or template-render checks before browser automation",
         "- Need a canonical shape? run `synrail scenario-proof-template`",
         "- Need exact semantic reasons after a check? run `synrail explain-proof`",
     ]

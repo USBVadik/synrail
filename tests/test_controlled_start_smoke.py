@@ -238,6 +238,36 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("Observed:", template.stdout)
             self.assertIn("Status: PASSED", template.stdout)
 
+    def test_runtime_helper_offers_small_ui_paths(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_runtime_helper_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "templates").mkdir(parents=True, exist_ok=True)
+            (project_root / "app.py").write_text("print('stub')\n")
+
+            init = self.run_alpha("init", cwd=project_root)
+            self.assertEqual(0, init.returncode, init.stdout + init.stderr)
+
+            helper = self.run_alpha("runtime-helper", cwd=project_root)
+            self.assertEqual(0, helper.returncode, helper.stdout + helper.stderr)
+            self.assertIn("curl -s http://localhost:8000/ | grep -C 2 'needle'", helper.stdout)
+            self.assertIn("python3 -c", helper.stdout)
+            self.assertIn("browser automation", helper.stdout)
+
+    def test_status_surfaces_nested_parent_git_warning(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_nested_status_") as tmpdir:
+            parent_root = Path(tmpdir) / "parent"
+            project_root = parent_root / "project"
+            (parent_root / ".git").mkdir(parents=True, exist_ok=True)
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            init = self.run_alpha("init", cwd=project_root)
+            self.assertEqual(0, init.returncode, init.stdout + init.stderr)
+
+            status = self.run_alpha("status", cwd=project_root)
+            self.assertEqual(0, status.returncode, status.stdout + status.stderr)
+            self.assertIn("Parent git repo detected above the project root", status.stdout)
+
     def test_explain_proof_guides_user_before_first_check(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_missing_") as tmpdir:
             project_root = Path(tmpdir) / "project"
@@ -342,6 +372,12 @@ class ControlledStartSmokeTests(unittest.TestCase):
             project_root.mkdir(parents=True, exist_ok=True)
             artifact_root.mkdir(parents=True, exist_ok=True)
             write_json(
+                artifact_root / "project_profile.json",
+                {
+                    "prefers_runtime_evidence": True,
+                },
+            )
+            write_json(
                 artifact_root / "bundle.json",
                 {
                     "status": "STRUCTURALLY_COMPLETE",
@@ -368,6 +404,41 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("readback", explain.stdout)
             self.assertIn("readback target: .synrail/readback.txt", explain.stdout)
             self.assertIn("synrail readback-template", explain.stdout)
+            self.assertIn("synrail runtime-helper", explain.stdout)
+
+    def test_explain_proof_surfaces_scope_alignment_fix(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_explain_scope_alignment_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "bundle.json",
+                {
+                    "status": "STRUCTURALLY_COMPLETE",
+                    "structural_status": "COMPLETE",
+                    "semantic_status": "INSUFFICIENT",
+                    "semantic_next_safe_step": "keep the implementation inside the requested additive scope and remove unrelated adjacent rewrites or spacing tweaks",
+                    "semantic_decision_trace": [
+                        {
+                            "section": "scope_alignment",
+                            "evaluated": True,
+                            "semantically_sufficient": False,
+                            "why": "the task reads like an add-only request, but the proof shows adjacent rewrites or removals beyond the requested insertion",
+                            "recommended_action": "keep the implementation inside the requested additive scope and remove unrelated adjacent rewrites or spacing tweaks",
+                        }
+                    ],
+                    "structural_decision_trace": [],
+                    "missing_sections": [],
+                    "semantically_insufficient_sections": ["scope_alignment"],
+                },
+            )
+
+            explain = self.run_alpha("explain-proof", cwd=project_root)
+            self.assertEqual(0, explain.returncode, explain.stdout + explain.stderr)
+            self.assertIn("scope_alignment", explain.stdout)
+            self.assertIn("requested additive change", explain.stdout)
+            self.assertIn("spacing, class, or layout rewrites", explain.stdout)
 
     def test_explain_proof_surfaces_scenario_helper(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_scenario_") as tmpdir:
