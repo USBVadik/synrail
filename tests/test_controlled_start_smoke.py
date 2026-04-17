@@ -167,6 +167,79 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("final_result: .synrail/final_result.json", check.stdout)
             self.assertIn("readback: .synrail/readback.txt", check.stdout)
             self.assertIn("scenario_proof: .synrail/scenario_proof.txt", check.stdout)
+            self.assertIn("synrail final-result-template", check.stdout)
+
+    def test_final_result_template_uses_current_run_context(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_final_result_template_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "Show the canonical final_result shape for this run.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+            state = load_json(artifact_root / "state.json")
+
+            template = self.run_alpha("final-result-template", cwd=project_root)
+            self.assertEqual(0, template.returncode, template.stdout + template.stderr)
+            self.assertIn(state["run_id"], template.stdout)
+            self.assertIn('"git_diff": "diff --git', template.stdout)
+            self.assertIn("workspace clean after updating only path/to/changed_file.ext", template.stdout)
+
+    def test_explain_proof_guides_user_before_first_check(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_missing_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "Need proof explanation after the bundle exists.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            explain = self.run_alpha("explain-proof", cwd=project_root)
+            self.assertEqual(2, explain.returncode, explain.stdout + explain.stderr)
+            self.assertIn("bundle.json has not been generated", explain.stdout)
+            self.assertIn("run synrail check first", explain.stdout)
+
+    def test_explain_proof_surfaces_semantic_reason(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_bundle_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "bundle.json",
+                {
+                    "status": "STRUCTURALLY_COMPLETE",
+                    "structural_status": "COMPLETE",
+                    "semantic_status": "INSUFFICIENT",
+                    "semantic_next_safe_step": "capture non-empty diff or provenance evidence for the changed files",
+                    "semantic_decision_trace": [
+                        {
+                            "section": "diff_provenance",
+                            "evaluated": True,
+                            "semantically_sufficient": False,
+                            "why": "diff or provenance evidence is present but does not yet prove a concrete patch on the named files",
+                            "recommended_action": "capture non-empty diff or provenance evidence for the changed files",
+                        }
+                    ],
+                    "structural_decision_trace": [],
+                    "missing_sections": [],
+                    "semantically_insufficient_sections": ["diff_provenance"],
+                },
+            )
+
+            explain = self.run_alpha("explain-proof", cwd=project_root)
+            self.assertEqual(0, explain.returncode, explain.stdout + explain.stderr)
+            self.assertIn("Semantic gaps:", explain.stdout)
+            self.assertIn("diff_provenance", explain.stdout)
+            self.assertIn("does not yet prove a concrete patch on the named files", explain.stdout)
+            self.assertIn("synrail final-result-template", explain.stdout)
 
     def test_check_blocks_remote_target_as_unsupported(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_remote_unsupported_") as tmpdir:

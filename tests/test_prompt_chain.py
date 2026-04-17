@@ -278,6 +278,9 @@ class TestBuildPromptBridge(unittest.TestCase):
         record = build_prompt_bridge(repair_packet=packet)
         self.assertEqual("final_result_payload", record["current_step_subsurface_id"])
         self.assertIn("final_result_payload", record["allowed_scope"])
+        self.assertIn("Checklist for /tmp/synrail/final_result.json:", record["prompt"])
+        self.assertIn("synrail final-result-template", record["prompt"])
+        self.assertIn("synrail explain-proof", record["prompt"])
 
     def test_no_subsurface_uses_step_scope(self) -> None:
         packet = _minimal_packet()

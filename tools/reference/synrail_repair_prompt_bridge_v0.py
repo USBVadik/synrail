@@ -135,6 +135,39 @@ def focused_step_details(repair_packet: dict, current_step_id: str, stale_subsur
     return human_step_label(current_step_id), "", ""
 
 
+def final_result_repair_checklist(*, current_step_subsurface_id: str, current_step_target_path: str) -> list[str]:
+    if not current_step_target_path or not current_step_target_path.endswith("final_result.json"):
+        return []
+    common = [
+        f"Checklist for {current_step_target_path}:",
+        "- modified_files: list each concrete changed file path",
+        "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files",
+        "- cleanup_status.success: true when the workspace is clean after the intended change",
+        "- cleanup_status.summary: say the workspace is clean and only the intended files changed",
+        "- Need a canonical shape? run `synrail final-result-template`",
+        "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+    ]
+    if current_step_subsurface_id == "final_result_payload":
+        return common
+    if current_step_subsurface_id == "diff_provenance_record":
+        return [
+            f"Checklist for {current_step_target_path}:",
+            "- modified_files: list each concrete changed file path first",
+            "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files",
+            "- Need a canonical shape? run `synrail final-result-template`",
+            "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+        ]
+    if current_step_subsurface_id == "cleanup_status_record":
+        return [
+            f"Checklist for {current_step_target_path}:",
+            "- cleanup_status.success: true when the workspace is clean after the intended change",
+            "- cleanup_status.summary: say the workspace is clean and only the intended files changed",
+            "- Need a canonical shape? run `synrail final-result-template`",
+            "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+        ]
+    return common
+
+
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
 
@@ -275,6 +308,10 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
     ]
     if checkpoint_hint:
         prompt_lines.append(checkpoint_hint)
+    prompt_lines.extend(final_result_repair_checklist(
+        current_step_subsurface_id=current_step_subsurface_id,
+        current_step_target_path=current_step_target_path,
+    ))
     return {
         "schema_version": "repair_prompt_bridge_record_v0",
         "run_id": repair_packet["run_id"],

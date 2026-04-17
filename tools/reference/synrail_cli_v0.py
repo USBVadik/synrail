@@ -1388,6 +1388,119 @@ def print_workspace_dashboard(summary: dict) -> None:
     print("\n".join(lines))
 
 
+def final_result_template_payload(*, root: Path | None) -> dict:
+    state: dict = {}
+    if root and alpha_file(root, "state").exists():
+        state = load_json(alpha_file(root, "state"))
+    task_identity = load_text_if_exists(root / "task_identity.txt") if root else ""
+    changed_file = "path/to/changed_file.ext"
+    return {
+        "request_id": state.get("run_id", "RUN_ID_FOR_THIS_CONTROLLED_RUN"),
+        "task_class": state.get("task_class", DEFAULT_ALPHA_TASK_CLASS),
+        "status": "success",
+        "summary": "Describe the bounded change that was actually completed for this run.",
+        "modified_files": [changed_file],
+        "git_diff": (
+            f"diff --git a/{changed_file} b/{changed_file}\n"
+            f"--- a/{changed_file}\n"
+            f"+++ b/{changed_file}\n"
+            "@@ -1,1 +1,2 @@\n"
+            "- old\n"
+            "+ new\n"
+            "+ describe the concrete patch on the named file"
+        ),
+        "cleanup_status": {
+            "success": True,
+            "summary": f"workspace clean after updating only {changed_file} with no unintended changes",
+        },
+        "_synrail": {
+            "template_mode": True,
+            "task_identity": task_identity,
+            "notes": [
+                "Replace the sample changed file path with the actual file paths for this run.",
+                "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers.",
+                "Use synrail explain-proof after a check to see exact semantic gaps and reasons.",
+            ],
+        },
+    }
+
+
+def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
+    structural_gaps = [
+        {
+            "section": entry.get("section", ""),
+            "why": entry.get("why", ""),
+            "recommended_action": entry.get("recommended_action", ""),
+        }
+        for entry in bundle.get("structural_decision_trace", [])
+        if not entry.get("structurally_complete", False)
+    ]
+    semantic_gaps = [
+        {
+            "section": entry.get("section", ""),
+            "why": entry.get("why", ""),
+            "recommended_action": entry.get("recommended_action", ""),
+        }
+        for entry in bundle.get("semantic_decision_trace", [])
+        if entry.get("evaluated", False) and not entry.get("semantically_sufficient", False)
+    ]
+    helper_commands: list[str] = []
+    if any(section["section"] in {"final_result", "modified_files", "diff_provenance", "cleanup_status"} for section in structural_gaps + semantic_gaps):
+        helper_commands.append("synrail final-result-template")
+    helper_commands.append("synrail repair-step")
+    final_result_target = display_path(root / "final_result.json") if root else "final_result.json"
+    return {
+        "bundle_status": bundle.get("status", ""),
+        "structural_status": bundle.get("structural_status", ""),
+        "semantic_status": bundle.get("semantic_status", ""),
+        "semantic_next_safe_step": bundle.get("semantic_next_safe_step", ""),
+        "missing_sections": list(bundle.get("missing_sections", [])),
+        "semantically_insufficient_sections": list(bundle.get("semantically_insufficient_sections", [])),
+        "structural_gaps": structural_gaps,
+        "semantic_gaps": semantic_gaps,
+        "helper_commands": helper_commands,
+        "final_result_target": final_result_target,
+    }
+
+
+def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
+    lines = [
+        "Synrail proof explanation",
+        f"Bundle status: {explanation['bundle_status']}",
+        f"Structural status: {explanation['structural_status']}",
+        f"Semantic status: {explanation['semantic_status']}",
+    ]
+    if explanation.get("semantic_next_safe_step", ""):
+        lines.append(f"Current semantic next step: {explanation['semantic_next_safe_step']}")
+    structural_gaps = explanation.get("structural_gaps", [])
+    semantic_gaps = explanation.get("semantic_gaps", [])
+    if structural_gaps:
+        lines.append("Structural gaps:")
+        for gap in structural_gaps:
+            lines.append(f"- {gap['section']}")
+            if gap["why"]:
+                lines.append(f"  Why: {gap['why']}")
+            if gap["recommended_action"]:
+                lines.append(f"  What to do: {gap['recommended_action']}")
+    if semantic_gaps:
+        lines.append("Semantic gaps:")
+        for gap in semantic_gaps:
+            lines.append(f"- {gap['section']}")
+            if gap["why"]:
+                lines.append(f"  Why: {gap['why']}")
+            if gap["recommended_action"]:
+                lines.append(f"  What to do: {gap['recommended_action']}")
+    if not structural_gaps and not semantic_gaps:
+        lines.append("Synrail did not find structural or semantic proof gaps in the current bundle.")
+    if any(gap["section"] in {"final_result", "modified_files", "diff_provenance", "cleanup_status"} for gap in structural_gaps + semantic_gaps):
+        lines.append(f"final_result target: {explanation['final_result_target']}")
+    if explanation.get("helper_commands", []):
+        lines.append("Helpful commands:")
+        for command in explanation["helper_commands"]:
+            lines.append(f"- {command}")
+    print("\n".join(lines))
+
+
 def print_acceptance_refresh_summary(*, root: Path) -> None:
     criteria = load_json(alpha_file(root, "acceptance_criteria"))
     lines = [
@@ -1515,6 +1628,39 @@ def cmd_status(args: argparse.Namespace) -> int:
         print(json.dumps(summary, indent=2, ensure_ascii=True))
     else:
         print_workspace_dashboard(summary)
+    return 0
+
+
+def cmd_explain_proof(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
+    bundle_file = Path(getattr(args, "bundle_file", "") or alpha_file(root, "bundle")).expanduser().resolve()
+    if not bundle_file.exists():
+        if getattr(args, "json", False):
+            print(json.dumps({"result": "ERROR", "reason": "BUNDLE_FILE_REQUIRED", "next_command": "synrail check"}, ensure_ascii=True))
+        else:
+            print("Synrail does not have a proof explanation yet.")
+            print("What is missing: bundle.json has not been generated for this run.")
+            print("What to do next: run synrail check first so Synrail can evaluate the current proof bundle.")
+        return 2
+    bundle = load_json(bundle_file)
+    explanation = build_proof_explanation(bundle, root=root)
+    if getattr(args, "json", False):
+        print(json.dumps(explanation, indent=2, ensure_ascii=True))
+    else:
+        print_proof_explanation(explanation, root=root)
+    return 0
+
+
+def cmd_final_result_template(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
+    payload = final_result_template_payload(root=root if root.exists() else None)
+    text = json.dumps(payload, indent=2, ensure_ascii=True) + "\n"
+    if getattr(args, "output", None):
+        target = Path(args.output).expanduser().resolve()
+        target.write_text(text)
+        print(f"Wrote canonical final_result template to {display_path(target)}")
+    else:
+        print(text, end="")
     return 0
 
 
@@ -2458,6 +2604,7 @@ def cmd_check(args: argparse.Namespace) -> int:
                     for label in ["final_result", "readback", "scenario_proof"]:
                         if preferred.get(label, ""):
                             print(f"- {label}: {preferred[label]}")
+                    print("Need a canonical final_result shape? run synrail final-result-template")
                 else:
                     profile = load_project_profile(root)
                     candidates = (profile or {}).get("final_result_candidates", [])
@@ -3703,6 +3850,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_status.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_status.add_argument("--json", action="store_true")
     p_status.set_defaults(func=cmd_status)
+
+    p_explain_proof = sub.add_parser("explain-proof", aliases=["proof-explain"])
+    p_explain_proof.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_explain_proof.add_argument("--bundle-file")
+    p_explain_proof.add_argument("--json", action="store_true")
+    p_explain_proof.set_defaults(func=cmd_explain_proof)
+
+    p_final_result_template = sub.add_parser("final-result-template")
+    p_final_result_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_final_result_template.add_argument("--output")
+    p_final_result_template.set_defaults(func=cmd_final_result_template)
 
     p_bundle = sub.add_parser("bundle-check")
     p_bundle.add_argument("--final-result", required=True)

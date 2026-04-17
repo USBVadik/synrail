@@ -55,6 +55,27 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                 "starter_surface": True,
                 "edit_in_place": True,
                 "task_identity": task_identity.strip(),
+                "starter_guidance": {
+                    "required_fields": [
+                        "summary",
+                        "modified_files",
+                        "git_diff",
+                        "cleanup_status.success",
+                        "cleanup_status.summary",
+                    ],
+                    "git_diff_must_include": [
+                        "diff --git",
+                        "---",
+                        "+++",
+                        "@@",
+                        "named changed files",
+                    ],
+                    "cleanup_summary_hint": "workspace clean after updating only path/to/changed_file.ext with no unintended changes",
+                    "helper_commands": [
+                        "synrail explain-proof",
+                        "synrail final-result-template",
+                    ],
+                },
             },
         },
         indent=2,
