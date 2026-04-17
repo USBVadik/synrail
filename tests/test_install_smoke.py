@@ -131,10 +131,13 @@ class InstallSmokeTests(unittest.TestCase):
             self.assertIn("Quick status: run `synrail` inside your project.", result.stdout)
             self.assertIn('Start a run: `synrail start "Describe the bounded local change."`', result.stdout)
             self.assertTrue((project_root / "AGENTS.md").exists())
+            self.assertTrue((project_root / "CLAUDE.md").exists())
             gemini = (project_root / "GEMINI.md").read_text()
+            claude = (project_root / "CLAUDE.md").read_text()
             self.assertIn("# Existing Gemini Context", gemini)
             self.assertIn("<!-- SYNRAIL_GEMINI_START -->", gemini)
             self.assertIn("Use Synrail as the default local control path", gemini)
+            self.assertIn("Use Synrail as the default local control path", claude)
 
 
 if __name__ == "__main__":

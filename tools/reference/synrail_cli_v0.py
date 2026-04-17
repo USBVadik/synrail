@@ -363,6 +363,51 @@ def render_gemini_policy_markdown(*, artifact_root: str) -> str:
     return "\n".join(lines)
 
 
+def render_claude_policy_markdown(*, artifact_root: str) -> str:
+    commands = policy_command_examples(artifact_root=artifact_root)
+    lines = [
+        "# Claude Workflow",
+        "",
+        "Use Synrail as the default local control path for this repo.",
+        "",
+        "## First Command",
+        "",
+        "For every new user task, run Synrail first so you can see the current governed state:",
+        "",
+        "```bash",
+        commands["status"],
+        "```",
+        "",
+        "Synrail is a CLI control kernel, not a background daemon.",
+        "",
+        "## Start",
+        "",
+        "If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
+        "",
+        "```bash",
+        commands["start"],
+        "```",
+        "",
+        "## Work",
+        "",
+        f"- Keep edits bounded and local to this repo.",
+        f"- Update the starter proof files in `{artifact_root}/` as the change becomes real.",
+        "- Run the local verification commands needed for the task.",
+        "",
+        "## Finish",
+        "",
+        "```bash",
+        commands["check"],
+        "```",
+        "",
+        f"If non-green, run `{commands['repair']}`, repair only the named gap, and re-check.",
+        "",
+        "Do not bypass Synrail and do not claim success without real local verification.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def render_agent_policy_block(*, title: str, intro: str, artifact_root: str) -> str:
     commands = policy_command_examples(artifact_root=artifact_root)
     lines = [
@@ -464,15 +509,22 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
     )
     agents_path = project_root / "AGENTS.md"
     gemini_path = project_root / "GEMINI.md"
+    claude_path = project_root / "CLAUDE.md"
 
     agents_content = render_agent_policy_markdown(artifact_root=artifact_root)
     gemini_content = render_gemini_policy_markdown(artifact_root=artifact_root)
+    claude_content = render_claude_policy_markdown(artifact_root=artifact_root)
     agents_block = render_agent_policy_block(
         title="Synrail Local Workflow",
         intro="This repo uses Synrail to keep one bounded local change inside one controlled run.",
         artifact_root=artifact_root,
     )
     gemini_block = render_agent_policy_block(
+        title="Synrail Local Workflow",
+        intro="Use Synrail as the default local control path for this repo.",
+        artifact_root=artifact_root,
+    )
+    claude_block = render_agent_policy_block(
         title="Synrail Local Workflow",
         intro="Use Synrail as the default local control path for this repo.",
         artifact_root=artifact_root,
@@ -490,19 +542,32 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         managed_block=gemini_block,
         force=args.force,
     )
+    claude_written, claude_state, claude_backup = write_agent_policy_file(
+        claude_path,
+        claude_content,
+        managed_block=claude_block,
+        force=args.force,
+    )
 
     print("Agent adoption files are ready.")
     print(f"Project root: {project_root}")
     print(f"Artifact root hint: {artifact_root}")
     print(f"AGENTS.md: {agents_state}")
     print(f"GEMINI.md: {gemini_state}")
+    print(f"CLAUDE.md: {claude_state}")
     if agents_backup:
         print(f"AGENTS.md backup: {agents_backup}")
     if gemini_backup:
         print(f"GEMINI.md backup: {gemini_backup}")
-    if agents_state in {"appended", "updated"} or gemini_state in {"appended", "updated"}:
+    if claude_backup:
+        print(f"CLAUDE.md backup: {claude_backup}")
+    if (
+        agents_state in {"appended", "updated"}
+        or gemini_state in {"appended", "updated"}
+        or claude_state in {"appended", "updated"}
+    ):
         print("What to do next: run `synrail` in this repo so the dashboard can show the current state, then review and commit the managed Synrail block if the wording fits the repo.")
-    elif agents_written or gemini_written:
+    elif agents_written or gemini_written or claude_written:
         print("What to do next: run `synrail` in this repo. Commit these files if you want local agents to keep discovering Synrail before editing.")
     else:
         print("What to do next: run `synrail` in this repo. Keep these files committed so local agents continue discovering the same Synrail entrypoint.")
@@ -1292,6 +1357,8 @@ def agent_wiring_label(project_root: Path) -> str:
         installed.append("AGENTS.md")
     if (project_root / "GEMINI.md").exists():
         installed.append("GEMINI.md")
+    if (project_root / "CLAUDE.md").exists():
+        installed.append("CLAUDE.md")
     return " + ".join(installed) if installed else "not installed"
 
 

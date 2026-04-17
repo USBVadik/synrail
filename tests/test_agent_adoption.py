@@ -47,6 +47,7 @@ class AgentAdoptionTests(unittest.TestCase):
 
             agents = (project_root / "AGENTS.md").read_text()
             gemini = (project_root / "GEMINI.md").read_text()
+            claude = (project_root / "CLAUDE.md").read_text()
 
             self.assertIn("First Step On Every New Task", agents)
             self.assertIn("synrail", agents)
@@ -60,6 +61,11 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("For every new user task, run Synrail first", gemini)
             self.assertIn('synrail start "Describe the bounded local change."', gemini)
             self.assertIn("synrail repair-step", gemini)
+
+            self.assertIn("Use Synrail as the default local control path", claude)
+            self.assertIn("For every new user task, run Synrail first", claude)
+            self.assertIn('synrail start "Describe the bounded local change."', claude)
+            self.assertIn("synrail repair-step", claude)
 
     def test_install_agent_files_is_idempotent_and_merges_existing_gemini_file(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_agent_adoption_force_") as tmpdir:
@@ -81,8 +87,10 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertEqual(0, second.returncode, second.stdout + second.stderr)
             self.assertIn("AGENTS.md: unchanged", second.stdout)
             self.assertIn("GEMINI.md: unchanged", second.stdout)
+            self.assertIn("CLAUDE.md: unchanged", second.stdout)
 
             (project_root / "GEMINI.md").write_text("# Existing Gemini Context\n\nKeep this repo focused on product work.\n")
+            (project_root / "CLAUDE.md").write_text("# Existing Claude Context\n\nStay inside the repo.\n")
 
             merged = self.run_alpha(
                 "install-agent-files",
@@ -91,10 +99,15 @@ class AgentAdoptionTests(unittest.TestCase):
             )
             self.assertEqual(0, merged.returncode, merged.stdout + merged.stderr)
             self.assertIn("GEMINI.md: appended", merged.stdout)
+            self.assertIn("CLAUDE.md: appended", merged.stdout)
             gemini = (project_root / "GEMINI.md").read_text()
+            claude = (project_root / "CLAUDE.md").read_text()
             self.assertIn("# Existing Gemini Context", gemini)
             self.assertIn("<!-- SYNRAIL_GEMINI_START -->", gemini)
             self.assertIn("Use Synrail as the default local control path", gemini)
+            self.assertIn("# Existing Claude Context", claude)
+            self.assertIn("<!-- SYNRAIL_CLAUDE_START -->", claude)
+            self.assertIn("Use Synrail as the default local control path", claude)
 
             forced = self.run_alpha(
                 "install-agent-files",
@@ -105,11 +118,18 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertEqual(0, forced.returncode, forced.stdout + forced.stderr)
             self.assertIn("GEMINI.md: written", forced.stdout)
             self.assertIn("GEMINI.md backup:", forced.stdout)
+            self.assertIn("CLAUDE.md: written", forced.stdout)
+            self.assertIn("CLAUDE.md backup:", forced.stdout)
             backups = list(project_root.glob("GEMINI.md.synrail.bak.*"))
+            claude_backups = list(project_root.glob("CLAUDE.md.synrail.bak.*"))
             self.assertEqual(1, len(backups))
+            self.assertEqual(1, len(claude_backups))
             self.assertIn("# Existing Gemini Context", backups[0].read_text())
+            self.assertIn("# Existing Claude Context", claude_backups[0].read_text())
             self.assertNotIn("<!-- SYNRAIL_GEMINI_START -->", (project_root / "GEMINI.md").read_text())
             self.assertIn("Use Synrail as the default local control path", (project_root / "GEMINI.md").read_text())
+            self.assertNotIn("<!-- SYNRAIL_CLAUDE_START -->", (project_root / "CLAUDE.md").read_text())
+            self.assertIn("Use Synrail as the default local control path", (project_root / "CLAUDE.md").read_text())
 
 
 if __name__ == "__main__":
