@@ -167,6 +167,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("final_result: .synrail/final_result.json", check.stdout)
             self.assertIn("readback: .synrail/readback.txt", check.stdout)
             self.assertIn("scenario_proof: .synrail/scenario_proof.txt", check.stdout)
+            self.assertIn("synrail readback-template", check.stdout)
             self.assertIn("synrail final-result-template", check.stdout)
             self.assertIn("synrail scenario-proof-template", check.stdout)
 
@@ -189,6 +190,28 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn(state["run_id"], template.stdout)
             self.assertIn('"git_diff": "diff --git', template.stdout)
             self.assertIn("workspace clean after updating only path/to/changed_file.ext", template.stdout)
+
+    def test_readback_template_uses_current_run_context(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_readback_template_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "templates").mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "Show the canonical readback shape for this run.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+            state = load_json(artifact_root / "state.json")
+
+            template = self.run_alpha("readback-template", cwd=project_root)
+            self.assertEqual(0, template.returncode, template.stdout + template.stderr)
+            self.assertIn(state["run_id"], template.stdout)
+            self.assertIn("Changed surface:", template.stdout)
+            self.assertIn("Observed:", template.stdout)
+            self.assertIn("Runtime hint:", template.stdout)
 
     def test_scenario_proof_template_uses_current_run_context(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_scenario_proof_template_") as tmpdir:
@@ -262,6 +285,40 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("diff_provenance", explain.stdout)
             self.assertIn("does not yet prove a concrete patch on the named files", explain.stdout)
             self.assertIn("synrail final-result-template", explain.stdout)
+
+    def test_explain_proof_surfaces_readback_helper(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_readback_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "bundle.json",
+                {
+                    "status": "STRUCTURALLY_COMPLETE",
+                    "structural_status": "COMPLETE",
+                    "semantic_status": "INSUFFICIENT",
+                    "semantic_next_safe_step": "record substantive readback from the changed sections on the attested surface",
+                    "semantic_decision_trace": [
+                        {
+                            "section": "readback",
+                            "evaluated": True,
+                            "semantically_sufficient": False,
+                            "why": "readback evidence does not yet name the changed surface with an observed readback",
+                            "recommended_action": "record substantive readback from the changed sections on the attested surface",
+                        }
+                    ],
+                    "structural_decision_trace": [],
+                    "missing_sections": [],
+                    "semantically_insufficient_sections": ["readback"],
+                },
+            )
+
+            explain = self.run_alpha("explain-proof", cwd=project_root)
+            self.assertEqual(0, explain.returncode, explain.stdout + explain.stderr)
+            self.assertIn("readback", explain.stdout)
+            self.assertIn("readback target: .synrail/readback.txt", explain.stdout)
+            self.assertIn("synrail readback-template", explain.stdout)
 
     def test_explain_proof_surfaces_scenario_helper(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_scenario_") as tmpdir:

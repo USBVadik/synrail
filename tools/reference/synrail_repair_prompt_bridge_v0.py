@@ -168,6 +168,21 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
     return common
 
 
+def readback_repair_checklist(*, current_step_subsurface_id: str, current_step_target_path: str) -> list[str]:
+    if current_step_subsurface_id != "readback_record":
+        return []
+    if not current_step_target_path or not current_step_target_path.endswith("readback.txt"):
+        return []
+    return [
+        f"Checklist for {current_step_target_path}:",
+        "- Changed surface: name the changed file or surface explicitly",
+        "- Observed: describe the concrete property that was seen on that changed surface",
+        "- For UI, route, or rendered output changes, prefer local runtime or response evidence over source-only grep when possible",
+        "- Need a canonical shape? run `synrail readback-template`",
+        "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+    ]
+
+
 def scenario_proof_repair_checklist(*, current_step_subsurface_id: str, current_step_target_path: str) -> list[str]:
     if current_step_subsurface_id != "scenario_proof_record":
         return []
@@ -179,6 +194,7 @@ def scenario_proof_repair_checklist(*, current_step_subsurface_id: str, current_
         "- Command: include the local command, request, or test used to verify the change",
         "- Observed: include the concrete output, rendered fragment, or behavior that was seen",
         "- Status: PASSED when the expected outcome was observed; otherwise use FAILED or BLOCKED truthfully",
+        "- For UI, route, or rendered output changes, prefer local runtime or response evidence over source-only grep when possible",
         "- Need a canonical shape? run `synrail scenario-proof-template`",
         "- Need exact semantic reasons after a check? run `synrail explain-proof`",
     ]
@@ -325,6 +341,10 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
     if checkpoint_hint:
         prompt_lines.append(checkpoint_hint)
     prompt_lines.extend(final_result_repair_checklist(
+        current_step_subsurface_id=current_step_subsurface_id,
+        current_step_target_path=current_step_target_path,
+    ))
+    prompt_lines.extend(readback_repair_checklist(
         current_step_subsurface_id=current_step_subsurface_id,
         current_step_target_path=current_step_target_path,
     ))

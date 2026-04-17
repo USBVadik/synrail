@@ -46,6 +46,7 @@ try:
         build_proof_request_record,
         build_proof_starter_contents,
         load_json as load_bootstrap_json,
+        project_prefers_runtime_evidence,
         save_json as save_bootstrap_json,
         validate_bootstrap_record,
         write_proof_starter_files,
@@ -56,6 +57,7 @@ except ImportError:
         build_proof_request_record,
         build_proof_starter_contents,
         load_json as load_bootstrap_json,
+        project_prefers_runtime_evidence,
         save_json as save_bootstrap_json,
         validate_bootstrap_record,
         write_proof_starter_files,
@@ -571,6 +573,7 @@ def build_project_profile(*, project_root: Path, root: Path, task_class: str) ->
         "schema_version": "alpha_project_profile_v0",
         "project_root": str(project_root),
         "project_type": project_type,
+        "prefers_runtime_evidence": project_prefers_runtime_evidence(project_root),
         "task_class": task_class,
         "target_path": str(project_root),
         "target_classification": "trusted_worktree",
@@ -917,6 +920,7 @@ def write_controlled_start_artifacts(
         run_id=run_id,
         task_class=task_class,
         task_identity=task_identity,
+        project_root=project_root,
     )
     proof_request = build_proof_request_record(
         run_id=run_id,
@@ -1429,20 +1433,47 @@ def scenario_proof_template_text(*, root: Path | None) -> str:
     state: dict = {}
     if root and alpha_file(root, "state").exists():
         state = load_json(alpha_file(root, "state"))
+    profile = load_project_profile(root) or {}
     task_identity = load_text_if_exists(root / "task_identity.txt") if root else ""
     title = task_identity or "Describe the bounded verification for this run."
     run_id = state.get("run_id", "RUN_ID_FOR_THIS_CONTROLLED_RUN")
-    return "\n".join(
-        [
-            f"### SCENARIO PROOF: {title}",
-            f"Run id: {run_id}",
-            "Scenario: describe the exact runtime context on the attested target surface",
-            "Command: paste the local command, request, or test that verified the change",
-            "Observed: paste the concrete output, rendered fragment, or behavior that was seen",
-            "Status: PASSED",
-            "",
-        ]
-    )
+    lines = [
+        f"### SCENARIO PROOF: {title}",
+        f"Run id: {run_id}",
+        "Scenario: describe the exact runtime context on the attested target surface",
+        "Command: paste the local command, request, or test that verified the change",
+        "Observed: paste the concrete output, rendered fragment, or behavior that was seen",
+    ]
+    if profile.get("prefers_runtime_evidence", False):
+        lines.append("Runtime hint: prefer a local request, rendered response, or observed runtime output over a source-only grep when possible")
+    lines.extend(["Status: PASSED", ""])
+    return "\n".join(lines)
+
+
+def readback_template_text(*, root: Path | None) -> str:
+    state: dict = {}
+    if root and alpha_file(root, "state").exists():
+        state = load_json(alpha_file(root, "state"))
+    profile = load_project_profile(root) or {}
+    task_identity = load_text_if_exists(root / "task_identity.txt") if root else ""
+    title = task_identity or "Describe the bounded readback for this run."
+    changed_surface = "path/to/changed_file.ext"
+    final_result_path = root / "final_result.json" if root else None
+    if final_result_path and final_result_path.exists():
+        final_result = load_json(final_result_path)
+        modified_files = list(final_result.get("modified_files", []))
+        if modified_files:
+            changed_surface = str(modified_files[0])
+    lines = [
+        f"### READBACK: {title}",
+        f"Run id: {state.get('run_id', 'RUN_ID_FOR_THIS_CONTROLLED_RUN')}",
+        f"Changed surface: {changed_surface}",
+        "Observed: describe what this changed surface now contains, returns, or renders",
+    ]
+    if profile.get("prefers_runtime_evidence", False):
+        lines.append("Runtime hint: for UI, route, or rendered output changes, prefer a local response or rendered fragment over source-only grep when possible")
+    lines.append("")
+    return "\n".join(lines)
 
 
 def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
@@ -1467,10 +1498,13 @@ def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
     helper_commands: list[str] = []
     if any(section["section"] in {"final_result", "modified_files", "diff_provenance", "cleanup_status"} for section in structural_gaps + semantic_gaps):
         helper_commands.append("synrail final-result-template")
+    if any(section["section"] == "readback" for section in structural_gaps + semantic_gaps):
+        helper_commands.append("synrail readback-template")
     if any(section["section"] == "scenario_proof" for section in structural_gaps + semantic_gaps):
         helper_commands.append("synrail scenario-proof-template")
     helper_commands.append("synrail repair-step")
     final_result_target = display_path(root / "final_result.json") if root else "final_result.json"
+    readback_target = display_path(root / "readback.txt") if root else "readback.txt"
     scenario_proof_target = display_path(root / "scenario_proof.txt") if root else "scenario_proof.txt"
     return {
         "bundle_status": bundle.get("status", ""),
@@ -1483,6 +1517,7 @@ def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
         "semantic_gaps": semantic_gaps,
         "helper_commands": helper_commands,
         "final_result_target": final_result_target,
+        "readback_target": readback_target,
         "scenario_proof_target": scenario_proof_target,
     }
 
@@ -1518,6 +1553,8 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
         lines.append("Synrail did not find structural or semantic proof gaps in the current bundle.")
     if any(gap["section"] in {"final_result", "modified_files", "diff_provenance", "cleanup_status"} for gap in structural_gaps + semantic_gaps):
         lines.append(f"final_result target: {explanation['final_result_target']}")
+    if any(gap["section"] == "readback" for gap in structural_gaps + semantic_gaps):
+        lines.append(f"readback target: {explanation['readback_target']}")
     if any(gap["section"] == "scenario_proof" for gap in structural_gaps + semantic_gaps):
         lines.append(f"scenario_proof target: {explanation['scenario_proof_target']}")
     if explanation.get("helper_commands", []):
@@ -1697,6 +1734,18 @@ def cmd_scenario_proof_template(args: argparse.Namespace) -> int:
         target = Path(args.output).expanduser().resolve()
         target.write_text(text)
         print(f"Wrote canonical scenario_proof template to {display_path(target)}")
+    else:
+        print(text, end="")
+    return 0
+
+
+def cmd_readback_template(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
+    text = readback_template_text(root=root if root.exists() else None)
+    if getattr(args, "output", None):
+        target = Path(args.output).expanduser().resolve()
+        target.write_text(text)
+        print(f"Wrote canonical readback template to {display_path(target)}")
     else:
         print(text, end="")
     return 0
@@ -2656,6 +2705,7 @@ def cmd_check(args: argparse.Namespace) -> int:
                     for label in ["final_result", "readback", "scenario_proof"]:
                         if preferred.get(label, ""):
                             print(f"- {label}: {preferred[label]}")
+                    print("Need a canonical readback shape? run synrail readback-template")
                     print("Need a canonical final_result shape? run synrail final-result-template")
                     print("Need a canonical scenario_proof shape? run synrail scenario-proof-template")
                 else:
@@ -3964,6 +4014,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_final_result_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_final_result_template.add_argument("--output")
     p_final_result_template.set_defaults(func=cmd_final_result_template)
+
+    p_readback_template = sub.add_parser("readback-template")
+    p_readback_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_readback_template.add_argument("--output")
+    p_readback_template.set_defaults(func=cmd_readback_template)
 
     p_scenario_proof_template = sub.add_parser("scenario-proof-template")
     p_scenario_proof_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)

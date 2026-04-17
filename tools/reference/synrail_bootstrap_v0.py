@@ -38,7 +38,20 @@ def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
-def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity: str) -> dict[str, str]:
+def project_prefers_runtime_evidence(project_root: Path | None) -> bool:
+    if not project_root:
+        return False
+    root = project_root.resolve()
+    direct_markers = ["templates", "static", "public", "pages"]
+    if any((root / marker).exists() for marker in direct_markers):
+        return True
+    for child in root.iterdir():
+        if child.is_dir() and any((child / marker).exists() for marker in direct_markers):
+            return True
+    return any(root.glob("*.html"))
+
+
+def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity: str, project_root: Path | None = None) -> dict[str, str]:
     final_result = json.dumps(
         {
             "request_id": run_id,
@@ -81,18 +94,29 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
         indent=2,
         ensure_ascii=True,
     ) + "\n"
-    readback = (
-        "Synrail starter surface for readback.\n"
-        "Replace this file with concrete readback from the changed sections on the attested surface.\n"
-        f"Task: {task_identity.strip()}\n"
-    )
-    scenario_proof = (
-        f"### SCENARIO PROOF: {task_identity.strip()}\n"
-        "Scenario: describe the exact runtime context on the attested target surface\n"
-        "Command: paste the local command, request, or test that verified the change\n"
-        "Observed: paste the concrete output, rendered fragment, or behavior that was seen\n"
-        "Status: PASSED\n"
-    )
+    runtime_hint = project_prefers_runtime_evidence(project_root)
+    readback_lines = [
+        f"### READBACK: {task_identity.strip()}",
+        "Changed surface: path/to/changed_file.ext",
+        "Observed: describe what this changed surface now contains, returns, or renders",
+    ]
+    if runtime_hint:
+        readback_lines.append(
+            "Runtime hint: for UI, route, or rendered output changes, prefer a local response or rendered fragment over source-only grep when possible"
+        )
+    scenario_lines = [
+        f"### SCENARIO PROOF: {task_identity.strip()}",
+        "Scenario: describe the exact runtime context on the attested target surface",
+        "Command: paste the local command, request, or test that verified the change",
+        "Observed: paste the concrete output, rendered fragment, or behavior that was seen",
+    ]
+    if runtime_hint:
+        scenario_lines.append(
+            "Runtime hint: prefer a local request, rendered response, or observed runtime output over a source-only grep when possible"
+        )
+    scenario_lines.append("Status: PASSED")
+    readback = "\n".join(readback_lines) + "\n"
+    scenario_proof = "\n".join(scenario_lines) + "\n"
     return {
         "final_result": final_result,
         "readback": readback,
@@ -166,6 +190,7 @@ def build_proof_request_record(
         run_id=run_id,
         task_class=task_class,
         task_identity=task_identity,
+        project_root=project_root,
     )
     final_result = artifact_root / "final_result.json"
     readback = artifact_root / "readback.txt"
