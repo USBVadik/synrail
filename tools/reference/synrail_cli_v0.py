@@ -253,24 +253,43 @@ def relative_artifact_root_for_project(*, project_root: Path, artifact_root: str
 
 
 def policy_command_examples(*, artifact_root: str) -> dict[str, str]:
+    return policy_command_examples_for_binary(artifact_root=artifact_root, command="synrail")
+
+
+def preferred_synrail_command() -> str:
+    argv0 = Path(sys.argv[0]).expanduser()
+    if argv0.name != "synrail":
+        return "synrail"
+    resolved = argv0.resolve()
+    discovered = shutil.which("synrail")
+    if discovered:
+        try:
+            if Path(discovered).resolve() == resolved:
+                return "synrail"
+        except OSError:
+            pass
+    return shlex.quote(str(resolved))
+
+
+def policy_command_examples_for_binary(*, artifact_root: str, command: str) -> dict[str, str]:
     quoted_root = shlex.quote(artifact_root)
     if artifact_root == DEFAULT_ALPHA_ARTIFACT_ROOT:
         return {
-            "status": "synrail",
-            "start": 'synrail start "Describe the bounded local change."',
-            "check": "synrail check",
-            "repair": "synrail repair-step",
+            "status": command,
+            "start": f'{command} start "Describe the bounded local change."',
+            "check": f"{command} check",
+            "repair": f"{command} repair-step",
         }
     return {
-        "status": f"synrail status --artifact-root {quoted_root}",
-        "start": f'synrail start --artifact-root {quoted_root} "Describe the bounded local change."',
-        "check": f"synrail check --artifact-root {quoted_root}",
-        "repair": f"synrail repair-step --artifact-root {quoted_root}",
+        "status": f"{command} status --artifact-root {quoted_root}",
+        "start": f'{command} start --artifact-root {quoted_root} "Describe the bounded local change."',
+        "check": f"{command} check --artifact-root {quoted_root}",
+        "repair": f"{command} repair-step --artifact-root {quoted_root}",
     }
 
 
-def render_agent_policy_markdown(*, artifact_root: str) -> str:
-    commands = policy_command_examples(artifact_root=artifact_root)
+def render_agent_policy_markdown(*, artifact_root: str, command: str = "synrail") -> str:
+    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
     lines = [
         "# Agent Workflow",
         "",
@@ -318,8 +337,8 @@ def render_agent_policy_markdown(*, artifact_root: str) -> str:
     return "\n".join(lines)
 
 
-def render_gemini_policy_markdown(*, artifact_root: str) -> str:
-    commands = policy_command_examples(artifact_root=artifact_root)
+def render_gemini_policy_markdown(*, artifact_root: str, command: str = "synrail") -> str:
+    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
     lines = [
         "# Gemini Workflow",
         "",
@@ -363,8 +382,8 @@ def render_gemini_policy_markdown(*, artifact_root: str) -> str:
     return "\n".join(lines)
 
 
-def render_claude_policy_markdown(*, artifact_root: str) -> str:
-    commands = policy_command_examples(artifact_root=artifact_root)
+def render_claude_policy_markdown(*, artifact_root: str, command: str = "synrail") -> str:
+    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
     lines = [
         "# Claude Workflow",
         "",
@@ -408,8 +427,8 @@ def render_claude_policy_markdown(*, artifact_root: str) -> str:
     return "\n".join(lines)
 
 
-def render_agent_policy_block(*, title: str, intro: str, artifact_root: str) -> str:
-    commands = policy_command_examples(artifact_root=artifact_root)
+def render_agent_policy_block(*, title: str, intro: str, artifact_root: str, command: str = "synrail") -> str:
+    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
     lines = [
         f"## {title}",
         "",
@@ -507,27 +526,31 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         project_root=project_root,
         artifact_root=args.artifact_root,
     )
+    command = preferred_synrail_command()
     agents_path = project_root / "AGENTS.md"
     gemini_path = project_root / "GEMINI.md"
     claude_path = project_root / "CLAUDE.md"
 
-    agents_content = render_agent_policy_markdown(artifact_root=artifact_root)
-    gemini_content = render_gemini_policy_markdown(artifact_root=artifact_root)
-    claude_content = render_claude_policy_markdown(artifact_root=artifact_root)
+    agents_content = render_agent_policy_markdown(artifact_root=artifact_root, command=command)
+    gemini_content = render_gemini_policy_markdown(artifact_root=artifact_root, command=command)
+    claude_content = render_claude_policy_markdown(artifact_root=artifact_root, command=command)
     agents_block = render_agent_policy_block(
         title="Synrail Local Workflow",
         intro="This repo uses Synrail to keep one bounded local change inside one controlled run.",
         artifact_root=artifact_root,
+        command=command,
     )
     gemini_block = render_agent_policy_block(
         title="Synrail Local Workflow",
         intro="Use Synrail as the default local control path for this repo.",
         artifact_root=artifact_root,
+        command=command,
     )
     claude_block = render_agent_policy_block(
         title="Synrail Local Workflow",
         intro="Use Synrail as the default local control path for this repo.",
         artifact_root=artifact_root,
+        command=command,
     )
 
     agents_written, agents_state, agents_backup = write_agent_policy_file(
@@ -552,6 +575,7 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
     print("Agent adoption files are ready.")
     print(f"Project root: {project_root}")
     print(f"Artifact root hint: {artifact_root}")
+    print(f"Synrail command: {command}")
     print(f"AGENTS.md: {agents_state}")
     print(f"GEMINI.md: {gemini_state}")
     print(f"CLAUDE.md: {claude_state}")

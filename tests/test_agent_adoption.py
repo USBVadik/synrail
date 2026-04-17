@@ -8,11 +8,18 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ALPHA_ENTRY = REPO_ROOT / "alpha.py"
+TOOLS_ROOT = REPO_ROOT / "tools" / "reference"
+
+if str(TOOLS_ROOT) not in sys.path:
+    sys.path.insert(0, str(TOOLS_ROOT))
+
+from synrail_cli_v0 import preferred_synrail_command
 
 
 class AgentAdoptionTests(unittest.TestCase):
@@ -44,6 +51,7 @@ class AgentAdoptionTests(unittest.TestCase):
             )
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
             self.assertIn("Agent adoption files are ready.", result.stdout)
+            self.assertIn("Synrail command: synrail", result.stdout)
 
             agents = (project_root / "AGENTS.md").read_text()
             gemini = (project_root / "GEMINI.md").read_text()
@@ -66,6 +74,13 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("For every new user task, run Synrail first", claude)
             self.assertIn('synrail start "Describe the bounded local change."', claude)
             self.assertIn("synrail repair-step", claude)
+
+    def test_prefers_explicit_binary_when_path_points_elsewhere(self) -> None:
+        with mock.patch("synrail_cli_v0.sys.argv", ["/opt/synrail/.venv/bin/synrail"]), mock.patch(
+            "synrail_cli_v0.shutil.which",
+            return_value="/usr/local/bin/synrail",
+        ):
+            self.assertEqual("/opt/synrail/.venv/bin/synrail", preferred_synrail_command())
 
     def test_install_agent_files_is_idempotent_and_merges_existing_gemini_file(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_agent_adoption_force_") as tmpdir:
