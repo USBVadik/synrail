@@ -310,6 +310,19 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertIn("margin, padding, class, or layout", record["prompt"])
         self.assertIn("synrail final-result-template", record["prompt"])
 
+    def test_presentation_alignment_subsurface_includes_checklist(self) -> None:
+        packet = _minimal_packet(
+            current_step_id="repair_final_result_artifact",
+            reason="SEMANTIC_PROOF_INSUFFICIENT",
+            subsurface_ids=["presentation_alignment_record"],
+            stale_artifact_ids=["final_result_artifact"],
+        )
+        record = build_prompt_bridge(repair_packet=packet)
+        self.assertEqual("presentation_alignment_record", record["current_step_subsurface_id"])
+        self.assertIn("Keep the newly added line visually plain", record["prompt"])
+        self.assertIn("italic, uppercase, tracking, opacity", record["prompt"])
+        self.assertIn("synrail final-result-template", record["prompt"])
+
     def test_scenario_subsurface_includes_checklist(self) -> None:
         packet = _minimal_packet(
             current_step_id="complete_missing_proof_sections",

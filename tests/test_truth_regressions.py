@@ -599,6 +599,83 @@ class TruthRegressionTests(unittest.TestCase):
         )
         self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
 
+    def test_additive_only_task_rejects_extra_emphasis_styling(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_presentation_alignment_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "success",
+                "change_disposition": "modified",
+                "summary": "Added the requested subtitle with extra emphasis styling.",
+                "modified_files": ["warroom/templates/index.html"],
+                "git_diff": (
+                    "diff --git a/warroom/templates/index.html b/warroom/templates/index.html\n"
+                    "--- a/warroom/templates/index.html\n"
+                    "+++ b/warroom/templates/index.html\n"
+                    "@@ -21,6 +21,7 @@\n"
+                    "                 <h2 class=\"text-2xl font-semibold mb-4 flex items-center\">\n"
+                    "                     <span class=\"mr-2\">📊</span> Watchlist\n"
+                    "                 </h2>\n"
+                    "+                <p class=\"text-xs text-gray-400 mb-4 italic opacity-75\">Local signals only</p>\n"
+                ),
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "warroom/templates/index.html",
+                    "added_line": "                <p class=\"text-xs text-gray-400 mb-4 italic opacity-75\">Local signals only</p>",
+                    "context_before": "                </h2>",
+                    "context_after": "                <form action=\"/add_token\" method=\"post\" class=\"mb-6 flex gap-2\">",
+                    "verification_command": "curl -s http://localhost:8000/ | grep -C 2 'Local signals only'",
+                    "verification_result": "<p class=\"text-xs text-gray-400 mb-4 italic opacity-75\">Local signals only</p>",
+                    "provenance_note": "Subtitle rendered locally.",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "add-watchlist-subtitle",
+                    "task_identity": "Add Local signals only subtitle under Watchlist heading and do not change anything else",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only warroom/templates/index.html with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text(
+                "### READBACK: add watchlist subtitle\n"
+                "Changed surface: warroom/templates/index.html\n"
+                "Observed: the template now renders a Local signals only subtitle under the Watchlist heading.\n"
+            )
+            scenario.write_text(
+                "### SCENARIO PROOF: add watchlist subtitle\n"
+                "Scenario: local homepage render check for the Watchlist section\n"
+                "Command: curl -s http://localhost:8000/ | grep -C 2 \"Local signals only\"\n"
+                "Observed: the subtitle renders below the Watchlist heading\n"
+                "Status: PASSED\n"
+            )
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            args.prompt_identity = "Add Local signals only subtitle under Watchlist heading"
+            args.task_identity = "Add Local signals only subtitle under Watchlist heading and do not change anything else"
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
+        self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
+        self.assertEqual(["presentation_alignment"], bundle["semantically_insufficient_sections"])
+        self.assertEqual(
+            "keep the newly added surface visually plain and close to the requested text-only intent; remove extra emphasis styling unless the task asked for it",
+            bundle["semantic_next_safe_step"],
+        )
+        self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
+
 
 if __name__ == "__main__":
     unittest.main()

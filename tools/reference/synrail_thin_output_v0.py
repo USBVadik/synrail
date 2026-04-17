@@ -282,6 +282,7 @@ def current_repair_action_instruction(repair_packet: dict | None) -> str:
 SEMANTIC_SECTION_HINTS = {
     "modified_files": "record the actual changed files in the final result artifact",
     "scope_alignment": "keep the implementation inside the requested additive scope and remove unrelated adjacent rewrites or spacing tweaks",
+    "presentation_alignment": "keep the newly added surface visually plain and remove extra emphasis styling unless the task asked for it",
     "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record",
     "readback": "record substantive readback from the changed sections on the attested surface",
     "scenario_proof": "record an explicit scenario-proof result for the attested target surface",

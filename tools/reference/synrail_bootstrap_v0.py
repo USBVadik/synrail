@@ -104,6 +104,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                         "synrail final-result-template",
                     ],
                     "scope_hint": "Keep the implementation inside the requested scope. If the task only asked you to add or insert something, do not also tweak adjacent spacing, classes, or layout unless the task explicitly asked for it.",
+                    "presentation_hint": "If the task only asked for a simple added subtitle or label, keep the new line visually plain and avoid extra emphasis styling unless the task explicitly asked for it.",
                     "diff_provenance_hint": "if git_diff is unavailable, use diff_provenance with changed_file, added_line or removed_line, and verification_command plus verification_result; if the requested state was already present before edits, set change_disposition to already_satisfied, keep git_diff empty, and use observed_line plus provenance_note instead of inventing a patch",
                     "artifact_identity_hint": "mirror the current run baseline, execution surface, prompt, and task identity values here when low-level bundle-check needs them",
                     "no_op_hint": "If the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and attest the observed line truthfully through diff_provenance.",

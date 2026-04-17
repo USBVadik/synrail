@@ -1641,6 +1641,7 @@ def final_result_template_payload(*, root: Path | None) -> dict:
         "Replace the sample changed file path with the actual file paths for this run.",
         "Set change_disposition to already_satisfied only when the requested state was already present before any edit.",
         "Keep the scope tight: do not smuggle adjacent spacing, class, or layout tweaks into a task that only asked you to add or insert a small surface change.",
+        "If the task only asked for a simple subtitle or label, keep the new line visually plain and avoid extra emphasis styling unless the task explicitly asked for it.",
         "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers when you can produce one.",
         "If git_diff is unavailable, keep diff_provenance explicit with changed_file, changed lines, and verification command plus result.",
         "For an already_satisfied no-op, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.",
@@ -1871,6 +1872,8 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  No-op fix: if no file had to change because the requested state already existed, set change_disposition to already_satisfied and keep modified_files empty instead of inventing a changed file list.")
             if gap["section"] == "scope_alignment":
                 lines.append("  Concrete fix: keep only the requested additive change. Remove adjacent spacing, class, or layout rewrites unless the task explicitly asked for them.")
+            if gap["section"] == "presentation_alignment":
+                lines.append("  Concrete fix: keep the newly added line visually plain. Remove extra emphasis styling like italic, opacity, uppercase, or tracking unless the task explicitly asked for it.")
     if semantic_gaps:
         lines.append("Semantic gaps:")
         for gap in semantic_gaps:
@@ -1888,6 +1891,8 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  No-op fix: if no file had to change because the requested state already existed, set change_disposition to already_satisfied and keep modified_files empty instead of inventing a changed file list.")
             if gap["section"] == "scope_alignment":
                 lines.append("  Concrete fix: keep only the requested additive change. Remove adjacent spacing, class, or layout rewrites unless the task explicitly asked for them.")
+            if gap["section"] == "presentation_alignment":
+                lines.append("  Concrete fix: keep the newly added line visually plain. Remove extra emphasis styling like italic, opacity, uppercase, or tracking unless the task explicitly asked for it.")
     if not structural_gaps and not semantic_gaps:
         lines.append("Synrail did not find structural or semantic proof gaps in the current bundle.")
     if any(gap["section"] in {"final_result", "modified_files", "diff_provenance", "artifact_identity", "cleanup_status"} for gap in structural_gaps + semantic_gaps):

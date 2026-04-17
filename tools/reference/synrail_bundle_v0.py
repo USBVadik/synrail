@@ -22,6 +22,7 @@ REQUIRED_SECTION_NAMES = [
 SEMANTIC_SECTION_STEPS = {
     "modified_files": "record the actual changed files in the final result artifact, or mark the run as already_satisfied only when the requested state was already present before edits",
     "scope_alignment": "keep the implementation inside the requested additive scope and remove unrelated adjacent rewrites or spacing tweaks",
+    "presentation_alignment": "keep the newly added surface visually plain and close to the requested text-only intent; remove extra emphasis styling unless the task asked for it",
     "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record, or use a truthful already_satisfied observation record when no edit was required",
     "readback": "record substantive readback from the changed sections on the attested surface",
     "scenario_proof": "record an explicit scenario-proof result for the attested target surface",
@@ -113,6 +114,16 @@ def removed_patch_lines(value: str) -> list[str]:
     return removed
 
 
+def added_patch_lines(value: str) -> list[str]:
+    added: list[str] = []
+    for raw_line in value.splitlines():
+        if raw_line.startswith(("diff --git", "@@", "---", "+++")):
+            continue
+        if raw_line.startswith("+"):
+            added.append(raw_line[1:].strip())
+    return added
+
+
 def non_empty_string(value: object) -> str:
     if not isinstance(value, str):
         return ""
@@ -187,6 +198,90 @@ def scope_alignment_is_semantically_sufficient(
     if isinstance(diff_provenance_record, dict) and non_empty_string(diff_provenance_record.get("removed_line", "")):
         return True, False
     return True, True
+
+
+def style_intent_requested(task_text: str) -> bool:
+    lowered = task_text.lower()
+    return any(
+        marker in lowered
+        for marker in [
+            "italic",
+            "bold",
+            "uppercase",
+            "tracking",
+            "opacity",
+            "faded",
+            "muted",
+            "accent",
+            "emphasis",
+            "style",
+            "styled",
+            "css",
+            "class",
+            "blue",
+            "gray",
+            "grey",
+            "caps",
+        ]
+    )
+
+
+def suspicious_emphasis_classes(line: str) -> list[str]:
+    text = non_empty_string(line)
+    if not text or 'class="' not in text:
+        return []
+    class_blob = text.split('class="', 1)[1].split('"', 1)[0]
+    classes = [item.strip() for item in class_blob.split() if item.strip()]
+    suspicious_prefixes = [
+        "italic",
+        "underline",
+        "line-through",
+        "uppercase",
+        "capitalize",
+        "tracking-",
+        "opacity-",
+        "font-bold",
+        "font-extrabold",
+        "font-black",
+        "shadow",
+        "animate-",
+        "rotate-",
+        "skew-",
+        "scale-",
+        "blur",
+    ]
+    return [
+        item
+        for item in classes
+        if any(item == prefix or item.startswith(prefix) for prefix in suspicious_prefixes)
+    ]
+
+
+def presentation_alignment_is_semantically_sufficient(
+    *,
+    change_disposition: str,
+    git_diff: str,
+    diff_provenance_record: object,
+    task_identity_text: str,
+) -> tuple[bool, bool, list[str]]:
+    if change_disposition == "already_satisfied":
+        return False, True, []
+    if not additive_only_scope_requested(task_identity_text) or style_intent_requested(task_identity_text):
+        return False, True, []
+    candidate_lines: list[str] = []
+    if isinstance(diff_provenance_record, dict):
+        for key in ["added_line", "observed_line"]:
+            line = non_empty_string(diff_provenance_record.get(key, ""))
+            if line:
+                candidate_lines.append(line)
+    candidate_lines.extend(added_patch_lines(git_diff))
+    suspicious: list[str] = []
+    for line in candidate_lines:
+        suspicious.extend(suspicious_emphasis_classes(line))
+    unique = sorted(set(suspicious))
+    if not candidate_lines:
+        return False, True, []
+    return True, not bool(unique), unique
 
 
 def structured_diff_provenance_is_semantically_sufficient(
@@ -390,6 +485,16 @@ def build_bundle(args: argparse.Namespace) -> dict:
         diff_provenance_record=diff_provenance_record,
         task_identity_text=scope_task_text,
     )
+    (
+        presentation_alignment_evaluated,
+        presentation_alignment_semantically_sufficient,
+        suspicious_presentation_classes,
+    ) = presentation_alignment_is_semantically_sufficient(
+        change_disposition=change_disposition,
+        git_diff=git_diff,
+        diff_provenance_record=diff_provenance_record,
+        task_identity_text=scope_task_text,
+    )
     identity_values = [
         baseline_identity,
         execution_surface_identity,
@@ -423,6 +528,11 @@ def build_bundle(args: argparse.Namespace) -> dict:
         "scope_alignment": {
             "evaluated": scope_alignment_evaluated,
             "semantically_sufficient": scope_alignment_semantically_sufficient,
+        },
+        "presentation_alignment": {
+            "evaluated": presentation_alignment_evaluated,
+            "semantically_sufficient": presentation_alignment_semantically_sufficient,
+            "suspicious_classes": suspicious_presentation_classes,
         },
         "diff_provenance": {
             "present": "git_diff" in final or "diff_provenance" in final,
@@ -569,6 +679,8 @@ def build_bundle(args: argparse.Namespace) -> dict:
             semantically_insufficient_sections.append("modified_files")
         if scope_alignment_evaluated and not scope_alignment_semantically_sufficient:
             semantically_insufficient_sections.append("scope_alignment")
+        if presentation_alignment_evaluated and not presentation_alignment_semantically_sufficient:
+            semantically_insufficient_sections.append("presentation_alignment")
         if not diff_semantically_sufficient:
             semantically_insufficient_sections.append("diff_provenance")
         if not readback_semantically_sufficient:
@@ -616,6 +728,20 @@ def build_bundle(args: argparse.Namespace) -> dict:
                 else "the task reads like an add-only request, but the proof shows adjacent rewrites or removals beyond the requested insertion"
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["scope_alignment"],
+        ),
+        semantic_trace_entry(
+            section="presentation_alignment",
+            evaluated=not missing and presentation_alignment_evaluated,
+            semantically_sufficient=presentation_alignment_semantically_sufficient,
+            why=(
+                "the task reads like a plain add-only request and the newly added surface stays visually plain without extra emphasis styling"
+                if presentation_alignment_semantically_sufficient
+                else (
+                    "the task reads like a plain add-only request, but the newly added surface adds extra emphasis styling: "
+                    + ", ".join(suspicious_presentation_classes)
+                )
+            ),
+            recommended_action=SEMANTIC_SECTION_STEPS["presentation_alignment"],
         ),
         semantic_trace_entry(
             section="diff_provenance",

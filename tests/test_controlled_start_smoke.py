@@ -474,6 +474,40 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("scenario_proof target: .synrail/scenario_proof.txt", explain.stdout)
             self.assertIn("synrail scenario-proof-template", explain.stdout)
 
+    def test_explain_proof_surfaces_presentation_alignment_fix(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_presentation_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "bundle.json",
+                {
+                    "status": "STRUCTURALLY_COMPLETE",
+                    "structural_status": "COMPLETE",
+                    "semantic_status": "INSUFFICIENT",
+                    "semantic_next_safe_step": "keep the newly added surface visually plain and remove extra emphasis styling unless the task asked for it",
+                    "semantic_decision_trace": [
+                        {
+                            "section": "presentation_alignment",
+                            "evaluated": True,
+                            "semantically_sufficient": False,
+                            "why": "the task reads like a plain add-only request, but the newly added surface adds extra emphasis styling: italic, opacity-75",
+                            "recommended_action": "keep the newly added surface visually plain and remove extra emphasis styling unless the task asked for it",
+                        }
+                    ],
+                    "structural_decision_trace": [],
+                    "missing_sections": [],
+                    "semantically_insufficient_sections": ["presentation_alignment"],
+                },
+            )
+
+            explain = self.run_alpha("explain-proof", cwd=project_root)
+            self.assertEqual(0, explain.returncode, explain.stdout + explain.stderr)
+            self.assertIn("presentation_alignment", explain.stdout)
+            self.assertIn("visually plain", explain.stdout)
+            self.assertIn("italic, opacity", explain.stdout)
+
     def test_check_blocks_remote_target_as_unsupported(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_remote_unsupported_") as tmpdir:
             project_root = Path(tmpdir) / "project"
