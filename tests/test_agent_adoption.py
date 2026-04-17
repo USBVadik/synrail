@@ -82,6 +82,13 @@ class AgentAdoptionTests(unittest.TestCase):
         ):
             self.assertEqual("/opt/synrail/.venv/bin/synrail", preferred_synrail_command())
 
+    def test_prefers_explicit_binary_even_when_path_matches(self) -> None:
+        with mock.patch("synrail_cli_v0.sys.argv", ["/opt/synrail/.venv/bin/synrail"]), mock.patch(
+            "synrail_cli_v0.shutil.which",
+            return_value="/opt/synrail/.venv/bin/synrail",
+        ):
+            self.assertEqual("/opt/synrail/.venv/bin/synrail", preferred_synrail_command())
+
     def test_install_agent_files_is_idempotent_and_merges_existing_gemini_file(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_agent_adoption_force_") as tmpdir:
             project_root = Path(tmpdir) / "project"

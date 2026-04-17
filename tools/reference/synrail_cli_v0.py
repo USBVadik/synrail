@@ -260,15 +260,11 @@ def preferred_synrail_command() -> str:
     argv0 = Path(sys.argv[0]).expanduser()
     if argv0.name != "synrail":
         return "synrail"
-    resolved = argv0.resolve()
-    discovered = shutil.which("synrail")
-    if discovered:
-        try:
-            if Path(discovered).resolve() == resolved:
-                return "synrail"
-        except OSError:
-            pass
-    return shlex.quote(str(resolved))
+    # When install-agent-files is invoked via the real synrail entrypoint, pin
+    # that exact binary in agent policy files. This avoids agent-specific PATH
+    # drift where Claude/Gemini resolve a different synrail binary than the one
+    # that authored the repo instructions.
+    return shlex.quote(str(argv0.resolve()))
 
 
 def policy_command_examples_for_binary(*, artifact_root: str, command: str) -> dict[str, str]:
