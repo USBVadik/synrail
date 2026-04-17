@@ -168,6 +168,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("readback: .synrail/readback.txt", check.stdout)
             self.assertIn("scenario_proof: .synrail/scenario_proof.txt", check.stdout)
             self.assertIn("synrail final-result-template", check.stdout)
+            self.assertIn("synrail scenario-proof-template", check.stdout)
 
     def test_final_result_template_uses_current_run_context(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_final_result_template_") as tmpdir:
@@ -188,6 +189,27 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn(state["run_id"], template.stdout)
             self.assertIn('"git_diff": "diff --git', template.stdout)
             self.assertIn("workspace clean after updating only path/to/changed_file.ext", template.stdout)
+
+    def test_scenario_proof_template_uses_current_run_context(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_scenario_proof_template_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "Show the canonical scenario_proof shape for this run.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+            state = load_json(artifact_root / "state.json")
+
+            template = self.run_alpha("scenario-proof-template", cwd=project_root)
+            self.assertEqual(0, template.returncode, template.stdout + template.stderr)
+            self.assertIn(state["run_id"], template.stdout)
+            self.assertIn("Scenario:", template.stdout)
+            self.assertIn("Observed:", template.stdout)
+            self.assertIn("Status: PASSED", template.stdout)
 
     def test_explain_proof_guides_user_before_first_check(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_missing_") as tmpdir:
@@ -240,6 +262,40 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("diff_provenance", explain.stdout)
             self.assertIn("does not yet prove a concrete patch on the named files", explain.stdout)
             self.assertIn("synrail final-result-template", explain.stdout)
+
+    def test_explain_proof_surfaces_scenario_helper(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_scenario_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "bundle.json",
+                {
+                    "status": "STRUCTURALLY_COMPLETE",
+                    "structural_status": "COMPLETE",
+                    "semantic_status": "INSUFFICIENT",
+                    "semantic_next_safe_step": "record an explicit scenario-proof result for the attested target surface",
+                    "semantic_decision_trace": [
+                        {
+                            "section": "scenario_proof",
+                            "evaluated": True,
+                            "semantically_sufficient": False,
+                            "why": "scenario-proof evidence does not yet record a concrete scenario context and outcome",
+                            "recommended_action": "record an explicit scenario-proof result for the attested target surface",
+                        }
+                    ],
+                    "structural_decision_trace": [],
+                    "missing_sections": [],
+                    "semantically_insufficient_sections": ["scenario_proof"],
+                },
+            )
+
+            explain = self.run_alpha("explain-proof", cwd=project_root)
+            self.assertEqual(0, explain.returncode, explain.stdout + explain.stderr)
+            self.assertIn("scenario_proof", explain.stdout)
+            self.assertIn("scenario_proof target: .synrail/scenario_proof.txt", explain.stdout)
+            self.assertIn("synrail scenario-proof-template", explain.stdout)
 
     def test_check_blocks_remote_target_as_unsupported(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_remote_unsupported_") as tmpdir:
@@ -396,6 +452,56 @@ class ControlledStartSmokeTests(unittest.TestCase):
                 "CONTROLLED_BOOTSTRAP_CONFIRMED",
                 retried_state["integrity"]["bootstrap_provenance_reason"],
             )
+
+    def test_repair_step_synthesizes_missing_packet_for_scenario_gap(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_repair_step_scenario_packet_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                "--task-identity",
+                "Guide the operator directly to scenario proof when that is the only gap.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            state = load_json(artifact_root / "state.json")
+            write_json(
+                artifact_root / "final_result.json",
+                {
+                    "request_id": state["run_id"],
+                    "task_class": state["task_class"],
+                    "status": "DONE",
+                    "summary": "Implemented the bounded change.",
+                    "modified_files": ["app.py"],
+                    "git_diff": "diff --git a/app.py b/app.py\n--- a/app.py\n+++ b/app.py\n@@\n+patched\n",
+                    "cleanup_status": {
+                        "success": True,
+                        "summary": "workspace is clean after the bounded change",
+                    },
+                },
+            )
+            (artifact_root / "readback.txt").write_text("Confirmed the changed section in app.py.\n")
+
+            check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertIn("record scenario proof in .synrail/scenario_proof.txt", check.stdout)
+
+            (artifact_root / "repair_packet.json").unlink(missing_ok=True)
+            (artifact_root / "prompt.json").unlink(missing_ok=True)
+
+            repair_step = self.run_alpha("repair-step", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, repair_step.returncode, repair_step.stdout + repair_step.stderr)
+            self.assertNotIn("does not have the next bounded repair instruction yet", repair_step.stdout.lower())
+            self.assertIn(".synrail/scenario_proof.txt", repair_step.stdout)
+            self.assertIn("Repair target: record scenario proof in .synrail/scenario_proof.txt", repair_step.stdout)
+            self.assertIn("synrail scenario-proof-template", load_json(artifact_root / "prompt.json")["prompt"])
 
 
     def test_start_after_terminal_state_auto_clears_proof(self) -> None:

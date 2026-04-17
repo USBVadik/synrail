@@ -1425,6 +1425,26 @@ def final_result_template_payload(*, root: Path | None) -> dict:
     }
 
 
+def scenario_proof_template_text(*, root: Path | None) -> str:
+    state: dict = {}
+    if root and alpha_file(root, "state").exists():
+        state = load_json(alpha_file(root, "state"))
+    task_identity = load_text_if_exists(root / "task_identity.txt") if root else ""
+    title = task_identity or "Describe the bounded verification for this run."
+    run_id = state.get("run_id", "RUN_ID_FOR_THIS_CONTROLLED_RUN")
+    return "\n".join(
+        [
+            f"### SCENARIO PROOF: {title}",
+            f"Run id: {run_id}",
+            "Scenario: describe the exact runtime context on the attested target surface",
+            "Command: paste the local command, request, or test that verified the change",
+            "Observed: paste the concrete output, rendered fragment, or behavior that was seen",
+            "Status: PASSED",
+            "",
+        ]
+    )
+
+
 def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
     structural_gaps = [
         {
@@ -1447,8 +1467,11 @@ def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
     helper_commands: list[str] = []
     if any(section["section"] in {"final_result", "modified_files", "diff_provenance", "cleanup_status"} for section in structural_gaps + semantic_gaps):
         helper_commands.append("synrail final-result-template")
+    if any(section["section"] == "scenario_proof" for section in structural_gaps + semantic_gaps):
+        helper_commands.append("synrail scenario-proof-template")
     helper_commands.append("synrail repair-step")
     final_result_target = display_path(root / "final_result.json") if root else "final_result.json"
+    scenario_proof_target = display_path(root / "scenario_proof.txt") if root else "scenario_proof.txt"
     return {
         "bundle_status": bundle.get("status", ""),
         "structural_status": bundle.get("structural_status", ""),
@@ -1460,6 +1483,7 @@ def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
         "semantic_gaps": semantic_gaps,
         "helper_commands": helper_commands,
         "final_result_target": final_result_target,
+        "scenario_proof_target": scenario_proof_target,
     }
 
 
@@ -1494,6 +1518,8 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
         lines.append("Synrail did not find structural or semantic proof gaps in the current bundle.")
     if any(gap["section"] in {"final_result", "modified_files", "diff_provenance", "cleanup_status"} for gap in structural_gaps + semantic_gaps):
         lines.append(f"final_result target: {explanation['final_result_target']}")
+    if any(gap["section"] == "scenario_proof" for gap in structural_gaps + semantic_gaps):
+        lines.append(f"scenario_proof target: {explanation['scenario_proof_target']}")
     if explanation.get("helper_commands", []):
         lines.append("Helpful commands:")
         for command in explanation["helper_commands"]:
@@ -1659,6 +1685,18 @@ def cmd_final_result_template(args: argparse.Namespace) -> int:
         target = Path(args.output).expanduser().resolve()
         target.write_text(text)
         print(f"Wrote canonical final_result template to {display_path(target)}")
+    else:
+        print(text, end="")
+    return 0
+
+
+def cmd_scenario_proof_template(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
+    text = scenario_proof_template_text(root=root if root.exists() else None)
+    if getattr(args, "output", None):
+        target = Path(args.output).expanduser().resolve()
+        target.write_text(text)
+        print(f"Wrote canonical scenario_proof template to {display_path(target)}")
     else:
         print(text, end="")
     return 0
@@ -2423,6 +2461,12 @@ def cmd_thin_output(args: argparse.Namespace) -> int:
 
 def cmd_generate_prompt(args: argparse.Namespace) -> int:
     root = alpha_root_from_args(args)
+    if root and not getattr(args, "state_file", None):
+        args.state_file = str(alpha_file(root, "state"))
+    if root and not getattr(args, "report_file", None):
+        existing = maybe_existing_alpha_file(root, "report")
+        if existing:
+            args.report_file = existing
     if root and not getattr(args, "repair_packet_file", None):
         args.repair_packet_file = str(alpha_file(root, "repair_packet"))
     if root and not getattr(args, "doctor_file", None):
@@ -2436,14 +2480,22 @@ def cmd_generate_prompt(args: argparse.Namespace) -> int:
         if discovered:
             args.checkpoint_record_file = discovered
     if not args.repair_packet_file or not Path(args.repair_packet_file).exists():
-        if args.mode == "dev":
-            print(json.dumps({"result": "ERROR", "reason": "REPAIR_PACKET_REQUIRED"}, ensure_ascii=True))
-        else:
-            print("Synrail does not have the next bounded repair instruction yet.")
-            if root:
-                print("What to do next: run one check first so Synrail can build the bounded next step.")
-                print("Next command: " + shell_command(root, "check"))
-        return 2
+        state_file = getattr(args, "state_file", None)
+        if root and state_file and Path(state_file).expanduser().resolve().exists():
+            state = load_json(Path(state_file).expanduser().resolve())
+            apply_resume_output_defaults(args, state)
+            ensure_repair_packet_synthesis_defaults(args)
+            synthesize_repair_packet(args, state)
+        if not args.repair_packet_file or not Path(args.repair_packet_file).exists():
+            if args.mode == "dev":
+                print(json.dumps({"result": "ERROR", "reason": "REPAIR_PACKET_REQUIRED"}, ensure_ascii=True))
+                return 2
+            else:
+                print("Synrail does not have the next bounded repair instruction yet.")
+                if root:
+                    print("What to do next: run one check first so Synrail can build the bounded next step.")
+                    print("Next command: " + shell_command(root, "check"))
+                return 2
     forwarded = [
         "--repair-packet-file", args.repair_packet_file,
         "--output", args.output,
@@ -2605,6 +2657,7 @@ def cmd_check(args: argparse.Namespace) -> int:
                         if preferred.get(label, ""):
                             print(f"- {label}: {preferred[label]}")
                     print("Need a canonical final_result shape? run synrail final-result-template")
+                    print("Need a canonical scenario_proof shape? run synrail scenario-proof-template")
                 else:
                     profile = load_project_profile(root)
                     candidates = (profile or {}).get("final_result_candidates", [])
@@ -3274,7 +3327,7 @@ def discover_resume_sibling_inputs(args: argparse.Namespace, state: dict) -> Non
             args.readback = str(candidate)
 
     if not getattr(args, "scenario_proof", None):
-        candidate = existing_variants("later_scenario.txt", "scenario.txt")
+        candidate = existing_variants("later_scenario_proof.txt", "scenario_proof.txt", "later_scenario.txt", "scenario.txt")
         if candidate:
             args.scenario_proof = str(candidate)
 
@@ -3401,12 +3454,24 @@ def apply_resume_output_defaults(args: argparse.Namespace, state: dict) -> None:
         if not getattr(args, attr, None):
             setattr(args, attr, value)
 
+    project_profile: dict = {}
+    for candidate_name in [runtime_name("project_profile.json"), "project_profile.json"]:
+        candidate = root / candidate_name
+        if candidate.exists():
+            project_profile = load_json(candidate)
+            break
+
     baseline_identity = state.get("target_surface", {}).get("identity", "") or state["run_id"]
     execution_surface_identity = state.get("target_surface", {}).get("identity", "") or baseline_identity
+    target_path = (
+        project_profile.get("target_path", "")
+        or project_profile.get("project_root", "")
+        or (str(root.parent) if root.name.startswith(".synrail") else str(root))
+    )
     context_defaults = {
         "doctor_run_id": f"{state['run_id']}_RESUME",
         "doctor_level": "CORE_DOCTOR",
-        "target_path": str(root),
+        "target_path": target_path,
         "target_classification": "resume_surface",
         "baseline_identity": baseline_identity,
         "intended_run_class": "core_probe",
@@ -3423,6 +3488,44 @@ def apply_resume_output_defaults(args: argparse.Namespace, state: dict) -> None:
         args.task_identity = ""
     if getattr(args, "final_result", None) is None:
         args.final_result = ""
+
+
+def ensure_repair_packet_synthesis_defaults(args: argparse.Namespace) -> None:
+    string_defaults = {
+        "final_result": "",
+        "readback": "",
+        "scenario_proof": "",
+        "target_identity_file": "",
+        "artifact_path": "",
+        "helper_path": "",
+        "prompt_identity": "",
+        "task_identity": "",
+        "refresh_output": "",
+        "refresh_event_type": "",
+        "refresh_recovery_status": "NOT_REQUIRED",
+    }
+    bool_defaults = {
+        "prompt_identity_ok": False,
+        "clean_surface": False,
+        "artifact_viable": False,
+        "helper_ok": False,
+        "credentials_ok": False,
+        "refresh_reverification_complete": False,
+        "refresh_use_bundle": False,
+        "refresh_use_closure": False,
+    }
+    list_defaults = {
+        "credential_env": [],
+    }
+    for attr, value in string_defaults.items():
+        if getattr(args, attr, None) is None:
+            setattr(args, attr, value)
+    for attr, value in bool_defaults.items():
+        if getattr(args, attr, None) is None:
+            setattr(args, attr, value)
+    for attr, value in list_defaults.items():
+        if getattr(args, attr, None) is None:
+            setattr(args, attr, list(value))
 
 
 def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> list[str]:
@@ -3861,6 +3964,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_final_result_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_final_result_template.add_argument("--output")
     p_final_result_template.set_defaults(func=cmd_final_result_template)
+
+    p_scenario_proof_template = sub.add_parser("scenario-proof-template")
+    p_scenario_proof_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_scenario_proof_template.add_argument("--output")
+    p_scenario_proof_template.set_defaults(func=cmd_scenario_proof_template)
 
     p_bundle = sub.add_parser("bundle-check")
     p_bundle.add_argument("--final-result", required=True)

@@ -282,6 +282,20 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertIn("synrail final-result-template", record["prompt"])
         self.assertIn("synrail explain-proof", record["prompt"])
 
+    def test_scenario_subsurface_includes_checklist(self) -> None:
+        packet = _minimal_packet(
+            current_step_id="complete_missing_proof_sections",
+            reason="INVALID_PROOF_BUNDLE",
+            subsurface_ids=["scenario_proof_record"],
+            stale_artifact_ids=["proof_bundle"],
+        )
+        record = build_prompt_bridge(repair_packet=packet)
+        self.assertEqual("scenario_proof_record", record["current_step_subsurface_id"])
+        self.assertIn("Checklist for /tmp/synrail/scenario_proof.txt:", record["prompt"])
+        self.assertIn("Status: PASSED", record["prompt"])
+        self.assertIn("synrail scenario-proof-template", record["prompt"])
+        self.assertIn("synrail explain-proof", record["prompt"])
+
     def test_no_subsurface_uses_step_scope(self) -> None:
         packet = _minimal_packet()
         record = build_prompt_bridge(repair_packet=packet)

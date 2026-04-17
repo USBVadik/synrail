@@ -87,9 +87,11 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
         f"Task: {task_identity.strip()}\n"
     )
     scenario_proof = (
-        "Synrail starter surface for scenario proof.\n"
-        "Replace this file with the explicit scenario result for this run.\n"
-        f"Task: {task_identity.strip()}\n"
+        f"### SCENARIO PROOF: {task_identity.strip()}\n"
+        "Scenario: describe the exact runtime context on the attested target surface\n"
+        "Command: paste the local command, request, or test that verified the change\n"
+        "Observed: paste the concrete output, rendered fragment, or behavior that was seen\n"
+        "Status: PASSED\n"
     )
     return {
         "final_result": final_result,

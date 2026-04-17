@@ -168,6 +168,22 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
     return common
 
 
+def scenario_proof_repair_checklist(*, current_step_subsurface_id: str, current_step_target_path: str) -> list[str]:
+    if current_step_subsurface_id != "scenario_proof_record":
+        return []
+    if not current_step_target_path or not current_step_target_path.endswith("scenario_proof.txt"):
+        return []
+    return [
+        f"Checklist for {current_step_target_path}:",
+        "- Scenario: describe the exact runtime context on the attested target surface",
+        "- Command: include the local command, request, or test used to verify the change",
+        "- Observed: include the concrete output, rendered fragment, or behavior that was seen",
+        "- Status: PASSED when the expected outcome was observed; otherwise use FAILED or BLOCKED truthfully",
+        "- Need a canonical shape? run `synrail scenario-proof-template`",
+        "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+    ]
+
+
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
 
@@ -309,6 +325,10 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
     if checkpoint_hint:
         prompt_lines.append(checkpoint_hint)
     prompt_lines.extend(final_result_repair_checklist(
+        current_step_subsurface_id=current_step_subsurface_id,
+        current_step_target_path=current_step_target_path,
+    ))
+    prompt_lines.extend(scenario_proof_repair_checklist(
         current_step_subsurface_id=current_step_subsurface_id,
         current_step_target_path=current_step_target_path,
     ))
