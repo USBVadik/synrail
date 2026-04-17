@@ -499,11 +499,11 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
     if gemini_backup:
         print(f"GEMINI.md backup: {gemini_backup}")
     if agents_state in {"appended", "updated"} or gemini_state in {"appended", "updated"}:
-        print("What to do next: review the managed Synrail block added to the existing agent file and commit it if the wording fits the repo.")
+        print("What to do next: run `synrail` in this repo so the dashboard can show the current state, then review and commit the managed Synrail block if the wording fits the repo.")
     elif agents_written or gemini_written:
-        print("What to do next: commit these files into the repo so local agents discover Synrail before editing.")
+        print("What to do next: run `synrail` in this repo. Commit these files if you want local agents to keep discovering Synrail before editing.")
     else:
-        print("What to do next: keep these files committed so local agents continue discovering the same Synrail entrypoint.")
+        print("What to do next: run `synrail` in this repo. Keep these files committed so local agents continue discovering the same Synrail entrypoint.")
     return 0
 
 
@@ -1261,6 +1261,24 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
     print("\n".join(lines))
 
 
+def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Path) -> None:
+    state = load_json(state_file)
+    proof_request = load_bootstrap_json(alpha_file(root, "proof_request")) if alpha_file(root, "proof_request").exists() else {}
+    preferred = proof_request.get("preferred_artifacts", {})
+    lines = [
+        "Synrail already has a controlled run in progress.",
+        "What happened: this artifact root still points at the current untouched run, so Synrail did not start a second one.",
+        f"Artifact root: {display_path(root)}",
+        f"Run id: {state.get('run_id', '')}",
+        "Continue this run by editing only the starter proof files below in place.",
+        f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
+        f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
+        f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
+        "Next command: " + shell_command(root, "check", project_root=project_root),
+    ]
+    print("\n".join(lines))
+
+
 TERMINAL_RUN_STATES = {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}
 
 
@@ -1285,6 +1303,25 @@ def format_run_label(state: dict | None) -> str:
     if run_state:
         return run_state
     return "present but unreadable"
+
+
+def humanize_dashboard_next_step(text: str) -> str:
+    value = (text or "").strip()
+    if not value:
+        return value
+    mapping = {
+        "attest target surface": "confirm that this repo/worktree is the intended place for the run",
+        "confirm exact task identity": "confirm that the saved task request still matches this run",
+        "run doctor and clear blocking failure classes": "run readiness checks and clear the blocking failure classes",
+        "start the run in controlled mode before trusting any proof or acceptance": "start this task through Synrail before trusting any proof or acceptance",
+        "restore exact prompt and task identity": "restore the exact task request and prompt identity",
+        "complete bounded execution on the attested target surface": "finish the bounded change on the verified target surface",
+        "capture the final result artifact and rebuild the proof bundle": "capture the final result and rebuild the proof bundle",
+        "repair the final result artifact and rebuild the proof bundle": "repair final_result.json and rebuild the proof bundle",
+        "complete the missing proof sections": "fill in the missing proof sections",
+        "run reverification against the attested target surface": "rerun verification against the verified target surface",
+    }
+    return mapping.get(value, value)
 
 
 def build_workspace_status(root: Path, *, project_root: Path, state_path: Path | None = None) -> dict:
@@ -1314,6 +1351,7 @@ def build_workspace_status(root: Path, *, project_root: Path, state_path: Path |
         next_step = (state or {}).get("next_safe_step", "") or shell_command(root, "check", project_root=project_root)
     else:
         next_step = shell_command(root, "start", "Describe the bounded local change.", project_root=project_root)
+    human_next_step = humanize_dashboard_next_step(next_step)
 
     return {
         "type": "cli_control_kernel",
@@ -1325,7 +1363,8 @@ def build_workspace_status(root: Path, *, project_root: Path, state_path: Path |
         "agent_wiring": agent_wiring_label(project_root),
         "active_run": format_run_label(state) if active_run else "none",
         "last_run": format_run_label(state),
-        "next_step": next_step,
+        "next_step": human_next_step,
+        "next_step_raw": next_step,
         "start_command": shell_command(root, "start", "Describe the bounded local change.", project_root=project_root),
         "help_command": "synrail --help",
     }
@@ -1560,8 +1599,26 @@ def cmd_start(args: argparse.Namespace) -> int:
         return 2
 
     existing_proof = existing_preferred_proof_artifacts(root)
+    previous_state = existing_state.get("state", "") if existing_state else ""
+    active_bootstrap = alpha_file(root, "bootstrap").exists()
+    if existing_state and active_bootstrap and previous_state and previous_state not in TERMINAL_RUN_STATES and not existing_proof:
+        if args.mode == "dev":
+            print(
+                json.dumps(
+                    {
+                        "result": "OK",
+                        "reason": "CONTROLLED_RUN_ALREADY_ACTIVE",
+                        "reused_existing_run": True,
+                        "run_id": existing_state.get("run_id", ""),
+                        "next_command": shell_command(root, "check", project_root=project_root),
+                    },
+                    ensure_ascii=True,
+                )
+            )
+        else:
+            print_existing_run_summary(root=root, state_file=existing_state_path, project_root=project_root)
+        return 0
     if existing_proof:
-        previous_state = existing_state.get("state", "") if existing_state else ""
         if previous_state in ("CLOSURE_ACCEPTED", "CLOSURE_REJECTED"):
             for _aid, path in preferred_proof_artifact_paths(root).items():
                 path.unlink(missing_ok=True)

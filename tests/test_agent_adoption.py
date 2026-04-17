@@ -54,6 +54,7 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("synrail check", agents)
             self.assertIn("Do not skip Synrail", agents)
             self.assertNotIn('ARTIFACT_ROOT="$(pwd)/.synrail"', agents)
+            self.assertIn("run `synrail` in this repo", result.stdout)
 
             self.assertIn("Use Synrail as the default local control path", gemini)
             self.assertIn("For every new user task, run Synrail first", gemini)

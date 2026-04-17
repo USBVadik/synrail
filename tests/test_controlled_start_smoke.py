@@ -68,7 +68,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(0, dashboard.returncode, dashboard.stdout + dashboard.stderr)
             self.assertIn("Workspace: controlled run in progress", dashboard.stdout)
             self.assertIn("Active run: ALPHA_RUN_", dashboard.stdout)
-            self.assertIn("Next step:", dashboard.stdout)
+            self.assertIn("Next step: confirm that this repo/worktree is the intended place for the run", dashboard.stdout)
+            self.assertNotIn("Next step: attest target surface", dashboard.stdout)
 
     def test_start_creates_bootstrap_and_proof_request(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_controlled_start_") as tmpdir:
@@ -398,6 +399,35 @@ class ControlledStartSmokeTests(unittest.TestCase):
             )
             self.assertEqual(2, start2.returncode)
             self.assertIn("proof artifacts already exist", start2.stdout)
+
+    def test_start_reuses_existing_untouched_run(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_restart_reuse_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start1 = self.run_alpha(
+                "start",
+                "First onboarding run.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start1.returncode, start1.stdout + start1.stderr)
+            first_state = load_json(artifact_root / "state.json")
+            first_run_id = first_state["run_id"]
+            first_task_identity = (artifact_root / "task_identity.txt").read_text()
+
+            start2 = self.run_alpha(
+                "start",
+                "Second onboarding run should not silently replace the first.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start2.returncode, start2.stdout + start2.stderr)
+            self.assertIn("Synrail already has a controlled run in progress.", start2.stdout)
+            self.assertIn(first_run_id, start2.stdout)
+
+            second_state = load_json(artifact_root / "state.json")
+            self.assertEqual(first_run_id, second_state["run_id"])
+            self.assertEqual(first_task_identity, (artifact_root / "task_identity.txt").read_text())
 
 
 if __name__ == "__main__":
