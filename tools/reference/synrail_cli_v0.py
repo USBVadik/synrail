@@ -1487,7 +1487,11 @@ def final_result_template_payload(*, root: Path | None) -> dict:
     state: dict = {}
     if root and alpha_file(root, "state").exists():
         state = load_json(alpha_file(root, "state"))
+    profile = load_project_profile(root) or {}
     task_identity = load_text_if_exists(root / "task_identity.txt") if root else ""
+    prompt_identity = load_text_if_exists(root / "prompt_identity.txt") if root else ""
+    baseline_identity = (profile.get("baseline_identity", "") or "").strip()
+    execution_surface_identity = (profile.get("execution_surface_identity", "") or "").strip()
     changed_file = "path/to/changed_file.ext"
     return {
         "request_id": state.get("run_id", "RUN_ID_FOR_THIS_CONTROLLED_RUN"),
@@ -1504,6 +1508,22 @@ def final_result_template_payload(*, root: Path | None) -> dict:
             "+ new\n"
             "+ describe the concrete patch on the named file"
         ),
+        "diff_provenance": {
+            "method": "direct_file_observation",
+            "changed_file": changed_file,
+            "added_line": "describe one concrete inserted line from the changed file",
+            "context_before": "describe the stable line immediately before the change",
+            "context_after": "describe the stable line immediately after the change",
+            "verification_command": f"grep -n 'needle' {changed_file}",
+            "verification_result": "12:+ describe the concrete inserted or changed line",
+            "provenance_note": "Use this when git_diff is unavailable or the file is not tracked by git.",
+        },
+        "artifact_identity": {
+            "baseline_identity": baseline_identity or "autodetected_generic_baseline",
+            "execution_surface_identity": execution_surface_identity or "autodetected_generic_worktree",
+            "prompt_identity": prompt_identity or task_identity or "TASK_PROMPT_IDENTITY_FOR_THIS_RUN",
+            "task_identity": task_identity or "TASK_IDENTITY_FOR_THIS_RUN",
+        },
         "cleanup_status": {
             "success": True,
             "summary": f"workspace clean after updating only {changed_file} with no unintended changes",
@@ -1513,7 +1533,9 @@ def final_result_template_payload(*, root: Path | None) -> dict:
             "task_identity": task_identity,
             "notes": [
                 "Replace the sample changed file path with the actual file paths for this run.",
-                "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers.",
+                "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers when you can produce one.",
+                "If git_diff is unavailable, keep diff_provenance explicit with changed_file, changed lines, and verification command plus result.",
+                "artifact_identity can mirror the current run identities so low-level bundle-check stays reproducible too.",
                 "Use synrail explain-proof after a check to see exact semantic gaps and reasons.",
             ],
         },
@@ -1597,6 +1619,13 @@ def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
     final_result_target = display_path(root / "final_result.json") if root else "final_result.json"
     readback_target = display_path(root / "readback.txt") if root else "readback.txt"
     scenario_proof_target = display_path(root / "scenario_proof.txt") if root else "scenario_proof.txt"
+    profile = load_project_profile(root) or {}
+    identity_sources = {
+        "baseline_identity": (profile.get("baseline_identity", "") or "").strip(),
+        "execution_surface_identity": (profile.get("execution_surface_identity", "") or "").strip(),
+        "prompt_identity": load_text_if_exists(root / "prompt_identity.txt") if root else "",
+        "task_identity": load_text_if_exists(root / "task_identity.txt") if root else "",
+    }
     return {
         "bundle_status": bundle.get("status", ""),
         "structural_status": bundle.get("structural_status", ""),
@@ -1610,6 +1639,7 @@ def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
         "final_result_target": final_result_target,
         "readback_target": readback_target,
         "scenario_proof_target": scenario_proof_target,
+        "identity_sources": identity_sources,
     }
 
 
@@ -1632,6 +1662,10 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append(f"  Why: {gap['why']}")
             if gap["recommended_action"]:
                 lines.append(f"  What to do: {gap['recommended_action']}")
+            if gap["section"] == "diff_provenance":
+                lines.append("  Concrete fix: keep git_diff patch-shaped with diff --git, ---, +++, @@, and the named changed files, or add diff_provenance with changed_file, changed lines, and verification command plus result.")
+            if gap["section"] == "artifact_identity":
+                lines.append("  Concrete fix: ensure baseline_identity, execution_surface_identity, prompt_identity, and task_identity are all non-empty for this run.")
     if semantic_gaps:
         lines.append("Semantic gaps:")
         for gap in semantic_gaps:
@@ -1640,10 +1674,21 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append(f"  Why: {gap['why']}")
             if gap["recommended_action"]:
                 lines.append(f"  What to do: {gap['recommended_action']}")
+            if gap["section"] == "diff_provenance":
+                lines.append("  Concrete fix: keep git_diff patch-shaped with diff --git, ---, +++, @@, and the named changed files, or add diff_provenance with changed_file, changed lines, and verification command plus result.")
+            if gap["section"] == "artifact_identity":
+                lines.append("  Concrete fix: ensure baseline_identity, execution_surface_identity, prompt_identity, and task_identity are all non-empty for this run.")
     if not structural_gaps and not semantic_gaps:
         lines.append("Synrail did not find structural or semantic proof gaps in the current bundle.")
-    if any(gap["section"] in {"final_result", "modified_files", "diff_provenance", "cleanup_status"} for gap in structural_gaps + semantic_gaps):
+    if any(gap["section"] in {"final_result", "modified_files", "diff_provenance", "artifact_identity", "cleanup_status"} for gap in structural_gaps + semantic_gaps):
         lines.append(f"final_result target: {explanation['final_result_target']}")
+    if any(gap["section"] == "artifact_identity" for gap in structural_gaps + semantic_gaps):
+        identity_sources = explanation.get("identity_sources", {})
+        lines.append("Current run identity hints:")
+        for key in ["baseline_identity", "execution_surface_identity", "prompt_identity", "task_identity"]:
+            value = identity_sources.get(key, "")
+            if value:
+                lines.append(f"- {key}: {value}")
     if any(gap["section"] == "readback" for gap in structural_gaps + semantic_gaps):
         lines.append(f"readback target: {explanation['readback_target']}")
     if any(gap["section"] == "scenario_proof" for gap in structural_gaps + semantic_gaps):

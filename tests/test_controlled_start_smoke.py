@@ -189,6 +189,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(0, template.returncode, template.stdout + template.stderr)
             self.assertIn(state["run_id"], template.stdout)
             self.assertIn('"git_diff": "diff --git', template.stdout)
+            self.assertIn('"diff_provenance": {', template.stdout)
+            self.assertIn('"artifact_identity": {', template.stdout)
             self.assertIn("workspace clean after updating only path/to/changed_file.ext", template.stdout)
 
     def test_readback_template_uses_current_run_context(self) -> None:
@@ -284,7 +286,52 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("Semantic gaps:", explain.stdout)
             self.assertIn("diff_provenance", explain.stdout)
             self.assertIn("does not yet prove a concrete patch on the named files", explain.stdout)
+            self.assertIn("Concrete fix: keep git_diff patch-shaped", explain.stdout)
             self.assertIn("synrail final-result-template", explain.stdout)
+
+    def test_explain_proof_surfaces_artifact_identity_hints(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_identity_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "project_profile.json",
+                {
+                    "baseline_identity": "autodetected_generic_baseline",
+                    "execution_surface_identity": "autodetected_generic_worktree",
+                },
+            )
+            (artifact_root / "prompt_identity.txt").write_text("prompt-123\n")
+            (artifact_root / "task_identity.txt").write_text("task-123\n")
+            write_json(
+                artifact_root / "bundle.json",
+                {
+                    "status": "STRUCTURALLY_COMPLETE",
+                    "structural_status": "COMPLETE",
+                    "semantic_status": "INSUFFICIENT",
+                    "semantic_next_safe_step": "restore baseline, execution surface, prompt, and task identity values for this run",
+                    "semantic_decision_trace": [
+                        {
+                            "section": "artifact_identity",
+                            "evaluated": True,
+                            "semantically_sufficient": False,
+                            "why": "identity fields are incomplete or empty in the current run context and final result artifact",
+                            "recommended_action": "restore baseline, execution surface, prompt, and task identity values for this run",
+                        }
+                    ],
+                    "structural_decision_trace": [],
+                    "missing_sections": [],
+                    "semantically_insufficient_sections": ["artifact_identity"],
+                },
+            )
+
+            explain = self.run_alpha("explain-proof", cwd=project_root)
+            self.assertEqual(0, explain.returncode, explain.stdout + explain.stderr)
+            self.assertIn("artifact_identity", explain.stdout)
+            self.assertIn("Current run identity hints:", explain.stdout)
+            self.assertIn("baseline_identity: autodetected_generic_baseline", explain.stdout)
+            self.assertIn("prompt_identity: prompt-123", explain.stdout)
 
     def test_explain_proof_surfaces_readback_helper(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_readback_") as tmpdir:

@@ -38,6 +38,8 @@ def focused_repair_summary(*, current_step_id: str, current_step_subsurface_id: 
         return f"update the result payload in {current_step_target_path}"
     if current_step_subsurface_id == "diff_provenance_record":
         return f"record diff provenance in {current_step_target_path}"
+    if current_step_subsurface_id == "artifact_identity_record":
+        return f"record artifact identity in {current_step_target_path}"
     if current_step_subsurface_id == "cleanup_status_record":
         return f"record cleanup status in {current_step_target_path}"
     if current_step_subsurface_id == "readback_record":
@@ -81,6 +83,7 @@ def focused_repair_surface(
         focus_order = [
             ("final_result_payload", proof_paths["final_result"]),
             ("diff_provenance_record", proof_paths["final_result"]),
+            ("artifact_identity_record", proof_paths["final_result"]),
             ("cleanup_status_record", proof_paths["final_result"]),
         ]
         for subsurface_id, target in focus_order:

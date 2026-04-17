@@ -279,8 +279,22 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertEqual("final_result_payload", record["current_step_subsurface_id"])
         self.assertIn("final_result_payload", record["allowed_scope"])
         self.assertIn("Checklist for /tmp/synrail/final_result.json:", record["prompt"])
+        self.assertIn("artifact_identity", record["prompt"])
         self.assertIn("synrail final-result-template", record["prompt"])
         self.assertIn("synrail explain-proof", record["prompt"])
+
+    def test_artifact_identity_subsurface_includes_checklist(self) -> None:
+        packet = _minimal_packet(
+            current_step_id="repair_final_result_artifact",
+            reason="INVALID_PROOF_BUNDLE",
+            subsurface_ids=["artifact_identity_record"],
+            stale_artifact_ids=["final_result_artifact"],
+        )
+        record = build_prompt_bridge(repair_packet=packet)
+        self.assertEqual("artifact_identity_record", record["current_step_subsurface_id"])
+        self.assertIn("Checklist for /tmp/synrail/final_result.json:", record["prompt"])
+        self.assertIn("artifact_identity.baseline_identity", record["prompt"])
+        self.assertIn("low-level bundle-check reproducible", record["prompt"])
 
     def test_scenario_subsurface_includes_checklist(self) -> None:
         packet = _minimal_packet(

@@ -410,7 +410,7 @@ def build_artifact_quality_hints(state: dict) -> list[dict]:
         )
 
     missing_sections = merged_missing_sections(state)
-    final_result_parts = [part for part in ["final_result_payload", "diff_provenance_record", "cleanup_status_record"] if False]
+    final_result_parts = [part for part in ["final_result_payload", "diff_provenance_record", "artifact_identity_record", "cleanup_status_record"] if False]
     final_result_subsurfaces: list[dict] = []
     if "final_result" in missing_sections or state.get("closure", {}).get("blocking_reason") in {"ARTIFACT_BUNDLE_MISSING", "INVALID_PROOF_BUNDLE"}:
         add_unique(final_result_parts, "final_result_payload")
@@ -430,6 +430,16 @@ def build_artifact_quality_hints(state: dict) -> list[dict]:
                 status="STALE",
                 mapped_inputs=["final_result"],
                 why="diff provenance still cannot be reconstructed from the current final result artifact",
+            )
+        )
+    if "artifact_identity" in missing_sections:
+        add_unique(final_result_parts, "artifact_identity_record")
+        final_result_subsurfaces.append(
+            make_subsurface(
+                "artifact_identity_record",
+                status="STALE",
+                mapped_inputs=["final_result"],
+                why="artifact identity still cannot be reconstructed from the current run context or final result artifact",
             )
         )
     if "cleanup_status" in missing_sections:

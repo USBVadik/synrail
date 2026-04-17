@@ -21,10 +21,10 @@ REQUIRED_SECTION_NAMES = [
 
 SEMANTIC_SECTION_STEPS = {
     "modified_files": "record the actual changed files in the final result artifact",
-    "diff_provenance": "capture non-empty diff or provenance evidence for the changed files",
+    "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record",
     "readback": "record substantive readback from the changed sections on the attested surface",
     "scenario_proof": "record an explicit scenario-proof result for the attested target surface",
-    "artifact_identity": "repair baseline, surface, prompt, and task identity fields",
+    "artifact_identity": "restore baseline, execution surface, prompt, and task identity values for this run",
     "cleanup_status": "record a successful cleanup status for the execution surface",
 }
 
@@ -89,10 +89,41 @@ def contains_patch_lines(value: str) -> bool:
     )
 
 
+def non_empty_string(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    return value.strip()
+
+
+def first_non_empty(*values: object) -> str:
+    for value in values:
+        text = non_empty_string(value)
+        if text:
+            return text
+    return ""
+
+
 def diff_mentions_modified_files(value: str, modified_files: list[str]) -> bool:
     if not modified_files:
         return False
     return references_modified_file(value, modified_files)
+
+
+def structured_diff_provenance_is_semantically_sufficient(record: object, modified_files: list[str]) -> bool:
+    if not isinstance(record, dict):
+        return False
+    method = non_empty_string(record.get("method", ""))
+    changed_file = non_empty_string(record.get("changed_file", ""))
+    added_line = non_empty_string(record.get("added_line", ""))
+    removed_line = non_empty_string(record.get("removed_line", ""))
+    context_before = non_empty_string(record.get("context_before", ""))
+    context_after = non_empty_string(record.get("context_after", ""))
+    verification_command = non_empty_string(record.get("verification_command", ""))
+    verification_result = non_empty_string(record.get("verification_result", ""))
+    changed_file_matches = references_modified_file(changed_file, modified_files) if modified_files else bool(changed_file)
+    has_patch_context = any([added_line, removed_line, context_before, context_after])
+    has_verification = bool(verification_command and verification_result)
+    return bool(method and changed_file and changed_file_matches and has_patch_context and has_verification)
 
 
 def readback_is_semantically_sufficient(value: str, modified_files: list[str]) -> bool:
@@ -203,6 +234,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
 
     modified_files = final.get("modified_files", [])
     git_diff = final.get("git_diff", "")
+    diff_provenance_record = final.get("diff_provenance", {})
     cleanup = final.get("cleanup_status", {})
     readback_text = file_text(args.readback)
     scenario_text = file_text(args.scenario_proof)
@@ -216,25 +248,41 @@ def build_bundle(args: argparse.Namespace) -> dict:
         and all(isinstance(item, str) and bool(item.strip()) for item in modified_files)
     )
     diff_has_markers = contains_diff_markers(git_diff)
+    diff_record_semantically_sufficient = structured_diff_provenance_is_semantically_sufficient(
+        diff_provenance_record,
+        modified_files if isinstance(modified_files, list) else [],
+    )
     diff_semantically_sufficient = (
-        bool(git_diff)
-        and "diff --git" in git_diff
-        and "@@" in git_diff
-        and contains_patch_lines(git_diff)
-        and diff_mentions_modified_files(git_diff, modified_files if isinstance(modified_files, list) else [])
+        (
+            bool(git_diff)
+            and "diff --git" in git_diff
+            and "@@" in git_diff
+            and contains_patch_lines(git_diff)
+            and diff_mentions_modified_files(git_diff, modified_files if isinstance(modified_files, list) else [])
+        )
+        or diff_record_semantically_sufficient
     )
     readback_semantically_sufficient = readback_is_semantically_sufficient(
         readback_text,
         modified_files if isinstance(modified_files, list) else [],
     )
     scenario_semantically_sufficient = scenario_is_semantically_sufficient(scenario_text)
+    artifact_identity_record = final.get("artifact_identity", {})
+    baseline_identity = first_non_empty(args.baseline_identity, artifact_identity_record.get("baseline_identity", ""))
+    execution_surface_identity = first_non_empty(
+        args.execution_surface_identity,
+        artifact_identity_record.get("execution_surface_identity", ""),
+    )
+    prompt_identity = first_non_empty(args.prompt_identity, artifact_identity_record.get("prompt_identity", ""))
+    task_identity = first_non_empty(args.task_identity, artifact_identity_record.get("task_identity", ""))
     identity_values = [
-        args.baseline_identity or "",
-        args.execution_surface_identity or "",
-        args.prompt_identity or "",
-        args.task_identity or "",
+        baseline_identity,
+        execution_surface_identity,
+        prompt_identity,
+        task_identity,
     ]
-    identity_semantically_sufficient = all(bool(value.strip()) for value in identity_values)
+    identity_fields_present = all(bool(value.strip()) for value in identity_values)
+    identity_semantically_sufficient = identity_fields_present
     cleanup_semantically_sufficient = "cleanup_status" in final and cleanup_is_semantically_sufficient(cleanup)
     final_request_id = (final.get("request_id", "") or "").strip()
 
@@ -257,9 +305,11 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "semantically_sufficient": modified_files_semantically_sufficient,
         },
         "diff_provenance": {
-            "present": "git_diff" in final,
+            "present": "git_diff" in final or "diff_provenance" in final,
             "non_empty": bool(git_diff),
             "has_diff_markers": diff_has_markers,
+            "has_structured_record": isinstance(diff_provenance_record, dict),
+            "structured_record_sufficient": diff_record_semantically_sufficient,
             "semantically_sufficient": diff_semantically_sufficient,
         },
         "readback": {
@@ -275,10 +325,19 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "semantically_sufficient": scenario_semantically_sufficient,
         },
         "artifact_identity": {
-            "baseline_identity": args.baseline_identity or "",
-            "execution_surface_identity": args.execution_surface_identity or "",
-            "prompt_identity": args.prompt_identity or "",
-            "task_identity": args.task_identity or "",
+            "baseline_identity": baseline_identity,
+            "execution_surface_identity": execution_surface_identity,
+            "prompt_identity": prompt_identity,
+            "task_identity": task_identity,
+            "from_final_result": isinstance(artifact_identity_record, dict) and any(
+                bool(non_empty_string(artifact_identity_record.get(key, "")))
+                for key in [
+                    "baseline_identity",
+                    "execution_surface_identity",
+                    "prompt_identity",
+                    "task_identity",
+                ]
+            ),
             "semantically_sufficient": identity_semantically_sufficient,
         },
         "cleanup_status": {
@@ -305,8 +364,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
     if not bundle["scenario_proof"]["present"]:
         missing.append("scenario_proof")
 
-    identity = bundle["artifact_identity"]
-    if not all(identity.values()):
+    if not identity_fields_present:
         missing.append("artifact_identity")
     if not bundle["cleanup_status"]["present"]:
         missing.append("cleanup_status")
@@ -338,9 +396,9 @@ def build_bundle(args: argparse.Namespace) -> dict:
             present=bundle["diff_provenance"]["present"],
             structurally_complete=bundle["diff_provenance"]["present"],
             why=(
-                "diff or provenance evidence is present in the final result artifact"
+                "git_diff or structured diff_provenance evidence is present in the final result artifact"
                 if bundle["diff_provenance"]["present"]
-                else "diff or provenance evidence is missing from the final result artifact"
+                else "git_diff or structured diff_provenance evidence is missing from the final result artifact"
             ),
         ),
         structural_trace_entry(
@@ -365,12 +423,12 @@ def build_bundle(args: argparse.Namespace) -> dict:
         ),
         structural_trace_entry(
             section="artifact_identity",
-            present=all(bool(value) for value in identity.values()),
-            structurally_complete=all(bool(value) for value in identity.values()),
+            present=identity_fields_present,
+            structurally_complete=identity_fields_present,
             why=(
-                "baseline, surface, prompt, and task identity fields are all present"
-                if all(bool(value) for value in identity.values())
-                else "one or more identity fields are missing"
+                "baseline, surface, prompt, and task identity fields are all present from the current run or final result artifact"
+                if identity_fields_present
+                else "one or more identity fields are missing from the current run context and final result artifact"
             ),
         ),
         structural_trace_entry(
@@ -423,9 +481,9 @@ def build_bundle(args: argparse.Namespace) -> dict:
             evaluated=not missing,
             semantically_sufficient=diff_semantically_sufficient,
             why=(
-                "diff or provenance evidence contains a concrete patch for the named modified files"
+                "git_diff or structured diff_provenance proves a concrete patch for the named modified files"
                 if diff_semantically_sufficient
-                else "diff or provenance evidence is present but does not yet prove a concrete patch on the named files"
+                else "diff or provenance evidence is present but does not yet prove a concrete patch on the named files with patch markers or structured verification"
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["diff_provenance"],
         ),
@@ -456,9 +514,9 @@ def build_bundle(args: argparse.Namespace) -> dict:
             evaluated=not missing,
             semantically_sufficient=identity_semantically_sufficient,
             why=(
-                "baseline, surface, prompt, and task identity fields are all non-empty"
+                "baseline, surface, prompt, and task identity fields are all non-empty from the current run or final result artifact"
                 if identity_semantically_sufficient
-                else "identity fields are incomplete or empty"
+                else "identity fields are incomplete or empty in the current run context and final result artifact"
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["artifact_identity"],
         ),

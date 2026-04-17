@@ -85,6 +85,7 @@ def human_scope_label(scope_id: str, *, repair_packet: dict | None = None) -> st
         "final_result_artifact": "the final result artifact for this run",
         "final_result_payload": f"the result payload in {proof_paths['final_result']}",
         "diff_provenance_record": f"the diff provenance section in {proof_paths['final_result']}",
+        "artifact_identity_record": f"the artifact identity section in {proof_paths['final_result']}",
         "cleanup_status_record": f"the cleanup status section in {proof_paths['final_result']}",
         "readback_record": f"the readback starter file at {proof_paths['readback']}",
         "scenario_proof_record": f"the scenario proof starter file at {proof_paths['scenario_proof']}",
@@ -119,6 +120,7 @@ def focused_step_details(repair_packet: dict, current_step_id: str, stale_subsur
         labels = {
             "final_result_payload": f"repair the result payload in {proof_paths['final_result']}",
             "diff_provenance_record": f"record diff provenance in {proof_paths['final_result']}",
+            "artifact_identity_record": f"record artifact identity in {proof_paths['final_result']}",
             "cleanup_status_record": f"record cleanup status in {proof_paths['final_result']}",
         }
         if subsurface_id:
@@ -141,7 +143,9 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
     common = [
         f"Checklist for {current_step_target_path}:",
         "- modified_files: list each concrete changed file path",
-        "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files",
+        "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files when you can produce one",
+        "- diff_provenance: if git_diff is unavailable or the file is untracked, record method, changed_file, added_line or removed_line, and verification_command plus verification_result",
+        "- artifact_identity: when identity is missing, fill baseline_identity, execution_surface_identity, prompt_identity, and task_identity for this run",
         "- cleanup_status.success: true when the workspace is clean after the intended change",
         "- cleanup_status.summary: say the workspace is clean and only the intended files changed",
         "- Need a canonical shape? run `synrail final-result-template`",
@@ -153,7 +157,22 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
         return [
             f"Checklist for {current_step_target_path}:",
             "- modified_files: list each concrete changed file path first",
-            "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files",
+            "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files when you can produce one",
+            "- diff_provenance.method: name how you captured the evidence (for example direct_file_observation)",
+            "- diff_provenance.changed_file: name one concrete modified file from modified_files",
+            "- diff_provenance.added_line or diff_provenance.removed_line: record the concrete changed line",
+            "- diff_provenance.verification_command and diff_provenance.verification_result: capture the command and observed output that proved the changed line",
+            "- Need a canonical shape? run `synrail final-result-template`",
+            "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+        ]
+    if current_step_subsurface_id == "artifact_identity_record":
+        return [
+            f"Checklist for {current_step_target_path}:",
+            "- artifact_identity.baseline_identity: use the current run baseline identity",
+            "- artifact_identity.execution_surface_identity: use the current worktree or execution surface identity",
+            "- artifact_identity.prompt_identity: use the prompt identity already attached to this run",
+            "- artifact_identity.task_identity: use the task identity already attached to this run",
+            "- If check or retry already knows these values, mirroring them here keeps low-level bundle-check reproducible too",
             "- Need a canonical shape? run `synrail final-result-template`",
             "- Need exact semantic reasons after a check? run `synrail explain-proof`",
         ]

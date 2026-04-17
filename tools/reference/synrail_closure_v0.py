@@ -12,7 +12,7 @@ from pathlib import Path
 MISSING_SECTION_STEPS = {
     "readback": "collect readback from changed sections on the attested surface",
     "scenario_proof": "rerun the scenario check against the attested target surface",
-    "artifact_identity": "repair baseline, surface, prompt, and task identity fields",
+    "artifact_identity": "restore baseline, execution surface, prompt, and task identity values",
     "cleanup_status": "record cleanup status for the execution surface",
     "final_result": "recover the final result artifact and rerun bundle assembly",
     "modified_files": "recover modified-files evidence from the final result artifact",
@@ -21,10 +21,10 @@ MISSING_SECTION_STEPS = {
 
 SEMANTIC_SECTION_STEPS = {
     "modified_files": "record the actual changed files in the final result artifact",
-    "diff_provenance": "capture non-empty diff or provenance evidence for the changed files",
+    "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record",
     "readback": "record substantive readback from the changed sections on the attested surface",
     "scenario_proof": "record an explicit scenario-proof result for the attested target surface",
-    "artifact_identity": "repair baseline, surface, prompt, and task identity fields",
+    "artifact_identity": "restore baseline, execution surface, prompt, and task identity values for this run",
     "cleanup_status": "record a successful cleanup status for the execution surface",
 }
 

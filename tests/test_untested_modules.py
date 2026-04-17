@@ -1091,7 +1091,7 @@ class TestThinOutputBuildRecord(unittest.TestCase):
             recovery=None,
         )
         self.assertIn(
-            "diff_provenance: capture non-empty diff or provenance evidence for the changed files",
+            "diff_provenance: prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record",
             record["thin_section_guidance"],
         )
         self.assertIn(
