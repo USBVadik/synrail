@@ -259,6 +259,9 @@ def policy_command_examples(*, artifact_root: str) -> dict[str, str]:
 def preferred_synrail_command() -> str:
     argv0 = Path(sys.argv[0]).expanduser()
     if argv0.name != "synrail":
+        sibling = Path(sys.executable).expanduser().with_name("synrail")
+        if sibling.exists():
+            return shlex.quote(str(sibling.resolve()))
         return "synrail"
     # When install-agent-files is invoked via the real synrail entrypoint, pin
     # that exact binary in agent policy files. This avoids agent-specific PATH

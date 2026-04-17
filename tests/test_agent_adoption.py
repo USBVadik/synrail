@@ -89,6 +89,20 @@ class AgentAdoptionTests(unittest.TestCase):
         ):
             self.assertEqual("/opt/synrail/.venv/bin/synrail", preferred_synrail_command())
 
+    def test_prefers_sibling_synrail_when_console_wrapper_uses_python_dash_c(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_wrapper_probe_") as tmpdir:
+            bin_dir = Path(tmpdir) / "bin"
+            bin_dir.mkdir(parents=True, exist_ok=True)
+            python_path = bin_dir / "python"
+            synrail_path = bin_dir / "synrail"
+            python_path.symlink_to(Path(sys.executable))
+            synrail_path.write_text("")
+            with mock.patch("synrail_cli_v0.sys.argv", ["-c"]), mock.patch(
+                "synrail_cli_v0.sys.executable",
+                str(python_path),
+            ):
+                self.assertEqual(str(synrail_path.resolve()), preferred_synrail_command())
+
     def test_install_agent_files_is_idempotent_and_merges_existing_gemini_file(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_agent_adoption_force_") as tmpdir:
             project_root = Path(tmpdir) / "project"
