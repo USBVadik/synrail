@@ -142,9 +142,11 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
         return []
     common = [
         f"Checklist for {current_step_target_path}:",
-        "- modified_files: list each concrete changed file path",
-        "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files when you can produce one",
+        "- change_disposition: use modified for a real edit, or already_satisfied only when the requested state was already present before any edit",
+        "- modified_files: list each concrete changed file path, or keep [] only for a truthful already_satisfied no-op attestation",
+        "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files when you can produce one; keep it empty for a truthful already_satisfied no-op attestation",
         "- diff_provenance: if git_diff is unavailable or the file is untracked, record method, changed_file, added_line or removed_line, and verification_command plus verification_result",
+        "- diff_provenance for already_satisfied: record changed_file, observed_line, verification_command, verification_result, and provenance_note instead of inventing a patch",
         "- artifact_identity: when identity is missing, fill baseline_identity, execution_surface_identity, prompt_identity, and task_identity for this run",
         "- cleanup_status.success: true when the workspace is clean after the intended change",
         "- cleanup_status.summary: say the workspace is clean and only the intended files changed",
@@ -156,12 +158,15 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
     if current_step_subsurface_id == "diff_provenance_record":
         return [
             f"Checklist for {current_step_target_path}:",
-            "- modified_files: list each concrete changed file path first",
-            "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files when you can produce one",
+            "- change_disposition: use modified for a real edit, or already_satisfied only when the requested state was already present before any edit",
+            "- modified_files: list each concrete changed file path first, or keep [] only for a truthful already_satisfied no-op attestation",
+            "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files when you can produce one; keep it empty for a truthful already_satisfied no-op attestation",
             "- diff_provenance.method: name how you captured the evidence (for example direct_file_observation)",
             "- diff_provenance.changed_file: name one concrete modified file from modified_files",
-            "- diff_provenance.added_line or diff_provenance.removed_line: record the concrete changed line",
-            "- diff_provenance.verification_command and diff_provenance.verification_result: capture the command and observed output that proved the changed line",
+            "- diff_provenance.added_line or diff_provenance.removed_line: record the concrete changed line for a real edit",
+            "- diff_provenance.observed_line: for already_satisfied, record the concrete line that was already present",
+            "- diff_provenance.verification_command and diff_provenance.verification_result: capture the command and observed output that proved the changed line or observed line",
+            "- diff_provenance.provenance_note: explain why this is direct observation, especially for already_satisfied or untracked files",
             "- Need a canonical shape? run `synrail final-result-template`",
             "- Need exact semantic reasons after a check? run `synrail explain-proof`",
         ]

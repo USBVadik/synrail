@@ -57,6 +57,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
             "request_id": run_id,
             "task_class": task_class,
             "status": "PENDING_PROOF",
+            "change_disposition": "modified",
             "summary": "Replace this starter payload with the actual bounded result for this run.",
             "modified_files": [],
             "git_diff": "",
@@ -77,6 +78,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                 "task_identity": task_identity.strip(),
                 "starter_guidance": {
                     "required_fields": [
+                        "change_disposition",
                         "summary",
                         "modified_files",
                         "git_diff",
@@ -101,8 +103,9 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                         "synrail explain-proof",
                         "synrail final-result-template",
                     ],
-                    "diff_provenance_hint": "if git_diff is unavailable, use diff_provenance with changed_file, added_line or removed_line, and verification_command plus verification_result",
+                    "diff_provenance_hint": "if git_diff is unavailable, use diff_provenance with changed_file, added_line or removed_line, and verification_command plus verification_result; if the requested state was already present before edits, set change_disposition to already_satisfied, keep git_diff empty, and use observed_line plus provenance_note instead of inventing a patch",
                     "artifact_identity_hint": "mirror the current run baseline, execution surface, prompt, and task identity values here when low-level bundle-check needs them",
+                    "no_op_hint": "If the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and attest the observed line truthfully through diff_provenance.",
                 },
             },
         },

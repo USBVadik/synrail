@@ -20,8 +20,8 @@ REQUIRED_SECTION_NAMES = [
 ]
 
 SEMANTIC_SECTION_STEPS = {
-    "modified_files": "record the actual changed files in the final result artifact",
-    "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record",
+    "modified_files": "record the actual changed files in the final result artifact, or mark the run as already_satisfied only when the requested state was already present before edits",
+    "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record, or use a truthful already_satisfied observation record when no edit was required",
     "readback": "record substantive readback from the changed sections on the attested surface",
     "scenario_proof": "record an explicit scenario-proof result for the attested target surface",
     "artifact_identity": "restore baseline, execution surface, prompt, and task identity values for this run",
@@ -81,6 +81,19 @@ def references_modified_file(value: str, modified_files: list[str]) -> bool:
     return False
 
 
+def attested_surfaces(modified_files: object, record: object) -> list[str]:
+    surfaces: list[str] = []
+    if isinstance(modified_files, list):
+        for item in modified_files:
+            if isinstance(item, str) and item.strip():
+                surfaces.append(item.strip())
+    if isinstance(record, dict):
+        changed_file = non_empty_string(record.get("changed_file", ""))
+        if changed_file and changed_file not in surfaces:
+            surfaces.append(changed_file)
+    return surfaces
+
+
 def contains_patch_lines(value: str) -> bool:
     return any(
         line.startswith("+") or line.startswith("-")
@@ -109,20 +122,30 @@ def diff_mentions_modified_files(value: str, modified_files: list[str]) -> bool:
     return references_modified_file(value, modified_files)
 
 
-def structured_diff_provenance_is_semantically_sufficient(record: object, modified_files: list[str]) -> bool:
+def structured_diff_provenance_is_semantically_sufficient(
+    record: object,
+    modified_files: list[str],
+    *,
+    change_disposition: str,
+) -> bool:
     if not isinstance(record, dict):
         return False
     method = non_empty_string(record.get("method", ""))
     changed_file = non_empty_string(record.get("changed_file", ""))
     added_line = non_empty_string(record.get("added_line", ""))
     removed_line = non_empty_string(record.get("removed_line", ""))
+    observed_line = non_empty_string(record.get("observed_line", ""))
     context_before = non_empty_string(record.get("context_before", ""))
     context_after = non_empty_string(record.get("context_after", ""))
     verification_command = non_empty_string(record.get("verification_command", ""))
     verification_result = non_empty_string(record.get("verification_result", ""))
+    provenance_note = non_empty_string(record.get("provenance_note", ""))
     changed_file_matches = references_modified_file(changed_file, modified_files) if modified_files else bool(changed_file)
-    has_patch_context = any([added_line, removed_line, context_before, context_after])
     has_verification = bool(verification_command and verification_result)
+    if change_disposition == "already_satisfied":
+        has_observation = bool(observed_line or verification_result)
+        return bool(method and changed_file and changed_file_matches and has_verification and has_observation and provenance_note)
+    has_patch_context = any([added_line, removed_line, context_before, context_after])
     return bool(method and changed_file and changed_file_matches and has_patch_context and has_verification)
 
 
@@ -238,33 +261,51 @@ def build_bundle(args: argparse.Namespace) -> dict:
     cleanup = final.get("cleanup_status", {})
     readback_text = file_text(args.readback)
     scenario_text = file_text(args.scenario_proof)
+    raw_change_disposition = non_empty_string(final.get("change_disposition", ""))
+    inferred_already_satisfied = (
+        isinstance(modified_files, list)
+        and len(modified_files) == 0
+        and not non_empty_string(git_diff)
+        and isinstance(diff_provenance_record, dict)
+        and bool(non_empty_string(diff_provenance_record.get("changed_file", "")))
+    )
+    change_disposition = raw_change_disposition or ("already_satisfied" if inferred_already_satisfied else "modified")
 
     readback_present, readback_path = file_present(args.readback)
     scenario_present, scenario_path = file_present(args.scenario_proof)
 
-    modified_files_semantically_sufficient = (
-        isinstance(modified_files, list)
-        and len(modified_files) > 0
-        and all(isinstance(item, str) and bool(item.strip()) for item in modified_files)
-    )
+    modified_files_semantically_sufficient = False
+    if isinstance(modified_files, list) and all(isinstance(item, str) for item in modified_files):
+        if change_disposition == "already_satisfied":
+            modified_files_semantically_sufficient = (
+                len(modified_files) == 0
+                and bool(non_empty_string(diff_provenance_record.get("changed_file", "")))
+            )
+        else:
+            modified_files_semantically_sufficient = len(modified_files) > 0 and all(bool(item.strip()) for item in modified_files)
     diff_has_markers = contains_diff_markers(git_diff)
     diff_record_semantically_sufficient = structured_diff_provenance_is_semantically_sufficient(
         diff_provenance_record,
         modified_files if isinstance(modified_files, list) else [],
+        change_disposition=change_disposition,
     )
-    diff_semantically_sufficient = (
-        (
-            bool(git_diff)
-            and "diff --git" in git_diff
-            and "@@" in git_diff
-            and contains_patch_lines(git_diff)
-            and diff_mentions_modified_files(git_diff, modified_files if isinstance(modified_files, list) else [])
+    if change_disposition == "already_satisfied":
+        diff_semantically_sufficient = not bool(non_empty_string(git_diff)) and diff_record_semantically_sufficient
+    else:
+        diff_semantically_sufficient = (
+            (
+                bool(git_diff)
+                and "diff --git" in git_diff
+                and "@@" in git_diff
+                and contains_patch_lines(git_diff)
+                and diff_mentions_modified_files(git_diff, modified_files if isinstance(modified_files, list) else [])
+            )
+            or diff_record_semantically_sufficient
         )
-        or diff_record_semantically_sufficient
-    )
+    surfaces = attested_surfaces(modified_files, diff_provenance_record)
     readback_semantically_sufficient = readback_is_semantically_sufficient(
         readback_text,
-        modified_files if isinstance(modified_files, list) else [],
+        surfaces,
     )
     scenario_semantically_sufficient = scenario_is_semantically_sufficient(scenario_text)
     artifact_identity_record = final.get("artifact_identity", {})
@@ -298,6 +339,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "parseable": final_parseable,
             "status": final.get("status", ""),
             "request_id": final_request_id,
+            "change_disposition": change_disposition,
         },
         "modified_files": {
             "present": isinstance(modified_files, list),
@@ -470,9 +512,17 @@ def build_bundle(args: argparse.Namespace) -> dict:
             evaluated=not missing,
             semantically_sufficient=modified_files_semantically_sufficient,
             why=(
-                "the modified-files list names at least one concrete changed file"
+                (
+                    "the run is truthfully marked already_satisfied, the modified-files list stays empty, and the attested surface is named through diff_provenance.changed_file"
+                    if change_disposition == "already_satisfied" and modified_files_semantically_sufficient
+                    else "the modified-files list names at least one concrete changed file"
+                )
                 if modified_files_semantically_sufficient
-                else "the modified-files list is empty, malformed, or does not name concrete changed files"
+                else (
+                    "already_satisfied runs must keep modified_files empty and still name the attested surface through diff_provenance.changed_file"
+                    if change_disposition == "already_satisfied"
+                    else "the modified-files list is empty, malformed, or does not name concrete changed files"
+                )
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["modified_files"],
         ),
@@ -481,9 +531,17 @@ def build_bundle(args: argparse.Namespace) -> dict:
             evaluated=not missing,
             semantically_sufficient=diff_semantically_sufficient,
             why=(
-                "git_diff or structured diff_provenance proves a concrete patch for the named modified files"
+                (
+                    "already_satisfied proof keeps git_diff empty and uses structured direct observation on the attested surface instead of inventing a patch"
+                    if change_disposition == "already_satisfied"
+                    else "git_diff or structured diff_provenance proves a concrete patch for the named modified files"
+                )
                 if diff_semantically_sufficient
-                else "diff or provenance evidence is present but does not yet prove a concrete patch on the named files with patch markers or structured verification"
+                else (
+                    "already_satisfied proof must keep git_diff empty and use structured observation with changed_file, observed_line, verification command, verification result, and provenance_note"
+                    if change_disposition == "already_satisfied"
+                    else "diff or provenance evidence is present but does not yet prove a concrete patch on the named files with patch markers or structured verification"
+                )
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["diff_provenance"],
         ),

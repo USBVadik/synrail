@@ -188,9 +188,11 @@ class ControlledStartSmokeTests(unittest.TestCase):
             template = self.run_alpha("final-result-template", cwd=project_root)
             self.assertEqual(0, template.returncode, template.stdout + template.stderr)
             self.assertIn(state["run_id"], template.stdout)
+            self.assertIn('"change_disposition": "modified"', template.stdout)
             self.assertIn('"git_diff": "diff --git', template.stdout)
             self.assertIn('"diff_provenance": {', template.stdout)
             self.assertIn('"artifact_identity": {', template.stdout)
+            self.assertIn("already_satisfied", template.stdout)
             self.assertIn("workspace clean after updating only path/to/changed_file.ext", template.stdout)
 
     def test_readback_template_uses_current_run_context(self) -> None:

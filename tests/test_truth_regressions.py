@@ -354,7 +354,7 @@ class TruthRegressionTests(unittest.TestCase):
             bundle["semantically_insufficient_sections"],
         )
         self.assertEqual(
-            "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record",
+            "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record, or use a truthful already_satisfied observation record when no edit was required",
             bundle["semantic_next_safe_step"],
         )
         self.assertEqual("CLAIMED_NOT_ACCEPTED", verdict["closure_status"])
@@ -422,6 +422,104 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("SUFFICIENT", bundle["semantic_status"])
         self.assertEqual([], bundle["semantically_insufficient_sections"])
         self.assertEqual("ACCEPTED", verdict["closure_status"])
+
+    def test_truthful_already_satisfied_noop_can_complete_bundle(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_already_satisfied_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "success",
+                "change_disposition": "already_satisfied",
+                "summary": "Verified that the requested subtitle was already present on the attested surface before any edit, so no file change was required for this run.",
+                "modified_files": [],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "warroom/templates/index.html",
+                    "observed_line": "                <p class=\"text-[10px] text-blue-500/80 uppercase font-bold tracking-wider mb-4\">Local signals only</p>",
+                    "verification_command": "grep -n 'Local signals only' warroom/templates/index.html",
+                    "verification_result": "24:                <p class=\"text-[10px] text-blue-500/80 uppercase font-bold tracking-wider mb-4\">Local signals only</p>",
+                    "provenance_note": "Requested state was already present before edits, so this run attests the existing line truthfully instead of inventing a patch.",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace unchanged apart from proof artifacts; no unintended changes were introduced while attesting the already satisfied state.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text(
+                "### READBACK: watchlist subtitle already satisfied\n"
+                "Changed surface: warroom/templates/index.html\n"
+                "Observed: the template already contains the Local signals only subtitle directly under the Watchlist heading at line 24.\n"
+            )
+            scenario.write_text(
+                "### SCENARIO PROOF: watchlist subtitle already satisfied\n"
+                "Scenario: local verification of the existing Watchlist subtitle on the homepage template\n"
+                "Command: grep -n \"Local signals only\" warroom/templates/index.html\n"
+                "Observed: line 24 already shows the subtitle paragraph directly below the Watchlist heading\n"
+                "Status: PASSED\n"
+            )
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("COMPLETE", bundle["status"])
+        self.assertEqual("SUFFICIENT", bundle["semantic_status"])
+        self.assertEqual([], bundle["semantically_insufficient_sections"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
+    def test_already_satisfied_noop_rejects_invented_patch(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_already_satisfied_fake_patch_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+
+            final_result.write_text(json.dumps({
+                "request_id": "RUN_001",
+                "status": "success",
+                "change_disposition": "already_satisfied",
+                "summary": "Claimed no-op, but also supplied a patch.",
+                "modified_files": [],
+                "git_diff": "diff --git a/warroom/templates/index.html b/warroom/templates/index.html\n--- a/warroom/templates/index.html\n+++ b/warroom/templates/index.html\n@@ -1,1 +1,2 @@\n+fake\n",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "warroom/templates/index.html",
+                    "observed_line": "                <p>Local signals only</p>",
+                    "verification_command": "grep -n 'Local signals only' warroom/templates/index.html",
+                    "verification_result": "24:                <p>Local signals only</p>",
+                    "provenance_note": "This should fail because a no-op must not also claim a patch.",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace unchanged with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            args = bundle_args(final_result=final_result)
+            bundle = build_bundle(args)
+
+        self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
+        self.assertIn("diff_provenance", bundle["semantically_insufficient_sections"])
 
 
 if __name__ == "__main__":

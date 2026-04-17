@@ -1496,6 +1496,7 @@ def final_result_template_payload(*, root: Path | None) -> dict:
         "request_id": state.get("run_id", "RUN_ID_FOR_THIS_CONTROLLED_RUN"),
         "task_class": state.get("task_class", DEFAULT_ALPHA_TASK_CLASS),
         "status": "success",
+        "change_disposition": "modified",
         "summary": "Describe the bounded change that was actually completed for this run.",
         "modified_files": [changed_file],
         "git_diff": (
@@ -1511,6 +1512,7 @@ def final_result_template_payload(*, root: Path | None) -> dict:
             "method": "direct_file_observation",
             "changed_file": changed_file,
             "added_line": "describe one concrete inserted line from the changed file",
+            "observed_line": "if no edit was required because the requested state was already present, record that existing line here instead of inventing a patch",
             "context_before": "describe the stable line immediately before the change",
             "context_after": "describe the stable line immediately after the change",
             "verification_command": f"grep -n 'needle' {changed_file}",
@@ -1532,8 +1534,10 @@ def final_result_template_payload(*, root: Path | None) -> dict:
             "task_identity": task_identity,
             "notes": [
                 "Replace the sample changed file path with the actual file paths for this run.",
+                "Set change_disposition to already_satisfied only when the requested state was already present before any edit.",
                 "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers when you can produce one.",
                 "If git_diff is unavailable, keep diff_provenance explicit with changed_file, changed lines, and verification command plus result.",
+                "For an already_satisfied no-op, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.",
                 "artifact_identity can mirror the current run identities so low-level bundle-check stays reproducible too.",
                 "Use synrail explain-proof after a check to see exact semantic gaps and reasons.",
             ],
@@ -1663,8 +1667,11 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append(f"  What to do: {gap['recommended_action']}")
             if gap["section"] == "diff_provenance":
                 lines.append("  Concrete fix: keep git_diff patch-shaped with diff --git, ---, +++, @@, and the named changed files, or add diff_provenance with changed_file, changed lines, and verification command plus result.")
+                lines.append("  No-op fix: if the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.")
             if gap["section"] == "artifact_identity":
                 lines.append("  Concrete fix: ensure baseline_identity, execution_surface_identity, prompt_identity, and task_identity are all non-empty for this run.")
+            if gap["section"] == "modified_files":
+                lines.append("  No-op fix: if no file had to change because the requested state already existed, set change_disposition to already_satisfied and keep modified_files empty instead of inventing a changed file list.")
     if semantic_gaps:
         lines.append("Semantic gaps:")
         for gap in semantic_gaps:
@@ -1675,8 +1682,11 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append(f"  What to do: {gap['recommended_action']}")
             if gap["section"] == "diff_provenance":
                 lines.append("  Concrete fix: keep git_diff patch-shaped with diff --git, ---, +++, @@, and the named changed files, or add diff_provenance with changed_file, changed lines, and verification command plus result.")
+                lines.append("  No-op fix: if the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.")
             if gap["section"] == "artifact_identity":
                 lines.append("  Concrete fix: ensure baseline_identity, execution_surface_identity, prompt_identity, and task_identity are all non-empty for this run.")
+            if gap["section"] == "modified_files":
+                lines.append("  No-op fix: if no file had to change because the requested state already existed, set change_disposition to already_satisfied and keep modified_files empty instead of inventing a changed file list.")
     if not structural_gaps and not semantic_gaps:
         lines.append("Synrail did not find structural or semantic proof gaps in the current bundle.")
     if any(gap["section"] in {"final_result", "modified_files", "diff_provenance", "artifact_identity", "cleanup_status"} for gap in structural_gaps + semantic_gaps):
