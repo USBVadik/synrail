@@ -39,6 +39,37 @@ class ControlledStartSmokeTests(unittest.TestCase):
             env=env,
         )
 
+    def test_no_args_prints_dashboard_instead_of_help(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_dashboard_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            dashboard = self.run_alpha(cwd=project_root)
+            self.assertEqual(0, dashboard.returncode, dashboard.stdout + dashboard.stderr)
+            self.assertIn("Synrail: local governance dashboard", dashboard.stdout)
+            self.assertIn("CLI control kernel (not a background daemon)", dashboard.stdout)
+            self.assertIn("Active run: none", dashboard.stdout)
+            self.assertIn("Start new run: synrail start", dashboard.stdout)
+            self.assertNotIn("usage: synrail", dashboard.stdout)
+
+    def test_dashboard_shows_active_run_after_start(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_dashboard_active_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "Keep this run visible from the dashboard.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            dashboard = self.run_alpha(cwd=project_root)
+            self.assertEqual(0, dashboard.returncode, dashboard.stdout + dashboard.stderr)
+            self.assertIn("Workspace: controlled run in progress", dashboard.stdout)
+            self.assertIn("Active run: ALPHA_RUN_", dashboard.stdout)
+            self.assertIn("Next step:", dashboard.stdout)
+
     def test_start_creates_bootstrap_and_proof_request(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_controlled_start_") as tmpdir:
             project_root = Path(tmpdir) / "project"

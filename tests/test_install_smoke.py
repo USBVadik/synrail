@@ -25,17 +25,13 @@ class InstallSmokeTests(unittest.TestCase):
         )
         self.assertIn("--project-root", help_result.stdout)
         self.assertIn("--task-identity", help_result.stdout)
+        self.assertIn("task_request", help_result.stdout)
 
         project_root.mkdir(parents=True, exist_ok=True)
         start_result = subprocess.run(
             [
                 str(synrail_bin),
                 "start",
-                "--artifact-root",
-                ".synrail",
-                "--project-root",
-                str(project_root),
-                "--task-identity",
                 "install smoke",
             ],
             check=True,
@@ -51,6 +47,7 @@ class InstallSmokeTests(unittest.TestCase):
         )
         self.assertIn("Starter proof files are ready for this run.", start_result.stdout)
         self.assertIn("Artifact root: .synrail", start_result.stdout)
+        self.assertIn("Then run: synrail check", start_result.stdout)
         self.assertTrue((artifact_root / "state.json").exists())
         self.assertTrue((artifact_root / "acceptance_criteria.json").exists())
         self.assertTrue((artifact_root / "project_profile.json").exists())
@@ -131,6 +128,8 @@ class InstallSmokeTests(unittest.TestCase):
 
             self.assertIn("Agent adoption files are ready.", result.stdout)
             self.assertIn("Agent files installed into:", result.stdout)
+            self.assertIn("Quick status: run `synrail` inside your project.", result.stdout)
+            self.assertIn('Start a run: `synrail start "Describe the bounded local change."`', result.stdout)
             self.assertTrue((project_root / "AGENTS.md").exists())
             gemini = (project_root / "GEMINI.md").read_text()
             self.assertIn("# Existing Gemini Context", gemini)

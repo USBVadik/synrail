@@ -48,14 +48,17 @@ class AgentAdoptionTests(unittest.TestCase):
             agents = (project_root / "AGENTS.md").read_text()
             gemini = (project_root / "GEMINI.md").read_text()
 
-            self.assertIn("synrail start --artifact-root", agents)
-            self.assertIn("synrail check --artifact-root", agents)
+            self.assertIn("First Step On Every New Task", agents)
+            self.assertIn("synrail", agents)
+            self.assertIn('synrail start "Describe the bounded local change."', agents)
+            self.assertIn("synrail check", agents)
             self.assertIn("Do not skip Synrail", agents)
-            self.assertIn('ARTIFACT_ROOT="$(pwd)/.synrail"', agents)
+            self.assertNotIn('ARTIFACT_ROOT="$(pwd)/.synrail"', agents)
 
             self.assertIn("Use Synrail as the default local control path", gemini)
-            self.assertIn("synrail start --artifact-root", gemini)
-            self.assertIn("synrail repair-step --artifact-root", gemini)
+            self.assertIn("For every new user task, run Synrail first", gemini)
+            self.assertIn('synrail start "Describe the bounded local change."', gemini)
+            self.assertIn("synrail repair-step", gemini)
 
     def test_install_agent_files_is_idempotent_and_merges_existing_gemini_file(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_agent_adoption_force_") as tmpdir:

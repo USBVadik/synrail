@@ -51,32 +51,32 @@ If you want local coding agents to discover Synrail in the current repo without 
 python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd)"
 ```
 
-If `AGENTS.md` or `GEMINI.md` already exists, Synrail appends one managed block instead of failing or overwriting the rest of the file. If you explicitly use `--force`, Synrail creates a timestamped `.synrail.bak.*` backup before replacing the file. If Synrail is already installed and on `PATH`, you can still run `synrail install-agent-files --project-root "$(pwd)"` directly.
+If `AGENTS.md` or `GEMINI.md` already exists, Synrail appends one managed block instead of failing or overwriting the rest of the file. If you explicitly use `--force`, Synrail creates a timestamped `.synrail.bak.*` backup before replacing the file. If Synrail is already installed and on `PATH`, you can still run `synrail install-agent-files --project-root "$(pwd)"` directly. Once installed in a repo, the default first command is just `synrail`, which opens the local dashboard and tells the operator whether a controlled run is already active.
 
 The current verified restore-capable alpha lane is:
 
 ```bash
-ARTIFACT_ROOT="$(pwd)/.synrail"
-synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Preserve one verified fallback before a bounded change."
+synrail
+synrail start "Preserve one verified fallback before a bounded change."
 # once this root reflects one verified working state:
-synrail save --artifact-root "$ARTIFACT_ROOT"
-# synrail start already creates starter proof files under $ARTIFACT_ROOT; edit them in place, then:
-synrail check --artifact-root "$ARTIFACT_ROOT"
+synrail save
+# synrail start already creates starter proof files under .synrail/; edit them in place, then:
+synrail check
 # after applying only that bounded repair:
-synrail retry --artifact-root "$ARTIFACT_ROOT"
-synrail restore --artifact-root "$ARTIFACT_ROOT"
-synrail session-export --artifact-root "$ARTIFACT_ROOT"
+synrail retry
+synrail restore
+synrail session-export --artifact-root .synrail
 ```
 
 The current fresh first-run contour is smaller:
 
 ```bash
-ARTIFACT_ROOT="$(pwd)/.synrail"
-synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
-# synrail start already creates starter proof files under $ARTIFACT_ROOT; edit them in place, then:
-synrail check --artifact-root "$ARTIFACT_ROOT"
-synrail repair-step --artifact-root "$ARTIFACT_ROOT"
-synrail bug-packet --artifact-root "$ARTIFACT_ROOT"
+synrail
+synrail start "Reject a plain-text final result and keep the repair bounded."
+# synrail start already creates starter proof files under .synrail/; edit them in place, then:
+synrail check
+synrail repair-step
+synrail bug-packet --artifact-root .synrail
 ```
 
 This shell is intentionally thin:

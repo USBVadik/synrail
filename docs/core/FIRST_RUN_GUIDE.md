@@ -18,17 +18,22 @@ python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd
 
 This installs the current Synrail CLI into `.venv` and immediately creates missing `AGENTS.md` / `GEMINI.md` files in the repo root or appends a managed Synrail block to existing ones. If you later rerun with `--force`, Synrail first writes a timestamped `.synrail.bak.*` backup of the existing policy file before replacing it. It is optional for humans, but useful when you want the local agent workflow to start in controlled mode without adding Synrail instructions to every prompt.
 
-## Five Steps
+## Quick Status
+
+Run this first in the repo:
 
 ```bash
-ARTIFACT_ROOT="$(pwd)/.synrail"
+synrail
 ```
+
+Synrail is a CLI control kernel, not a background daemon. The dashboard tells you whether a controlled run is active and what the next command should be.
+
+## Five Steps
 
 ### 1. Start a controlled run
 
 ```bash
-synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" \
-  --task-identity "Describe the bounded change you are making."
+synrail start "Describe the bounded change you are making."
 ```
 
 This creates `.synrail/` with starter proof files: `final_result.json`, `readback.txt`, `scenario_proof.txt`.
@@ -40,7 +45,7 @@ Open `.synrail/final_result.json` and replace the placeholder content with your 
 ### 3. Check
 
 ```bash
-synrail check --artifact-root "$ARTIFACT_ROOT"
+synrail check
 ```
 
 **Expected output on first try: non-green.** This is normal. You will see `CLAIMED_NOT_ACCEPTED` with a `blocking_reason` and a `next_safe_step`. Read them.
@@ -48,7 +53,7 @@ synrail check --artifact-root "$ARTIFACT_ROOT"
 ### 4. Repair
 
 ```bash
-synrail repair-step --artifact-root "$ARTIFACT_ROOT"
+synrail repair-step
 ```
 
 This tells you exactly what is still missing or weak. Fix the named issue in your proof files.
@@ -56,7 +61,7 @@ This tells you exactly what is still missing or weak. Fix the named issue in you
 ### 5. Re-check
 
 ```bash
-synrail check --artifact-root "$ARTIFACT_ROOT"
+synrail check
 ```
 
 Repeat steps 4-5 until you see `CLOSURE_ACCEPTED`. Typical: 2-4 iterations.
@@ -75,7 +80,7 @@ Non-green is the normal first state. It means the system is working.
 `CLOSURE_ACCEPTED` means the proof bundle is complete, the doctor passed, and closure is honest. You can now:
 
 ```bash
-synrail session-export --artifact-root "$ARTIFACT_ROOT"
+synrail session-export --artifact-root .synrail
 ```
 
 If a later deploy or restart script must cause a side effect, do not call it raw.
@@ -84,7 +89,7 @@ Use the deploy-guard pattern described in [DEPLOY_GUARD_INTEGRATION_001.md](/Use
 ## If something breaks
 
 ```bash
-synrail bug-packet --artifact-root "$ARTIFACT_ROOT"
+synrail bug-packet --artifact-root .synrail
 ```
 
 This creates a machine-readable bug report you can share with the maintainer.

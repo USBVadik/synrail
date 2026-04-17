@@ -250,18 +250,42 @@ def relative_artifact_root_for_project(*, project_root: Path, artifact_root: str
     return str(artifact_path)
 
 
+def policy_command_examples(*, artifact_root: str) -> dict[str, str]:
+    quoted_root = shlex.quote(artifact_root)
+    if artifact_root == DEFAULT_ALPHA_ARTIFACT_ROOT:
+        return {
+            "status": "synrail",
+            "start": 'synrail start "Describe the bounded local change."',
+            "check": "synrail check",
+            "repair": "synrail repair-step",
+        }
+    return {
+        "status": f"synrail status --artifact-root {quoted_root}",
+        "start": f'synrail start --artifact-root {quoted_root} "Describe the bounded local change."',
+        "check": f"synrail check --artifact-root {quoted_root}",
+        "repair": f"synrail repair-step --artifact-root {quoted_root}",
+    }
+
+
 def render_agent_policy_markdown(*, artifact_root: str) -> str:
+    commands = policy_command_examples(artifact_root=artifact_root)
     lines = [
         "# Agent Workflow",
         "",
         "This repo uses Synrail to keep one bounded local change inside one controlled run.",
         "",
+        "## First Step On Every New Task",
+        "",
+        "Run Synrail before deciding what to do next. It is a CLI control kernel, not a background daemon.",
+        "```bash",
+        commands["status"],
+        "```",
+        "",
         "## Before You Edit",
         "",
-        "1. Start one controlled run before mutating code:",
+        "1. If Synrail shows that no controlled run is active, start one before mutating code:",
         "```bash",
-        f'ARTIFACT_ROOT="$(pwd)/{artifact_root}"',
-        'synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Describe the bounded local change."',
+        commands["start"],
         "```",
         "",
         "2. Keep the change local and bounded to the stated task.",
@@ -271,13 +295,13 @@ def render_agent_policy_markdown(*, artifact_root: str) -> str:
         "## Before You Claim Success",
         "",
         "```bash",
-        'synrail check --artifact-root "$ARTIFACT_ROOT"',
+        commands["check"],
         "```",
         "",
         "If Synrail is non-green, run:",
         "",
         "```bash",
-        'synrail repair-step --artifact-root "$ARTIFACT_ROOT"',
+        commands["repair"],
         "```",
         "",
         "Then repair only the named gap and re-check.",
@@ -293,18 +317,28 @@ def render_agent_policy_markdown(*, artifact_root: str) -> str:
 
 
 def render_gemini_policy_markdown(*, artifact_root: str) -> str:
+    commands = policy_command_examples(artifact_root=artifact_root)
     lines = [
         "# Gemini Workflow",
         "",
         "Use Synrail as the default local control path for this repo.",
         "",
-        "## Start",
+        "## First Command",
         "",
-        "Before editing code, start one controlled run:",
+        "For every new user task, run Synrail first so you can see the current governed state:",
         "",
         "```bash",
-        f'ARTIFACT_ROOT="$(pwd)/{artifact_root}"',
-        'synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Describe the bounded local change."',
+        commands["status"],
+        "```",
+        "",
+        "Synrail is a CLI control kernel, not a background daemon.",
+        "",
+        "## Start",
+        "",
+        "If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
+        "",
+        "```bash",
+        commands["start"],
         "```",
         "",
         "## Work",
@@ -316,10 +350,10 @@ def render_gemini_policy_markdown(*, artifact_root: str) -> str:
         "## Finish",
         "",
         "```bash",
-        'synrail check --artifact-root "$ARTIFACT_ROOT"',
+        commands["check"],
         "```",
         "",
-        "If non-green, run `synrail repair-step --artifact-root \"$ARTIFACT_ROOT\"`, repair only the named gap, and re-check.",
+        f"If non-green, run `{commands['repair']}`, repair only the named gap, and re-check.",
         "",
         "Do not bypass Synrail and do not claim success without real local verification.",
         "",
@@ -328,23 +362,31 @@ def render_gemini_policy_markdown(*, artifact_root: str) -> str:
 
 
 def render_agent_policy_block(*, title: str, intro: str, artifact_root: str) -> str:
+    commands = policy_command_examples(artifact_root=artifact_root)
     lines = [
         f"## {title}",
         "",
         intro,
         "",
+        "First command for every new task:",
+        "",
         "```bash",
-        f'ARTIFACT_ROOT="$(pwd)/{artifact_root}"',
-        'synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Describe the bounded local change."',
+        commands["status"],
+        "```",
+        "",
+        "If Synrail shows that no controlled run is active, start one:",
+        "",
+        "```bash",
+        commands["start"],
         "```",
         "",
         "Before claiming success, run:",
         "",
         "```bash",
-        'synrail check --artifact-root "$ARTIFACT_ROOT"',
+        commands["check"],
         "```",
         "",
-        'If non-green, run `synrail repair-step --artifact-root "$ARTIFACT_ROOT"` and repair only the named gap before re-checking.',
+        f"If non-green, run `{commands['repair']}` and repair only the named gap before re-checking.",
         "",
         "Do not bypass Synrail and do not claim success without real local verification.",
     ]
@@ -574,8 +616,20 @@ def display_path_from_base(path: Path, *, base: Path) -> str:
     return text or "."
 
 
-def shell_command(root: Path, *parts: str) -> str:
-    return " ".join(shlex.quote(part) for part in ["synrail", *parts, "--artifact-root", display_path(root)])
+def default_workspace_artifact_root(*, project_root: Path | None = None) -> Path:
+    base = (project_root or Path.cwd()).resolve()
+    return (base / DEFAULT_ALPHA_ARTIFACT_ROOT).resolve()
+
+
+def is_default_workspace_artifact_root(root: Path, *, project_root: Path | None = None) -> bool:
+    return root.resolve() == default_workspace_artifact_root(project_root=project_root)
+
+
+def shell_command(root: Path | None, *parts: str, project_root: Path | None = None) -> str:
+    command = ["synrail", *parts]
+    if root is not None and not is_default_workspace_artifact_root(root, project_root=project_root):
+        command.extend(["--artifact-root", display_path(root)])
+    return " ".join(shlex.quote(part) for part in command)
 
 
 def preferred_proof_paths(root: Path, *, project_root: Path) -> dict[str, str]:
@@ -895,6 +949,8 @@ def write_controlled_start_artifacts(
 
 def resolve_start_identities(args: argparse.Namespace, *, root: Path) -> tuple[str, str]:
     task_identity = (getattr(args, "task_identity", "") or "").strip()
+    if not task_identity:
+        task_identity = (getattr(args, "task_request", "") or "").strip()
     prompt_identity = (getattr(args, "prompt_identity", "") or "").strip()
     if not task_identity:
         task_identity = load_text_if_exists(root / "task_identity.txt")
@@ -1172,16 +1228,16 @@ def print_prompt_summary_compact(output_file: Path, *, include_prompt: bool = Fa
 
 
 def print_init_summary(*, root: Path, state_file: Path) -> None:
-    state = load_json(state_file)
     profile = load_project_profile(root) or {}
     lines = [
         "Synrail setup is ready.",
         f"Artifact root: {display_path(root)}",
         f"Detected project type: {profile.get('project_type', 'generic')}",
         "This setup is not a controlled run yet.",
-        "Next command: " + shell_command(root, "start"),
+        "Quick status: " + shell_command(root, project_root=Path.cwd().resolve()),
+        'Start a controlled run: ' + shell_command(root, "start", "Describe the bounded local change.", project_root=Path.cwd().resolve()),
     ]
-    checkpoint_suggestion = shell_command(root, "save")
+    checkpoint_suggestion = shell_command(root, "save", project_root=Path.cwd().resolve())
     lines.append(f"Optional safety fallback: {checkpoint_suggestion}")
     print("\n".join(lines))
 
@@ -1199,8 +1255,96 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
         f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
         f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
-        "Then run: " + shell_command(root, "check"),
-        "Optional safety fallback: " + shell_command(root, "save"),
+        "Then run: " + shell_command(root, "check", project_root=project_root),
+        "Optional safety fallback: " + shell_command(root, "save", project_root=project_root),
+    ]
+    print("\n".join(lines))
+
+
+TERMINAL_RUN_STATES = {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}
+
+
+def agent_wiring_label(project_root: Path) -> str:
+    installed: list[str] = []
+    if (project_root / "AGENTS.md").exists():
+        installed.append("AGENTS.md")
+    if (project_root / "GEMINI.md").exists():
+        installed.append("GEMINI.md")
+    return " + ".join(installed) if installed else "not installed"
+
+
+def format_run_label(state: dict | None) -> str:
+    if not state:
+        return "none"
+    run_id = (state.get("run_id", "") or "").strip()
+    run_state = (state.get("state", "") or "").strip()
+    if run_id and run_state:
+        return f"{run_id} — {run_state}"
+    if run_id:
+        return run_id
+    if run_state:
+        return run_state
+    return "present but unreadable"
+
+
+def build_workspace_status(root: Path, *, project_root: Path, state_path: Path | None = None) -> dict:
+    state_path = (state_path or alpha_file(root, "state")).resolve()
+    state = load_json(state_path) if state_path.exists() else None
+    profile = load_project_profile(root) or {}
+    bootstrap_exists = alpha_file(root, "bootstrap").exists()
+    run_state = ((state or {}).get("state", "") or "").strip()
+    active_run = bool(state and bootstrap_exists and run_state not in TERMINAL_RUN_STATES)
+    if active_run:
+        workspace_state = "controlled run in progress"
+    elif state and not bootstrap_exists:
+        workspace_state = "setup ready; no controlled run yet"
+    elif state:
+        workspace_state = "controlled run history available"
+    elif root.exists() or profile:
+        workspace_state = "workspace initialized"
+    else:
+        workspace_state = "no Synrail artifacts yet"
+
+    next_step = ""
+    if active_run:
+        next_step = (state or {}).get("next_safe_step", "") or shell_command(root, "check", project_root=project_root)
+    elif state and not bootstrap_exists:
+        next_step = shell_command(root, "start", "Describe the bounded local change.", project_root=project_root)
+    elif state and run_state and run_state not in TERMINAL_RUN_STATES:
+        next_step = (state or {}).get("next_safe_step", "") or shell_command(root, "check", project_root=project_root)
+    else:
+        next_step = shell_command(root, "start", "Describe the bounded local change.", project_root=project_root)
+
+    return {
+        "type": "cli_control_kernel",
+        "daemon": False,
+        "workspace": display_path(project_root),
+        "workspace_state": workspace_state,
+        "artifact_root": display_path_from_base(root, base=project_root),
+        "project_type": profile.get("project_type", detect_project_type(project_root)),
+        "agent_wiring": agent_wiring_label(project_root),
+        "active_run": format_run_label(state) if active_run else "none",
+        "last_run": format_run_label(state),
+        "next_step": next_step,
+        "start_command": shell_command(root, "start", "Describe the bounded local change.", project_root=project_root),
+        "help_command": "synrail --help",
+    }
+
+
+def print_workspace_dashboard(summary: dict) -> None:
+    lines = [
+        "Synrail: local governance dashboard",
+        "Type: CLI control kernel (not a background daemon)",
+        "",
+        f"Workspace: {summary['workspace_state']}",
+        f"Artifact root: {summary['artifact_root']}",
+        f"Project type: {summary['project_type']}",
+        f"Agent wiring: {summary['agent_wiring']}",
+        f"Active run: {summary['active_run']}",
+        f"Last run: {summary['last_run']}",
+        f"Next step: {summary['next_step']}",
+        f"Start new run: {summary['start_command']}",
+        f"Full help: {summary['help_command']}",
     ]
     print("\n".join(lines))
 
@@ -1304,18 +1448,34 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
 
 
 def cmd_status(args: argparse.Namespace) -> int:
-    state = load_json(Path(args.state_file))
-    summary = {
-        "run_id": state["run_id"],
-        "task_class": state["task_class"],
-        "state": state["state"],
-        "target_surface": state["target_surface"]["status"],
-        "doctor": state["doctor"]["status"],
-        "proof_bundle": state["proof_bundle"]["status"],
-        "closure": state["closure"]["status"],
-        "next_safe_step": state["next_safe_step"],
-    }
-    print(json.dumps(summary, indent=2, ensure_ascii=True))
+    project_root = Path.cwd().resolve()
+    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=project_root)
+    state_path: Path | None = None
+    if getattr(args, "state_file", None):
+        state_path = Path(args.state_file).expanduser().resolve()
+        default_state_path = alpha_file(root, "state")
+        if state_path != default_state_path.resolve():
+            root = state_path.parent
+    summary = build_workspace_status(root, project_root=project_root, state_path=state_path)
+    state_path = (state_path or alpha_file(root, "state")).resolve()
+    if state_path.exists():
+        state = load_json(state_path)
+        summary.update(
+            {
+                "run_id": state.get("run_id", ""),
+                "task_class": state.get("task_class", ""),
+                "state": state.get("state", ""),
+                "target_surface": state.get("target_surface", {}).get("status", ""),
+                "doctor": state.get("doctor", {}).get("status", ""),
+                "proof_bundle": state.get("proof_bundle", {}).get("status", ""),
+                "closure": state.get("closure", {}).get("status", ""),
+                "next_safe_step": state.get("next_safe_step", ""),
+            }
+        )
+    if getattr(args, "json", False):
+        print(json.dumps(summary, indent=2, ensure_ascii=True))
+    else:
+        print_workspace_dashboard(summary)
     return 0
 
 
@@ -1396,7 +1556,7 @@ def cmd_start(args: argparse.Namespace) -> int:
         else:
             print("Synrail could not start a controlled run yet.")
             print("What is missing: the original task request for this run.")
-            print("What to do next: pass --task-identity or save the task request first, then rerun synrail start.")
+            print('What to do next: run `synrail start "Describe the bounded local change."` or pass --task-identity, then retry.')
         return 2
 
     existing_proof = existing_preferred_proof_artifacts(root)
@@ -3383,7 +3543,7 @@ def add_orchestration_args(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="synrail")
-    sub = parser.add_subparsers(dest="cmd", required=True)
+    sub = parser.add_subparsers(dest="cmd")
 
     p_init = sub.add_parser("init")
     p_init.add_argument("--run-id")
@@ -3409,6 +3569,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_start.add_argument("--tester-id", default="alpha_tester")
     p_start.add_argument("--mode", default="default", choices=["default", "dev"])
     p_start.add_argument("--output")
+    p_start.add_argument("task_request", nargs="?")
     p_start.set_defaults(func=cmd_start)
 
     p_install_agent_files = sub.add_parser("install-agent-files")
@@ -3480,8 +3641,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_check.add_argument("--target-identity-file")
     p_check.set_defaults(func=cmd_check)
 
-    p_status = sub.add_parser("status")
-    p_status.add_argument("state_file")
+    p_status = sub.add_parser("status", aliases=["dashboard"])
+    p_status.add_argument("state_file", nargs="?")
+    p_status.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_status.add_argument("--json", action="store_true")
     p_status.set_defaults(func=cmd_status)
 
     p_bundle = sub.add_parser("bundle-check")
@@ -3979,9 +4142,18 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args()
+    parsed_argv = list(sys.argv[1:] if argv is None else argv)
+    args = parser.parse_args(parsed_argv)
+    if not getattr(args, "cmd", None):
+        dashboard_args = argparse.Namespace(
+            cmd="status",
+            artifact_root=DEFAULT_ALPHA_ARTIFACT_ROOT,
+            state_file=None,
+            json=False,
+        )
+        return cmd_status(dashboard_args)
     caught: Exception | None = None
     exit_code = 1
     try:

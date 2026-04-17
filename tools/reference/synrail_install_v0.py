@@ -152,7 +152,8 @@ def main(argv: list[str] | None = None) -> int:
     if project_root is not None:
         rel_project = os.path.relpath(project_root, Path.cwd())
         print(f"Agent files installed into: {rel_project}")
-    print("Next step: run `synrail start --artifact-root .synrail --project-root \"$(pwd)\" --task-identity \"...\"` inside your project.")
+    print("Quick status: run `synrail` inside your project.")
+    print('Start a run: `synrail start "Describe the bounded local change."`')
     return 0
 
 

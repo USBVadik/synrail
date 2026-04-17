@@ -12,7 +12,7 @@ Proof-first control kernel for agentic work.
 python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd)"
 ```
 
-This installs the current Synrail CLI into a local venv and immediately writes missing `AGENTS.md` / `GEMINI.md` files or appends a managed Synrail block to existing ones, so local agents discover the same `synrail start -> work -> synrail check` path without per-task prompt instructions. If you later do choose `--force`, Synrail writes a timestamped `.synrail.bak.*` backup before replacing an existing policy file.
+This installs the current Synrail CLI into a local venv and immediately writes missing `AGENTS.md` / `GEMINI.md` files or appends a managed Synrail block to existing ones, so local agents discover the same `synrail -> synrail start -> work -> synrail check` path without per-task prompt instructions. If you later do choose `--force`, Synrail writes a timestamped `.synrail.bak.*` backup before replacing an existing policy file.
 
 ## Wedge
 
