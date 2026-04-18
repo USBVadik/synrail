@@ -831,6 +831,54 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertNotIn("scenario_proof", bundle["semantically_insufficient_sections"])
         self.assertEqual("ACCEPTED", verdict["closure_status"])
 
+    def test_missing_method_is_inferred_for_strong_direct_observation_record(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_infer_diff_method_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["warroom/templates/index.html"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "changed_file": "warroom/templates/index.html",
+                    "added_line": "                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                    "context_before": "                </h2>",
+                    "context_after": "                <form action=\"/add_token\" method=\"post\" class=\"mb-6 flex gap-2\">",
+                    "verification_command": "grep -n 'Local signals only' warroom/templates/index.html",
+                    "verification_result": "24:                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only warroom/templates/index.html with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(tmp / "missing_readback.txt")
+            args.scenario_proof = str(tmp / "missing_scenario.txt")
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("direct_file_observation", bundle["diff_provenance"]["normalized_method"])
+        self.assertTrue(bundle["diff_provenance"]["method_inferred"])
+        self.assertTrue(bundle["verification_corroboration"]["has_structured_runtime_verification"])
+        self.assertTrue(bundle["readback"]["waived_by_runtime_corroboration"])
+        self.assertTrue(bundle["scenario_proof"]["waived_by_runtime_corroboration"])
+        self.assertEqual([], bundle["missing_sections"])
+        self.assertEqual([], bundle["semantically_insufficient_sections"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
     def test_already_satisfied_noop_rejects_invented_patch(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_already_satisfied_fake_patch_") as tmpdir:
             tmp = Path(tmpdir)

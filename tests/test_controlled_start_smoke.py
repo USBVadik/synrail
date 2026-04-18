@@ -237,7 +237,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("final_result: .synrail/final_result.json", check.stdout)
             self.assertIn("readback: .synrail/readback.txt", check.stdout)
             self.assertIn("scenario_proof: .synrail/scenario_proof.txt", check.stdout)
-            self.assertIn("verification_command plus verification_result", check.stdout)
+            self.assertIn("diff_provenance method, verification_command, and verification_result", check.stdout)
             self.assertIn("trust-bearing status", check.stdout)
             self.assertIn("PROVEN", check.stdout)
             self.assertIn("Command: plus Observed: or Result:", check.stdout)

@@ -333,7 +333,7 @@ def structured_diff_provenance_is_semantically_sufficient(
 ) -> bool:
     if not isinstance(record, dict):
         return False
-    method = non_empty_string(record.get("method", ""))
+    method = normalized_diff_provenance_method(record, change_disposition=change_disposition)
     changed_file = non_empty_string(record.get("changed_file", ""))
     added_line = non_empty_string(record.get("added_line", ""))
     removed_line = non_empty_string(record.get("removed_line", ""))
@@ -350,6 +350,32 @@ def structured_diff_provenance_is_semantically_sufficient(
         return bool(method and changed_file and changed_file_matches and has_verification and has_observation and provenance_note)
     has_patch_context = any([added_line, removed_line, context_before, context_after])
     return bool(method and changed_file and changed_file_matches and has_patch_context and has_verification)
+
+
+def normalized_diff_provenance_method(record: object, *, change_disposition: str) -> str:
+    if not isinstance(record, dict):
+        return ""
+    explicit_method = non_empty_string(record.get("method", ""))
+    if explicit_method:
+        return explicit_method
+    changed_file = non_empty_string(record.get("changed_file", ""))
+    verification_command = non_empty_string(record.get("verification_command", ""))
+    verification_result = non_empty_string(record.get("verification_result", ""))
+    if not (changed_file and verification_command and verification_result):
+        return ""
+    if change_disposition == "already_satisfied":
+        observed_line = non_empty_string(record.get("observed_line", ""))
+        provenance_note = non_empty_string(record.get("provenance_note", ""))
+        if observed_line and provenance_note:
+            return "direct_file_observation"
+        return ""
+    added_line = non_empty_string(record.get("added_line", ""))
+    removed_line = non_empty_string(record.get("removed_line", ""))
+    context_before = non_empty_string(record.get("context_before", ""))
+    context_after = non_empty_string(record.get("context_after", ""))
+    if any([added_line, removed_line, context_before, context_after]):
+        return "direct_file_observation"
+    return ""
 
 
 def _word_set(text: str) -> set[str]:
@@ -694,6 +720,10 @@ def build_bundle(args: argparse.Namespace) -> dict:
         modified_files if isinstance(modified_files, list) else [],
         change_disposition=change_disposition,
     )
+    normalized_diff_method = normalized_diff_provenance_method(
+        diff_provenance_record,
+        change_disposition=change_disposition,
+    )
     if change_disposition == "already_satisfied":
         diff_semantically_sufficient = not bool(non_empty_string(git_diff)) and diff_record_semantically_sufficient
     else:
@@ -809,6 +839,8 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "non_empty": bool(git_diff),
             "has_diff_markers": diff_has_markers,
             "has_structured_record": isinstance(diff_provenance_record, dict),
+            "normalized_method": normalized_diff_method,
+            "method_inferred": bool(normalized_diff_method) and not bool(non_empty_string(diff_provenance_record.get("method", ""))) if isinstance(diff_provenance_record, dict) else False,
             "structured_record_sufficient": diff_record_semantically_sufficient,
             "semantically_sufficient": diff_semantically_sufficient,
         },

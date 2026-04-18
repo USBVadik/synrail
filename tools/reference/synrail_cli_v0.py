@@ -1557,7 +1557,7 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
         f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
         "Proof shape reminders:",
-        "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; Synrail can carry run identity and doctor-ready cleanup truth during a normal check.",
+        "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; include diff_provenance.method when you can, although Synrail can infer direct_file_observation from a strong direct-observation record during a normal check.",
         "- readback.txt: briefly name the changed surface and what you observed there; if final_result.json already carries strong structured verification, readback can stay explanatory instead of carrying the trust decision.",
         "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines; if final_result.json already carries strong structured verification, scenario proof can stay brief and explanatory instead of carrying the trust decision.",
         "Then run: " + shell_command(root, "check", project_root=project_root),
@@ -1583,7 +1583,7 @@ def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Pa
         f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
         "Proof shape reminders:",
-        "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; Synrail can carry run identity and doctor-ready cleanup truth during a normal check.",
+        "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; include diff_provenance.method when you can, although Synrail can infer direct_file_observation from a strong direct-observation record during a normal check.",
         "- readback.txt: briefly name the changed surface and what you observed there; if final_result.json already carries strong structured verification, readback can stay explanatory instead of carrying the trust decision.",
         "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines; if final_result.json already carries strong structured verification, scenario proof can stay brief and explanatory instead of carrying the trust decision.",
         "Next command: " + shell_command(root, "check", project_root=project_root),
@@ -1723,7 +1723,7 @@ def final_result_template_payload(*, root: Path | None) -> dict:
         "Keep the scope tight: do not smuggle adjacent spacing, class, or layout tweaks into a task that only asked you to add or insert a small surface change.",
         "If the task only asked for a simple subtitle or label, keep the new line visually plain and avoid extra emphasis styling unless the task explicitly asked for it.",
         "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers when you can produce one.",
-        "If git_diff is unavailable, keep diff_provenance explicit with changed_file, changed lines, and verification command plus result.",
+        "If git_diff is unavailable, keep diff_provenance explicit with method, changed_file, changed lines, and verification command plus result. If method is omitted but the direct-observation record is otherwise complete, Synrail can normalize it to direct_file_observation during a normal check.",
         "For an already_satisfied no-op, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.",
         "In the normal synrail check path, run identity is already carried from the current controlled context; only fill artifact_identity manually when you are doing a standalone bundle check without that context.",
         "In the normal synrail check path, doctor-ready cleanup truth can satisfy cleanup_status; only fill cleanup_status manually when standalone proof needs an explicit cleanup attestation.",
@@ -3262,7 +3262,7 @@ def cmd_check(args: argparse.Namespace) -> int:
                         if preferred.get(label, ""):
                             print(f"- {label}: {preferred[label]}")
                     print("Proof shape reminders:")
-                    print("- final_result.json should carry a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op) plus a real patch or explicit diff_provenance verification_command plus verification_result.")
+                    print("- final_result.json should carry a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op) plus a real patch or explicit diff_provenance method, verification_command, and verification_result.")
                     print("- readback.txt should name the changed surface and what you observed there, not just restate the task.")
                     print("- scenario_proof.txt should use labeled Command: plus Observed: or Result: lines.")
                     print("Need a canonical readback shape? run synrail readback-template")
