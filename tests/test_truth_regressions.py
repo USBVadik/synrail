@@ -56,6 +56,7 @@ def bundle_args(*, final_result: Path) -> argparse.Namespace:
         execution_surface_identity="clean-clone",
         prompt_identity="prompt-001",
         task_identity="task-001",
+        doctor_file="",
         output="",
     )
 
@@ -421,6 +422,70 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("COMPLETE", bundle["status"])
         self.assertEqual("SUFFICIENT", bundle["semantic_status"])
         self.assertEqual([], bundle["semantically_insufficient_sections"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
+    def test_doctor_cleanup_and_run_context_identity_can_complete_bundle_without_authored_duplication(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cleanup_fallback_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+            doctor_file = tmp / "doctor.json"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "success",
+                "modified_files": ["warroom/templates/index.html"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "warroom/templates/index.html",
+                    "added_line": "                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                    "context_before": "                </h2>",
+                    "context_after": "                <form action=\"/add_token\" method=\"post\" class=\"mb-6 flex gap-2\">",
+                    "verification_command": "grep -n 'Local signals only' warroom/templates/index.html",
+                    "verification_result": "24:                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text(
+                "### READBACK: add watchlist subtitle\n"
+                "Changed surface: warroom/templates/index.html\n"
+                "Observed: the template now contains a Local signals only subtitle directly under the Watchlist heading.\n"
+            )
+            scenario.write_text(
+                "### SCENARIO PROOF: add watchlist subtitle\n"
+                "Scenario: local homepage render check for the Watchlist section\n"
+                "Command: grep -n \"Local signals only\" warroom/templates/index.html\n"
+                "Observed: line 24 shows the inserted subtitle paragraph under the Watchlist heading\n"
+                "Status: PASSED\n"
+            )
+            doctor_file.write_text(json.dumps({
+                "schema_version": "doctor_record_v0",
+                "doctor_level": "CORE_DOCTOR",
+                "gates": {
+                    "clean_execution_surface": {
+                        "status": "PASS",
+                        "note": "execution surface is acceptable",
+                    },
+                },
+                "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            args.doctor_file = str(doctor_file)
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("COMPLETE", bundle["status"])
+        self.assertEqual("SUFFICIENT", bundle["semantic_status"])
+        self.assertEqual([], bundle["semantically_insufficient_sections"])
+        self.assertFalse(bundle["artifact_identity"]["from_final_result"])
+        self.assertTrue(bundle["cleanup_status"]["from_doctor"])
         self.assertEqual("ACCEPTED", verdict["closure_status"])
 
     def test_truthful_already_satisfied_noop_can_complete_bundle(self) -> None:

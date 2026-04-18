@@ -79,6 +79,8 @@ synrail check
 # if non-green, fix what check says, then rerun synrail check
 ```
 
+In that normal `synrail check` path, the operator should focus on changed files, diff/provenance, readback, and labeled verification evidence. Run identity and doctor-ready cleanup truth can now be carried from the current controlled context instead of being recopied by hand into `final_result.json` on every small task.
+
 This shell is intentionally thin:
 
 - the default `synrail --help` keeps the primary shell small and leaves helper/dev surfaces out of the first operator view

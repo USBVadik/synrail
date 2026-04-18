@@ -2310,6 +2310,8 @@ def _phase_execution_and_proof(ctx: OrchestrationContext, args: argparse.Namespa
         "--prompt-identity", args.prompt_identity,
         "--task-identity", args.task_identity,
     ]
+    if args.doctor_output:
+        bundle_args.extend(["--doctor-file", args.doctor_output])
     if args.readback:
         bundle_args.extend(["--readback", args.readback])
     if args.scenario_proof:

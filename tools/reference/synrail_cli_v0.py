@@ -1557,7 +1557,7 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
         f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
         "Proof shape reminders:",
-        "- final_result.json: keep git_diff patch-shaped when possible, or keep diff_provenance explicit with verification_command plus verification_result.",
+        "- final_result.json: focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; Synrail can carry run identity and doctor-ready cleanup truth during a normal check.",
         "- readback.txt: name the changed surface and what you observed there; do not paraphrase the task.",
         "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines instead of prose-only proof.",
         "Then run: " + shell_command(root, "check", project_root=project_root),
@@ -1583,7 +1583,7 @@ def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Pa
         f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
         "Proof shape reminders:",
-        "- final_result.json: keep git_diff patch-shaped when possible, or keep diff_provenance explicit with verification_command plus verification_result.",
+        "- final_result.json: focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; Synrail can carry run identity and doctor-ready cleanup truth during a normal check.",
         "- readback.txt: name the changed surface and what you observed there; do not paraphrase the task.",
         "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines instead of prose-only proof.",
         "Next command: " + shell_command(root, "check", project_root=project_root),
@@ -1723,7 +1723,8 @@ def final_result_template_payload(*, root: Path | None) -> dict:
         "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers when you can produce one.",
         "If git_diff is unavailable, keep diff_provenance explicit with changed_file, changed lines, and verification command plus result.",
         "For an already_satisfied no-op, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.",
-        "artifact_identity can mirror the current run identities so low-level bundle-check stays reproducible too.",
+        "In the normal synrail check path, run identity is already carried from the current controlled context; only fill artifact_identity manually when you are doing a standalone bundle check without that context.",
+        "In the normal synrail check path, doctor-ready cleanup truth can satisfy cleanup_status; only fill cleanup_status manually when standalone proof needs an explicit cleanup attestation.",
         "Use synrail explain-proof after a check to see exact semantic gaps and reasons.",
     ]
     if profile.get("workspace_isolation_note", ""):
@@ -1946,6 +1947,7 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  No-op fix: if the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.")
             if gap["section"] == "artifact_identity":
                 lines.append("  Concrete fix: ensure baseline_identity, execution_surface_identity, prompt_identity, and task_identity are all non-empty for this run.")
+                lines.append("  Normal check path: Synrail usually carries these identity values from the current run context automatically; only fill them manually when a standalone bundle-check lacks that context.")
             if gap["section"] == "modified_files":
                 lines.append("  No-op fix: if no file had to change because the requested state already existed, set change_disposition to already_satisfied and keep modified_files empty instead of inventing a changed file list.")
             if gap["section"] == "scope_alignment":
@@ -1954,6 +1956,8 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  Concrete fix: keep the newly added line visually plain. Remove extra emphasis styling like italic, opacity, uppercase, or tracking unless the task explicitly asked for it.")
             if gap["section"] == "verification_corroboration":
                 lines.append("  Concrete fix: keep acceptance tied to explicit local verification. Either add structured diff_provenance with verification command and result in final_result.json, or record a labeled scenario proof with Command and Observed or Result lines instead of prose-only proof text.")
+            if gap["section"] == "cleanup_status":
+                lines.append("  Normal check path: if doctor already reports an acceptable clean execution surface, Synrail can satisfy cleanup_status from that current readiness truth; otherwise record an explicit cleanup summary in final_result.json.")
     if semantic_gaps:
         lines.append("Semantic gaps:")
         for gap in semantic_gaps:
@@ -1967,6 +1971,7 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  No-op fix: if the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.")
             if gap["section"] == "artifact_identity":
                 lines.append("  Concrete fix: ensure baseline_identity, execution_surface_identity, prompt_identity, and task_identity are all non-empty for this run.")
+                lines.append("  Normal check path: Synrail usually carries these identity values from the current run context automatically; only fill them manually when a standalone bundle-check lacks that context.")
             if gap["section"] == "modified_files":
                 lines.append("  No-op fix: if no file had to change because the requested state already existed, set change_disposition to already_satisfied and keep modified_files empty instead of inventing a changed file list.")
             if gap["section"] == "scope_alignment":
@@ -1975,6 +1980,8 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  Concrete fix: keep the newly added line visually plain. Remove extra emphasis styling like italic, opacity, uppercase, or tracking unless the task explicitly asked for it.")
             if gap["section"] == "verification_corroboration":
                 lines.append("  Concrete fix: keep acceptance tied to explicit local verification. Either add structured diff_provenance with verification command and result in final_result.json, or record a labeled scenario proof with Command and Observed or Result lines instead of prose-only proof text.")
+            if gap["section"] == "cleanup_status":
+                lines.append("  Normal check path: if doctor already reports an acceptable clean execution surface, Synrail can satisfy cleanup_status from that current readiness truth; otherwise record an explicit cleanup summary in final_result.json.")
     if not structural_gaps and not semantic_gaps:
         lines.append("Synrail did not find structural or semantic proof gaps in the current bundle.")
     if any(gap["section"] in {"final_result", "modified_files", "diff_provenance", "verification_corroboration", "artifact_identity", "cleanup_status"} for gap in structural_gaps + semantic_gaps):
@@ -2495,6 +2502,7 @@ def cmd_bundle_check(args: argparse.Namespace) -> int:
         ("--execution-surface-identity", args.execution_surface_identity),
         ("--prompt-identity", args.prompt_identity),
         ("--task-identity", args.task_identity),
+        ("--doctor-file", args.doctor_file),
     ]
     for flag, value in optional_pairs:
         if value:
@@ -4615,6 +4623,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_bundle.add_argument("--execution-surface-identity")
     p_bundle.add_argument("--prompt-identity")
     p_bundle.add_argument("--task-identity")
+    p_bundle.add_argument("--doctor-file")
     p_bundle.set_defaults(func=cmd_bundle_check)
 
     p_apply_bundle = sub.add_parser("apply-bundle", help=argparse.SUPPRESS)

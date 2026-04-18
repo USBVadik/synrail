@@ -528,6 +528,27 @@ def cleanup_is_semantically_sufficient(cleanup: dict) -> bool:
     )
 
 
+def cleanup_fallback_from_doctor(doctor_record: dict | None) -> dict:
+    if not isinstance(doctor_record, dict):
+        return {}
+    final_verdict = non_empty_string(doctor_record.get("final_verdict", ""))
+    gates = doctor_record.get("gates", {})
+    clean_surface_gate = gates.get("clean_execution_surface", {}) if isinstance(gates, dict) else {}
+    clean_surface_note = non_empty_string(clean_surface_gate.get("note", ""))
+    if not final_verdict.startswith("ACCEPTABLE_"):
+        return {}
+    if clean_surface_gate.get("status", "") != "PASS":
+        return {}
+    summary = "workspace clean and execution surface acceptable for this run"
+    if clean_surface_note and "clean" in clean_surface_note.lower():
+        summary = clean_surface_note
+    return {
+        "success": True,
+        "summary": summary,
+        "source": "doctor",
+    }
+
+
 def first_semantic_step(semantically_insufficient_sections: list[str]) -> str:
     for section in semantically_insufficient_sections:
         if section in SEMANTIC_SECTION_STEPS:
@@ -565,11 +586,23 @@ def build_bundle(args: argparse.Namespace) -> dict:
     final_present, final_path_str = file_present(args.final_result)
     final_path = Path(final_path_str) if final_path_str else None
     final_parseable, final = load_json_if_valid(final_path) if final_present else (False, {})
+    doctor_present, doctor_path_str = file_present(getattr(args, "doctor_file", ""))
+    doctor_path = Path(doctor_path_str) if doctor_path_str else None
+    doctor_parseable, doctor = load_json_if_valid(doctor_path) if doctor_present else (False, {})
 
     modified_files = final.get("modified_files", [])
     git_diff = final.get("git_diff", "")
     diff_provenance_record = final.get("diff_provenance", {})
-    cleanup = final.get("cleanup_status", {})
+    cleanup_record = final.get("cleanup_status", {})
+    cleanup_fallback = cleanup_fallback_from_doctor(doctor if doctor_parseable else {})
+    explicit_cleanup_present = isinstance(cleanup_record, dict) and bool(cleanup_record)
+    explicit_cleanup_semantically_sufficient = explicit_cleanup_present and cleanup_is_semantically_sufficient(cleanup_record)
+    if explicit_cleanup_semantically_sufficient:
+        cleanup = cleanup_record
+    elif cleanup_fallback:
+        cleanup = cleanup_fallback
+    else:
+        cleanup = cleanup_record if explicit_cleanup_present else {}
     readback_text = file_text(args.readback)
     scenario_text = file_text(args.scenario_proof)
     raw_change_disposition = non_empty_string(final.get("change_disposition", ""))
@@ -657,7 +690,8 @@ def build_bundle(args: argparse.Namespace) -> dict:
     ]
     identity_fields_present = all(bool(value.strip()) for value in identity_values)
     identity_semantically_sufficient = identity_fields_present
-    cleanup_semantically_sufficient = "cleanup_status" in final and cleanup_is_semantically_sufficient(cleanup)
+    cleanup_present = ("cleanup_status" in final) or bool(cleanup_fallback)
+    cleanup_semantically_sufficient = cleanup_present and cleanup_is_semantically_sufficient(cleanup)
     final_request_id = (final.get("request_id", "") or "").strip()
 
     bundle = {
@@ -731,8 +765,9 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "semantically_sufficient": identity_semantically_sufficient,
         },
         "cleanup_status": {
-            "present": "cleanup_status" in final,
+            "present": cleanup_present,
             "success": bool(cleanup.get("success", False)),
+            "from_doctor": bool(cleanup_fallback) and not explicit_cleanup_semantically_sufficient,
             "semantically_sufficient": cleanup_semantically_sufficient,
         },
         "missing_sections": [],
@@ -826,9 +861,13 @@ def build_bundle(args: argparse.Namespace) -> dict:
             present=bundle["cleanup_status"]["present"],
             structurally_complete=bundle["cleanup_status"]["present"],
             why=(
-                "cleanup status is present in the final result artifact"
+                (
+                    "cleanup status is present in the final result artifact"
+                    if explicit_cleanup_semantically_sufficient
+                    else "cleanup status is satisfied by the current doctor-ready workspace"
+                )
                 if bundle["cleanup_status"]["present"]
-                else "cleanup status is missing from the final result artifact"
+                else "cleanup status is missing from the final result artifact and current doctor context"
             ),
         ),
     ]
@@ -973,7 +1012,11 @@ def build_bundle(args: argparse.Namespace) -> dict:
             evaluated=not missing,
             semantically_sufficient=cleanup_semantically_sufficient,
             why=(
-                "cleanup status reports success with an explicit clean-surface summary"
+                (
+                    "cleanup status reports success with an explicit clean-surface summary"
+                    if explicit_cleanup_semantically_sufficient
+                    else "doctor already reports an acceptable clean execution surface for this run"
+                )
                 if cleanup_semantically_sufficient
                 else "cleanup status is present but does not prove a clean post-change surface"
             ),
@@ -1012,6 +1055,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--execution-surface-identity")
     parser.add_argument("--prompt-identity")
     parser.add_argument("--task-identity")
+    parser.add_argument("--doctor-file")
     parser.add_argument("--output", required=True)
     return parser
 

@@ -158,6 +158,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             )
             self.assertIn("Proof shape reminders:", start.stdout)
             self.assertIn("verification_command plus verification_result", start.stdout)
+            self.assertIn("doctor-ready cleanup truth", start.stdout)
             self.assertIn("Command: plus Observed: or Result:", start.stdout)
             self.assertIn("Starter proof files are ready for this run.", start.stdout)
             self.assertTrue((artifact_root / "bootstrap.json").exists())
@@ -179,6 +180,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(64, len(proof_request["starter_hashes"]["final_result"]))
             self.assertIn("explicit proof artifacts and local verification evidence", proof_request["summary"])
             self.assertIn("record explicit verification anchors", proof_request["next_safe_step"])
+            self.assertIn("carry run identity and doctor-ready cleanup truth", proof_request["next_safe_step"])
 
     def test_check_after_plain_init_requires_controlled_start(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_bootstrap_block_") as tmpdir:

@@ -84,12 +84,10 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                         "git_diff",
                         "diff_provenance.changed_file",
                         "diff_provenance.verification_command",
-                        "artifact_identity.baseline_identity",
-                        "artifact_identity.execution_surface_identity",
-                        "artifact_identity.prompt_identity",
-                        "artifact_identity.task_identity",
-                        "cleanup_status.success",
-                        "cleanup_status.summary",
+                    ],
+                    "auto_carried_fields": [
+                        "artifact_identity",
+                        "cleanup_status",
                     ],
                     "git_diff_must_include": [
                         "diff --git",
@@ -106,7 +104,8 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                     "scope_hint": "Keep the implementation inside the requested scope. If the task only asked you to add or insert something, do not also tweak adjacent spacing, classes, or layout unless the task explicitly asked for it.",
                     "presentation_hint": "If the task only asked for a simple added subtitle or label, keep the new line visually plain and avoid extra emphasis styling unless the task explicitly asked for it.",
                     "diff_provenance_hint": "if git_diff is unavailable, use diff_provenance with changed_file, added_line or removed_line, and verification_command plus verification_result; if the requested state was already present before edits, set change_disposition to already_satisfied, keep git_diff empty, and use observed_line plus provenance_note instead of inventing a patch",
-                    "artifact_identity_hint": "mirror the current run baseline, execution surface, prompt, and task identity values here when low-level bundle-check needs them",
+                    "artifact_identity_hint": "during a normal synrail check, run identity is carried from the current controlled context; only fill artifact_identity manually when a standalone bundle-check lacks that run context",
+                    "cleanup_hint": "during a normal synrail check, a doctor-ready workspace can satisfy cleanup_status automatically; only edit cleanup_status manually when standalone proof needs an explicit cleanup attestation",
                     "no_op_hint": "If the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and attest the observed line truthfully through diff_provenance.",
                 },
             },
@@ -241,10 +240,8 @@ def build_proof_request_record(
             "diff_provenance",
             "readback",
             "scenario_proof",
-            "artifact_identity",
-            "cleanup_status",
         ],
-        "next_safe_step": "Run local verification, record explicit verification anchors in the starter proof files, then run synrail check.",
+        "next_safe_step": "Run local verification, record explicit verification anchors in the starter proof files, let Synrail carry run identity and doctor-ready cleanup truth when available, then run synrail check.",
     }
 
 
