@@ -156,6 +156,20 @@ So the updated honest claim is:
 - the fix is validated on the Claude lane
 - the Gemini lane still needs stronger shaping than text-only guidance
 
+Run [019c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019c/REPORT.md) retests Gemini again after the stronger Gemini-specific tightening.
+
+It improves the picture, but does not fully close it:
+
+- Gemini now stays much closer to the governed state and no longer wanders into database/schema or sibling-probe archaeology
+- the saved answer is short and correct
+- but the lane still is not as small as Claude `020b`, and the run did not persist a clean `end` / `rc` trace
+
+So the refined claim is:
+
+- Claude now has a clear literal `synrail`-first orientation lane
+- Gemini has materially improved orientation discipline
+- but Gemini orientation is still not as operationally minimal, and its CLI/harness completion path still looks weaker
+
 ## What The Runs Do **Not** Yet Prove
 
 ### 1. They do not yet prove that `Synrail` clearly beats the simpler baseline overall
@@ -222,6 +236,7 @@ The retests refine that picture:
 
 - [020b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020b/REPORT.md) does provide clean evidence of a literal `synrail`-first start on Claude
 - [019b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019b/REPORT.md) shows that Gemini still does not reliably collapse orientation into that same small loop
+- [019c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019c/REPORT.md) shows that Gemini can be nudged into a materially narrower governed summary, but still not into the same tiny, cleanly persisted loop
 
 That means the project is improving on recall and context recovery, but the operator-facing entry habit is still only partially internalized across agents.
 
@@ -255,6 +270,7 @@ That means the project is improving on recall and context recovery, but the oper
 | [020](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020/REPORT.md) | Claude can answer accurately from `.synrail` artifacts in a short read-only run, but still without a literal CLI-first entry | Moderate positive evidence |
 | [019b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019b/REPORT.md) | Gemini retest still over-explores even after the orientation guidance wording fix | Mixed evidence |
 | [020b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020b/REPORT.md) | Claude retest now literally starts with `synrail`, giving the first clean CLI-first orientation signal | Strong positive evidence |
+| [019c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019c/REPORT.md) | Gemini retest is materially narrower than `019b`, but still not as small or as cleanly persisted as the Claude lane | Moderate mixed-positive evidence |
 
 ## Current Best Honest Claim Against Baseline
 
@@ -346,6 +362,6 @@ the answer is:
 
 The strongest positive signal is still handoff, but restore now has a real positive external recovery signal too.
 
-The strongest negative signal is no longer the old false-success restore bug; the clearest remaining negative signal is now trivial-task operator tax, while restore still needs broader contour coverage and orientation still needs that smaller CLI-first loop to generalize beyond the Claude lane.
+The strongest negative signal is no longer the old false-success restore bug; the clearest remaining negative signal is now trivial-task operator tax, while restore still needs broader contour coverage and orientation still needs that smaller CLI-first loop to generalize beyond the Claude lane, even though Gemini improved materially in `019c`.
 
 That is exactly enough clarity to justify the next round of focused fixes.
