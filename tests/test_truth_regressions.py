@@ -350,7 +350,7 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
         self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
         self.assertEqual(
-            ["diff_provenance", "readback", "scenario_proof", "cleanup_status"],
+            ["diff_provenance", "verification_corroboration", "readback", "scenario_proof", "cleanup_status"],
             bundle["semantically_insufficient_sections"],
         )
         self.assertEqual(
@@ -769,6 +769,24 @@ class TestAntiNarrativeGuards(unittest.TestCase):
             "Scenario: tested the feature end to end.\nObserved the expected behavior after the change.\nStatus: PASSED",
         ))
 
+    def test_scenario_rejects_missing_command_label(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: retry delay on attempt 0\n"
+            "python -m pytest tests/test_retry_logic.py::test_attempt_zero_delay -q\n"
+            "Observed: test passed with delay 0.0\n"
+            "Status: PASSED",
+        ))
+
+    def test_scenario_rejects_missing_observed_label(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: retry delay on attempt 0\n"
+            "Command: python -m pytest tests/test_retry_logic.py::test_attempt_zero_delay -q\n"
+            "delay 0.0 returned for attempt 0\n"
+            "Status: PASSED",
+        ))
+
     def test_scenario_rejects_parroting(self) -> None:
         from synrail_bundle_v0 import scenario_is_semantically_sufficient
         # Proof that merely restates task words without concrete evidence
@@ -784,6 +802,27 @@ class TestAntiNarrativeGuards(unittest.TestCase):
         self.assertTrue(scenario_is_semantically_sufficient(
             "Scenario: cinematic zoom on core/router.py\nCommand: python -m pytest tests/test_router.py::test_zoom -v\nObserved: test_zoom PASSED, handler returns /api/zoom\nStatus: PASSED",
             task_identity="add cinematic zoom trigger",
+        ))
+
+    def test_verification_corroboration_requires_structured_or_labeled_scenario(self) -> None:
+        from synrail_bundle_v0 import verification_corroboration_is_semantically_sufficient
+        self.assertFalse(verification_corroboration_is_semantically_sufficient(
+            structured_diff_sufficient=False,
+            scenario_text=(
+                "Scenario: retry delay on attempt 0\n"
+                "python -m pytest tests/test_retry_logic.py::test_attempt_zero_delay -q\n"
+                "delay 0.0 returned for attempt 0\n"
+                "Status: PASSED"
+            ),
+        ))
+        self.assertTrue(verification_corroboration_is_semantically_sufficient(
+            structured_diff_sufficient=False,
+            scenario_text=(
+                "Scenario: retry delay on attempt 0\n"
+                "Command: python -m pytest tests/test_retry_logic.py::test_attempt_zero_delay -q\n"
+                "Observed: test passed and delay 0.0 was returned for attempt 0\n"
+                "Status: PASSED"
+            ),
         ))
 
     def test_parroting_detector_catches_high_overlap(self) -> None:

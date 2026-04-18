@@ -474,6 +474,43 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("scenario_proof target: .synrail/scenario_proof.txt", explain.stdout)
             self.assertIn("synrail scenario-proof-template", explain.stdout)
 
+    def test_explain_proof_surfaces_verification_corroboration_fix(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_verification_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "bundle.json",
+                {
+                    "status": "STRUCTURALLY_COMPLETE",
+                    "structural_status": "COMPLETE",
+                    "semantic_status": "INSUFFICIENT",
+                    "semantic_next_safe_step": "tie acceptance to explicit local verification evidence inside the current proof surfaces instead of prose-only readback and scenario text",
+                    "semantic_decision_trace": [
+                        {
+                            "section": "verification_corroboration",
+                            "evaluated": True,
+                            "semantically_sufficient": False,
+                            "why": "the proof still leans on authored text without an explicit structured verification record or a labeled scenario command/result pair",
+                            "recommended_action": "tie acceptance to explicit local verification evidence inside the current proof surfaces instead of prose-only readback and scenario text",
+                        }
+                    ],
+                    "structural_decision_trace": [],
+                    "missing_sections": [],
+                    "semantically_insufficient_sections": ["verification_corroboration"],
+                },
+            )
+
+            explain = self.run_alpha("explain-proof", cwd=project_root)
+            self.assertEqual(0, explain.returncode, explain.stdout + explain.stderr)
+            self.assertIn("verification_corroboration", explain.stdout)
+            self.assertIn("final_result target: .synrail/final_result.json", explain.stdout)
+            self.assertIn("scenario_proof target: .synrail/scenario_proof.txt", explain.stdout)
+            self.assertIn("prose-only proof", explain.stdout)
+            self.assertIn("synrail final-result-template", explain.stdout)
+            self.assertIn("synrail scenario-proof-template", explain.stdout)
+
     def test_explain_proof_surfaces_presentation_alignment_fix(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_presentation_") as tmpdir:
             project_root = Path(tmpdir) / "project"

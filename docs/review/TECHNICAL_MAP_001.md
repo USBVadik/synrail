@@ -15,18 +15,22 @@ Main file:
 - `alpha.py`
 - `tools/reference/synrail_cli_v0.py`
 
-Current user-facing commands include:
+Current primary user-facing commands include:
 
-- `init`
+- `synrail`
+- `start`
 - `check`
-- `repair-step`
-- `retry`
 - `save`
 - `restore`
 - `confirm-restore`
 - `telemetry export`
 - `bug-packet`
 - `session-export`
+
+Current helper or compatibility surfaces still include:
+
+- `repair-step`
+- `retry`
 
 ### 2. Runtime spine
 
@@ -155,13 +159,13 @@ Main outputs under the artifact root typically include:
 
 `repair-step` reads the current repair packet and renders a bounded next-agent instruction.
 
-This is not a general orchestration planner.
+This is not a general orchestration planner or the preferred first-run command.
 
 It is a constrained bridge from current non-green truth to one next attempt.
 
 ### Retry
 
-`retry` is the preferred human-facing alias for continuation on a repairable contour.
+`retry` is a compatibility alias for continuation on a repairable contour.
 
 It still goes through the same kernel continuation logic.
 
@@ -311,7 +315,7 @@ File:
 
 - `tests/test_alpha_test_pack_smoke.py`
 
-Covers current outside-facing first-run contour:
+Covers current outside-facing first-run contour plus one legacy helper surface:
 
 - `init`
 - `check`

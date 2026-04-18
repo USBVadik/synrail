@@ -60,12 +60,10 @@ The current verified restore-capable alpha lane is:
 ```bash
 synrail
 synrail start "Preserve one verified fallback before a bounded change."
-# once this root reflects one verified working state:
 synrail save
-# synrail start already creates starter proof files under .synrail/; edit them in place, then:
+# make the bounded change, then update only the proof surfaces that reflect what you actually changed and verified
 synrail check
-# after applying only that bounded repair:
-synrail retry
+# if non-green, fix only what check names, then rerun synrail check
 synrail restore
 synrail session-export --artifact-root .synrail
 ```
@@ -75,7 +73,7 @@ The current fresh first-run contour is smaller:
 ```bash
 synrail
 synrail start "Reject a plain-text final result and keep the repair bounded."
-# synrail start already creates starter proof files under .synrail/; edit them in place, then:
+# make the bounded change, then update only the proof surfaces that reflect what you actually changed and verified
 synrail check
 # if non-green, fix what check says, then rerun synrail check
 ```
@@ -87,8 +85,8 @@ This shell is intentionally thin:
 - it defaults the alpha restore-point checkpoint id to `working`
 - it exposes `synrail save` as a thin human-facing action that saves and confirms the default working restore point
 - it exposes `synrail confirm-restore` as the preferred human-facing alias for explicit restore-point confirmation
-- it exposes `synrail repair-step` as the preferred human-facing alias for the existing prompt bridge
-- it exposes `synrail retry` as the preferred human-facing alias for the existing `resume` path
+- it keeps `synrail repair-step` as a helper bridge for bounded prompt materialization, not as the primary first-run loop
+- it keeps `synrail retry` as a compatibility alias for the existing `resume` path, not as the preferred first-run command
 - it exposes `synrail session-export` as the preferred packet-first export for second-operator replay and issue handoff
 - it exposes `synrail bug-packet` as one compact failure export for issue filing and runtime debugging
 - it keeps `synrail continue` as a compatibility alias for the same path

@@ -1841,15 +1841,15 @@ def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
         if entry.get("evaluated", False) and not entry.get("semantically_sufficient", False)
     ]
     helper_commands: list[str] = []
-    if any(section["section"] in {"final_result", "modified_files", "diff_provenance", "cleanup_status"} for section in structural_gaps + semantic_gaps):
+    if any(section["section"] in {"final_result", "modified_files", "diff_provenance", "verification_corroboration", "cleanup_status"} for section in structural_gaps + semantic_gaps):
         helper_commands.append("synrail final-result-template")
     if any(section["section"] == "readback" for section in structural_gaps + semantic_gaps):
         helper_commands.append("synrail readback-template")
-    if any(section["section"] == "scenario_proof" for section in structural_gaps + semantic_gaps):
+    if any(section["section"] in {"scenario_proof", "verification_corroboration"} for section in structural_gaps + semantic_gaps):
         helper_commands.append("synrail scenario-proof-template")
     profile = load_project_profile(root) or {}
     if profile.get("prefers_runtime_evidence", False) and any(
-        section["section"] in {"readback", "scenario_proof"} for section in structural_gaps + semantic_gaps
+        section["section"] in {"readback", "scenario_proof", "verification_corroboration"} for section in structural_gaps + semantic_gaps
     ):
         helper_commands.append("synrail runtime-helper")
     helper_commands.append("synrail check")
@@ -1909,6 +1909,8 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  Concrete fix: keep only the requested additive change. Remove adjacent spacing, class, or layout rewrites unless the task explicitly asked for them.")
             if gap["section"] == "presentation_alignment":
                 lines.append("  Concrete fix: keep the newly added line visually plain. Remove extra emphasis styling like italic, opacity, uppercase, or tracking unless the task explicitly asked for it.")
+            if gap["section"] == "verification_corroboration":
+                lines.append("  Concrete fix: keep acceptance tied to explicit local verification. Either add structured diff_provenance with verification command and result in final_result.json, or record a labeled scenario proof with Command and Observed or Result lines instead of prose-only proof text.")
     if semantic_gaps:
         lines.append("Semantic gaps:")
         for gap in semantic_gaps:
@@ -1928,9 +1930,11 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  Concrete fix: keep only the requested additive change. Remove adjacent spacing, class, or layout rewrites unless the task explicitly asked for them.")
             if gap["section"] == "presentation_alignment":
                 lines.append("  Concrete fix: keep the newly added line visually plain. Remove extra emphasis styling like italic, opacity, uppercase, or tracking unless the task explicitly asked for it.")
+            if gap["section"] == "verification_corroboration":
+                lines.append("  Concrete fix: keep acceptance tied to explicit local verification. Either add structured diff_provenance with verification command and result in final_result.json, or record a labeled scenario proof with Command and Observed or Result lines instead of prose-only proof text.")
     if not structural_gaps and not semantic_gaps:
         lines.append("Synrail did not find structural or semantic proof gaps in the current bundle.")
-    if any(gap["section"] in {"final_result", "modified_files", "diff_provenance", "artifact_identity", "cleanup_status"} for gap in structural_gaps + semantic_gaps):
+    if any(gap["section"] in {"final_result", "modified_files", "diff_provenance", "verification_corroboration", "artifact_identity", "cleanup_status"} for gap in structural_gaps + semantic_gaps):
         lines.append(f"final_result target: {explanation['final_result_target']}")
     if any(gap["section"] == "artifact_identity" for gap in structural_gaps + semantic_gaps):
         identity_sources = explanation.get("identity_sources", {})
@@ -1941,9 +1945,9 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append(f"- {key}: {value}")
     if any(gap["section"] == "readback" for gap in structural_gaps + semantic_gaps):
         lines.append(f"readback target: {explanation['readback_target']}")
-    if any(gap["section"] == "scenario_proof" for gap in structural_gaps + semantic_gaps):
+    if any(gap["section"] in {"scenario_proof", "verification_corroboration"} for gap in structural_gaps + semantic_gaps):
         lines.append(f"scenario_proof target: {explanation['scenario_proof_target']}")
-    if any(gap["section"] in {"readback", "scenario_proof"} for gap in structural_gaps + semantic_gaps):
+    if any(gap["section"] in {"readback", "scenario_proof", "verification_corroboration"} for gap in structural_gaps + semantic_gaps):
         profile = load_project_profile(root) or {}
         if profile.get("prefers_runtime_evidence", False):
             lines.append("Runtime nudge: prefer `synrail runtime-helper` and a small curl or template-render check before browser automation.")

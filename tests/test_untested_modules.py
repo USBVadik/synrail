@@ -1079,7 +1079,7 @@ class TestThinOutputBuildRecord(unittest.TestCase):
         state = default_state("R1", "bounded_change")
         state["state"] = "PROOF_BUNDLE_STRUCTURALLY_COMPLETE"
         state["proof_bundle"]["status"] = "STRUCTURALLY_COMPLETE"
-        state["proof_bundle"]["semantically_insufficient_sections"] = ["diff_provenance", "scenario_proof"]
+        state["proof_bundle"]["semantically_insufficient_sections"] = ["diff_provenance", "verification_corroboration", "scenario_proof"]
         report = {"reason": "SEMANTIC_PROOF_INSUFFICIENT", "result": "NON_GREEN"}
         record = build_thin_output_record(
             state=state,
@@ -1095,7 +1095,11 @@ class TestThinOutputBuildRecord(unittest.TestCase):
             record["thin_section_guidance"],
         )
         self.assertIn(
-            "scenario_proof: record a scenario-proof with a concrete command or verification step, observed output, and explicit pass/fail \u2014 do not just restate the task",
+            "verification_corroboration: tie acceptance to explicit local verification evidence: either structured diff_provenance or a labeled scenario Command plus Observed or Result record, not prose-only proof",
+            record["thin_section_guidance"],
+        )
+        self.assertIn(
+            "scenario_proof: record a scenario-proof with a labeled Command and Observed or Result line, plus explicit pass/fail \u2014 do not just restate the task",
             record["thin_section_guidance"],
         )
 

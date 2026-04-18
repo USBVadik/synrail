@@ -284,8 +284,9 @@ SEMANTIC_SECTION_HINTS = {
     "scope_alignment": "keep the implementation inside the requested additive scope and remove unrelated adjacent rewrites or spacing tweaks",
     "presentation_alignment": "keep the newly added surface visually plain and remove extra emphasis styling unless the task asked for it",
     "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record",
+    "verification_corroboration": "tie acceptance to explicit local verification evidence: either structured diff_provenance or a labeled scenario Command plus Observed or Result record, not prose-only proof",
     "readback": "record a concrete readback naming actual file paths, function names, or line contents from the changed surface — do not paraphrase the task description",
-    "scenario_proof": "record a scenario-proof with a concrete command or verification step, observed output, and explicit pass/fail — do not just restate the task",
+    "scenario_proof": "record a scenario-proof with a labeled Command and Observed or Result line, plus explicit pass/fail — do not just restate the task",
     "artifact_identity": "restore baseline, execution surface, prompt, and task identity values for this run",
     "cleanup_status": "record a successful cleanup status for the execution surface",
 }
@@ -416,12 +417,12 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "ACCEPTED": "no next command required",
         "NON_RESUMABLE": "synrail restore or start a new run",
         "CLOSURE_REJECTED": "synrail restore or repair and rerun closure",
-        "PROOF_INVALID": "run synrail repair-step, apply only that repair, then synrail retry",
-        "PROOF_THIN": "run synrail repair-step, strengthen only the thin proof evidence, then synrail retry",
-        "PROOF_PARTIAL": "run synrail repair-step, supply only the missing proof inputs, then synrail retry",
+        "PROOF_INVALID": "fix only the invalid proof surface named above, then synrail check",
+        "PROOF_THIN": "strengthen only the thin proof evidence named above, then synrail check",
+        "PROOF_PARTIAL": "supply only the missing proof inputs named above, then synrail check",
         "REPAIR_STOP": "synrail restore or start a new run",
-        "SCOPE_VIOLATION": "repair the workspace or intended task target, then synrail retry",
-        "DOCTOR_BLOCKED": "repair readiness, then synrail retry",
+        "SCOPE_VIOLATION": "repair the workspace or intended task target, then synrail check",
+        "DOCTOR_BLOCKED": "repair readiness, then synrail check",
         "NON_GREEN": "inspect the blocker, then continue the bounded repair step",
     }[outcome_class]
     if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
@@ -429,9 +430,9 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
     if outcome_class == "SCOPE_VIOLATION" and restore_available:
         failure_classes = list((doctor or {}).get("blocking_failure_classes", []))
         if "dirty-surface unsafe" in failure_classes:
-            suggested_command = "synrail restore or move to a clean in-scope surface, then synrail retry"
+            suggested_command = "synrail restore or move to a clean in-scope surface, then synrail check"
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTINUATION_INPUTS_MISSING":
-        suggested_command = "run synrail repair-step, finish only that repair, then synrail retry"
+        suggested_command = "finish only the current bounded repair, then synrail check"
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
         suggested_command = "run synrail refresh-acceptance, then rerun synrail check"
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":

@@ -24,6 +24,7 @@ SEMANTIC_SECTION_STEPS = {
     "scope_alignment": "keep the implementation inside the requested additive scope and remove unrelated adjacent rewrites or spacing tweaks",
     "presentation_alignment": "keep the newly added surface visually plain and close to the requested text-only intent; remove extra emphasis styling unless the task asked for it",
     "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record, or use a truthful already_satisfied observation record when no edit was required",
+    "verification_corroboration": "tie acceptance to explicit local verification evidence inside the current proof surfaces instead of prose-only readback and scenario text",
     "readback": "record substantive readback from the changed sections on the attested surface",
     "scenario_proof": "record an explicit scenario-proof result for the attested target surface",
     "artifact_identity": "restore baseline, execution surface, prompt, and task identity values for this run",
@@ -65,6 +66,11 @@ def contains_diff_markers(value: str) -> bool:
 def contains_any_keyword(value: str, keywords: list[str]) -> bool:
     lowered = value.lower()
     return any(keyword in lowered for keyword in keywords)
+
+
+def line_starts_with_any_label(value: str, labels: list[str]) -> bool:
+    lowered = value.strip().lower()
+    return any(lowered.startswith(label) for label in labels)
 
 
 def non_empty_lines(value: str) -> list[str]:
@@ -380,6 +386,8 @@ _ACTION_VERBS = [
 ]
 
 _OBSERVATION_LABELS = ["observed", "confirmed"]
+_SCENARIO_COMMAND_LABELS = ["command:", "cmd:"]
+_SCENARIO_OBSERVED_LABELS = ["observed:", "result:", "output:"]
 
 
 def _readback_line_is_action_narrative(line: str) -> bool:
@@ -455,6 +463,14 @@ def readback_is_semantically_sufficient(value: str, modified_files: list[str], t
     return True
 
 
+def scenario_has_explicit_command(value: str) -> bool:
+    return any(line_starts_with_any_label(line, _SCENARIO_COMMAND_LABELS) for line in non_empty_lines(value))
+
+
+def scenario_has_explicit_observation(value: str) -> bool:
+    return any(line_starts_with_any_label(line, _SCENARIO_OBSERVED_LABELS) for line in non_empty_lines(value))
+
+
 def scenario_is_semantically_sufficient(value: str, task_identity: str = "") -> bool:
     if not value:
         return False
@@ -473,11 +489,23 @@ def scenario_is_semantically_sufficient(value: str, task_identity: str = "") -> 
         contains_any_keyword(line, ["pass", "passed", "fail", "failed", "success", "succeeded", "blocked"])
         for line in lines
     )
+    has_explicit_command = scenario_has_explicit_command(value)
+    has_explicit_observation = scenario_has_explicit_observation(value)
     has_specifics = _has_concrete_identifier(value) or any(
         contains_any_keyword(line, ["command:", "curl", "python", "node", "npm", "bash", "http", "localhost", "grep", "cat", "run "])
         for line in lines
     )
-    return has_context and has_outcome and has_specifics
+    return has_context and has_outcome and has_specifics and has_explicit_command and has_explicit_observation
+
+
+def verification_corroboration_is_semantically_sufficient(
+    *,
+    structured_diff_sufficient: bool,
+    scenario_text: str,
+) -> bool:
+    if structured_diff_sufficient:
+        return True
+    return scenario_has_explicit_command(scenario_text) and scenario_has_explicit_observation(scenario_text)
 
 
 def cleanup_is_semantically_sufficient(cleanup: dict) -> bool:
@@ -601,6 +629,10 @@ def build_bundle(args: argparse.Namespace) -> dict:
         task_identity=scope_task_text,
     )
     scenario_semantically_sufficient = scenario_is_semantically_sufficient(scenario_text, task_identity=scope_task_text)
+    verification_corroboration_semantically_sufficient = verification_corroboration_is_semantically_sufficient(
+        structured_diff_sufficient=diff_record_semantically_sufficient,
+        scenario_text=scenario_text,
+    )
     scope_alignment_evaluated, scope_alignment_semantically_sufficient = scope_alignment_is_semantically_sufficient(
         change_disposition=change_disposition,
         git_diff=git_diff,
@@ -663,6 +695,12 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "has_structured_record": isinstance(diff_provenance_record, dict),
             "structured_record_sufficient": diff_record_semantically_sufficient,
             "semantically_sufficient": diff_semantically_sufficient,
+        },
+        "verification_corroboration": {
+            "semantically_sufficient": verification_corroboration_semantically_sufficient,
+            "has_structured_runtime_verification": diff_record_semantically_sufficient,
+            "scenario_has_explicit_command": scenario_has_explicit_command(scenario_text),
+            "scenario_has_explicit_observation": scenario_has_explicit_observation(scenario_text),
         },
         "readback": {
             "present": readback_present,
@@ -805,6 +843,8 @@ def build_bundle(args: argparse.Namespace) -> dict:
             semantically_insufficient_sections.append("presentation_alignment")
         if not diff_semantically_sufficient:
             semantically_insufficient_sections.append("diff_provenance")
+        if not verification_corroboration_semantically_sufficient:
+            semantically_insufficient_sections.append("verification_corroboration")
         if not readback_semantically_sufficient:
             semantically_insufficient_sections.append("readback")
         if not scenario_semantically_sufficient:
@@ -883,6 +923,17 @@ def build_bundle(args: argparse.Namespace) -> dict:
                 )
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["diff_provenance"],
+        ),
+        semantic_trace_entry(
+            section="verification_corroboration",
+            evaluated=not missing,
+            semantically_sufficient=verification_corroboration_semantically_sufficient,
+            why=(
+                "the proof includes explicit local verification evidence through structured provenance or a labeled scenario command and observed result"
+                if verification_corroboration_semantically_sufficient
+                else "the proof still leans on authored text without an explicit structured verification record or a labeled scenario command/result pair"
+            ),
+            recommended_action=SEMANTIC_SECTION_STEPS["verification_corroboration"],
         ),
         semantic_trace_entry(
             section="readback",

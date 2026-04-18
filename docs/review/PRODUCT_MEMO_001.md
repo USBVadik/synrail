@@ -104,11 +104,12 @@ Current support boundary:
 Current first-run alpha lane:
 
 1. `synrail start`
-2. agent edits only the starter proof artifacts requested for the run
+2. do the bounded change and update only the proof surfaces that reflect what was actually changed and verified
 3. `synrail check`
-4. if non-green: `synrail repair-step`
-5. if a trusted fallback exists: `synrail restore`
-6. if needed: `synrail telemetry export` or `synrail bug-packet`
+4. if non-green: fix only the named blocker
+5. `synrail check`
+6. if a trusted fallback exists: `synrail restore`
+7. if needed: `synrail telemetry export` or `synrail bug-packet`
 
 Current restore-capable lane:
 
@@ -116,7 +117,7 @@ Current restore-capable lane:
 2. `synrail save`
 3. run the bounded change
 4. `synrail check`
-5. if repairable: `synrail retry`
+5. if repairable: fix only what `synrail check` named, then run `synrail check` again
 6. if safer to return: `synrail restore`
 
 ## Product maturity today

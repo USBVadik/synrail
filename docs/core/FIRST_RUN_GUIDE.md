@@ -38,11 +38,23 @@ For open-ended questions like "what is this project?" or "where did we stop?", s
 synrail start "Describe the bounded change you are making."
 ```
 
-This creates `.synrail/` with starter proof files: `final_result.json`, `readback.txt`, `scenario_proof.txt`.
+This creates `.synrail/` and opens one governed run for this bounded change.
 
-### 2. Edit the proof files
+### 2. Do the bounded work and keep proof honest
 
-Open `.synrail/final_result.json` and replace the placeholder content with your actual result. Do the same for `readback.txt` (your readback of what changed) and `scenario_proof.txt` (evidence the change works).
+Make the requested change. Then update only the proof surfaces that reflect what you actually changed and verified:
+
+- `final_result.json` for the changed files and diff/provenance record
+- `readback.txt` for a concrete observed readback of the changed surface
+- `scenario_proof.txt` for labeled verification evidence such as `Command:` plus `Observed:` or `Result:`
+
+If you need help with the expected shape, use:
+
+```bash
+synrail final-result-template
+synrail readback-template
+synrail scenario-proof-template
+```
 
 ### 3. Check
 
@@ -54,13 +66,19 @@ synrail check
 
 ### 4. Fix what check says, then re-check
 
-Fix only the named issue in your proof files, then rerun:
+Fix only the named blocker, then rerun:
 
 ```bash
 synrail check
 ```
 
-Repeat until you see `CLOSURE_ACCEPTED`. Typical: 2-4 iterations.
+If you need a clearer breakdown of a proof gap, run:
+
+```bash
+synrail explain-proof
+```
+
+Repeat until you see `CLOSURE_ACCEPTED`.
 
 ## What non-green means
 
