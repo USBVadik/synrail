@@ -118,7 +118,8 @@ Current restore-capable lane:
 3. run the bounded change
 4. `synrail check`
 5. if repairable: fix only what `synrail check` named, then run `synrail check` again
-6. if safer to return: `synrail restore`
+6. if safer to return: `synrail restore --preview`
+7. if still appropriate: `synrail restore`
 
 ## Product maturity today
 

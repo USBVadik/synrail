@@ -1104,7 +1104,7 @@ class TestRestoreHonestyWithoutGit(unittest.TestCase):
         """If workspace_snapshot.type is 'none', restore must fail honestly."""
         import argparse
         import tempfile
-        from synrail_checkpoint_v0 import restore_record, verify_record
+        from synrail_checkpoint_v0 import restore_preview, restore_record, verify_record
         from synrail_spine_v0 import default_state as make_state
 
         state = make_state("run1", "bounded_change")
@@ -1150,11 +1150,15 @@ class TestRestoreHonestyWithoutGit(unittest.TestCase):
                 "next_safe_step": "verify checkpoint before trusting restore",
             }
             target_root = Path(tmpdir) / ".synrail"
+            preview = restore_preview(record, target_root)
             restored = restore_record(record, target_root)
+            self.assertEqual("UNSUPPORTED", preview["restore_status"])
+            self.assertFalse(preview["restore_supported"])
+            self.assertEqual("none", preview["workspace_restore_mode"])
             self.assertFalse(restored["restore"]["workspace_restored"])
             self.assertEqual("RESTORE_FAILED", restored["restore"]["status"])
             self.assertTrue(
-                any("workspace restore failed" in f for f in restored["restore"]["failure_reasons"]),
+                any("cannot restore workspace files" in f.lower() for f in restored["restore"]["failure_reasons"]),
                 f"Expected workspace failure reason, got: {restored['restore']['failure_reasons']}",
             )
 
@@ -1162,7 +1166,7 @@ class TestRestoreHonestyWithoutGit(unittest.TestCase):
         """Full save→break→restore using file-copy (no git)."""
         import argparse
         import tempfile
-        from synrail_checkpoint_v0 import create_record, restore_record
+        from synrail_checkpoint_v0 import create_record, restore_preview, restore_record
         from synrail_spine_v0 import default_state as make_state
 
         state = make_state("run1", "bounded_change")
@@ -1192,6 +1196,10 @@ class TestRestoreHonestyWithoutGit(unittest.TestCase):
             record = create_record(args)
             self.assertEqual("OK", record["result"])
             self.assertEqual("file_copy", record["workspace_snapshot"]["type"])
+            preview = restore_preview(record, project / ".synrail")
+            self.assertEqual("READY", preview["restore_status"])
+            self.assertTrue(preview["restore_supported"])
+            self.assertTrue(preview["workspace_restore_destructive"])
 
             # Break the files
             target.write_text("BROKEN\n")
@@ -1213,7 +1221,7 @@ class TestRestoreHonestyWithoutGit(unittest.TestCase):
         import os
         import subprocess
         import tempfile
-        from synrail_checkpoint_v0 import create_record, restore_record
+        from synrail_checkpoint_v0 import create_record, restore_preview, restore_record
         from synrail_spine_v0 import default_state as make_state
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1245,6 +1253,10 @@ class TestRestoreHonestyWithoutGit(unittest.TestCase):
             )
             record = create_record(args)
             self.assertEqual("git", record["workspace_snapshot"]["type"])
+            preview = restore_preview(record, project / ".synrail")
+            self.assertEqual("READY", preview["restore_status"])
+            self.assertEqual("git", preview["workspace_restore_mode"])
+            self.assertTrue(preview["workspace_restore_destructive"])
 
             # Break and restore
             target.write_text("BROKEN\n")
@@ -1252,6 +1264,41 @@ class TestRestoreHonestyWithoutGit(unittest.TestCase):
             self.assertEqual("OK", restored["result"])
             self.assertTrue(restored["restore"]["workspace_restored"])
             self.assertEqual("RESTORED", restored["restore"]["status"])
+
+    def test_restore_preview_marks_verified_state_as_artifacts_only(self) -> None:
+        import argparse
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, restore_preview
+
+        state = ready_state("run1", "bounded_change")
+        state["state"] = "READY"
+        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+
+        with tempfile.TemporaryDirectory(prefix="synrail_restore_preview_verified_") as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+            args = argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=str(project),
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            )
+            record = create_record(args)
+            preview = restore_preview(record, project / ".synrail")
+
+        self.assertEqual("LIMITED", preview["restore_status"])
+        self.assertTrue(preview["restore_supported"])
+        self.assertEqual("artifacts_only", preview["workspace_restore_mode"])
+        self.assertFalse(preview["workspace_restore_supported"])
 
 
 class TestCleanSurfaceAutoDetect(unittest.TestCase):

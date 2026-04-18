@@ -280,6 +280,123 @@ def rollback_template() -> dict:
     }
 
 
+def restore_contract(record: dict) -> dict:
+    workspace_snapshot = record.get("workspace_snapshot", {})
+    safe_point_class = record.get("safe_point_class", "")
+    artifact_restore_count = len(record.get("artifact_manifest", []))
+    contract = {
+        "supported_contour": "",
+        "restore_supported": True,
+        "workspace_restore_mode": "artifacts_only",
+        "workspace_restore_supported": False,
+        "workspace_restore_destructive": False,
+        "artifact_restore_count": artifact_restore_count,
+        "summary": "Restore will rehydrate checkpoint-owned artifacts only. It will not revert project workspace files.",
+        "notes": [
+            "This contour restores the checkpoint artifact set under the target root only.",
+            "Do not treat this as a full workspace rollback.",
+        ],
+        "next_safe_step": "use restore only if you need the saved checkpoint artifacts again",
+    }
+    if safe_point_class != "PRE_RUN_SNAPSHOT":
+        contract["supported_contour"] = "artifact_only_verified_state"
+        return contract
+
+    workspace_type = workspace_snapshot.get("type", "none")
+    project_root = workspace_snapshot.get("project_root", "")
+    if workspace_type == "git" and workspace_snapshot.get("head_ref"):
+        contract.update(
+            {
+                "supported_contour": "pre_run_snapshot_git",
+                "workspace_restore_mode": "git",
+                "workspace_restore_supported": True,
+                "workspace_restore_destructive": True,
+                "summary": "Restore will reset the saved git workspace state and then rehydrate checkpoint artifacts.",
+                "notes": [
+                    "This restore modifies project files in the saved project root.",
+                    ("Saved project root: " + project_root) if project_root else "Saved project root is recorded in the checkpoint.",
+                ],
+                "next_safe_step": "preview this restore carefully, then run restore only if you want to return to the saved pre-run workspace",
+            }
+        )
+        return contract
+    if workspace_type == "file_copy":
+        contract.update(
+            {
+                "supported_contour": "pre_run_snapshot_file_copy",
+                "workspace_restore_mode": "file_copy",
+                "workspace_restore_supported": True,
+                "workspace_restore_destructive": True,
+                "summary": "Restore will replace non-excluded project files from the saved file-copy snapshot and then rehydrate checkpoint artifacts.",
+                "notes": [
+                    "This restore removes current non-excluded project files before copying the saved snapshot back.",
+                    ("Saved project root: " + project_root) if project_root else "Saved project root is recorded in the checkpoint.",
+                ],
+                "next_safe_step": "preview this restore carefully, then run restore only if you want to replace the current pre-run workspace with the saved snapshot",
+            }
+        )
+        return contract
+    contract.update(
+        {
+            "supported_contour": "pre_run_snapshot_unsupported",
+            "restore_supported": False,
+            "workspace_restore_mode": "none",
+            "workspace_restore_supported": False,
+            "workspace_restore_destructive": False,
+            "summary": "This pre-run snapshot cannot restore workspace files because no supported workspace snapshot was saved.",
+            "notes": [
+                workspace_snapshot.get("reason", "No workspace snapshot is available for this checkpoint."),
+                "Synrail will not treat this as a trustworthy workspace rollback contour.",
+            ],
+            "next_safe_step": "create a new restore point on a supported workspace contour before depending on restore",
+        }
+    )
+    return contract
+
+
+def restore_preview(record: dict, target_root: Path) -> dict:
+    verified = verify_record(record)
+    contract = restore_contract(record)
+    verification_ok = verified["result"] == "OK"
+    restore_supported = verification_ok and contract["restore_supported"]
+    restore_status = "READY"
+    summary = contract["summary"]
+    notes = list(contract["notes"])
+    failure_reasons: list[str] = []
+    next_safe_step = contract["next_safe_step"]
+    if not verification_ok:
+        restore_status = "BLOCKED"
+        summary = "Restore is not safe to run yet because the checkpoint has not been verified successfully."
+        failure_reasons = list(verified["verification"].get("failure_reasons", []))
+        notes = failure_reasons or ["Checkpoint verification must pass before restore is allowed."]
+        next_safe_step = "verify checkpoint successfully before attempting restore"
+    elif not contract["restore_supported"]:
+        restore_status = "UNSUPPORTED"
+        failure_reasons = [contract["summary"]]
+    elif not contract["workspace_restore_supported"]:
+        restore_status = "LIMITED"
+    return {
+        "schema_version": "checkpoint_restore_preview_v0",
+        "checkpoint_id": record.get("checkpoint_id", ""),
+        "run_id": record.get("run_id", ""),
+        "task_class": record.get("task_class", ""),
+        "target_root": str(target_root),
+        "verification_status": verified["verification"].get("status", ""),
+        "restore_status": restore_status,
+        "restore_supported": restore_supported,
+        "safe_point_class": record.get("safe_point_class", ""),
+        "supported_contour": contract["supported_contour"],
+        "workspace_restore_mode": contract["workspace_restore_mode"],
+        "workspace_restore_supported": contract["workspace_restore_supported"],
+        "workspace_restore_destructive": contract["workspace_restore_destructive"],
+        "artifact_restore_count": contract["artifact_restore_count"],
+        "summary": summary,
+        "notes": notes,
+        "failure_reasons": failure_reasons,
+        "next_safe_step": next_safe_step,
+    }
+
+
 def classify_safe_point(state: dict) -> tuple[str, bool, list[str]]:
     failures: list[str] = []
     current_state = state.get("state", "")
@@ -536,9 +653,10 @@ def rollback_from_backup(record: dict, target_root: Path, backup_root: Path, bac
 
 
 def restore_record(record: dict, target_root: Path) -> dict:
+    preview = restore_preview(record, target_root)
     preverify = verify_record(record)
-    if preverify["result"] != "OK":
-        blocked = dict(preverify)
+    if preverify["result"] != "OK" or not preview["restore_supported"]:
+        blocked = dict(preverify if preverify["result"] != "OK" else record)
         blocked["event_type"] = "RESTORE"
         blocked["result"] = "BLOCKED"
         blocked["restore"] = {
@@ -546,10 +664,15 @@ def restore_record(record: dict, target_root: Path) -> dict:
             "target_root": str(target_root),
             "restore_verification_required": True,
             "restored_artifact_ids": [],
-            "failure_reasons": list(preverify["verification"].get("failure_reasons", [])),
+            "failure_reasons": (
+                list(preview["failure_reasons"])
+                if preview["failure_reasons"]
+                else list(preverify["verification"].get("failure_reasons", []))
+            ),
+            "workspace_restored": False,
         }
         blocked["rollback"] = rollback_template()
-        blocked["next_safe_step"] = "verify checkpoint successfully before attempting restore"
+        blocked["next_safe_step"] = preview["next_safe_step"]
         return blocked
 
     # For pre-run snapshots with a git workspace, restore the project files first.
@@ -658,6 +781,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_restore.add_argument("--target-root", required=True)
     p_restore.add_argument("--output", required=True)
 
+    p_preview = sub.add_parser("preview")
+    p_preview.add_argument("--checkpoint-record-file", required=True)
+    p_preview.add_argument("--target-root", required=True)
+    p_preview.add_argument("--output", required=True)
+
     return parser
 
 
@@ -684,6 +812,13 @@ def main() -> int:
         save_json(Path(args.output), restored)
         print(json.dumps({"result": restored["result"], "event_type": restored["event_type"], "rollback_status": restored["rollback"]["status"]}, ensure_ascii=True))
         return 0 if restored["result"] == "OK" else 2
+
+    if args.cmd == "preview":
+        record = load_json(Path(args.checkpoint_record_file))
+        preview = restore_preview(record, Path(args.target_root))
+        save_json(Path(args.output), preview)
+        print(json.dumps({"result": "OK", "restore_status": preview["restore_status"], "restore_supported": preview["restore_supported"]}, ensure_ascii=True))
+        return 0
 
     parser.error(f"unknown command {args.cmd}")
     return 2

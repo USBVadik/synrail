@@ -21,6 +21,7 @@ Current primary user-facing commands include:
 - `start`
 - `check`
 - `save`
+- `restore --preview`
 - `restore`
 - `confirm-restore`
 - `telemetry export`
@@ -172,6 +173,8 @@ It still goes through the same kernel continuation logic.
 ### Save / restore
 
 `save` creates and confirms a restore point.
+
+`restore --preview` shows whether the current restore contour is full, limited, or unsupported before mutating the workspace.
 
 `restore` rehydrates it.
 

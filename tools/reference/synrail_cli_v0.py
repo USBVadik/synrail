@@ -141,6 +141,7 @@ ALPHA_FILE_NAMES = {
     "thin_output": "thin_output.json",
     "prompt": "prompt.json",
     "checkpoint_restore": "checkpoint_restore.json",
+    "checkpoint_restore_preview": "checkpoint_restore_preview.json",
     "deploy_receipt": "deploy_receipt.json",
 }
 CHECKPOINT_RECORD_BASENAME = "checkpoint_record.json"
@@ -1984,6 +1985,36 @@ def human_safe_point_class(value: str) -> str:
     return mapping.get(value, value)
 
 
+def human_restore_preview_status(value: str) -> str:
+    mapping = {
+        "READY": "Ready",
+        "LIMITED": "Limited",
+        "UNSUPPORTED": "Unsupported",
+        "BLOCKED": "Blocked",
+    }
+    return mapping.get(value, value)
+
+
+def human_workspace_restore_mode(value: str) -> str:
+    mapping = {
+        "git": "Git workspace snapshot",
+        "file_copy": "File-copy workspace snapshot",
+        "artifacts_only": "Checkpoint artifacts only",
+        "none": "No supported workspace snapshot",
+    }
+    return mapping.get(value, value)
+
+
+def human_supported_contour(value: str) -> str:
+    mapping = {
+        "pre_run_snapshot_git": "Pre-run snapshot on a git workspace",
+        "pre_run_snapshot_file_copy": "Pre-run snapshot on a file-copy workspace",
+        "pre_run_snapshot_unsupported": "Pre-run snapshot without supported workspace recovery",
+        "artifact_only_verified_state": "Verified checkpoint artifact restore only",
+    }
+    return mapping.get(value, value)
+
+
 def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | None = None) -> None:
     if not record_file.exists():
         return
@@ -2013,6 +2044,24 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
             f"Restore point confirmation: {payload.get('verification', {}).get('status', '')}",
             human_checkpoint_step(payload.get("next_safe_step", "")),
         ]
+        if root and payload.get("verification", {}).get("status", "") == "PASSED":
+            lines.append("Preview command: " + shell_command(root, "restore") + " --preview")
+    elif action == "preview":
+        lines = [
+            f"Restore preview: {human_restore_preview_status(payload.get('restore_status', ''))}",
+            f"Fallback type: {human_safe_point_class(payload.get('safe_point_class', ''))}",
+            f"Supported contour: {human_supported_contour(payload.get('supported_contour', ''))}",
+            f"Workspace restore mode: {human_workspace_restore_mode(payload.get('workspace_restore_mode', ''))}",
+            "What it means: " + payload.get("summary", ""),
+        ]
+        if payload.get("workspace_restore_destructive", False):
+            lines.append("Caution: this restore will modify project workspace files on the saved project root.")
+        for note in payload.get("notes", []):
+            lines.append("- " + note)
+        if payload.get("restore_supported", False) and root:
+            lines.append("Next command: " + shell_command(root, "restore"))
+        elif payload.get("next_safe_step", ""):
+            lines.append("What to do next: " + payload.get("next_safe_step", ""))
     elif action == "restore":
         restore = payload.get("restore", {})
         rollback = payload.get("rollback", {})
@@ -2040,10 +2089,11 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
         lines.extend(
             [
                 "What it means: You now have a trusted fallback if this run goes non-green.",
-                "What to do next: continue the current workflow. Restore is ready if you need it.",
+                "What to do next: continue the current workflow. Preview the restore contract before using restore on a live workspace.",
             ]
         )
         if root:
+            lines.append("Preview command: " + shell_command(root, "restore") + " --preview")
             lines.append("Restore command: " + shell_command(root, "restore"))
     else:
         lines.extend(
@@ -2792,7 +2842,38 @@ def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
     if root and not getattr(args, "target_root", None):
         args.target_root = str(root)
     if root and not getattr(args, "output", None):
-        args.output = str(alpha_file(root, "checkpoint_restore"))
+        output_file_id = "checkpoint_restore_preview" if getattr(args, "preview", False) else "checkpoint_restore"
+        args.output = str(alpha_file(root, output_file_id))
+    if not root and not getattr(args, "output", None):
+        print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_OUTPUT_REQUIRED"}, ensure_ascii=True))
+        return 2
+    if getattr(args, "preview", False):
+        if not getattr(args, "checkpoint_record_file", None):
+            if args.mode == "dev":
+                print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
+            else:
+                print("Synrail could not find a restore point to preview.")
+                if root:
+                    print("What to do next: create one before relying on restore semantics.")
+                    print("Next command: " + shell_command(root, "save"))
+            return 2
+        forwarded = [
+            "preview",
+            "--checkpoint-record-file", args.checkpoint_record_file,
+            "--target-root", args.target_root,
+            "--output", args.output,
+        ]
+        if args.mode == "dev":
+            return run_python(CHECKPOINT, forwarded)
+        completed = run_python_capture(CHECKPOINT, forwarded)
+        if completed.returncode != 0:
+            if completed.stderr.strip():
+                print(completed.stderr.strip(), file=sys.stderr)
+            if completed.stdout.strip():
+                print(completed.stdout.strip())
+            return completed.returncode
+        print_checkpoint_summary(Path(args.output), action="preview", root=root)
+        return 0
     if not getattr(args, "checkpoint_record_file", None):
         if args.mode == "dev":
             print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
@@ -4663,6 +4744,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_restore.add_argument("--checkpoint-id")
     p_checkpoint_restore.add_argument("--checkpoint-record-file")
     p_checkpoint_restore.add_argument("--target-root")
+    p_checkpoint_restore.add_argument("--preview", action="store_true")
     p_checkpoint_restore.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_restore.add_argument("--output")
     p_checkpoint_restore.set_defaults(func=cmd_restore_checkpoint)
@@ -4702,6 +4784,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_nested_restore.add_argument("--checkpoint-id")
     p_checkpoint_nested_restore.add_argument("--checkpoint-record-file")
     p_checkpoint_nested_restore.add_argument("--target-root")
+    p_checkpoint_nested_restore.add_argument("--preview", action="store_true")
     p_checkpoint_nested_restore.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_nested_restore.add_argument("--output")
     p_checkpoint_nested_restore.set_defaults(func=cmd_restore_checkpoint)
@@ -4711,6 +4794,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_restore.add_argument("--checkpoint-id")
     p_restore.add_argument("--checkpoint-record-file")
     p_restore.add_argument("--target-root")
+    p_restore.add_argument("--preview", action="store_true")
     p_restore.add_argument("--mode", default="default", choices=["default", "dev"])
     p_restore.add_argument("--output")
     p_restore.set_defaults(func=cmd_restore)

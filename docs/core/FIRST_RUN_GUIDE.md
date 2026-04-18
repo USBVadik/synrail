@@ -102,6 +102,22 @@ Use the deploy-guard pattern described in [DEPLOY_GUARD_INTEGRATION_001.md](/Use
 
 ## If something breaks
 
+If you already saved a fallback and want to understand what restore would do before changing the workspace again, preview it first:
+
+```bash
+synrail restore --preview
+```
+
+Then decide whether to actually restore:
+
+```bash
+synrail restore
+```
+
+If the preview says the current contour is limited or unsupported, do not treat restore as a full workspace rollback.
+
+If you need a compact bug report instead:
+
 ```bash
 synrail bug-packet --artifact-root .synrail
 ```

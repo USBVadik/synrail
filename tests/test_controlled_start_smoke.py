@@ -71,6 +71,50 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("Next step: confirm that this repo/worktree is the intended place for the run", dashboard.stdout)
             self.assertNotIn("Next step: attest target surface", dashboard.stdout)
 
+    def test_restore_preview_surfaces_file_copy_contract(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_restore_preview_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "hello.py").write_text('print("hello")\n')
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                "--task-identity",
+                "Preview restore before using it on a live workspace.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            save = self.run_alpha(
+                "save",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                cwd=project_root,
+            )
+            self.assertEqual(0, save.returncode, save.stdout + save.stderr)
+            self.assertIn("Preview command: synrail restore --preview", save.stdout)
+
+            preview = self.run_alpha(
+                "restore",
+                "--artifact-root",
+                ".synrail",
+                "--preview",
+                cwd=project_root,
+            )
+            self.assertEqual(0, preview.returncode, preview.stdout + preview.stderr)
+            self.assertIn("Restore preview: Ready", preview.stdout)
+            self.assertIn("Workspace restore mode: File-copy workspace snapshot", preview.stdout)
+            self.assertIn("Caution: this restore will modify project workspace files", preview.stdout)
+            self.assertIn("Next command: synrail restore", preview.stdout)
+            self.assertTrue((artifact_root / "checkpoint_restore_preview.json").exists())
+
     def test_start_creates_bootstrap_and_proof_request(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_controlled_start_") as tmpdir:
             project_root = Path(tmpdir) / "project"

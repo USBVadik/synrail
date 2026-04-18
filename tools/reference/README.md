@@ -64,6 +64,7 @@ synrail save
 # make the bounded change, then update only the proof surfaces that reflect what you actually changed and verified
 synrail check
 # if non-green, fix only what check names, then rerun synrail check
+synrail restore --preview
 synrail restore
 synrail session-export --artifact-root .synrail
 ```
@@ -85,6 +86,7 @@ This shell is intentionally thin:
 - it defaults the alpha restore-point checkpoint id to `working`
 - it exposes `synrail save` as a thin human-facing action that saves and confirms the default working restore point
 - it exposes `synrail confirm-restore` as the preferred human-facing alias for explicit restore-point confirmation
+- it exposes `synrail restore --preview` as the preferred dry-run before a live restore on a workspace
 - it keeps `synrail repair-step` as a helper bridge for bounded prompt materialization, not as the primary first-run loop
 - it keeps `synrail retry` as a compatibility alias for the existing `resume` path, not as the preferred first-run command
 - it exposes `synrail session-export` as the preferred packet-first export for second-operator replay and issue handoff
