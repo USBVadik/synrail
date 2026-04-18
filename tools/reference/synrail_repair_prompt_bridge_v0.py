@@ -84,6 +84,7 @@ def human_scope_label(scope_id: str, *, repair_packet: dict | None = None) -> st
         "proof_bundle_surface": "the proof bundle for this run",
         "final_result_artifact": "the final result artifact for this run",
         "final_result_payload": f"the result payload in {proof_paths['final_result']}",
+        "final_result_status_record": f"the trust-bearing status field in {proof_paths['final_result']}",
         "scope_alignment_record": f"the scope-alignment section in {proof_paths['final_result']}",
         "presentation_alignment_record": f"the presentation-alignment section in {proof_paths['final_result']}",
         "diff_provenance_record": f"the diff provenance section in {proof_paths['final_result']}",
@@ -121,6 +122,7 @@ def focused_step_details(repair_packet: dict, current_step_id: str, stale_subsur
     if current_step_id == "repair_final_result_artifact":
         labels = {
             "final_result_payload": f"repair the result payload in {proof_paths['final_result']}",
+            "final_result_status_record": f"set a trust-bearing final_result.status in {proof_paths['final_result']}",
             "scope_alignment_record": f"remove unrelated adjacent edits in {proof_paths['final_result']}",
             "presentation_alignment_record": f"remove extra emphasis styling in {proof_paths['final_result']}",
             "diff_provenance_record": f"record diff provenance in {proof_paths['final_result']}",
@@ -146,6 +148,7 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
         return []
     common = [
         f"Checklist for {current_step_target_path}:",
+        "- final_result.status: use PROVEN for an evidenced modification run, or ALREADY_SATISFIED only when the requested state was already present before any edit",
         "- change_disposition: use modified for a real edit, or already_satisfied only when the requested state was already present before any edit",
         "- modified_files: list each concrete changed file path, or keep [] only for a truthful already_satisfied no-op attestation",
         "- scope: if the task only asked you to add or insert something, do not also rewrite adjacent spacing, classes, or layout just to make room for it",
@@ -161,6 +164,16 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
     ]
     if current_step_subsurface_id == "final_result_payload":
         return common
+    if current_step_subsurface_id == "final_result_status_record":
+        return [
+            f"Checklist for {current_step_target_path}:",
+            "- final_result.status: use PROVEN for an evidenced modification run",
+            "- final_result.status: use ALREADY_SATISFIED only for a truthful no-op attestation where the requested state was already present before any edit",
+            "- Do not use decorative execution labels like SUCCESS, COMPLETED, DONE, or OK when the bundle is making a trust claim",
+            "- Keep final_result.status aligned with change_disposition and the actual proof contour",
+            "- Need a canonical shape? run `synrail final-result-template`",
+            "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+        ]
     if current_step_subsurface_id == "scope_alignment_record":
         return [
             f"Checklist for {current_step_target_path}:",

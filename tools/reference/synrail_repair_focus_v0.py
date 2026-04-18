@@ -36,6 +36,8 @@ def focused_repair_summary(*, current_step_id: str, current_step_subsurface_id: 
         return "confirm the workspace is clean for this run via --clean-surface on the next retry"
     if current_step_subsurface_id == "final_result_payload":
         return f"update the result payload in {current_step_target_path}"
+    if current_step_subsurface_id == "final_result_status_record":
+        return f"set a trust-bearing final_result.status in {current_step_target_path}"
     if current_step_subsurface_id == "scope_alignment_record":
         return f"remove unrelated adjacent edits in {current_step_target_path} and keep only the requested additive change"
     if current_step_subsurface_id == "presentation_alignment_record":
@@ -86,6 +88,7 @@ def focused_repair_surface(
     if current_step_id == "repair_final_result_artifact":
         focus_order = [
             ("final_result_payload", proof_paths["final_result"]),
+            ("final_result_status_record", proof_paths["final_result"]),
             ("scope_alignment_record", proof_paths["final_result"]),
             ("presentation_alignment_record", proof_paths["final_result"]),
             ("diff_provenance_record", proof_paths["final_result"]),

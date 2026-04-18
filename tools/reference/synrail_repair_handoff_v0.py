@@ -413,7 +413,7 @@ def build_artifact_quality_hints(state: dict) -> list[dict]:
         )
 
     missing_sections = merged_missing_sections(state)
-    final_result_parts = [part for part in ["final_result_payload", "scope_alignment_record", "presentation_alignment_record", "diff_provenance_record", "artifact_identity_record", "cleanup_status_record"] if False]
+    final_result_parts = [part for part in ["final_result_payload", "final_result_status_record", "scope_alignment_record", "presentation_alignment_record", "diff_provenance_record", "artifact_identity_record", "cleanup_status_record"] if False]
     final_result_subsurfaces: list[dict] = []
     if "final_result" in missing_sections or state.get("closure", {}).get("blocking_reason") in {"ARTIFACT_BUNDLE_MISSING", "INVALID_PROOF_BUNDLE"}:
         add_unique(final_result_parts, "final_result_payload")
@@ -423,6 +423,16 @@ def build_artifact_quality_hints(state: dict) -> list[dict]:
                 status="STALE",
                 mapped_inputs=["final_result"],
                 why="the final result artifact is missing, empty, or not yet trusted for bundle repair",
+            )
+        )
+    if "final_result_status" in missing_sections:
+        add_unique(final_result_parts, "final_result_status_record")
+        final_result_subsurfaces.append(
+            make_subsurface(
+                "final_result_status_record",
+                status="STALE",
+                mapped_inputs=["final_result"],
+                why="final_result.status still uses a generic execution label or does not match the truthful proof contour for this run",
             )
         )
     if "diff_provenance" in missing_sections:

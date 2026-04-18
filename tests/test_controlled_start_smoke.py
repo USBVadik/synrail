@@ -238,6 +238,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("readback: .synrail/readback.txt", check.stdout)
             self.assertIn("scenario_proof: .synrail/scenario_proof.txt", check.stdout)
             self.assertIn("verification_command plus verification_result", check.stdout)
+            self.assertIn("trust-bearing status", check.stdout)
+            self.assertIn("PROVEN", check.stdout)
             self.assertIn("Command: plus Observed: or Result:", check.stdout)
             self.assertIn("synrail readback-template", check.stdout)
             self.assertIn("synrail final-result-template", check.stdout)
@@ -260,10 +262,12 @@ class ControlledStartSmokeTests(unittest.TestCase):
             template = self.run_alpha("final-result-template", cwd=project_root)
             self.assertEqual(0, template.returncode, template.stdout + template.stderr)
             self.assertIn(state["run_id"], template.stdout)
+            self.assertIn('"status": "PROVEN"', template.stdout)
             self.assertIn('"change_disposition": "modified"', template.stdout)
             self.assertIn('"git_diff": "diff --git', template.stdout)
             self.assertIn('"diff_provenance": {', template.stdout)
             self.assertIn('"artifact_identity": {', template.stdout)
+            self.assertIn("ALREADY_SATISFIED", template.stdout)
             self.assertIn("already_satisfied", template.stdout)
             self.assertIn("workspace clean after updating only path/to/changed_file.ext", template.stdout)
 
@@ -582,6 +586,43 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("prose-only proof", explain.stdout)
             self.assertIn("synrail final-result-template", explain.stdout)
             self.assertIn("synrail scenario-proof-template", explain.stdout)
+
+    def test_explain_proof_surfaces_final_result_status_fix(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_final_status_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "bundle.json",
+                {
+                    "status": "STRUCTURALLY_COMPLETE",
+                    "structural_status": "COMPLETE",
+                    "semantic_status": "INSUFFICIENT",
+                    "semantic_next_safe_step": "state a trust-bearing final_result.status: use PROVEN for an evidenced modification run, or ALREADY_SATISFIED for a truthful no-op attestation",
+                    "semantic_decision_trace": [
+                        {
+                            "section": "final_result_status",
+                            "evaluated": True,
+                            "semantically_sufficient": False,
+                            "why": "final_result.status uses generic execution language (SUCCESS) instead of the trust-bearing closure claim PROVEN",
+                            "recommended_action": "state a trust-bearing final_result.status: use PROVEN for an evidenced modification run, or ALREADY_SATISFIED for a truthful no-op attestation",
+                        }
+                    ],
+                    "structural_decision_trace": [],
+                    "missing_sections": [],
+                    "semantically_insufficient_sections": ["final_result_status"],
+                },
+            )
+
+            explain = self.run_alpha("explain-proof", cwd=project_root)
+            self.assertEqual(0, explain.returncode, explain.stdout + explain.stderr)
+            self.assertIn("final_result_status", explain.stdout)
+            self.assertIn("final_result target: .synrail/final_result.json", explain.stdout)
+            self.assertIn("PROVEN", explain.stdout)
+            self.assertIn("ALREADY_SATISFIED", explain.stdout)
+            self.assertIn("SUCCESS", explain.stdout)
+            self.assertIn("synrail final-result-template", explain.stdout)
 
     def test_explain_proof_surfaces_presentation_alignment_fix(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_explain_proof_presentation_") as tmpdir:

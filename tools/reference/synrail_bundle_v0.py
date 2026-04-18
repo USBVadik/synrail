@@ -25,11 +25,14 @@ SEMANTIC_SECTION_STEPS = {
     "presentation_alignment": "keep the newly added surface visually plain and close to the requested text-only intent; remove extra emphasis styling unless the task asked for it",
     "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record, or use a truthful already_satisfied observation record when no edit was required",
     "verification_corroboration": "tie acceptance to explicit local verification evidence inside the current proof surfaces instead of prose-only readback and scenario text",
+    "final_result_status": "state a trust-bearing final_result.status: use PROVEN for an evidenced modification run, or ALREADY_SATISFIED for a truthful no-op attestation",
     "readback": "record substantive readback from the changed sections on the attested surface",
     "scenario_proof": "record an explicit scenario-proof result for the attested target surface",
     "artifact_identity": "restore baseline, execution surface, prompt, and task identity values for this run",
     "cleanup_status": "record a successful cleanup status for the execution surface",
 }
+
+GENERIC_EXECUTION_STATUSES = {"SUCCESS", "COMPLETED", "DONE", "OK", "PASSED"}
 
 
 def load_json(path: Path) -> dict:
@@ -142,6 +145,38 @@ def first_non_empty(*values: object) -> str:
         if text:
             return text
     return ""
+
+
+def normalized_final_result_status(value: object) -> str:
+    text = non_empty_string(value)
+    if not text:
+        return ""
+    return text.replace("-", "_").replace(" ", "_").upper()
+
+
+def expected_final_result_status(change_disposition: str) -> str:
+    if change_disposition == "already_satisfied":
+        return "ALREADY_SATISFIED"
+    return "PROVEN"
+
+
+def final_result_status_is_semantically_sufficient(*, status: str, change_disposition: str) -> bool:
+    return bool(status and status == expected_final_result_status(change_disposition))
+
+
+def final_result_status_reason(*, status: str, change_disposition: str, semantically_sufficient: bool) -> str:
+    expected = expected_final_result_status(change_disposition)
+    if semantically_sufficient:
+        if expected == "ALREADY_SATISFIED":
+            return "final_result.status truthfully marks this run as ALREADY_SATISFIED for a no-op attestation"
+        return "final_result.status truthfully marks this run as PROVEN for an evidenced modification run"
+    if not status:
+        return f"final_result.status is empty; use {expected} instead of a blank or decorative execution label"
+    if status in GENERIC_EXECUTION_STATUSES:
+        return f"final_result.status uses generic execution language ({status}) instead of the trust-bearing closure claim {expected}"
+    if change_disposition == "already_satisfied":
+        return f"final_result.status ({status}) does not match the trust-bearing closure claim {expected} for a truthful no-op attestation"
+    return f"final_result.status ({status}) does not match the trust-bearing closure claim {expected} for an evidenced modification run"
 
 
 def diff_mentions_modified_files(value: str, modified_files: list[str]) -> bool:
@@ -614,6 +649,8 @@ def build_bundle(args: argparse.Namespace) -> dict:
         and bool(non_empty_string(diff_provenance_record.get("changed_file", "")))
     )
     change_disposition = raw_change_disposition or ("already_satisfied" if inferred_already_satisfied else "modified")
+    normalized_status = normalized_final_result_status(final.get("status", ""))
+    expected_status = expected_final_result_status(change_disposition)
 
     readback_present, readback_path = file_present(args.readback)
     scenario_present, scenario_path = file_present(args.scenario_proof)
@@ -666,6 +703,10 @@ def build_bundle(args: argparse.Namespace) -> dict:
         structured_diff_sufficient=diff_record_semantically_sufficient,
         scenario_text=scenario_text,
     )
+    final_result_status_semantically_sufficient = final_result_status_is_semantically_sufficient(
+        status=normalized_status,
+        change_disposition=change_disposition,
+    )
     scope_alignment_evaluated, scope_alignment_semantically_sufficient = scope_alignment_is_semantically_sufficient(
         change_disposition=change_disposition,
         git_diff=git_diff,
@@ -705,6 +746,9 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "present": final_present and final_parseable,
             "parseable": final_parseable,
             "status": final.get("status", ""),
+            "normalized_status": normalized_status,
+            "expected_status": expected_status,
+            "semantically_sufficient": final_result_status_semantically_sufficient,
             "request_id": final_request_id,
             "change_disposition": change_disposition,
         },
@@ -892,6 +936,8 @@ def build_bundle(args: argparse.Namespace) -> dict:
             semantically_insufficient_sections.append("artifact_identity")
         if not cleanup_semantically_sufficient:
             semantically_insufficient_sections.append("cleanup_status")
+        if not final_result_status_semantically_sufficient:
+            semantically_insufficient_sections.append("final_result_status")
 
     bundle["semantically_insufficient_sections"] = semantically_insufficient_sections
     bundle["semantic_next_safe_step"] = (
@@ -973,6 +1019,17 @@ def build_bundle(args: argparse.Namespace) -> dict:
                 else "the proof still leans on authored text without an explicit structured verification record or a labeled scenario command/result pair"
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["verification_corroboration"],
+        ),
+        semantic_trace_entry(
+            section="final_result_status",
+            evaluated=not missing,
+            semantically_sufficient=final_result_status_semantically_sufficient,
+            why=final_result_status_reason(
+                status=normalized_status,
+                change_disposition=change_disposition,
+                semantically_sufficient=final_result_status_semantically_sufficient,
+            ),
+            recommended_action=SEMANTIC_SECTION_STEPS["final_result_status"],
         ),
         semantic_trace_entry(
             section="readback",

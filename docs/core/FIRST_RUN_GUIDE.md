@@ -48,7 +48,9 @@ Make the requested change. Then update only the proof surfaces that reflect what
 - `readback.txt` for a concrete observed readback of the changed surface
 - `scenario_proof.txt` for labeled verification evidence such as `Command:` plus `Observed:` or `Result:`
 
-In the normal `synrail check` path, you usually do not need to hand-copy run identity fields or a cleanup summary into `final_result.json` when the current controlled run context and doctor-ready workspace already provide that truth. Focus first on the changed files, diff/provenance, readback, and labeled verification evidence.
+In `final_result.json`, use a trust-bearing status: `PROVEN` for an evidenced bounded edit, or `ALREADY_SATISFIED` only for a truthful no-op attestation where the requested state was already present before any edit.
+
+In the normal `synrail check` path, you usually do not need to hand-copy run identity fields or a cleanup summary into `final_result.json` when the current controlled run context and doctor-ready workspace already provide that truth. Focus first on the status, changed files, diff/provenance, readback, and labeled verification evidence.
 
 If you need help with the expected shape, use:
 

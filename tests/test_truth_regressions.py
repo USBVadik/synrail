@@ -326,7 +326,7 @@ class TruthRegressionTests(unittest.TestCase):
 
             final_result.write_text(json.dumps({
                 "request_id": state["run_id"],
-                "status": "success",
+                "status": "PROVEN",
                 "modified_files": ["core/router.py", "tools/cinematic.py"],
                 "git_diff": "--- a/core/router.py\n+++ b/core/router.py\n+from tools.cinematic import generate_cinematic_zoom\n",
                 "cleanup_status": {
@@ -372,7 +372,7 @@ class TruthRegressionTests(unittest.TestCase):
 
             final_result.write_text(json.dumps({
                 "request_id": state["run_id"],
-                "status": "success",
+                "status": "PROVEN",
                 "modified_files": ["warroom/templates/index.html"],
                 "git_diff": "",
                 "diff_provenance": {
@@ -436,7 +436,7 @@ class TruthRegressionTests(unittest.TestCase):
 
             final_result.write_text(json.dumps({
                 "request_id": state["run_id"],
-                "status": "success",
+                "status": "PROVEN",
                 "modified_files": ["warroom/templates/index.html"],
                 "git_diff": "",
                 "diff_provenance": {
@@ -499,7 +499,7 @@ class TruthRegressionTests(unittest.TestCase):
 
             final_result.write_text(json.dumps({
                 "request_id": state["run_id"],
-                "status": "success",
+                "status": "ALREADY_SATISFIED",
                 "change_disposition": "already_satisfied",
                 "summary": "Verified that the requested subtitle was already present on the attested surface before any edit, so no file change was required for this run.",
                 "modified_files": [],
@@ -548,6 +548,69 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual([], bundle["semantically_insufficient_sections"])
         self.assertEqual("ACCEPTED", verdict["closure_status"])
 
+    def test_generic_success_status_is_semantically_blocked_even_with_good_evidence(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_final_result_status_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "SUCCESS",
+                "modified_files": ["warroom/templates/index.html"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "warroom/templates/index.html",
+                    "added_line": "                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                    "context_before": "                </h2>",
+                    "context_after": "                <form action=\"/add_token\" method=\"post\" class=\"mb-6 flex gap-2\">",
+                    "verification_command": "grep -n 'Local signals only' warroom/templates/index.html",
+                    "verification_result": "24:                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only warroom/templates/index.html with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text(
+                "### READBACK: add watchlist subtitle\n"
+                "Changed surface: warroom/templates/index.html\n"
+                "Observed: the template now contains a Local signals only subtitle directly under the Watchlist heading.\n"
+            )
+            scenario.write_text(
+                "### SCENARIO PROOF: add watchlist subtitle\n"
+                "Scenario: local homepage render check for the Watchlist section\n"
+                "Command: grep -n \"Local signals only\" warroom/templates/index.html\n"
+                "Observed: line 24 shows the inserted subtitle paragraph under the Watchlist heading\n"
+                "Status: PASSED\n"
+            )
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
+        self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
+        self.assertEqual(["final_result_status"], bundle["semantically_insufficient_sections"])
+        self.assertEqual(
+            "state a trust-bearing final_result.status: use PROVEN for an evidenced modification run, or ALREADY_SATISFIED for a truthful no-op attestation",
+            bundle["semantic_next_safe_step"],
+        )
+        self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
+
     def test_already_satisfied_noop_rejects_invented_patch(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_already_satisfied_fake_patch_") as tmpdir:
             tmp = Path(tmpdir)
@@ -555,7 +618,7 @@ class TruthRegressionTests(unittest.TestCase):
 
             final_result.write_text(json.dumps({
                 "request_id": "RUN_001",
-                "status": "success",
+                "status": "ALREADY_SATISFIED",
                 "change_disposition": "already_satisfied",
                 "summary": "Claimed no-op, but also supplied a patch.",
                 "modified_files": [],
@@ -597,7 +660,7 @@ class TruthRegressionTests(unittest.TestCase):
 
             final_result.write_text(json.dumps({
                 "request_id": state["run_id"],
-                "status": "success",
+                "status": "PROVEN",
                 "change_disposition": "modified",
                 "summary": "Added the requested subtitle but also tightened the adjacent heading margin.",
                 "modified_files": ["warroom/templates/index.html"],
@@ -675,7 +738,7 @@ class TruthRegressionTests(unittest.TestCase):
 
             final_result.write_text(json.dumps({
                 "request_id": state["run_id"],
-                "status": "success",
+                "status": "PROVEN",
                 "change_disposition": "modified",
                 "summary": "Added the requested subtitle with extra emphasis styling.",
                 "modified_files": ["warroom/templates/index.html"],

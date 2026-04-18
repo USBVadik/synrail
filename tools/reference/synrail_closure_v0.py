@@ -22,6 +22,7 @@ MISSING_SECTION_STEPS = {
 SEMANTIC_SECTION_STEPS = {
     "modified_files": "record the actual changed files in the final result artifact",
     "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record",
+    "final_result_status": "state a trust-bearing final_result.status for this run",
     "readback": "record substantive readback from the changed sections on the attested surface",
     "scenario_proof": "record an explicit scenario-proof result for the attested target surface",
     "artifact_identity": "restore baseline, execution surface, prompt, and task identity values for this run",

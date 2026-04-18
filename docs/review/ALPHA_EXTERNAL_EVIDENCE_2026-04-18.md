@@ -32,7 +32,7 @@ So the honest current verdict is:
 
 ### 1. Happy-path closure is real, not hypothetical
 
-Runs [003](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_003/REPORT.md), [005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_005/REPORT.md), [006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_006/REPORT.md), [008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md), [010](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_010/REPORT.md), [013](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_013/REPORT.md), [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md), [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md), [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md), [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md), [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md), [021d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md), and [021e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md) reached `Accepted` on real agent-driven loops.
+Runs [003](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_003/REPORT.md), [005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_005/REPORT.md), [006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_006/REPORT.md), [008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md), [010](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_010/REPORT.md), [013](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_013/REPORT.md), [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md), [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md), [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md), [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md), [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md), [021d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md), [021e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md), and [022](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_022/REPORT.md) reached `Accepted` on real agent-driven loops.
 
 That matters because it means:
 
@@ -227,6 +227,12 @@ Run [021e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_externa
 - the run reaches `Accepted` in one pass with zero repairs and zero rejections
 - and the elapsed time drops materially relative to the live TTY workaround in `021d`
 
+Run [022](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_022/REPORT.md) strengthens that trivial Gemini picture in a different way:
+
+- the same unattended Gemini lane still reaches `Accepted` in one pass after the new trust-bearing `final_result.status` gate lands
+- `.synrail/final_result.json` now carries `status: "PROVEN"` instead of the older decorative `SUCCESS`
+- and `bundle.json` explicitly marks `final_result_status` as semantically sufficient, so the new kernel rule has already survived a real agent-driven run rather than only unit tests
+
 So the refined statement is:
 
 - trivial-task tax is getting better on both Claude and Gemini
@@ -239,7 +245,8 @@ So the honest updated statement is:
 - trivial-task tax is getting better
 - the Claude lane now looks materially cleaner than earlier runs
 - Gemini can also complete the cheapened contour successfully
-- but trivial work is still not a general baseline win, and Gemini's headless lane is still broken enough to weaken the comparison quality
+- the new trust-bearing status semantics already generalize to a real unattended Gemini contour
+- but trivial work is still not a general baseline win, and one older Gemini headless invocation shape is still broken enough to weaken the comparison quality
 
 So we cannot yet say:
 
@@ -273,10 +280,11 @@ Run [021b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_externa
 
 So the current Gemini trivial-lane regression on this server should be treated as harness-invalid rather than as negative Synrail product evidence.
 
-Runs [021d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md) and [021e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md) sharpen that interpretation further:
+Runs [021d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md), [021e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md), and [022](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_022/REPORT.md) sharpen that interpretation further:
 
 - the same trivial task succeeds both through a live interactive TTY session and through an unattended headless-safe invocation
 - the positive `Synrail` result therefore coexists with the broken older `021b` invocation
+- and after the latest status-semantics tranche, the unattended Gemini lane still succeeds while emitting a trust-bearing `PROVEN` final result
 - which means the remaining problem is now more clearly a Gemini harness-shape seam than a direct product failure on this contour
 
 ### 5. They do not yet prove a literal `synrail` CLI-first entry ritual for open-ended orientation prompts
@@ -328,6 +336,7 @@ That means the project is improving on recall and context recovery, but the oper
 | [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md) | Cleanest current trivial Claude retest: one inferred accepted pass, no repairs, no visible trust dance | Moderate positive evidence |
 | [021d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md) | Valid Gemini trivial retest through live TTY: accepted in one pass, but still much slower than baseline and weaker operationally than a clean headless lane | Moderate mixed-positive evidence |
 | [021e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md) | Valid unattended Gemini trivial retest: accepted in one pass on the same host, showing that a headless-safe Gemini path exists even though trivial work is still slower than baseline | Strong moderate positive evidence |
+| [022](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_022/REPORT.md) | Valid unattended Gemini retest after the new trust-bearing status tranche: accepted in one pass with `final_result.status = PROVEN`, showing that the new kernel semantics already hold on a real agent-driven contour | Strong moderate positive evidence |
 
 ## Current Best Honest Claim Against Baseline
 
@@ -387,6 +396,7 @@ The evidence is already stored in these run reports:
 - [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md)
 - [021d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md)
 - [021e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md)
+- [022](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_022/REPORT.md)
 
 There was also already a generic scoring template here:
 
@@ -424,6 +434,6 @@ the answer is:
 
 The strongest positive signal is still handoff, but restore now has a real positive external recovery signal too.
 
-The strongest negative signal is no longer the old false-success restore bug; the clearest remaining negative signal is now trivial-task operator tax, while restore still needs broader contour coverage and orientation still needs that smaller CLI-first loop to generalize beyond the Claude lane. The new wrinkle from `021b`, `021d`, and `021e` is that the Gemini trivial lane on this host is now split more precisely: one older invocation shape is harness-broken (`setRawMode EIO`), but both live TTY Gemini and a headless-safe unattended Gemini path can complete the contour honestly. That makes the product signal more positive than before, while still leaving trivial-task cost above baseline.
+The strongest negative signal is no longer the old false-success restore bug; the clearest remaining negative signal is now trivial-task operator tax, while restore still needs broader contour coverage and orientation still needs that smaller CLI-first loop to generalize beyond the Claude lane. The new wrinkle from `021b`, `021d`, `021e`, and `022` is that the Gemini trivial lane on this host is now split more precisely: one older invocation shape is harness-broken (`setRawMode EIO`), but both live TTY Gemini and a headless-safe unattended Gemini path can complete the contour honestly, and the newest unattended retest now emits the trust-bearing `PROVEN` status under the new kernel gate. That makes the product signal more positive than before, while still leaving trivial-task cost above baseline.
 
 That is exactly enough clarity to justify the next round of focused fixes.

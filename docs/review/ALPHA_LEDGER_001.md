@@ -62,6 +62,7 @@ The purpose of this file is simple:
 | [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md) | Claude Code | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 0.7 | +0.4 | 0 | 1 | +1 |
 | [021d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 2.2 | +1.9 | 0 | 1 | +1 |
 | [021e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
+| [022](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_022/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS | none | unclear | low | 0.3 | 0.8 | +0.5 | 0 | 1 | +1 |
 
 ## Per-Run Records
 
@@ -744,6 +745,27 @@ The purpose of this file is simple:
   - Gemini again reached accepted closure with one check, zero repairs, and zero rejections, so the trivial contour no longer depends on a live TTY workaround
   - it materially improves confidence in the Gemini lane, even though trivial work is still slower than the simpler baseline
 
+### Run 022
+
+- Report: [fixtures/alpha_external_run_022/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_022/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `none`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.8`
+- Delta time: `+0.5`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live unattended Gemini retest after the new trust-bearing `final_result.status` gate landed locally
+  - Gemini again reached accepted closure with one check, zero repairs, and zero rejections, so the new status semantics did not break the cheapened trivial contour
+  - the strongest new signal is qualitative: `final_result.json` now carries `status: "PROVEN"` and `bundle.json` records `final_result_status` as semantically sufficient, showing that the new kernel rule already generalizes to a real agent-driven run
+
 ## Current Read
 
 If we force the current ledger into one brutally practical sentence:
@@ -753,6 +775,7 @@ If we force the current ledger into one brutally practical sentence:
 - looks materially stronger than before on proof hardening for bounded bug-fix runs
 - still looks too heavy on trivial tasks, even though the newer compressed-loop tranche improved the path from run 009 to run 015
 - and now looks materially better on both Claude and Gemini trivial lanes than it did earlier, including an unattended Gemini success path, even though the simpler baseline is still cheaper and one older Gemini harness shape is still known-bad
+- and now also has one real unattended Gemini run where the new trust-bearing `PROVEN` status gate succeeds end to end instead of relying on a decorative `SUCCESS` label
 - and now has a materially stronger restore story: `014d` fixed the false-success lie, and `014e` validates real recovery on the no-commit git contour via `file_copy`
 - orientation on governed roots is better than before; Claude now shows a literal `synrail`-first entry, while Gemini has narrowed the loop materially in `019c` but still does not converge on that same small shape
 - the Claude-first handoff lane is still harness-limited under the current root server setup, so new handoff strength is still coming mostly from Gemini-side evidence

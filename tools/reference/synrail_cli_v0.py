@@ -1557,7 +1557,7 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
         f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
         "Proof shape reminders:",
-        "- final_result.json: focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; Synrail can carry run identity and doctor-ready cleanup truth during a normal check.",
+        "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; Synrail can carry run identity and doctor-ready cleanup truth during a normal check.",
         "- readback.txt: name the changed surface and what you observed there; do not paraphrase the task.",
         "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines instead of prose-only proof.",
         "Then run: " + shell_command(root, "check", project_root=project_root),
@@ -1583,7 +1583,7 @@ def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Pa
         f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
         "Proof shape reminders:",
-        "- final_result.json: focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; Synrail can carry run identity and doctor-ready cleanup truth during a normal check.",
+        "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; Synrail can carry run identity and doctor-ready cleanup truth during a normal check.",
         "- readback.txt: name the changed surface and what you observed there; do not paraphrase the task.",
         "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines instead of prose-only proof.",
         "Next command: " + shell_command(root, "check", project_root=project_root),
@@ -1717,6 +1717,8 @@ def final_result_template_payload(*, root: Path | None) -> dict:
     changed_file = "path/to/changed_file.ext"
     notes = [
         "Replace the sample changed file path with the actual file paths for this run.",
+        "Set status to PROVEN when this run made and verified a real bounded edit.",
+        "Set status to ALREADY_SATISFIED only when the requested state was already present before any edit and the no-op attestation is truthful.",
         "Set change_disposition to already_satisfied only when the requested state was already present before any edit.",
         "Keep the scope tight: do not smuggle adjacent spacing, class, or layout tweaks into a task that only asked you to add or insert a small surface change.",
         "If the task only asked for a simple subtitle or label, keep the new line visually plain and avoid extra emphasis styling unless the task explicitly asked for it.",
@@ -1732,7 +1734,7 @@ def final_result_template_payload(*, root: Path | None) -> dict:
     return {
         "request_id": state.get("run_id", "RUN_ID_FOR_THIS_CONTROLLED_RUN"),
         "task_class": state.get("task_class", DEFAULT_ALPHA_TASK_CLASS),
-        "status": "success",
+        "status": "PROVEN",
         "change_disposition": "modified",
         "summary": "Describe the bounded change that was actually completed for this run.",
         "modified_files": [changed_file],
@@ -1885,7 +1887,7 @@ def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
         if entry.get("evaluated", False) and not entry.get("semantically_sufficient", False)
     ]
     helper_commands: list[str] = []
-    if any(section["section"] in {"final_result", "modified_files", "diff_provenance", "verification_corroboration", "cleanup_status"} for section in structural_gaps + semantic_gaps):
+    if any(section["section"] in {"final_result", "final_result_status", "modified_files", "diff_provenance", "verification_corroboration", "cleanup_status"} for section in structural_gaps + semantic_gaps):
         helper_commands.append("synrail final-result-template")
     if any(section["section"] == "readback" for section in structural_gaps + semantic_gaps):
         helper_commands.append("synrail readback-template")
@@ -1956,6 +1958,9 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  Concrete fix: keep the newly added line visually plain. Remove extra emphasis styling like italic, opacity, uppercase, or tracking unless the task explicitly asked for it.")
             if gap["section"] == "verification_corroboration":
                 lines.append("  Concrete fix: keep acceptance tied to explicit local verification. Either add structured diff_provenance with verification command and result in final_result.json, or record a labeled scenario proof with Command and Observed or Result lines instead of prose-only proof text.")
+            if gap["section"] == "final_result_status":
+                lines.append("  Concrete fix: use a trust-bearing closure claim in final_result.json. Set status to PROVEN for an evidenced modification run, or ALREADY_SATISFIED for a truthful no-op attestation.")
+                lines.append("  Avoid generic execution labels like SUCCESS, COMPLETED, or DONE when the bundle is making a trust claim.")
             if gap["section"] == "cleanup_status":
                 lines.append("  Normal check path: if doctor already reports an acceptable clean execution surface, Synrail can satisfy cleanup_status from that current readiness truth; otherwise record an explicit cleanup summary in final_result.json.")
     if semantic_gaps:
@@ -1980,11 +1985,14 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  Concrete fix: keep the newly added line visually plain. Remove extra emphasis styling like italic, opacity, uppercase, or tracking unless the task explicitly asked for it.")
             if gap["section"] == "verification_corroboration":
                 lines.append("  Concrete fix: keep acceptance tied to explicit local verification. Either add structured diff_provenance with verification command and result in final_result.json, or record a labeled scenario proof with Command and Observed or Result lines instead of prose-only proof text.")
+            if gap["section"] == "final_result_status":
+                lines.append("  Concrete fix: use a trust-bearing closure claim in final_result.json. Set status to PROVEN for an evidenced modification run, or ALREADY_SATISFIED for a truthful no-op attestation.")
+                lines.append("  Avoid generic execution labels like SUCCESS, COMPLETED, or DONE when the bundle is making a trust claim.")
             if gap["section"] == "cleanup_status":
                 lines.append("  Normal check path: if doctor already reports an acceptable clean execution surface, Synrail can satisfy cleanup_status from that current readiness truth; otherwise record an explicit cleanup summary in final_result.json.")
     if not structural_gaps and not semantic_gaps:
         lines.append("Synrail did not find structural or semantic proof gaps in the current bundle.")
-    if any(gap["section"] in {"final_result", "modified_files", "diff_provenance", "verification_corroboration", "artifact_identity", "cleanup_status"} for gap in structural_gaps + semantic_gaps):
+    if any(gap["section"] in {"final_result", "final_result_status", "modified_files", "diff_provenance", "verification_corroboration", "artifact_identity", "cleanup_status"} for gap in structural_gaps + semantic_gaps):
         lines.append(f"final_result target: {explanation['final_result_target']}")
     if any(gap["section"] == "artifact_identity" for gap in structural_gaps + semantic_gaps):
         identity_sources = explanation.get("identity_sources", {})
@@ -3252,7 +3260,7 @@ def cmd_check(args: argparse.Namespace) -> int:
                         if preferred.get(label, ""):
                             print(f"- {label}: {preferred[label]}")
                     print("Proof shape reminders:")
-                    print("- final_result.json should carry a real patch or explicit diff_provenance verification_command plus verification_result.")
+                    print("- final_result.json should carry a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op) plus a real patch or explicit diff_provenance verification_command plus verification_result.")
                     print("- readback.txt should name the changed surface and what you observed there, not just restate the task.")
                     print("- scenario_proof.txt should use labeled Command: plus Observed: or Result: lines.")
                     print("Need a canonical readback shape? run synrail readback-template")

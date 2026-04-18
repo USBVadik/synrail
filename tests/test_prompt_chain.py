@@ -279,6 +279,7 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertEqual("final_result_payload", record["current_step_subsurface_id"])
         self.assertIn("final_result_payload", record["allowed_scope"])
         self.assertIn("Checklist for /tmp/synrail/final_result.json:", record["prompt"])
+        self.assertIn("final_result.status", record["prompt"])
         self.assertIn("change_disposition", record["prompt"])
         self.assertIn("artifact_identity", record["prompt"])
         self.assertIn("synrail final-result-template", record["prompt"])

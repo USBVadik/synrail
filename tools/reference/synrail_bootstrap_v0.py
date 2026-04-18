@@ -78,6 +78,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                 "task_identity": task_identity.strip(),
                 "starter_guidance": {
                     "required_fields": [
+                        "status",
                         "change_disposition",
                         "summary",
                         "modified_files",
@@ -85,6 +86,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                         "diff_provenance.changed_file",
                         "diff_provenance.verification_command",
                     ],
+                    "status_hint": "use PROVEN for an evidenced modification run, or ALREADY_SATISFIED only when the requested state was already present before any edit",
                     "auto_carried_fields": [
                         "artifact_identity",
                         "cleanup_status",

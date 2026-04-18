@@ -1,6 +1,6 @@
 {
   "request_id": "SEMANTIC_PROOF_HARDENING_VALID_001",
-  "status": "success",
+  "status": "PROVEN",
   "modified_files": ["core/router.py"],
   "git_diff": "diff --git a/core/router.py b/core/router.py\n--- a/core/router.py\n+++ b/core/router.py\n@@ -10,1 +10,2 @@\n- old\n+ new\n+ route imports cinematic helper",
   "cleanup_status": {
