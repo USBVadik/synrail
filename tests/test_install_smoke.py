@@ -138,6 +138,7 @@ class InstallSmokeTests(unittest.TestCase):
             self.assertIn("<!-- SYNRAIL_GEMINI_START -->", gemini)
             self.assertIn("Use Synrail as the default local control path", gemini)
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", gemini)
+            self.assertIn("Do not turn project recall into repo archaeology.", gemini)
             self.assertIn("Use Synrail as the default local control path", claude)
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", claude)
 

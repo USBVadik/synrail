@@ -377,6 +377,7 @@ def render_gemini_policy_markdown(
         command=command,
     )
     orientation_lines = policy_orientation_lines(commands["status"])
+    gemini_orientation_lines = policy_gemini_orientation_lines()
     lines = [
         "# Gemini Workflow",
         "",
@@ -394,6 +395,7 @@ def render_gemini_policy_markdown(
         "",
     ]
     lines.extend(orientation_lines)
+    lines.extend(gemini_orientation_lines)
     lines.extend([
         "## Start",
         "",
@@ -548,7 +550,19 @@ def policy_orientation_lines(status_command: str) -> list[str]:
         f"- Start with `{status_command}` before broader repo search.",
         "- Stay inside this project root and prefer read-only inspection first.",
         "- Summarize the governed state before exploring older files, sibling probes, or unrelated surfaces.",
+        "- Do not turn project recall into repo archaeology.",
         "- Do not create helper scripts or make edits for an orientation-only question.",
+        "",
+    ]
+
+
+def policy_gemini_orientation_lines() -> list[str]:
+    return [
+        "### Gemini Orientation Rule",
+        "",
+        "- After Synrail shows the current state, answer from the governed state first and stop once you can answer the user's question.",
+        "- Do not inspect database schema, templates, or app internals for a simple orientation prompt unless Synrail state is genuinely insufficient.",
+        "- Do not turn project recall into repo archaeology.",
         "",
     ]
 
