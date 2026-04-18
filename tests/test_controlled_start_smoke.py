@@ -291,6 +291,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn(state["run_id"], template.stdout)
             self.assertIn("Changed surface:", template.stdout)
             self.assertIn("Observed:", template.stdout)
+            self.assertIn("keep this readback short and explanatory", template.stdout)
             self.assertIn("Runtime hint:", template.stdout)
 
     def test_scenario_proof_template_uses_current_run_context(self) -> None:

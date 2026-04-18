@@ -543,6 +543,18 @@ def verification_corroboration_is_semantically_sufficient(
     return scenario_has_explicit_command(scenario_text) and scenario_has_explicit_observation(scenario_text)
 
 
+def readback_requirement_is_semantically_sufficient(
+    *,
+    readback_sufficient: bool,
+    structured_diff_sufficient: bool,
+    final_result_status_sufficient: bool,
+) -> tuple[bool, bool]:
+    if readback_sufficient:
+        return True, False
+    waived_by_runtime_corroboration = structured_diff_sufficient and final_result_status_sufficient
+    return waived_by_runtime_corroboration, waived_by_runtime_corroboration
+
+
 def cleanup_is_semantically_sufficient(cleanup: dict) -> bool:
     if not cleanup.get("success", False):
         return False
@@ -707,6 +719,13 @@ def build_bundle(args: argparse.Namespace) -> dict:
         status=normalized_status,
         change_disposition=change_disposition,
     )
+    readback_requirement_semantically_sufficient, readback_waived_by_runtime_corroboration = (
+        readback_requirement_is_semantically_sufficient(
+            readback_sufficient=readback_semantically_sufficient,
+            structured_diff_sufficient=diff_record_semantically_sufficient,
+            final_result_status_sufficient=final_result_status_semantically_sufficient,
+        )
+    )
     scope_alignment_evaluated, scope_alignment_semantically_sufficient = scope_alignment_is_semantically_sufficient(
         change_disposition=change_disposition,
         git_diff=git_diff,
@@ -784,7 +803,9 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "present": readback_present,
             "path": readback_path,
             "non_empty": bool(readback_text),
-            "semantically_sufficient": readback_semantically_sufficient,
+            "content_semantically_sufficient": readback_semantically_sufficient,
+            "waived_by_runtime_corroboration": readback_waived_by_runtime_corroboration,
+            "semantically_sufficient": readback_requirement_semantically_sufficient,
         },
         "scenario_proof": {
             "present": scenario_present,
@@ -828,7 +849,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
         missing.append("modified_files")
     if not bundle["diff_provenance"]["present"]:
         missing.append("diff_provenance")
-    if not bundle["readback"]["present"]:
+    if not bundle["readback"]["present"] and not readback_waived_by_runtime_corroboration:
         missing.append("readback")
     if not bundle["scenario_proof"]["present"]:
         missing.append("scenario_proof")
@@ -928,7 +949,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
             semantically_insufficient_sections.append("diff_provenance")
         if not verification_corroboration_semantically_sufficient:
             semantically_insufficient_sections.append("verification_corroboration")
-        if not readback_semantically_sufficient:
+        if not readback_requirement_semantically_sufficient:
             semantically_insufficient_sections.append("readback")
         if not scenario_semantically_sufficient:
             semantically_insufficient_sections.append("scenario_proof")
@@ -1034,11 +1055,15 @@ def build_bundle(args: argparse.Namespace) -> dict:
         semantic_trace_entry(
             section="readback",
             evaluated=not missing,
-            semantically_sufficient=readback_semantically_sufficient,
+            semantically_sufficient=readback_requirement_semantically_sufficient,
             why=(
-                "readback evidence names the changed surface and records an observed property of it"
-                if readback_semantically_sufficient
-                else "readback evidence does not yet name the changed surface with an observed readback"
+                (
+                    "readback evidence names the changed surface and records an observed property of it"
+                    if readback_semantically_sufficient
+                    else "structured runtime corroboration already closes the trust decision, so readback stays explanatory instead of blocking acceptance on this run"
+                )
+                if readback_requirement_semantically_sufficient
+                else "readback evidence does not yet name the changed surface with an observed readback, and the bundle still needs that explanatory surface because runtime corroboration is not yet strong enough to waive it"
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["readback"],
         ),

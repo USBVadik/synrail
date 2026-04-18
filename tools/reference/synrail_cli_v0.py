@@ -1558,7 +1558,7 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
         "Proof shape reminders:",
         "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; Synrail can carry run identity and doctor-ready cleanup truth during a normal check.",
-        "- readback.txt: name the changed surface and what you observed there; do not paraphrase the task.",
+        "- readback.txt: briefly name the changed surface and what you observed there; if final_result.json already carries strong structured verification, readback can stay explanatory instead of carrying the trust decision.",
         "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines instead of prose-only proof.",
         "Then run: " + shell_command(root, "check", project_root=project_root),
     ]
@@ -1584,7 +1584,7 @@ def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Pa
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
         "Proof shape reminders:",
         "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; Synrail can carry run identity and doctor-ready cleanup truth during a normal check.",
-        "- readback.txt: name the changed surface and what you observed there; do not paraphrase the task.",
+        "- readback.txt: briefly name the changed surface and what you observed there; if final_result.json already carries strong structured verification, readback can stay explanatory instead of carrying the trust decision.",
         "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines instead of prose-only proof.",
         "Next command: " + shell_command(root, "check", project_root=project_root),
     ]
@@ -1859,8 +1859,9 @@ def readback_template_text(*, root: Path | None) -> str:
         f"### READBACK: {title}",
         f"Run id: {state.get('run_id', 'RUN_ID_FOR_THIS_CONTROLLED_RUN')}",
         f"Changed surface: {changed_surface}",
-        "Observed: describe what this changed surface now contains, returns, or renders",
+        "Observed: briefly describe what this changed surface now contains, returns, or renders",
     ]
+    lines.append("Note: if final_result.json already carries explicit structured verification, keep this readback short and explanatory instead of repeating the whole proof.")
     if profile.get("prefers_runtime_evidence", False):
         lines.append("Runtime hint: for UI, route, or rendered output changes, prefer a local response or rendered fragment over source-only grep when possible; run `synrail runtime-helper` for a small curl or template-render path before browser automation")
     lines.append("")

@@ -242,6 +242,7 @@ def readback_repair_checklist(*, current_step_subsurface_id: str, current_step_t
         "- Do not paraphrase or restate the task description — prove you read the actual changed code or output",
         "- At least 2 lines with at least one concrete identifier (file path, function/class name, line number, or code token)",
         "- For UI or rendered changes, prefer local runtime evidence (curl, test output) over source-only grep when possible",
+        "- If final_result.json already carries structured diff_provenance with verification_command plus verification_result, keep readback short and explanatory instead of duplicating the main proof payload",
     ]
 
 

@@ -45,7 +45,7 @@ This creates `.synrail/` and opens one governed run for this bounded change.
 Make the requested change. Then update only the proof surfaces that reflect what you actually changed and verified:
 
 - `final_result.json` for the changed files and diff/provenance record
-- `readback.txt` for a concrete observed readback of the changed surface
+- `readback.txt` for a brief observed readback of the changed surface; when `final_result.json` already carries strong structured verification, treat `readback.txt` as explanatory rather than the main trust-bearing proof
 - `scenario_proof.txt` for labeled verification evidence such as `Command:` plus `Observed:` or `Result:`
 
 In `final_result.json`, use a trust-bearing status: `PROVEN` for an evidenced bounded edit, or `ALREADY_SATISFIED` only for a truthful no-op attestation where the requested state was already present before any edit.
