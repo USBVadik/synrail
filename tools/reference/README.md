@@ -51,7 +51,7 @@ If you want local coding agents to discover Synrail in the current repo without 
 python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd)"
 ```
 
-If `AGENTS.md` or `GEMINI.md` already exists, Synrail appends one managed block instead of failing or overwriting the rest of the file. If you explicitly use `--force`, Synrail creates a timestamped `.synrail.bak.*` backup before replacing the file. If Synrail is already installed and on `PATH`, you can still run `synrail install-agent-files --project-root "$(pwd)"` directly. Once installed in a repo, the default first command is just `synrail`, which opens the local dashboard and tells the operator whether a controlled run is already active.
+If `AGENTS.md` or `GEMINI.md` already exists, Synrail appends one managed block instead of failing or overwriting the rest of the file. If you explicitly use `--force`, Synrail creates a timestamped `.synrail.bak.*` backup before replacing the file. If Synrail is already installed and on `PATH`, you can still run `synrail install-agent-files --project-root "$(pwd)"` directly. Once installed in a repo, the default first command is just `synrail`, which opens the local dashboard and tells the operator whether a controlled run is already active. Generated agent policy now keeps committed commands repo-portable and only surfaces an exact local binary as a fallback note for that machine when needed.
 
 That same first step applies to project-orientation prompts such as "what is this repo?" or "where did we leave off?": start with `synrail`, stay read-only, and summarize the governed state before broader filesystem archaeology.
 

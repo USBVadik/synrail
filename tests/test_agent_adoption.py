@@ -8,6 +8,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from unittest import mock
 from pathlib import Path
 
@@ -19,7 +21,11 @@ TOOLS_ROOT = REPO_ROOT / "tools" / "reference"
 if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
-from synrail_cli_v0 import preferred_synrail_command
+from synrail_cli_v0 import (
+    cmd_install_agent_files,
+    preferred_synrail_command,
+    preferred_synrail_fallback_command,
+)
 
 
 class AgentAdoptionTests(unittest.TestCase):
@@ -81,21 +87,29 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn('synrail start "Describe the bounded local change."', claude)
             self.assertIn("fix only what check tells you to fix", claude)
 
-    def test_prefers_explicit_binary_when_path_points_elsewhere(self) -> None:
+    def test_prefers_repo_portable_command_when_path_points_elsewhere(self) -> None:
         with mock.patch("synrail_cli_v0.sys.argv", ["/opt/synrail/.venv/bin/synrail"]), mock.patch(
             "synrail_cli_v0.shutil.which",
             return_value="/usr/local/bin/synrail",
         ):
-            self.assertEqual("/opt/synrail/.venv/bin/synrail", preferred_synrail_command())
+            self.assertEqual("synrail", preferred_synrail_command())
+            self.assertEqual(
+                "/opt/synrail/.venv/bin/synrail",
+                preferred_synrail_fallback_command(),
+            )
 
-    def test_prefers_explicit_binary_even_when_path_matches(self) -> None:
+    def test_keeps_repo_portable_command_even_when_path_matches(self) -> None:
         with mock.patch("synrail_cli_v0.sys.argv", ["/opt/synrail/.venv/bin/synrail"]), mock.patch(
             "synrail_cli_v0.shutil.which",
             return_value="/opt/synrail/.venv/bin/synrail",
         ):
-            self.assertEqual("/opt/synrail/.venv/bin/synrail", preferred_synrail_command())
+            self.assertEqual("synrail", preferred_synrail_command())
+            self.assertEqual(
+                "/opt/synrail/.venv/bin/synrail",
+                preferred_synrail_fallback_command(),
+            )
 
-    def test_prefers_sibling_synrail_when_console_wrapper_uses_python_dash_c(self) -> None:
+    def test_uses_sibling_synrail_as_local_fallback_when_console_wrapper_uses_python_dash_c(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_wrapper_probe_") as tmpdir:
             bin_dir = Path(tmpdir) / "bin"
             bin_dir.mkdir(parents=True, exist_ok=True)
@@ -107,7 +121,19 @@ class AgentAdoptionTests(unittest.TestCase):
                 "synrail_cli_v0.sys.executable",
                 str(python_path),
             ):
-                self.assertEqual(str(synrail_path.resolve()), preferred_synrail_command())
+                self.assertEqual("synrail", preferred_synrail_command())
+                self.assertEqual(
+                    str(synrail_path.resolve()),
+                    preferred_synrail_fallback_command(),
+                )
+
+    def test_no_machine_fallback_when_no_synrail_wrapper_is_available(self) -> None:
+        with mock.patch("synrail_cli_v0.sys.argv", ["-c"]), mock.patch(
+            "synrail_cli_v0.sys.executable",
+            "/tmp/no-wrapper/python",
+        ):
+            self.assertEqual("synrail", preferred_synrail_command())
+            self.assertIsNone(preferred_synrail_fallback_command())
 
     def test_install_agent_files_is_idempotent_and_merges_existing_gemini_file(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_agent_adoption_force_") as tmpdir:
@@ -149,6 +175,7 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("Use Synrail as the default local control path", gemini)
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", gemini)
             self.assertIn("Do not turn project recall into repo archaeology.", gemini)
+            self.assertIn("Keep repo instructions portable: prefer `synrail`", gemini)
             self.assertIn("# Existing Claude Context", claude)
             self.assertIn("<!-- SYNRAIL_CLAUDE_START -->", claude)
             self.assertIn("Use Synrail as the default local control path", claude)
@@ -198,6 +225,36 @@ class AgentAdoptionTests(unittest.TestCase):
             claude = (project_root / "CLAUDE.md").read_text()
             self.assertIn("Parent git repo detected above the project root", claude)
             self.assertIn("runtime-helper", claude)
+            self.assertIn("Keep repo instructions portable: prefer `synrail`", claude)
+
+    def test_install_agent_files_surfaces_machine_fallback_without_committing_it_into_commands(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_agent_fallback_note_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            stdout = StringIO()
+            args = mock.Mock(
+                project_root=str(project_root),
+                artifact_root=".synrail",
+                force=False,
+            )
+            with mock.patch("synrail_cli_v0.sys.argv", ["/opt/synrail/.venv/bin/synrail"]), redirect_stdout(stdout):
+                rc = cmd_install_agent_files(args)
+            self.assertEqual(0, rc)
+            rendered = stdout.getvalue()
+            self.assertIn("Synrail command: synrail", rendered)
+            self.assertIn(
+                "Synrail fallback for this machine: /opt/synrail/.venv/bin/synrail",
+                rendered,
+            )
+
+            gemini = (project_root / "GEMINI.md").read_text()
+            self.assertIn("Keep repo instructions portable: prefer `synrail`", gemini)
+            self.assertIn(
+                "If this machine cannot resolve the right Synrail binary from PATH, use `/opt/synrail/.venv/bin/synrail` as the local fallback for this checkout.",
+                gemini,
+            )
+            self.assertNotIn("/opt/synrail/.venv/bin/synrail start", gemini)
 
 
 if __name__ == "__main__":

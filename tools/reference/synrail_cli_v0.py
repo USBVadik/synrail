@@ -258,16 +258,18 @@ def policy_command_examples(*, artifact_root: str) -> dict[str, str]:
 
 
 def preferred_synrail_command() -> str:
+    return "synrail"
+
+
+def preferred_synrail_fallback_command() -> str | None:
     argv0 = Path(sys.argv[0]).expanduser()
     if argv0.name != "synrail":
         sibling = Path(sys.executable).expanduser().with_name("synrail")
         if sibling.exists():
             return shlex.quote(str(sibling.resolve()))
-        return "synrail"
-    # When install-agent-files is invoked via the real synrail entrypoint, pin
-    # that exact binary in agent policy files. This avoids agent-specific PATH
-    # drift where Claude/Gemini resolve a different synrail binary than the one
-    # that authored the repo instructions.
+        return None
+    # Keep repo policy portable-first, but surface the exact local binary as an
+    # escape hatch when this machine resolves a different entrypoint.
     return shlex.quote(str(argv0.resolve()))
 
 
@@ -299,10 +301,22 @@ def policy_workspace_note_lines(*, workspace_isolation_note: str, prefer_runtime
     return lines
 
 
+def policy_portability_note_lines(*, fallback_command: str | None) -> list[str]:
+    lines = [
+        "- Keep repo instructions portable: prefer `synrail` in commands and committed docs.",
+    ]
+    if fallback_command:
+        lines.append(
+            f"- If this machine cannot resolve the right Synrail binary from PATH, use `{fallback_command}` as the local fallback for this checkout."
+        )
+    return lines
+
+
 def render_agent_policy_markdown(
     *,
     artifact_root: str,
     command: str = "synrail",
+    fallback_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
 ) -> str:
@@ -312,6 +326,7 @@ def render_agent_policy_markdown(
         prefer_runtime_helper=prefer_runtime_helper,
         command=command,
     )
+    portability_lines = policy_portability_note_lines(fallback_command=fallback_command)
     orientation_lines = policy_orientation_lines(commands["status"])
     lines = [
         "# Agent Workflow",
@@ -358,8 +373,9 @@ def render_agent_policy_markdown(
         "- If `synrail` is unavailable on this machine, stop and report that the control tool is missing instead of bypassing it.",
         "",
     ])
+    lines.extend(portability_lines)
     lines.extend(note_lines)
-    if note_lines:
+    if portability_lines or note_lines:
         lines.append("")
     return "\n".join(lines)
 
@@ -368,6 +384,7 @@ def render_gemini_policy_markdown(
     *,
     artifact_root: str,
     command: str = "synrail",
+    fallback_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
 ) -> str:
@@ -377,6 +394,7 @@ def render_gemini_policy_markdown(
         prefer_runtime_helper=prefer_runtime_helper,
         command=command,
     )
+    portability_lines = policy_portability_note_lines(fallback_command=fallback_command)
     orientation_lines = policy_orientation_lines(commands["status"])
     gemini_orientation_lines = policy_gemini_orientation_lines()
     lines = [
@@ -423,8 +441,9 @@ def render_gemini_policy_markdown(
         "Do not bypass Synrail and do not claim success without real local verification.",
         "",
     ])
+    lines.extend(portability_lines)
     lines.extend(note_lines)
-    if note_lines:
+    if portability_lines or note_lines:
         lines.append("")
     return "\n".join(lines)
 
@@ -433,6 +452,7 @@ def render_claude_policy_markdown(
     *,
     artifact_root: str,
     command: str = "synrail",
+    fallback_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
 ) -> str:
@@ -442,6 +462,7 @@ def render_claude_policy_markdown(
         prefer_runtime_helper=prefer_runtime_helper,
         command=command,
     )
+    portability_lines = policy_portability_note_lines(fallback_command=fallback_command)
     orientation_lines = policy_orientation_lines(commands["status"])
     lines = [
         "# Claude Workflow",
@@ -486,8 +507,9 @@ def render_claude_policy_markdown(
         "Do not bypass Synrail and do not claim success without real local verification.",
         "",
     ])
+    lines.extend(portability_lines)
     lines.extend(note_lines)
-    if note_lines:
+    if portability_lines or note_lines:
         lines.append("")
     return "\n".join(lines)
 
@@ -498,6 +520,7 @@ def render_agent_policy_block(
     intro: str,
     artifact_root: str,
     command: str = "synrail",
+    fallback_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
 ) -> str:
@@ -507,6 +530,7 @@ def render_agent_policy_block(
         prefer_runtime_helper=prefer_runtime_helper,
         command=command,
     )
+    portability_lines = policy_portability_note_lines(fallback_command=fallback_command)
     orientation_lines = policy_orientation_lines(commands["status"])
     lines = [
         f"## {title}",
@@ -538,6 +562,7 @@ def render_agent_policy_block(
         "",
         "Do not bypass Synrail and do not claim success without real local verification.",
     ])
+    lines.extend(portability_lines)
     lines.extend(note_lines)
     return "\n".join(lines)
 
@@ -636,6 +661,7 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         artifact_root=args.artifact_root,
     )
     command = preferred_synrail_command()
+    fallback_command = preferred_synrail_fallback_command()
     git_context = workspace_git_context(project_root)
     workspace_isolation_note = git_context.get("workspace_isolation_note", "")
     prefer_runtime_helper = project_prefers_runtime_evidence(project_root)
@@ -646,18 +672,21 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
     agents_content = render_agent_policy_markdown(
         artifact_root=artifact_root,
         command=command,
+        fallback_command=fallback_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
     gemini_content = render_gemini_policy_markdown(
         artifact_root=artifact_root,
         command=command,
+        fallback_command=fallback_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
     claude_content = render_claude_policy_markdown(
         artifact_root=artifact_root,
         command=command,
+        fallback_command=fallback_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
@@ -666,6 +695,7 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         intro="This repo uses Synrail to keep one bounded local change inside one controlled run.",
         artifact_root=artifact_root,
         command=command,
+        fallback_command=fallback_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
@@ -674,6 +704,7 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         intro="Use Synrail as the default local control path for this repo.",
         artifact_root=artifact_root,
         command=command,
+        fallback_command=fallback_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
@@ -682,6 +713,7 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         intro="Use Synrail as the default local control path for this repo.",
         artifact_root=artifact_root,
         command=command,
+        fallback_command=fallback_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
@@ -709,6 +741,8 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
     print(f"Project root: {project_root}")
     print(f"Artifact root hint: {artifact_root}")
     print(f"Synrail command: {command}")
+    if fallback_command:
+        print(f"Synrail fallback for this machine: {fallback_command}")
     if workspace_isolation_note:
         print(f"Workspace note: {workspace_isolation_note}")
     if prefer_runtime_helper:

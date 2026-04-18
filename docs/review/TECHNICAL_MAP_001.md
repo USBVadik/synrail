@@ -35,6 +35,8 @@ Current helper or compatibility surfaces still include:
 
 The default `synrail --help` keeps helper and dev surfaces out of the first operator view even though those compatibility paths still exist underneath.
 
+Repo-native agent policy files also stay portable-first now: committed workflow examples use `synrail`, while any exact machine-local binary is surfaced only as a fallback note for that checkout.
+
 ### 2. Runtime spine
 
 Purpose:
