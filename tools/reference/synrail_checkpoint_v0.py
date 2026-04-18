@@ -152,6 +152,78 @@ def _git_restore_snapshot(project_root: Path, *, head_ref: str, stash_ref: str) 
         return False, str(exc)
 
 
+# Directories to exclude from file-copy snapshots (relative to project root).
+_FILE_COPY_EXCLUDE_DIRS = {".synrail", ".git", "__pycache__", "node_modules", ".venv", "venv"}
+# Maximum total size (bytes) we'll copy. Prevents accidental multi-GB snapshots.
+_FILE_COPY_MAX_BYTES = 50 * 1024 * 1024  # 50 MB
+
+
+def _file_copy_snapshot(project_root: Path, snapshot_dir: Path) -> tuple[bool, str, int]:
+    """Copy project files (excluding .synrail/ etc.) into snapshot_dir.
+
+    Returns (success, error_message, file_count).
+    """
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    total_bytes = 0
+    file_count = 0
+    try:
+        for item in sorted(project_root.iterdir()):
+            if item.name in _FILE_COPY_EXCLUDE_DIRS:
+                continue
+            if item.is_file():
+                size = item.stat().st_size
+                if total_bytes + size > _FILE_COPY_MAX_BYTES:
+                    return False, f"project exceeds {_FILE_COPY_MAX_BYTES // (1024*1024)} MB file-copy limit", file_count
+                shutil.copy2(item, snapshot_dir / item.name)
+                total_bytes += size
+                file_count += 1
+            elif item.is_dir():
+                dir_dest = snapshot_dir / item.name
+                # Walk the subtree respecting limits
+                for root_dir, dirs, files in os.walk(item):
+                    dirs[:] = [d for d in dirs if d not in _FILE_COPY_EXCLUDE_DIRS]
+                    rel = Path(root_dir).relative_to(project_root)
+                    dest = snapshot_dir / rel
+                    dest.mkdir(parents=True, exist_ok=True)
+                    for fname in files:
+                        src_file = Path(root_dir) / fname
+                        size = src_file.stat().st_size
+                        if total_bytes + size > _FILE_COPY_MAX_BYTES:
+                            return False, f"project exceeds {_FILE_COPY_MAX_BYTES // (1024*1024)} MB file-copy limit", file_count
+                        shutil.copy2(src_file, dest / fname)
+                        total_bytes += size
+                        file_count += 1
+        return True, "", file_count
+    except Exception as exc:
+        return False, str(exc), file_count
+
+
+def _file_copy_restore(snapshot_dir: Path, project_root: Path) -> tuple[bool, str]:
+    """Restore project files from a file-copy snapshot. Returns (success, error_message).
+
+    Removes existing non-excluded project content first, then copies back.
+    """
+    try:
+        # Remove existing project files (except excluded dirs)
+        for item in sorted(project_root.iterdir()):
+            if item.name in _FILE_COPY_EXCLUDE_DIRS:
+                continue
+            if item.is_file():
+                item.unlink()
+            elif item.is_dir():
+                shutil.rmtree(item)
+        # Copy back from snapshot
+        for item in sorted(snapshot_dir.iterdir()):
+            dest = project_root / item.name
+            if item.is_file():
+                shutil.copy2(item, dest)
+            elif item.is_dir():
+                shutil.copytree(item, dest)
+        return True, ""
+    except Exception as exc:
+        return False, str(exc)
+
+
 def build_manifest(args: argparse.Namespace, checkpoint_root: Path) -> list[dict]:
     manifest: list[dict] = []
     artifacts_dir = checkpoint_root / "artifacts"
@@ -261,11 +333,22 @@ def create_record(args: argparse.Namespace) -> dict:
                 "has_uncommitted": bool(stash_ref),
             }
         else:
-            workspace_snapshot = {
-                "type": "none",
-                "project_root": str(project_root),
-                "reason": "project is not a git repository or has no commits",
-            }
+            # No git HEAD available — fall back to file-copy snapshot.
+            snapshot_dir = checkpoint_root / "workspace_files"
+            ok, err, count = _file_copy_snapshot(project_root, snapshot_dir)
+            if ok:
+                workspace_snapshot = {
+                    "type": "file_copy",
+                    "project_root": str(project_root),
+                    "snapshot_dir": str(snapshot_dir),
+                    "file_count": count,
+                }
+            else:
+                workspace_snapshot = {
+                    "type": "none",
+                    "project_root": str(project_root),
+                    "reason": f"file-copy snapshot failed: {err}",
+                }
 
     record = {
         "schema_version": "checkpoint_record_v0",
@@ -482,6 +565,15 @@ def restore_record(record: dict, target_root: Path) -> dict:
         )
         workspace_restored = ok
         workspace_error = err
+    elif workspace_snapshot.get("type") == "file_copy":
+        snapshot_dir = Path(workspace_snapshot["snapshot_dir"])
+        project_root = Path(workspace_snapshot["project_root"])
+        if snapshot_dir.exists():
+            ok, err = _file_copy_restore(snapshot_dir, project_root)
+            workspace_restored = ok
+            workspace_error = err
+        else:
+            workspace_error = f"snapshot directory missing: {snapshot_dir}"
     elif workspace_snapshot.get("type") == "none":
         workspace_error = workspace_snapshot.get("reason", "no workspace snapshot available")
 
