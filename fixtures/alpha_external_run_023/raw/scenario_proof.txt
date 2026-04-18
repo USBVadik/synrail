@@ -1,0 +1,8 @@
+### SCENARIO PROOF: Add a one-line docstring to the main function in alpha.py.
+Scenario: Local verification of the docstring addition in alpha.py.
+Command: grep -C 2 '"""Main entrypoint for the Synrail CLI."""' alpha.py
+Observed:
+def main() -> int:
+    """Main entrypoint for the Synrail CLI."""
+    from tools.reference.synrail_cli_v0 import main as cli_main
+Status: PASSED
