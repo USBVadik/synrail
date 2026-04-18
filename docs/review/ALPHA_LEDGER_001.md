@@ -67,6 +67,8 @@ The purpose of this file is simple:
 | [024](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_024/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS_BUT_STILL_NO_WAIVER | mixed | unclear | low | 0.3 | 1.0 | +0.7 | 0 | 2 | +2 |
 | [025](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_025/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_INFERRED_METHOD_AND_RUNTIME_VERIFICATION | mixed | yes | low | 0.3 | 0.4 | +0.1 | 0 | 1 | +1 |
 | [027](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_027/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_WAIVER_REALIZED | mixed | yes | medium | 0.3 | 0.4 | +0.1 | 0 | 1 | +1 |
+| [028b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_028b/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_FINAL_RESULT_FIRST_BUT_PROSE_STILL_AUTHORED | mixed | yes | medium | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
+| [029](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_029/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_STARTER_PROSE_LEFT_UNTOUCHED | mixed | yes | medium | 0.3 | 1.2 | +0.9 | 0 | 1 | +1 |
 
 ## Per-Run Records
 
@@ -858,6 +860,48 @@ The purpose of this file is simple:
   - the trust decision is now clearly carried by runtime-backed proof rather than by the prose proof surfaces
   - the lane stays cheap at about `0.4` minutes and one check, which keeps Synrail very close to baseline cost on this contour even though it is still not yet clearly cheaper
 
+### Run 028b
+
+- Report: [fixtures/alpha_external_run_028b/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_028b/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `mixed`
+- Reuse tomorrow: `yes`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.9`
+- Delta time: `+0.6`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this run shows the first live effect of the final-result-first guidance: Gemini strengthens `final_result.json` before touching the prose surfaces
+  - the bundle still lands on the strong cheapened contour with waived runtime-backed proof
+  - but the agent still edits `readback.txt` and `scenario_proof.txt`, so the cheapened semantics have not yet become cheapened agent behavior
+
+### Run 029
+
+- Report: [fixtures/alpha_external_run_029/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_029/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `mixed`
+- Reuse tomorrow: `yes`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `1.2`
+- Delta time: `+0.9`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live unattended Gemini run where the agent leaves `readback.txt` and `scenario_proof.txt` in their starter form while still reaching `Accepted`
+  - the cheapened contour is now both semantic and behavioral: `readback/scenario` stay waived in the bundle and untouched in the workspace
+  - the lane is still not faster than baseline, but the extra prose tax is no longer intrinsic to the trust path on this contour
+
 ## Current Read
 
 If we force the current ledger into one brutally practical sentence:
@@ -870,6 +914,7 @@ If we force the current ledger into one brutally practical sentence:
 - and now also has one real unattended Gemini run where the new trust-bearing `PROVEN` status gate succeeds end to end instead of relying on a decorative `SUCCESS` label
 - and now also shows a sharper split in the newer evidence-first cheapening story: `023` and `024` still filled both prose proof surfaces after failing to complete a strong enough structured `diff_provenance`, while `025` finally materializes the stronger direct-observation contour with inferred method and runtime verification but still keeps the prose surfaces around
 - and now also shows that the cheaper evidence-first contour can fully materialize on a real Gemini run: `027` keeps the prose surfaces present but semantically waived, so the trust decision now lives in runtime-backed proof rather than in those extra artifacts
+- and now also shows the next live step beyond that: `028b` reorders the agent toward `final_result.json` first, and `029` finally leaves `readback/scenario` untouched in starter form while the waived runtime-backed contour still reaches `Accepted`
 - and now has a materially stronger restore story: `014d` fixed the false-success lie, and `014e` validates real recovery on the no-commit git contour via `file_copy`
 - orientation on governed roots is better than before; Claude now shows a literal `synrail`-first entry, while Gemini has narrowed the loop materially in `019c` but still does not converge on that same small shape
 - the Claude-first handoff lane is still harness-limited under the current root server setup, so new handoff strength is still coming mostly from Gemini-side evidence

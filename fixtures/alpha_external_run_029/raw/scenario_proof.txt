@@ -1,0 +1,6 @@
+### SCENARIO PROOF: Add a one-line docstring to the main function in alpha.py.
+Starter note: if final_result.json already carries strong structured verification, leave this file untouched unless synrail check explicitly asks for scenario proof.
+Scenario: describe the exact runtime context on the attested target surface
+Command: paste the local command, request, or test that verified the change
+Observed: paste the concrete output, rendered fragment, or behavior that was seen
+Status: PASSED

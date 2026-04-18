@@ -1,0 +1,4 @@
+### READBACK: Add a one-line docstring to the main function in alpha.py.
+Starter note: if final_result.json already carries strong structured verification, leave this file untouched unless synrail check explicitly asks for readback.
+Changed surface: path/to/changed_file.ext
+Observed: describe what this changed surface now contains, returns, or renders

@@ -293,6 +293,18 @@ So the refined statement becomes:
 - Synrail can now make prose proof surfaces secondary on at least one live trivial contour
 - the remaining gap is narrower still: not “can the cheapened contour work?”, but “can it become clearly cheaper than baseline instead of merely near-baseline?”
 
+Runs [028b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_028b/REPORT.md) and [029](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_029/REPORT.md) sharpen the next distinction:
+
+- `028b` shows that the new final-result-first guidance changes live Gemini ordering: the agent now strengthens `final_result.json` first, while the bundle still lands on the same strong runtime-backed, waived contour
+- but `028b` also shows that this is not enough by itself, because Gemini still rewrites `readback.txt` and `scenario_proof.txt` out of habit
+- `029` adds the missing behavioral piece: after the starter-note tranche, Gemini again reaches `Accepted` with runtime-backed proof and waived prose surfaces, and this time both `readback.txt` and `scenario_proof.txt` stay untouched in their starter form
+
+So the refined statement becomes:
+
+- the cheapened evidence-first contour now changes agent behavior, not just bundle semantics
+- on at least one live unattended Gemini trivial contour, `Synrail` now makes prose proof surfaces both semantically secondary and operationally skippable
+- the main remaining trivial-lane gap is now baseline cost, not whether the trust path intrinsically requires extra authored prose
+
 So the honest updated statement is:
 
 - trivial-task tax is getting better
@@ -394,6 +406,8 @@ That means the project is improving on recall and context recovery, but the oper
 | [024](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_024/REPORT.md) | Valid unattended Gemini retest after inferred-method normalization: accepted again, but the agent still authored too-thin direct provenance for inference to fire, so the waiver contour still did not materialize | Strong mixed-positive evidence |
 | [025](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_025/REPORT.md) | Valid unattended Gemini retest after direct-provenance starter shaping: accepted in one pass with inferred method and strong runtime verification, bringing the trivial lane close to baseline cost even though the prose proof surfaces still remain | Strong positive evidence |
 | [027](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_027/REPORT.md) | Valid unattended Gemini retest after waiver-on-runtime tranche: accepted in one pass with `readback` and `scenario_proof` semantically waived by runtime corroboration, making the prose proof surfaces secondary on a real live contour | Very strong positive evidence |
+| [028b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_028b/REPORT.md) | Valid unattended Gemini retest after final-result-first wording: accepted with the same runtime-backed waived contour, and the live agent now prioritizes `final_result.json`, but it still rewrites the prose proof surfaces | Strong mixed-positive evidence |
+| [029](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_029/REPORT.md) | Valid unattended Gemini retest after starter-note shaping: accepted with runtime-backed proof, waived prose surfaces, and untouched starter `readback/scenario`, showing the cheapened contour now affects live agent behavior too | Very strong positive evidence |
 
 ## Current Best Honest Claim Against Baseline
 
@@ -401,7 +415,7 @@ Today the most defensible claim is:
 
 - `Synrail` already looks **materially more useful than baseline** on **handoff / continuation honesty**.
 - It also looks **increasingly credible** on bounded accepted closure for local bug-fix tasks.
-- The trivial lane now looks cleaner than it did earlier on both Claude and Gemini, with one-pass accepted retests on the current build, an unattended Gemini success path, a strong-runtime-verification trivial win, and now one live run where the prose proof surfaces are semantically waived instead of carrying trust.
+- The trivial lane now looks cleaner than it did earlier on both Claude and Gemini, with one-pass accepted retests on the current build, an unattended Gemini success path, a strong-runtime-verification trivial win, one live run where the prose proof surfaces are semantically waived instead of carrying trust, and now one live run where Gemini leaves those starter prose surfaces untouched altogether.
 - And it now has a real restore win on the no-commit git contour via `file_copy`.
 - But it is **not yet clearly better than baseline overall**, because trivial-task operator tax is still too visible, one older Gemini harness path is still broken on this host, and restore is not yet proven across every workspace type.
 

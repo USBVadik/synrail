@@ -1,0 +1,26 @@
+{
+  "schema_version": "proof_request_record_v0",
+  "run_id": "ALPHA_RUN_20260418T223041026766Z_51c9b2",
+  "task_class": "bounded_change",
+  "task_identity": "Add a one-line docstring to the main function in alpha.py.",
+  "summary": "Synrail is waiting for explicit proof artifacts and local verification evidence from this controlled run.",
+  "starter_mode": "edit_in_place",
+  "starter_hashes": {
+    "final_result": "81eacb0699420d89f52cb24d3f39e295cc9155029a92d769be3af632906d57e6",
+    "readback": "b0af39cb29378c69d569b3b84806c8736b2915337073e343d1f9f5d9c59aa387",
+    "scenario_proof": "c6adb12f4972390c5e7bedc1dce94ee9109d79bf70c3cccaa12ae8dd20b570d6"
+  },
+  "preferred_artifacts": {
+    "final_result": ".synrail/final_result.json",
+    "readback": ".synrail/readback.txt",
+    "scenario_proof": ".synrail/scenario_proof.txt"
+  },
+  "required_sections": [
+    "final_result",
+    "modified_files",
+    "diff_provenance",
+    "readback",
+    "scenario_proof"
+  ],
+  "next_safe_step": "Run local verification, make final_result.json strong first with trust-bearing status and structured diff_provenance anchors, leave readback.txt and scenario_proof.txt brief or untouched unless Synrail later asks for them, let Synrail carry run identity and doctor-ready cleanup truth when available, then run synrail check."
+}
