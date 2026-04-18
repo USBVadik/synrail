@@ -157,8 +157,9 @@ class ControlledStartSmokeTests(unittest.TestCase):
                 start.stdout,
             )
             self.assertIn("Proof shape reminders:", start.stdout)
-            self.assertIn("verification_command plus verification_result", start.stdout)
-            self.assertIn("doctor-ready cleanup truth", start.stdout)
+            self.assertIn("plus verification_command and verification_result", start.stdout)
+            self.assertIn("context_before or context_after anchor", start.stdout)
+            self.assertIn("strong structured verification", start.stdout)
             self.assertIn("Command: plus Observed: or Result:", start.stdout)
             self.assertIn("Starter proof files are ready for this run.", start.stdout)
             self.assertTrue((artifact_root / "bootstrap.json").exists())
@@ -172,6 +173,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             bootstrap = load_json(artifact_root / "bootstrap.json")
             validation = load_json(artifact_root / "bootstrap_validation.json")
             proof_request = load_json(artifact_root / "proof_request.json")
+            final_result = load_json(artifact_root / "final_result.json")
 
             self.assertTrue(bootstrap["controlled_mode"])
             self.assertEqual("VALID", validation["status"])
@@ -181,6 +183,9 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("explicit proof artifacts and local verification evidence", proof_request["summary"])
             self.assertIn("record explicit verification anchors", proof_request["next_safe_step"])
             self.assertIn("carry run identity and doctor-ready cleanup truth", proof_request["next_safe_step"])
+            self.assertEqual("direct_file_observation", final_result["diff_provenance"]["method"])
+            self.assertIn("changed or observed line", final_result["diff_provenance"]["context_before"])
+            self.assertIn("exact changed or observed line", final_result["diff_provenance"]["verification_result"])
 
     def test_check_after_plain_init_requires_controlled_start(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_bootstrap_block_") as tmpdir:
@@ -237,7 +242,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("final_result: .synrail/final_result.json", check.stdout)
             self.assertIn("readback: .synrail/readback.txt", check.stdout)
             self.assertIn("scenario_proof: .synrail/scenario_proof.txt", check.stdout)
-            self.assertIn("diff_provenance method, verification_command, and verification_result", check.stdout)
+            self.assertIn("diff_provenance method, one exact changed line, one stable context anchor, verification_command, and verification_result", check.stdout)
             self.assertIn("trust-bearing status", check.stdout)
             self.assertIn("PROVEN", check.stdout)
             self.assertIn("Command: plus Observed: or Result:", check.stdout)
