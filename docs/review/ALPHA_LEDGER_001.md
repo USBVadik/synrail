@@ -61,6 +61,7 @@ The purpose of this file is simple:
 | [021b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021b/REPORT.md) | Gemini CLI | trivial / additive_change | INVALID_HARNESS_GEMINI_NONINTERACTIVE_EIO | harness | no | low | n/a | 0.0 | n/a | n/a | 0 | n/a |
 | [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md) | Claude Code | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 0.7 | +0.4 | 0 | 1 | +1 |
 | [021d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 2.2 | +1.9 | 0 | 1 | +1 |
+| [021e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
 
 ## Per-Run Records
 
@@ -722,6 +723,27 @@ The purpose of this file is simple:
   - Gemini reached accepted closure with one check, zero repairs, and zero rejections, so the cheapened trivial contour is now supported by both Claude and Gemini evidence
   - it still does not make trivial work a baseline win, because the positive result depended on a live interactive TTY Gemini session and remained much slower than the simpler baseline
 
+### Run 021e
+
+- Report: [fixtures/alpha_external_run_021e/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `none`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.9`
+- Delta time: `+0.6`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first unattended Gemini trivial success on the current build, using a headless-safe invocation on the same host where `021b` previously failed
+  - Gemini again reached accepted closure with one check, zero repairs, and zero rejections, so the trivial contour no longer depends on a live TTY workaround
+  - it materially improves confidence in the Gemini lane, even though trivial work is still slower than the simpler baseline
+
 ## Current Read
 
 If we force the current ledger into one brutally practical sentence:
@@ -730,7 +752,7 @@ If we force the current ledger into one brutally practical sentence:
 - looks credible on bounded accepted closure
 - looks materially stronger than before on proof hardening for bounded bug-fix runs
 - still looks too heavy on trivial tasks, even though the newer compressed-loop tranche improved the path from run 009 to run 015
-- and now looks materially better on both Claude and Gemini trivial lanes than it did earlier, even though the simpler baseline is still cheaper and the Gemini headless lane is still harness-blocked by `setRawMode EIO`
+- and now looks materially better on both Claude and Gemini trivial lanes than it did earlier, including an unattended Gemini success path, even though the simpler baseline is still cheaper and one older Gemini harness shape is still known-bad
 - and now has a materially stronger restore story: `014d` fixed the false-success lie, and `014e` validates real recovery on the no-commit git contour via `file_copy`
 - orientation on governed roots is better than before; Claude now shows a literal `synrail`-first entry, while Gemini has narrowed the loop materially in `019c` but still does not converge on that same small shape
 - the Claude-first handoff lane is still harness-limited under the current root server setup, so new handoff strength is still coming mostly from Gemini-side evidence
