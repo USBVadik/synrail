@@ -28,6 +28,8 @@ synrail
 
 Synrail is a CLI control kernel, not a background daemon. The dashboard tells you whether a controlled run is active and what the next command should be.
 
+For open-ended questions like "what is this project?" or "where did we stop?", still start with `synrail` and keep the first pass read-only before broader repo exploration.
+
 ## Four Steps
 
 ### 1. Start a controlled run

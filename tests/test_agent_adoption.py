@@ -67,11 +67,15 @@ class AgentAdoptionTests(unittest.TestCase):
 
             self.assertIn("Use Synrail as the default local control path", gemini)
             self.assertIn("For every new user task, run Synrail first", gemini)
+            self.assertIn("If the user asks what this project is, where work stopped, or what the current status is", gemini)
+            self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", gemini)
             self.assertIn('synrail start "Describe the bounded local change."', gemini)
             self.assertIn("fix only what check tells you to fix", gemini)
 
             self.assertIn("Use Synrail as the default local control path", claude)
             self.assertIn("For every new user task, run Synrail first", claude)
+            self.assertIn("If the user asks what this project is, where work stopped, or what the current status is", claude)
+            self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", claude)
             self.assertIn('synrail start "Describe the bounded local change."', claude)
             self.assertIn("fix only what check tells you to fix", claude)
 
@@ -141,9 +145,11 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("# Existing Gemini Context", gemini)
             self.assertIn("<!-- SYNRAIL_GEMINI_START -->", gemini)
             self.assertIn("Use Synrail as the default local control path", gemini)
+            self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", gemini)
             self.assertIn("# Existing Claude Context", claude)
             self.assertIn("<!-- SYNRAIL_CLAUDE_START -->", claude)
             self.assertIn("Use Synrail as the default local control path", claude)
+            self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", claude)
 
             forced = self.run_alpha(
                 "install-agent-files",
@@ -164,8 +170,10 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("# Existing Claude Context", claude_backups[0].read_text())
             self.assertNotIn("<!-- SYNRAIL_GEMINI_START -->", (project_root / "GEMINI.md").read_text())
             self.assertIn("Use Synrail as the default local control path", (project_root / "GEMINI.md").read_text())
+            self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", (project_root / "GEMINI.md").read_text())
             self.assertNotIn("<!-- SYNRAIL_CLAUDE_START -->", (project_root / "CLAUDE.md").read_text())
             self.assertIn("Use Synrail as the default local control path", (project_root / "CLAUDE.md").read_text())
+            self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", (project_root / "CLAUDE.md").read_text())
 
     def test_install_agent_files_adds_nested_git_and_runtime_notes(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_agent_nested_git_") as tmpdir:

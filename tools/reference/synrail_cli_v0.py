@@ -311,6 +311,7 @@ def render_agent_policy_markdown(
         prefer_runtime_helper=prefer_runtime_helper,
         command=command,
     )
+    orientation_lines = policy_orientation_lines(commands["status"])
     lines = [
         "# Agent Workflow",
         "",
@@ -323,6 +324,9 @@ def render_agent_policy_markdown(
         commands["status"],
         "```",
         "",
+    ]
+    lines.extend(orientation_lines)
+    lines.extend([
         "## Before You Edit",
         "",
         "1. If Synrail shows that no controlled run is active, start one before mutating code:",
@@ -352,7 +356,7 @@ def render_agent_policy_markdown(
         "- Do not claim success without real local verification.",
         "- If `synrail` is unavailable on this machine, stop and report that the control tool is missing instead of bypassing it.",
         "",
-    ]
+    ])
     lines.extend(note_lines)
     if note_lines:
         lines.append("")
@@ -372,6 +376,7 @@ def render_gemini_policy_markdown(
         prefer_runtime_helper=prefer_runtime_helper,
         command=command,
     )
+    orientation_lines = policy_orientation_lines(commands["status"])
     lines = [
         "# Gemini Workflow",
         "",
@@ -387,6 +392,9 @@ def render_gemini_policy_markdown(
         "",
         "Synrail is a CLI control kernel, not a background daemon.",
         "",
+    ]
+    lines.extend(orientation_lines)
+    lines.extend([
         "## Start",
         "",
         "If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
@@ -411,7 +419,7 @@ def render_gemini_policy_markdown(
         "",
         "Do not bypass Synrail and do not claim success without real local verification.",
         "",
-    ]
+    ])
     lines.extend(note_lines)
     if note_lines:
         lines.append("")
@@ -431,6 +439,7 @@ def render_claude_policy_markdown(
         prefer_runtime_helper=prefer_runtime_helper,
         command=command,
     )
+    orientation_lines = policy_orientation_lines(commands["status"])
     lines = [
         "# Claude Workflow",
         "",
@@ -446,6 +455,9 @@ def render_claude_policy_markdown(
         "",
         "Synrail is a CLI control kernel, not a background daemon.",
         "",
+    ]
+    lines.extend(orientation_lines)
+    lines.extend([
         "## Start",
         "",
         "If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
@@ -470,7 +482,7 @@ def render_claude_policy_markdown(
         "",
         "Do not bypass Synrail and do not claim success without real local verification.",
         "",
-    ]
+    ])
     lines.extend(note_lines)
     if note_lines:
         lines.append("")
@@ -492,6 +504,7 @@ def render_agent_policy_block(
         prefer_runtime_helper=prefer_runtime_helper,
         command=command,
     )
+    orientation_lines = policy_orientation_lines(commands["status"])
     lines = [
         f"## {title}",
         "",
@@ -503,6 +516,9 @@ def render_agent_policy_block(
         commands["status"],
         "```",
         "",
+    ]
+    lines.extend(orientation_lines)
+    lines.extend([
         "If Synrail shows that no controlled run is active, start one:",
         "",
         "```bash",
@@ -518,9 +534,23 @@ def render_agent_policy_block(
         f"If non-green, run `{commands['repair']}` and repair only the named gap before re-checking.",
         "",
         "Do not bypass Synrail and do not claim success without real local verification.",
-    ]
+    ])
     lines.extend(note_lines)
     return "\n".join(lines)
+
+
+def policy_orientation_lines(status_command: str) -> list[str]:
+    return [
+        "## Project Orientation",
+        "",
+        "If the user asks what this project is, where work stopped, or what the current status is, treat that as a Synrail-guided orientation task too.",
+        "",
+        f"- Start with `{status_command}` before broader repo search.",
+        "- Stay inside this project root and prefer read-only inspection first.",
+        "- Summarize the governed state before exploring older files, sibling probes, or unrelated surfaces.",
+        "- Do not create helper scripts or make edits for an orientation-only question.",
+        "",
+    ]
 
 
 def managed_policy_markers(path: Path) -> tuple[str, str]:
