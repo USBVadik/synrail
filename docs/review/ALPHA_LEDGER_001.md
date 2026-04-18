@@ -64,6 +64,7 @@ The purpose of this file is simple:
 | [021e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
 | [022](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_022/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS | none | unclear | low | 0.3 | 0.8 | +0.5 | 0 | 1 | +1 |
 | [023](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_023/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS_BUT_NO_WAIVER | mixed | unclear | low | 0.3 | 2.8 | +2.5 | 0 | 1 | +1 |
+| [024](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_024/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS_BUT_STILL_NO_WAIVER | mixed | unclear | low | 0.3 | 1.0 | +0.7 | 0 | 2 | +2 |
 
 ## Per-Run Records
 
@@ -789,6 +790,28 @@ The purpose of this file is simple:
   - but the intended cheaper contour did not actually trigger on this live run: `diff_provenance.method` was still missing, so structured runtime verification stayed too weak to waive `readback` and `scenario_proof`
   - the run therefore strengthens the kernel compatibility story while also showing that the real operator-tax win is still not yet materialized on the live Gemini lane
 
+### Run 024
+
+- Report: [fixtures/alpha_external_run_024/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_024/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `mixed`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `1.0`
+- Delta time: `+0.7`
+- Baseline retry count estimate: `0`
+- Synrail check count: `2`
+- Delta loops: `+2`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live unattended Gemini retest after the `db192c4` tranche that can infer `diff_provenance.method` from a sufficiently strong direct-observation record
+  - Gemini still reached accepted closure with `status: "PROVEN"`, so the new kernel logic remains compatible with a real unattended contour
+  - but the waiver still did not fire: the live agent authored only `changed_file`, `verification_command`, and `verification_result`, leaving the direct-observation record too thin for `normalized_method` inference
+  - this sharpens the next gap again: the remaining problem is no longer another missing kernel affordance, but the fact that live agent behavior still does not emit a strong enough structured provenance record to cash in the cheaper evidence-first contour
+
 ## Current Read
 
 If we force the current ledger into one brutally practical sentence:
@@ -799,7 +822,7 @@ If we force the current ledger into one brutally practical sentence:
 - still looks too heavy on trivial tasks, even though the newer compressed-loop tranche improved the path from run 009 to run 015
 - and now looks materially better on both Claude and Gemini trivial lanes than it did earlier, including an unattended Gemini success path, even though the simpler baseline is still cheaper and one older Gemini harness shape is still known-bad
 - and now also has one real unattended Gemini run where the new trust-bearing `PROVEN` status gate succeeds end to end instead of relying on a decorative `SUCCESS` label
-- and now also shows that the newer evidence-first cheapening is not yet being fully realized by the live Gemini lane, because `023` still filled both prose proof surfaces after failing to complete a strong enough structured `diff_provenance`
+- and now also shows that the newer evidence-first cheapening is not yet being fully realized by the live Gemini lane, because both `023` and `024` still filled both prose proof surfaces after failing to complete a strong enough structured `diff_provenance`
 - and now has a materially stronger restore story: `014d` fixed the false-success lie, and `014e` validates real recovery on the no-commit git contour via `file_copy`
 - orientation on governed roots is better than before; Claude now shows a literal `synrail`-first entry, while Gemini has narrowed the loop materially in `019c` but still does not converge on that same small shape
 - the Claude-first handoff lane is still harness-limited under the current root server setup, so new handoff strength is still coming mostly from Gemini-side evidence

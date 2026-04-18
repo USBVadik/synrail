@@ -1,0 +1,11 @@
+final_status=PROVEN
+semantic_status=SUFFICIENT
+missing_sections=[]
+semantically_insufficient=[]
+normalized_method=
+method_inferred=false
+readback_waived=false
+scenario_waived=false
+closure=ACCEPTED
+repair_count=1
+rejection_count=0

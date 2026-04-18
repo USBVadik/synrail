@@ -1,0 +1,5 @@
+Readback of alpha.py:
+Found the newly added docstring at line 6:
+    \"\"\"Main entry point for the Synrail CLI.\"\"\"
+The docstring is placed inside 'def main() -> int:' and before 'from tools.reference.synrail_cli_v0 import main as cli_main'.
+Confirmed with 'cat alpha.py' and 'grep'.
