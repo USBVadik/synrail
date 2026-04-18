@@ -1,0 +1,5 @@
+### SCENARIO PROOF: Add docstring to main function in alpha.py
+Scenario: Verify the docstring of the main function in alpha.py
+Command: python3 -c 'import alpha; print(alpha.main.__doc__)'
+Observed: Thin alpha entrypoint for the installable Synrail CLI.
+Status: PASSED

@@ -32,7 +32,7 @@ So the honest current verdict is:
 
 ### 1. Happy-path closure is real, not hypothetical
 
-Runs [003](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_003/REPORT.md), [005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_005/REPORT.md), [006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_006/REPORT.md), [008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md), [010](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_010/REPORT.md), [013](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_013/REPORT.md), [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md), [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md), [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md), [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md), [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md), [021d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md), [021e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md), [022](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_022/REPORT.md), [023](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_023/REPORT.md), [024](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_024/REPORT.md), and [025](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_025/REPORT.md) reached `Accepted` on real agent-driven loops.
+Runs [003](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_003/REPORT.md), [005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_005/REPORT.md), [006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_006/REPORT.md), [008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md), [010](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_010/REPORT.md), [013](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_013/REPORT.md), [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md), [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md), [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md), [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md), [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md), [021d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md), [021e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md), [022](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_022/REPORT.md), [023](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_023/REPORT.md), [024](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_024/REPORT.md), [025](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_025/REPORT.md), and [027](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_027/REPORT.md) reached `Accepted` on real agent-driven loops.
 
 That matters because it means:
 
@@ -280,6 +280,19 @@ So the refined statement becomes:
 - the cheaper direct-observation contour is no longer only theoretical; it is materially present on a real unattended run
 - the remaining gap is narrower now: not “can live Gemini produce strong structured provenance?”, but “can that contour fully displace the prose proof surfaces?”
 
+Run [027](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_027/REPORT.md) closes that next gap much more cleanly:
+
+- Gemini again reaches `Accepted` in one pass on the unattended lane
+- `bundle.json` now marks `readback.waived_by_runtime_corroboration = true` and `scenario_proof.waived_by_runtime_corroboration = true`
+- the important difference is semantic, not just cosmetic: the prose proof files may still exist, but they are no longer carrying the trust decision
+- the trust decision is now clearly backed by runtime evidence in `final_result.json` and the resulting proof bundle, while the lane still stays near-baseline in cost at about `0.4` minutes
+
+So the refined statement becomes:
+
+- the evidence-first contour is now not only present in the kernel and not only reachable in principle; it is semantically realized on a real unattended Gemini run
+- Synrail can now make prose proof surfaces secondary on at least one live trivial contour
+- the remaining gap is narrower still: not “can the cheapened contour work?”, but “can it become clearly cheaper than baseline instead of merely near-baseline?”
+
 So the honest updated statement is:
 
 - trivial-task tax is getting better
@@ -380,6 +393,7 @@ That means the project is improving on recall and context recovery, but the oper
 | [023](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_023/REPORT.md) | Valid unattended Gemini retest after the readback/scenario cheapening tranche: accepted in one pass with stronger `diff_provenance`, but the agent still filled both prose proof surfaces because the structured runtime record was not yet complete enough to trigger the waiver path | Strong mixed-positive evidence |
 | [024](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_024/REPORT.md) | Valid unattended Gemini retest after inferred-method normalization: accepted again, but the agent still authored too-thin direct provenance for inference to fire, so the waiver contour still did not materialize | Strong mixed-positive evidence |
 | [025](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_025/REPORT.md) | Valid unattended Gemini retest after direct-provenance starter shaping: accepted in one pass with inferred method and strong runtime verification, bringing the trivial lane close to baseline cost even though the prose proof surfaces still remain | Strong positive evidence |
+| [027](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_027/REPORT.md) | Valid unattended Gemini retest after waiver-on-runtime tranche: accepted in one pass with `readback` and `scenario_proof` semantically waived by runtime corroboration, making the prose proof surfaces secondary on a real live contour | Very strong positive evidence |
 
 ## Current Best Honest Claim Against Baseline
 
@@ -387,7 +401,7 @@ Today the most defensible claim is:
 
 - `Synrail` already looks **materially more useful than baseline** on **handoff / continuation honesty**.
 - It also looks **increasingly credible** on bounded accepted closure for local bug-fix tasks.
-- The trivial lane now looks cleaner than it did earlier on both Claude and Gemini, with one-pass accepted retests on the current build, an unattended Gemini success path, and now one strong-runtime-verification trivial win that comes close to baseline cost.
+- The trivial lane now looks cleaner than it did earlier on both Claude and Gemini, with one-pass accepted retests on the current build, an unattended Gemini success path, a strong-runtime-verification trivial win, and now one live run where the prose proof surfaces are semantically waived instead of carrying trust.
 - And it now has a real restore win on the no-commit git contour via `file_copy`.
 - But it is **not yet clearly better than baseline overall**, because trivial-task operator tax is still too visible, one older Gemini harness path is still broken on this host, and restore is not yet proven across every workspace type.
 
@@ -443,6 +457,7 @@ The evidence is already stored in these run reports:
 - [023](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_023/REPORT.md)
 - [024](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_024/REPORT.md)
 - [025](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_025/REPORT.md)
+- [027](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_027/REPORT.md)
 
 There was also already a generic scoring template here:
 
@@ -480,6 +495,6 @@ the answer is:
 
 The strongest positive signal is still handoff, but restore now has a real positive external recovery signal too.
 
-The strongest negative signal is no longer the old false-success restore bug; the clearest remaining negative signal is now trivial-task operator tax, while restore still needs broader contour coverage and orientation still needs that smaller CLI-first loop to generalize beyond the Claude lane. The new wrinkle from `021b`, `021d`, `021e`, `022`, `023`, `024`, and `025` is that the Gemini trivial lane on this host is now split even more precisely: one older invocation shape is harness-broken (`setRawMode EIO`), but a headless-safe unattended Gemini path can complete the contour honestly and emit the trust-bearing `PROVEN` status under the new kernel gate. The newer `025` run is a real step forward: live Gemini now naturally reaches inferred direct-observation method and strong runtime verification in a single pass. The remaining gap is narrower than before, but it is still there: the prose proof surfaces are still being authored instead of disappearing behind a fully realized evidence-only contour, and trivial-task cost is only near-baseline rather than clearly better than baseline.
+The strongest negative signal is no longer the old false-success restore bug; the clearest remaining negative signal is now trivial-task operator tax, while restore still needs broader contour coverage and orientation still needs that smaller CLI-first loop to generalize beyond the Claude lane. The new wrinkle from `021b`, `021d`, `021e`, `022`, `023`, `024`, `025`, and `027` is that the Gemini trivial lane on this host is now split even more precisely: one older invocation shape is harness-broken (`setRawMode EIO`), but a headless-safe unattended Gemini path can complete the contour honestly and emit the trust-bearing `PROVEN` status under the new kernel gate. The newest `027` run is a real semantic milestone: runtime-backed proof now waives the prose proof surfaces on a live unattended run. That is a stronger answer to the original criticism about authored proof being too central. The remaining gap is smaller again, but still real: trivial-task cost is only near-baseline rather than clearly better than baseline, and the agent still writes extra files even when the kernel no longer needs them for trust.
 
 That is exactly enough clarity to justify the next round of focused fixes.

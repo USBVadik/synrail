@@ -1,0 +1,12 @@
+final_status=PROVEN
+semantic_status=SUFFICIENT
+normalized_method=direct_file_observation
+method_inferred=false
+has_structured_runtime_verification=true
+has_patch_runtime_verification=false
+runtime_verification_sufficient=true
+readback_waived=true
+scenario_waived=true
+closure=ACCEPTED
+repair_count=0
+rejection_count=0
