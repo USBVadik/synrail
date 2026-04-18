@@ -32,7 +32,7 @@ So the honest current verdict is:
 
 ### 1. Happy-path closure is real, not hypothetical
 
-Runs [003](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_003/REPORT.md), [005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_005/REPORT.md), [006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_006/REPORT.md), [008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md), [010](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_010/REPORT.md), [013](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_013/REPORT.md), [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md), [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md), [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md), and [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md) reached `Accepted` on real agent-driven loops.
+Runs [003](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_003/REPORT.md), [005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_005/REPORT.md), [006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_006/REPORT.md), [008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md), [010](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_010/REPORT.md), [013](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_013/REPORT.md), [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md), [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md), [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md), [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md), and [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md) reached `Accepted` on real agent-driven loops.
 
 That matters because it means:
 
@@ -202,6 +202,20 @@ Run [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external
 - the visible `--clean-surface` dance dropped out
 - but the trivial lane still does not look cheap enough to recommend over baseline
 
+Run [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md) improves the Claude side of that story further:
+
+- the run reached `Accepted` on the current trivial-burden tranche in a single inferred pass
+- `observability.json` shows zero repairs and zero rejections
+- and the proof pack stayed concrete without visible churn
+
+But even that stronger Claude result is still slower than the simpler baseline on this contour.
+
+So the honest updated statement is:
+
+- trivial-task tax is getting better
+- the Claude lane now looks materially cleaner than earlier runs
+- but trivial work is still not a general baseline win, and the Gemini lane is currently blocked by harness failure rather than giving a clean comparison
+
 So we cannot yet say:
 
 - first-run cheapness is good enough
@@ -222,9 +236,17 @@ So the current claim must stay modest:
 
 ### 4. They do not yet isolate product value perfectly from harness issues
 
-Runs [001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_001/REPORT.md) and [004](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_004/REPORT.md) were dominated by Claude harness problems, not product behavior.
+Runs [001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_001/REPORT.md), [004](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_004/REPORT.md), and [021b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021b/REPORT.md) were dominated by harness problems, not product behavior.
 
 That means some of the current evidence is still noisy.
+
+Run [021b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021b/REPORT.md) usefully narrows that noise:
+
+- Gemini non-interactive mode on this host crashes with `setRawMode EIO`
+- the failure happens before `synrail start` or `synrail check`
+- and a PTY-wrapped smoke retry still timed out without producing output
+
+So the current Gemini trivial-lane regression on this server should be treated as harness-invalid rather than as negative Synrail product evidence.
 
 ### 5. They do not yet prove a literal `synrail` CLI-first entry ritual for open-ended orientation prompts
 
@@ -271,6 +293,8 @@ That means the project is improving on recall and context recovery, but the oper
 | [019b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019b/REPORT.md) | Gemini retest still over-explores even after the orientation guidance wording fix | Mixed evidence |
 | [020b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020b/REPORT.md) | Claude retest now literally starts with `synrail`, giving the first clean CLI-first orientation signal | Strong positive evidence |
 | [019c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019c/REPORT.md) | Gemini retest is materially narrower than `019b`, but still not as small or as cleanly persisted as the Claude lane | Moderate mixed-positive evidence |
+| [021b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021b/REPORT.md) | Isolates the current Gemini server regression as a `setRawMode EIO` harness failure before any Synrail step begins | Harness evidence only |
+| [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md) | Cleanest current trivial Claude retest: one inferred accepted pass, no repairs, no visible trust dance | Moderate positive evidence |
 
 ## Current Best Honest Claim Against Baseline
 
@@ -278,8 +302,9 @@ Today the most defensible claim is:
 
 - `Synrail` already looks **materially more useful than baseline** on **handoff / continuation honesty**.
 - It also looks **increasingly credible** on bounded accepted closure for local bug-fix tasks.
+- The trivial Claude lane now looks cleaner than it did earlier, with a one-pass accepted retest on the current build.
 - And it now has a real restore win on the no-commit git contour via `file_copy`.
-- But it is **not yet clearly better than baseline overall**, because trivial-task operator tax is still too visible and restore is not yet proven across every workspace type.
+- But it is **not yet clearly better than baseline overall**, because trivial-task operator tax is still too visible, Gemini's current trivial lane is harness-broken on this host, and restore is not yet proven across every workspace type.
 
 That is enough to justify:
 
@@ -325,6 +350,8 @@ The evidence is already stored in these run reports:
 - [020](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020/REPORT.md)
 - [019b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019b/REPORT.md)
 - [020b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020b/REPORT.md)
+- [021b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021b/REPORT.md)
+- [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md)
 
 There was also already a generic scoring template here:
 
@@ -362,6 +389,6 @@ the answer is:
 
 The strongest positive signal is still handoff, but restore now has a real positive external recovery signal too.
 
-The strongest negative signal is no longer the old false-success restore bug; the clearest remaining negative signal is now trivial-task operator tax, while restore still needs broader contour coverage and orientation still needs that smaller CLI-first loop to generalize beyond the Claude lane, even though Gemini improved materially in `019c`.
+The strongest negative signal is no longer the old false-success restore bug; the clearest remaining negative signal is now trivial-task operator tax, while restore still needs broader contour coverage and orientation still needs that smaller CLI-first loop to generalize beyond the Claude lane. The new wrinkle from `021b` is that the Gemini trivial lane on this host is presently harness-broken (`setRawMode EIO`), while `021c` shows that the Claude lane is getting cleaner but still not cheap enough to declare a baseline win.
 
 That is exactly enough clarity to justify the next round of focused fixes.

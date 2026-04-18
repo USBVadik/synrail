@@ -58,6 +58,8 @@ The purpose of this file is simple:
 | [019b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019b/REPORT.md) | Gemini CLI | orientation | ORIENTATION_SUMMARIZED_WITH_OVEREXPLORATION | mixed | unclear | medium | 0.4 | 0.8 | +0.4 | 0 | 0 | 0 |
 | [020b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020b/REPORT.md) | Claude Code | orientation | ORIENTATION_SUMMARIZED_WITH_SYNRAIL_FIRST | none | yes | medium | 0.4 | 0.3 | -0.1 | 0 | 0 | 0 |
 | [019c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019c/REPORT.md) | Gemini CLI | orientation | ORIENTATION_SUMMARIZED_WITH_REDUCED_EXPLORATION | mixed | unclear | medium | 0.4 | 0.5 | +0.1 | 0 | 0 | 0 |
+| [021b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021b/REPORT.md) | Gemini CLI | trivial / additive_change | INVALID_HARNESS_GEMINI_NONINTERACTIVE_EIO | harness | no | low | n/a | 0.0 | n/a | n/a | 0 | n/a |
+| [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md) | Claude Code | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 0.7 | +0.4 | 0 | 1 | +1 |
 
 ## Per-Run Records
 
@@ -656,6 +658,48 @@ The purpose of this file is simple:
   - compared with `019b`, the run is materially narrower: no database/schema probing, no sibling-probe archaeology, and the answer stays centered on governed state
   - but the lane still is not as small as Claude `020b`, and the server artifacts did not persist a normal `end` / `rc` completion trace
 
+### Run 021b
+
+- Report: [fixtures/alpha_external_run_021b/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021b/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `harness`
+- Reuse tomorrow: `no`
+- Wedge fit: `low`
+- Baseline minutes estimate: `n/a`
+- Synrail minutes actual: `0.0`
+- Delta time: `n/a`
+- Baseline retry count estimate: `n/a`
+- Synrail check count: `0`
+- Delta loops: `n/a`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this isolates the current Gemini server failure mode much more precisely than the earlier hanging shell log
+  - the saved `agent.log` shows a concrete harness error: Gemini non-interactive mode crashes with `setRawMode EIO` before any governed Synrail step begins
+  - that means current Gemini trivial-lane retests on this host should be treated as harness-invalid rather than product-negative until the CLI lane is repaired
+
+### Run 021c
+
+- Report: [fixtures/alpha_external_run_021c/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `none`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.7`
+- Delta time: `+0.4`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live trivial retest after the context-driven cleanup / trivial-burden tranche on the current build `25b9b9b`
+  - Claude reached accepted closure on a single inferred pass with zero repairs and zero rejections, and the proof pack stayed concrete rather than bloated
+  - it improves the trivial picture materially relative to `003` and `015`, but baseline is still cheaper and the evidence is currently stronger on the Claude lane than on Gemini
+
 ## Current Read
 
 If we force the current ledger into one brutally practical sentence:
@@ -664,6 +708,7 @@ If we force the current ledger into one brutally practical sentence:
 - looks credible on bounded accepted closure
 - looks materially stronger than before on proof hardening for bounded bug-fix runs
 - still looks too heavy on trivial tasks, even though the newer compressed-loop tranche improved the path from run 009 to run 015
+- and now looks materially better on the Claude trivial lane than it did earlier, even though the simpler baseline is still cheaper and the Gemini lane is currently harness-blocked by `setRawMode EIO`
 - and now has a materially stronger restore story: `014d` fixed the false-success lie, and `014e` validates real recovery on the no-commit git contour via `file_copy`
 - orientation on governed roots is better than before; Claude now shows a literal `synrail`-first entry, while Gemini has narrowed the loop materially in `019c` but still does not converge on that same small shape
 - the Claude-first handoff lane is still harness-limited under the current root server setup, so new handoff strength is still coming mostly from Gemini-side evidence

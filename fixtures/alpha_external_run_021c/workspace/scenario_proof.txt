@@ -1,0 +1,5 @@
+### SCENARIO PROOF: Add one-line docstring to main function in alpha.py
+Scenario: alpha.py main() function in local workspace after edit
+Command: python3 -c "import ast; tree=ast.parse(open('alpha.py').read()); fn=[n for n in ast.walk(tree) if isinstance(n,ast.FunctionDef) and n.name=='main'][0]; print(ast.get_docstring(fn))"
+Observed: Entry point: delegate to the Synrail CLI main.
+Status: PASSED

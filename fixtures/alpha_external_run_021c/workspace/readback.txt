@@ -1,0 +1,3 @@
+### READBACK: Add one-line docstring to main function in alpha.py
+Changed surface: alpha.py — def main() -> int:
+Observed: main() now has docstring "Entry point: delegate to the Synrail CLI main." as its first statement; no other lines changed.

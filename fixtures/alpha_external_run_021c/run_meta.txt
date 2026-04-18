@@ -1,0 +1,24 @@
+timestamp=2026-04-18T18:21:08+00:00
+branch=codex/first-extraction-pr
+head=25b9b9b1d010e43484330fdee306298542cbc46c
+synrail=/root/alpha_external_run_021c/workspace/.venv/bin/synrail
+2.1.113 (Claude Code)
+usage: synrail [-h]
+               {start,install-agent-files,check,status,explain-proof,save,restore,session-export,bug-packet}
+               ...
+
+positional arguments:
+  start                 Begin a new controlled run
+  install-agent-files   Write CLAUDE.md/GEMINI.md/AGENTS.md for agent
+                        discovery
+  check                 Run the full verification pipeline
+  status (dashboard)    Show current run state
+  explain-proof (proof-explain)
+                        Show what proof files are needed and why
+  save                  Save a checkpoint of the current verified state
+  restore               Restore workspace from a saved checkpoint
+  session-export        Export session replay for review
+  bug-packet            Export a bug report packet
+
+options:
+  -h, --help            show this help message and exit

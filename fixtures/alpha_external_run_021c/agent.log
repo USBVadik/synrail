@@ -1,0 +1,5 @@
+**Summary:**
+
+- **File changed:** `alpha.py` — added `"""Entry point: delegate to the Synrail CLI main."""` as the first line of `main()`.
+- **Verification:** AST parse via `ast.get_docstring()` confirmed the docstring is present.
+- **Final status:** `synrail check` → **Accepted** (green, no repair needed).
