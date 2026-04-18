@@ -352,6 +352,32 @@ def structured_diff_provenance_is_semantically_sufficient(
     return bool(method and changed_file and changed_file_matches and has_patch_context and has_verification)
 
 
+def patch_plus_verification_is_semantically_sufficient(
+    *,
+    git_diff: str,
+    record: object,
+    modified_files: list[str],
+    change_disposition: str,
+) -> bool:
+    if change_disposition == "already_satisfied":
+        return False
+    if not isinstance(record, dict):
+        return False
+    if not (
+        bool(git_diff)
+        and "diff --git" in git_diff
+        and "@@" in git_diff
+        and contains_patch_lines(git_diff)
+        and diff_mentions_modified_files(git_diff, modified_files)
+    ):
+        return False
+    changed_file = non_empty_string(record.get("changed_file", ""))
+    verification_command = non_empty_string(record.get("verification_command", ""))
+    verification_result = non_empty_string(record.get("verification_result", ""))
+    changed_file_matches = references_modified_file(changed_file, modified_files) if modified_files else bool(changed_file)
+    return bool(changed_file and changed_file_matches and verification_command and verification_result)
+
+
 def normalized_diff_provenance_method(record: object, *, change_disposition: str) -> str:
     if not isinstance(record, dict):
         return ""
@@ -561,10 +587,10 @@ def scenario_is_semantically_sufficient(value: str, task_identity: str = "") -> 
 
 def verification_corroboration_is_semantically_sufficient(
     *,
-    structured_diff_sufficient: bool,
+    runtime_verification_sufficient: bool,
     scenario_text: str,
 ) -> bool:
-    if structured_diff_sufficient:
+    if runtime_verification_sufficient:
         return True
     return scenario_has_explicit_command(scenario_text) and scenario_has_explicit_observation(scenario_text)
 
@@ -572,20 +598,20 @@ def verification_corroboration_is_semantically_sufficient(
 def readback_requirement_is_semantically_sufficient(
     *,
     readback_sufficient: bool,
-    structured_diff_sufficient: bool,
+    runtime_verification_sufficient: bool,
     final_result_status_sufficient: bool,
 ) -> tuple[bool, bool]:
-    waived_by_runtime_corroboration = structured_diff_sufficient and final_result_status_sufficient
+    waived_by_runtime_corroboration = runtime_verification_sufficient and final_result_status_sufficient
     return readback_sufficient or waived_by_runtime_corroboration, waived_by_runtime_corroboration
 
 
 def scenario_requirement_is_semantically_sufficient(
     *,
     scenario_sufficient: bool,
-    structured_diff_sufficient: bool,
+    runtime_verification_sufficient: bool,
     final_result_status_sufficient: bool,
 ) -> tuple[bool, bool]:
-    waived_by_runtime_corroboration = structured_diff_sufficient and final_result_status_sufficient
+    waived_by_runtime_corroboration = runtime_verification_sufficient and final_result_status_sufficient
     return scenario_sufficient or waived_by_runtime_corroboration, waived_by_runtime_corroboration
 
 
@@ -716,6 +742,15 @@ def build_bundle(args: argparse.Namespace) -> dict:
         modified_files if isinstance(modified_files, list) else [],
         change_disposition=change_disposition,
     )
+    patch_plus_verification_semantically_sufficient = patch_plus_verification_is_semantically_sufficient(
+        git_diff=git_diff,
+        record=diff_provenance_record,
+        modified_files=modified_files if isinstance(modified_files, list) else [],
+        change_disposition=change_disposition,
+    )
+    runtime_verification_semantically_sufficient = (
+        diff_record_semantically_sufficient or patch_plus_verification_semantically_sufficient
+    )
     normalized_diff_method = normalized_diff_provenance_method(
         diff_provenance_record,
         change_disposition=change_disposition,
@@ -750,7 +785,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
     )
     scenario_semantically_sufficient = scenario_is_semantically_sufficient(scenario_text, task_identity=scope_task_text)
     verification_corroboration_semantically_sufficient = verification_corroboration_is_semantically_sufficient(
-        structured_diff_sufficient=diff_record_semantically_sufficient,
+        runtime_verification_sufficient=runtime_verification_semantically_sufficient,
         scenario_text=scenario_text,
     )
     final_result_status_semantically_sufficient = final_result_status_is_semantically_sufficient(
@@ -760,14 +795,14 @@ def build_bundle(args: argparse.Namespace) -> dict:
     readback_requirement_semantically_sufficient, readback_waived_by_runtime_corroboration = (
         readback_requirement_is_semantically_sufficient(
             readback_sufficient=readback_semantically_sufficient,
-            structured_diff_sufficient=diff_record_semantically_sufficient,
+            runtime_verification_sufficient=runtime_verification_semantically_sufficient,
             final_result_status_sufficient=final_result_status_semantically_sufficient,
         )
     )
     scenario_requirement_semantically_sufficient, scenario_waived_by_runtime_corroboration = (
         scenario_requirement_is_semantically_sufficient(
             scenario_sufficient=scenario_semantically_sufficient,
-            structured_diff_sufficient=diff_record_semantically_sufficient,
+            runtime_verification_sufficient=runtime_verification_semantically_sufficient,
             final_result_status_sufficient=final_result_status_semantically_sufficient,
         )
     )
@@ -843,6 +878,8 @@ def build_bundle(args: argparse.Namespace) -> dict:
         "verification_corroboration": {
             "semantically_sufficient": verification_corroboration_semantically_sufficient,
             "has_structured_runtime_verification": diff_record_semantically_sufficient,
+            "has_patch_runtime_verification": patch_plus_verification_semantically_sufficient,
+            "runtime_verification_sufficient": runtime_verification_semantically_sufficient,
             "scenario_has_explicit_command": scenario_has_explicit_command(scenario_text),
             "scenario_has_explicit_observation": scenario_has_explicit_observation(scenario_text),
         },

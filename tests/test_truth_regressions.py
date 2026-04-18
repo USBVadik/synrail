@@ -947,6 +947,74 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertTrue(bundle["scenario_proof"]["waived_by_runtime_corroboration"])
         self.assertEqual("ACCEPTED", verdict["closure_status"])
 
+    def test_patch_plus_verification_marks_present_prose_surfaces_waived(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_patch_plus_verification_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["alpha.py"],
+                "git_diff": (
+                    "diff --git a/alpha.py b/alpha.py\n"
+                    "--- a/alpha.py\n"
+                    "+++ b/alpha.py\n"
+                    "@@ -3,4 +3,5 @@\n"
+                    " from __future__ import annotations\n"
+                    " \n"
+                    " def main() -> int:\n"
+                    "+    \"\"\"Entry point for the Synrail CLI.\"\"\"\n"
+                    "     from tools.reference.synrail_cli_v0 import main as cli_main\n"
+                ),
+                "diff_provenance": {
+                    "changed_file": "alpha.py",
+                    "verification_command": "grep -A 1 \"def main() -> int:\" alpha.py",
+                    "verification_result": "def main() -> int:\n    \"\"\"Entry point for the Synrail CLI.\"\"\"",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "workspace clean after updating only alpha.py with no unintended changes",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text(
+                "### READBACK: add alpha docstring\n"
+                "Changed surface: alpha.py\n"
+                "Observed: the main function now contains a one-line docstring.\n"
+            )
+            scenario.write_text(
+                "### SCENARIO PROOF: add alpha docstring\n"
+                "Scenario: verify the main function docstring in alpha.py\n"
+                "Command: grep -A 1 \"def main() -> int:\" alpha.py\n"
+                "Observed: the inserted docstring appears immediately below the function signature\n"
+                "Status: PASSED\n"
+            )
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertTrue(bundle["verification_corroboration"]["has_patch_runtime_verification"])
+        self.assertTrue(bundle["verification_corroboration"]["runtime_verification_sufficient"])
+        self.assertTrue(bundle["readback"]["content_semantically_sufficient"])
+        self.assertTrue(bundle["scenario_proof"]["content_semantically_sufficient"])
+        self.assertTrue(bundle["readback"]["waived_by_runtime_corroboration"])
+        self.assertTrue(bundle["scenario_proof"]["waived_by_runtime_corroboration"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
     def test_missing_method_is_inferred_for_strong_direct_observation_record(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
 
