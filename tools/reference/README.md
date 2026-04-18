@@ -81,6 +81,7 @@ synrail check
 
 This shell is intentionally thin:
 
+- the default `synrail --help` keeps the primary shell small and leaves helper/dev surfaces out of the first operator view
 - it auto-discovers the standard artifact files under one artifact root
 - it auto-detects one sane project profile for the current project root
 - it defaults the alpha restore-point checkpoint id to `working`

@@ -33,6 +33,8 @@ Current helper or compatibility surfaces still include:
 - `repair-step`
 - `retry`
 
+The default `synrail --help` keeps helper and dev surfaces out of the first operator view even though those compatibility paths still exist underneath.
+
 ### 2. Runtime spine
 
 Purpose:

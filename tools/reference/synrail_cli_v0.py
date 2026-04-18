@@ -4550,22 +4550,22 @@ def build_parser() -> argparse.ArgumentParser:
     p_explain_proof.add_argument("--json", action="store_true")
     p_explain_proof.set_defaults(func=cmd_explain_proof)
 
-    p_final_result_template = sub.add_parser("final-result-template", help="Show template for final_result.json")
+    p_final_result_template = sub.add_parser("final-result-template", help=argparse.SUPPRESS)
     p_final_result_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_final_result_template.add_argument("--output")
     p_final_result_template.set_defaults(func=cmd_final_result_template)
 
-    p_readback_template = sub.add_parser("readback-template", help="Show template for readback.txt")
+    p_readback_template = sub.add_parser("readback-template", help=argparse.SUPPRESS)
     p_readback_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_readback_template.add_argument("--output")
     p_readback_template.set_defaults(func=cmd_readback_template)
 
-    p_scenario_proof_template = sub.add_parser("scenario-proof-template", help="Show template for scenario_proof.txt")
+    p_scenario_proof_template = sub.add_parser("scenario-proof-template", help=argparse.SUPPRESS)
     p_scenario_proof_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_scenario_proof_template.add_argument("--output")
     p_scenario_proof_template.set_defaults(func=cmd_scenario_proof_template)
 
-    p_runtime_helper = sub.add_parser("runtime-helper", help="Generate a runtime verification helper script")
+    p_runtime_helper = sub.add_parser("runtime-helper", help=argparse.SUPPRESS)
     p_runtime_helper.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_runtime_helper.add_argument("--output")
     p_runtime_helper.set_defaults(func=cmd_runtime_helper)
@@ -4856,7 +4856,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_session_export.add_argument("--refresh-file")
     p_session_export.set_defaults(func=cmd_session_export)
 
-    p_deploy = sub.add_parser("deploy", help="Deploy with acceptance guard")
+    p_deploy = sub.add_parser("deploy", help=argparse.SUPPRESS)
     p_deploy.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_deploy.add_argument("--state-file")
     p_deploy.add_argument("--deploy-run-id")
@@ -4864,7 +4864,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_deploy.add_argument("--mode", default="default", choices=["default", "dev"])
     p_deploy.set_defaults(func=cmd_deploy)
 
-    p_deploy_check = sub.add_parser("deploy-check", help="Check if deployment is allowed")
+    p_deploy_check = sub.add_parser("deploy-check", help=argparse.SUPPRESS)
     p_deploy_check.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_deploy_check.add_argument("--state-file")
     p_deploy_check.set_defaults(func=cmd_deploy_check)
@@ -4895,7 +4895,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_thin_output.add_argument("--consistency-recovery-file")
     p_thin_output.set_defaults(func=cmd_thin_output)
 
-    p_generate_prompt = sub.add_parser("generate-prompt", aliases=["next-step", "repair-step"], help="Show what to fix next")
+    p_generate_prompt = sub.add_parser("generate-prompt", aliases=["next-step", "repair-step"], help=argparse.SUPPRESS)
     p_generate_prompt.add_argument("--artifact-root")
     p_generate_prompt.add_argument("--repair-packet-file")
     p_generate_prompt.add_argument("--mode", default="default", choices=["default", "dev"])

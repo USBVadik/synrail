@@ -52,6 +52,25 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("Start new run: synrail start", dashboard.stdout)
             self.assertNotIn("usage: synrail", dashboard.stdout)
 
+    def test_help_shows_compact_primary_surface(self) -> None:
+        help_result = self.run_alpha("--help")
+        self.assertEqual(0, help_result.returncode, help_result.stdout + help_result.stderr)
+        self.assertIn("start", help_result.stdout)
+        self.assertIn("install-agent-files", help_result.stdout)
+        self.assertIn("check", help_result.stdout)
+        self.assertIn("status (dashboard)", help_result.stdout)
+        self.assertIn("explain-proof (proof-explain)", help_result.stdout)
+        self.assertIn("save", help_result.stdout)
+        self.assertIn("restore", help_result.stdout)
+        self.assertIn("session-export", help_result.stdout)
+        self.assertIn("bug-packet", help_result.stdout)
+        self.assertNotIn("final-result-template", help_result.stdout)
+        self.assertNotIn("readback-template", help_result.stdout)
+        self.assertNotIn("scenario-proof-template", help_result.stdout)
+        self.assertNotIn("runtime-helper", help_result.stdout)
+        self.assertNotIn("deploy-check", help_result.stdout)
+        self.assertNotIn("generate-prompt", help_result.stdout)
+
     def test_dashboard_shows_active_run_after_start(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_dashboard_active_") as tmpdir:
             project_root = Path(tmpdir) / "project"
