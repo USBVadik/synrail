@@ -723,6 +723,64 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertNotIn("readback", bundle["semantically_insufficient_sections"])
         self.assertEqual("ACCEPTED", verdict["closure_status"])
 
+    def test_semantically_sufficient_readback_is_still_marked_waived_when_runtime_corroboration_is_strong(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_runtime_corroborated_with_good_readback_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["warroom/templates/index.html"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "warroom/templates/index.html",
+                    "added_line": "                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                    "context_before": "                </h2>",
+                    "context_after": "                <form action=\"/add_token\" method=\"post\" class=\"mb-6 flex gap-2\">",
+                    "verification_command": "grep -n 'Local signals only' warroom/templates/index.html",
+                    "verification_result": "24:                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only warroom/templates/index.html with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text(
+                "### READBACK: add watchlist subtitle\n"
+                "Changed surface: warroom/templates/index.html\n"
+                "Observed: the template now contains a Local signals only subtitle directly under the Watchlist heading.\n"
+            )
+            scenario.write_text(
+                "### SCENARIO PROOF: add watchlist subtitle\n"
+                "Scenario: local homepage render check for the Watchlist section\n"
+                "Command: grep -n \"Local signals only\" warroom/templates/index.html\n"
+                "Observed: line 24 shows the inserted subtitle paragraph under the Watchlist heading\n"
+                "Status: PASSED\n"
+            )
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertTrue(bundle["readback"]["content_semantically_sufficient"])
+        self.assertTrue(bundle["readback"]["waived_by_runtime_corroboration"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
     def test_missing_scenario_proof_is_waived_when_final_result_carries_strong_runtime_corroboration(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
 
@@ -829,6 +887,64 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertFalse(bundle["scenario_proof"]["content_semantically_sufficient"])
         self.assertTrue(bundle["scenario_proof"]["waived_by_runtime_corroboration"])
         self.assertNotIn("scenario_proof", bundle["semantically_insufficient_sections"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
+    def test_semantically_sufficient_scenario_is_still_marked_waived_when_runtime_corroboration_is_strong(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_runtime_corroborated_with_good_scenario_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["warroom/templates/index.html"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "warroom/templates/index.html",
+                    "added_line": "                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                    "context_before": "                </h2>",
+                    "context_after": "                <form action=\"/add_token\" method=\"post\" class=\"mb-6 flex gap-2\">",
+                    "verification_command": "grep -n 'Local signals only' warroom/templates/index.html",
+                    "verification_result": "24:                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only warroom/templates/index.html with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text(
+                "### READBACK: add watchlist subtitle\n"
+                "Changed surface: warroom/templates/index.html\n"
+                "Observed: the template now contains a Local signals only subtitle directly under the Watchlist heading.\n"
+            )
+            scenario.write_text(
+                "### SCENARIO PROOF: add watchlist subtitle\n"
+                "Scenario: local homepage render check for the Watchlist section\n"
+                "Command: grep -n \"Local signals only\" warroom/templates/index.html\n"
+                "Observed: line 24 shows the inserted subtitle paragraph under the Watchlist heading\n"
+                "Status: PASSED\n"
+            )
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertTrue(bundle["scenario_proof"]["content_semantically_sufficient"])
+        self.assertTrue(bundle["scenario_proof"]["waived_by_runtime_corroboration"])
         self.assertEqual("ACCEPTED", verdict["closure_status"])
 
     def test_missing_method_is_inferred_for_strong_direct_observation_record(self) -> None:

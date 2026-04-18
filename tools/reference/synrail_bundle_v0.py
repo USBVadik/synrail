@@ -575,10 +575,8 @@ def readback_requirement_is_semantically_sufficient(
     structured_diff_sufficient: bool,
     final_result_status_sufficient: bool,
 ) -> tuple[bool, bool]:
-    if readback_sufficient:
-        return True, False
     waived_by_runtime_corroboration = structured_diff_sufficient and final_result_status_sufficient
-    return waived_by_runtime_corroboration, waived_by_runtime_corroboration
+    return readback_sufficient or waived_by_runtime_corroboration, waived_by_runtime_corroboration
 
 
 def scenario_requirement_is_semantically_sufficient(
@@ -587,10 +585,8 @@ def scenario_requirement_is_semantically_sufficient(
     structured_diff_sufficient: bool,
     final_result_status_sufficient: bool,
 ) -> tuple[bool, bool]:
-    if scenario_sufficient:
-        return True, False
     waived_by_runtime_corroboration = structured_diff_sufficient and final_result_status_sufficient
-    return waived_by_runtime_corroboration, waived_by_runtime_corroboration
+    return scenario_sufficient or waived_by_runtime_corroboration, waived_by_runtime_corroboration
 
 
 def cleanup_is_semantically_sufficient(cleanup: dict) -> bool:
