@@ -1095,7 +1095,7 @@ class TestThinOutputBuildRecord(unittest.TestCase):
             record["thin_section_guidance"],
         )
         self.assertIn(
-            "scenario_proof: record an explicit scenario-proof result for the attested target surface",
+            "scenario_proof: record a scenario-proof with a concrete command or verification step, observed output, and explicit pass/fail \u2014 do not just restate the task",
             record["thin_section_guidance"],
         )
 

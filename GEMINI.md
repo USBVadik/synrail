@@ -2,13 +2,22 @@
 
 Use Synrail as the default local control path for this repo.
 
-## Start
+## First Command
 
-Before editing code, start one controlled run:
+For every new user task, run Synrail first so you can see the current governed state:
 
 ```bash
-ARTIFACT_ROOT="$(pwd)/.synrail"
-synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Describe the bounded local change."
+synrail
+```
+
+Synrail is a CLI control kernel, not a background daemon.
+
+## Start
+
+If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:
+
+```bash
+synrail start "Describe the bounded local change."
 ```
 
 ## Work
@@ -20,9 +29,9 @@ synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-id
 ## Finish
 
 ```bash
-synrail check --artifact-root "$ARTIFACT_ROOT"
+synrail check
 ```
 
-If non-green, run `synrail repair-step --artifact-root "$ARTIFACT_ROOT"`, repair only the named gap, and re-check.
+If non-green, fix only what check tells you to fix, then rerun `synrail check`.
 
 Do not bypass Synrail and do not claim success without real local verification.

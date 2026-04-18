@@ -1,1 +1,4 @@
-core/router.py: read back the changed branch and confirmed it imports the cinematic helper on the zoom path.
+core/router.py: read back the changed branch at line 42.
+Observed: the function handle_zoom_request() now imports cinematic_helper from core.effects.
+The import statement reads: from core.effects import cinematic_helper
+Confirmed the handler route /api/zoom dispatches through the new path.

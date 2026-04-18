@@ -1,0 +1,3 @@
+.synrail/checkpoints/working/artifacts/state.json
+.synrail/checkpoints/working/checkpoint_record.json
+.synrail/checkpoints/working/checkpoint_verify.json

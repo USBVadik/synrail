@@ -167,13 +167,13 @@ class TestFailureReason(unittest.TestCase):
 
 
 class TestNextCommand(unittest.TestCase):
-    def test_repairable_returns_retry(self) -> None:
+    def test_repairable_returns_check(self) -> None:
         packet = {
             "resumability": {"status": "REPAIRABLE"},
             "repair_termination": {"status": "CONTINUE"},
             "resumability_family": "",
         }
-        self.assertEqual("synrail retry", next_command(packet, "restore_readiness_truth"))
+        self.assertEqual("synrail check", next_command(packet, "restore_readiness_truth"))
 
     def test_terminated_returns_empty(self) -> None:
         packet = {
@@ -261,7 +261,7 @@ class TestBuildPromptBridge(unittest.TestCase):
     def test_next_command_repairable(self) -> None:
         packet = _minimal_packet(resumability_status="REPAIRABLE", termination_status="CONTINUE")
         record = build_prompt_bridge(repair_packet=packet)
-        self.assertEqual("synrail retry", record["next_command"])
+        self.assertEqual("synrail check", record["next_command"])
 
     def test_next_command_terminated(self) -> None:
         packet = _minimal_packet(resumability_status="REPAIRABLE", termination_status="TERMINATE")
@@ -334,8 +334,7 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertEqual("scenario_proof_record", record["current_step_subsurface_id"])
         self.assertIn("Checklist for /tmp/synrail/scenario_proof.txt:", record["prompt"])
         self.assertIn("Status: PASSED", record["prompt"])
-        self.assertIn("synrail scenario-proof-template", record["prompt"])
-        self.assertIn("synrail explain-proof", record["prompt"])
+        self.assertIn("Do not restate the task description", record["prompt"])
 
     def test_readback_subsurface_includes_checklist(self) -> None:
         packet = _minimal_packet(
@@ -348,8 +347,7 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertEqual("readback_record", record["current_step_subsurface_id"])
         self.assertIn("Checklist for /tmp/synrail/readback.txt:", record["prompt"])
         self.assertIn("Changed surface:", record["prompt"])
-        self.assertIn("synrail readback-template", record["prompt"])
-        self.assertIn("source-only grep", record["prompt"])
+        self.assertIn("Do not paraphrase", record["prompt"])
 
     def test_no_subsurface_uses_step_scope(self) -> None:
         packet = _minimal_packet()

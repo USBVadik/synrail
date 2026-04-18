@@ -75,7 +75,7 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             self.assertEqual(0, check.returncode, check.stdout + check.stderr)
             self.assertNotIn(str(project_root), check.stdout)
             self.assertIn(
-                "Do this now: Run synrail repair-step, then update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
+                "Fix the issue shown below: update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged. Then rerun synrail check.",
                 check.stdout,
             )
             self.assertIn("Repair target: update the result payload in .synrail/final_result.json", check.stdout)
@@ -83,7 +83,7 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             thin_output = load_json(artifact_root / "thin_output.json")
             self.assertEqual("PROOF_INVALID", thin_output["outcome_class"])
             self.assertEqual(
-                "Run synrail repair-step, then update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
+                "Fix the issue shown below: update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged. Then rerun synrail check.",
                 thin_output["action_now"],
             )
             self.assertEqual(

@@ -311,42 +311,159 @@ def structured_diff_provenance_is_semantically_sufficient(
     return bool(method and changed_file and changed_file_matches and has_patch_context and has_verification)
 
 
-def readback_is_semantically_sufficient(value: str, modified_files: list[str]) -> bool:
+def _word_set(text: str) -> set[str]:
+    """Extract lowercase alphabetic tokens of 3+ chars for overlap comparison."""
+    return {w for w in text.lower().split() if len(w) >= 3 and w.isalpha()}
+
+
+def _is_parroting_task(proof_text: str, task_text: str) -> bool:
+    """Return True if proof is suspiciously similar to the task description.
+
+    A proof that merely restates the task in different words is worthless.
+    We check word-level overlap: if >70% of the proof's content words also
+    appear in the task description, it's likely parroting.
+    """
+    if not task_text or not proof_text:
+        return False
+    proof_words = _word_set(proof_text)
+    task_words = _word_set(task_text)
+    if len(proof_words) < 4:
+        return False
+    # Exclude very common words that inflate overlap
+    filler = {"the", "and", "for", "this", "that", "with", "from", "was", "were", "has", "have", "not", "are", "but"}
+    proof_meaningful = proof_words - filler
+    task_meaningful = task_words - filler
+    if not proof_meaningful:
+        return False
+    overlap = len(proof_meaningful & task_meaningful) / len(proof_meaningful)
+    return overlap > 0.70
+
+
+def _has_concrete_identifier(value: str) -> bool:
+    """Return True if the text contains at least one concrete identifier.
+
+    Concrete identifiers are file paths, function/class names, line numbers,
+    code tokens, or command fragments — anything more specific than prose.
+    """
+    for line in non_empty_lines(value):
+        stripped = line.strip()
+        # File path patterns: contains / or . with extension-like suffix
+        if "/" in stripped or "\\" in stripped:
+            return True
+        # Dotted identifiers like module.function or file.ext
+        if "." in stripped and any(
+            part.strip() for part in stripped.split(".") if len(part.strip()) >= 2
+        ):
+            tokens = stripped.split()
+            if any("." in tok and not tok.endswith(".") and not tok.startswith(".") for tok in tokens):
+                return True
+        # Line number references
+        if contains_any_keyword(stripped, ["line ", "line:", "L", ":"]) and any(ch.isdigit() for ch in stripped):
+            return True
+        # Code-like tokens: camelCase, snake_case, or ALL_CAPS identifiers
+        for token in stripped.split():
+            clean = token.strip(".,;:\"'`()[]{}#")
+            if not clean:
+                continue
+            if "_" in clean and len(clean) >= 4 and any(ch.isalpha() for ch in clean):
+                return True
+            if any(ch.isupper() for ch in clean[1:]) and any(ch.islower() for ch in clean):
+                return True
+    return False
+
+
+_ACTION_VERBS = [
+    "implemented", "added", "created", "wrote", "built", "made",
+    "refactored", "updated", "modified", "changed", "fixed", "removed",
+    "deleted", "replaced", "introduced", "set up", "configured",
+    "applied", "integrated", "migrated", "converted", "moved",
+]
+
+_OBSERVATION_LABELS = ["observed", "confirmed"]
+
+
+def _readback_line_is_action_narrative(line: str) -> bool:
+    """Return True if a line uses an observation label but contains action verbs.
+
+    Example bad line: "Observed: Implemented compute_retry_delay with backoff"
+    Example good line: "Observed: compute_retry_delay returns 2.0 for attempt=1"
+    """
+    lowered = line.lower()
+    for label in _OBSERVATION_LABELS:
+        pos = lowered.find(label)
+        if pos == -1:
+            continue
+        # Extract the content after the label
+        after = lowered[pos + len(label):]
+        # Strip colon, dash, whitespace
+        after = after.lstrip(":- \t")
+        if not after:
+            continue
+        # Check if the content starts with an action verb
+        for verb in _ACTION_VERBS:
+            if after.startswith(verb) and (
+                len(after) == len(verb) or not after[len(verb)].isalpha()
+            ):
+                return True
+    return False
+
+
+def readback_is_semantically_sufficient(value: str, modified_files: list[str], task_identity: str = "") -> bool:
     if not value:
         return False
     lines = non_empty_lines(value)
-    if not lines or len(value.strip()) < 32:
+    if not lines or len(value.strip()) < 48:
+        return False
+    if len(lines) < 2:
         return False
     if not references_modified_file(value, modified_files):
         return False
-    return any(
-        contains_any_keyword(
-            line,
-            [
-                "read back",
-                "readback",
-                "observed",
-                "confirmed",
-                "contains",
-                "returns",
-                "imports",
-                "branch",
-                "handler",
-                "route",
-                "function",
-                "class",
-                "line",
-            ],
-        )
-        for line in lines
-    )
+    if not _has_concrete_identifier(value):
+        return False
+    if _is_parroting_task(value, task_identity):
+        return False
+    observation_keywords = [
+        "read back",
+        "readback",
+        "observed",
+        "confirmed",
+        "contains",
+        "returns",
+        "imports",
+        "branch",
+        "handler",
+        "route",
+        "function",
+        "class",
+        "line",
+    ]
+    matching_lines = [
+        line for line in lines
+        if contains_any_keyword(line, observation_keywords)
+    ]
+    if not matching_lines:
+        return False
+    # Reject if every line with an observation label is action-narrative
+    observation_label_lines = [
+        line for line in matching_lines
+        if contains_any_keyword(line, _OBSERVATION_LABELS)
+    ]
+    if observation_label_lines and all(
+        _readback_line_is_action_narrative(line) for line in observation_label_lines
+    ):
+        return False
+    return True
 
 
-def scenario_is_semantically_sufficient(value: str) -> bool:
+def scenario_is_semantically_sufficient(value: str, task_identity: str = "") -> bool:
     if not value:
         return False
     lines = non_empty_lines(value)
-    if not lines or len(value.strip()) < 32:
+    if not lines or len(value.strip()) < 48:
+        return False
+    if len(lines) < 3:
+        return False
+    if _is_parroting_task(value, task_identity):
         return False
     has_context = any(
         contains_any_keyword(line, ["scenario:", "status:", "result:", "observed", "returned", "response", "output"])
@@ -356,7 +473,11 @@ def scenario_is_semantically_sufficient(value: str) -> bool:
         contains_any_keyword(line, ["pass", "passed", "fail", "failed", "success", "succeeded", "blocked"])
         for line in lines
     )
-    return has_context and has_outcome
+    has_specifics = _has_concrete_identifier(value) or any(
+        contains_any_keyword(line, ["command:", "curl", "python", "node", "npm", "bash", "http", "localhost", "grep", "cat", "run "])
+        for line in lines
+    )
+    return has_context and has_outcome and has_specifics
 
 
 def cleanup_is_semantically_sufficient(cleanup: dict) -> bool:
@@ -465,11 +586,6 @@ def build_bundle(args: argparse.Namespace) -> dict:
             or diff_record_semantically_sufficient
         )
     surfaces = attested_surfaces(modified_files, diff_provenance_record)
-    readback_semantically_sufficient = readback_is_semantically_sufficient(
-        readback_text,
-        surfaces,
-    )
-    scenario_semantically_sufficient = scenario_is_semantically_sufficient(scenario_text)
     artifact_identity_record = final.get("artifact_identity", {})
     baseline_identity = first_non_empty(args.baseline_identity, artifact_identity_record.get("baseline_identity", ""))
     execution_surface_identity = first_non_empty(
@@ -479,6 +595,12 @@ def build_bundle(args: argparse.Namespace) -> dict:
     prompt_identity = first_non_empty(args.prompt_identity, artifact_identity_record.get("prompt_identity", ""))
     task_identity = first_non_empty(args.task_identity, artifact_identity_record.get("task_identity", ""))
     scope_task_text = first_non_empty(task_identity, prompt_identity)
+    readback_semantically_sufficient = readback_is_semantically_sufficient(
+        readback_text,
+        surfaces,
+        task_identity=scope_task_text,
+    )
+    scenario_semantically_sufficient = scenario_is_semantically_sufficient(scenario_text, task_identity=scope_task_text)
     scope_alignment_evaluated, scope_alignment_semantically_sufficient = scope_alignment_is_semantically_sufficient(
         change_disposition=change_disposition,
         git_diff=git_diff,

@@ -1,0 +1,5 @@
+Fallback ready: working
+Fallback type: Pre-run workspace snapshot
+What it means: You now have a trusted fallback if this run goes non-green.
+What to do next: continue the current workflow. Restore is ready if you need it.
+Restore command: synrail restore

@@ -712,7 +712,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertNotIn("does not have the next bounded repair instruction yet", repair_step.stdout.lower())
             self.assertIn(".synrail/scenario_proof.txt", repair_step.stdout)
             self.assertIn("Repair target: record scenario proof in .synrail/scenario_proof.txt", repair_step.stdout)
-            self.assertIn("synrail scenario-proof-template", load_json(artifact_root / "prompt.json")["prompt"])
+            self.assertIn("Do not restate the task description", load_json(artifact_root / "prompt.json")["prompt"])
 
 
     def test_start_after_terminal_state_auto_clears_proof(self) -> None:

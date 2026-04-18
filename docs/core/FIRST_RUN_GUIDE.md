@@ -28,7 +28,7 @@ synrail
 
 Synrail is a CLI control kernel, not a background daemon. The dashboard tells you whether a controlled run is active and what the next command should be.
 
-## Five Steps
+## Four Steps
 
 ### 1. Start a controlled run
 
@@ -48,23 +48,17 @@ Open `.synrail/final_result.json` and replace the placeholder content with your 
 synrail check
 ```
 
-**Expected output on first try: non-green.** This is normal. You will see `CLAIMED_NOT_ACCEPTED` with a `blocking_reason` and a `next_safe_step`. Read them.
+**Expected output on first try: non-green.** This is normal. You will see what failed and what to fix.
 
-### 4. Repair
+### 4. Fix what check says, then re-check
 
-```bash
-synrail repair-step
-```
-
-This tells you exactly what is still missing or weak. Fix the named issue in your proof files.
-
-### 5. Re-check
+Fix only the named issue in your proof files, then rerun:
 
 ```bash
 synrail check
 ```
 
-Repeat steps 4-5 until you see `CLOSURE_ACCEPTED`. Typical: 2-4 iterations.
+Repeat until you see `CLOSURE_ACCEPTED`. Typical: 2-4 iterations.
 
 ## What non-green means
 

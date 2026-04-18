@@ -2,12 +2,18 @@
 
 This repo uses Synrail to keep one bounded local change inside one controlled run.
 
+## First Step On Every New Task
+
+Run Synrail before deciding what to do next. It is a CLI control kernel, not a background daemon.
+```bash
+synrail
+```
+
 ## Before You Edit
 
-1. Start one controlled run before mutating code:
+1. If Synrail shows that no controlled run is active, start one before mutating code:
 ```bash
-ARTIFACT_ROOT="$(pwd)/.synrail"
-synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Describe the bounded local change."
+synrail start "Describe the bounded local change."
 ```
 
 2. Keep the change local and bounded to the stated task.
@@ -17,16 +23,14 @@ synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-id
 ## Before You Claim Success
 
 ```bash
-synrail check --artifact-root "$ARTIFACT_ROOT"
+synrail check
 ```
 
-If Synrail is non-green, run:
+If Synrail is non-green, fix only what check tells you to fix, then rerun:
 
 ```bash
-synrail repair-step --artifact-root "$ARTIFACT_ROOT"
+synrail check
 ```
-
-Then repair only the named gap and re-check.
 
 ## Important
 

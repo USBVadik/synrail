@@ -75,8 +75,7 @@ synrail
 synrail start "Reject a plain-text final result and keep the repair bounded."
 # synrail start already creates starter proof files under .synrail/; edit them in place, then:
 synrail check
-synrail repair-step
-synrail bug-packet --artifact-root .synrail
+# if non-green, fix what check says, then rerun synrail check
 ```
 
 This shell is intentionally thin:

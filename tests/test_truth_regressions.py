@@ -310,7 +310,7 @@ class TruthRegressionTests(unittest.TestCase):
 
         self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
         self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
-        self.assertEqual(["diff_provenance"], bundle["semantically_insufficient_sections"])
+        self.assertIn("diff_provenance", bundle["semantically_insufficient_sections"])
         self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
         self.assertEqual("PROOF_BUNDLE_STRENGTHENING", verdict["next_allowed_transition"])
 
@@ -675,6 +675,146 @@ class TruthRegressionTests(unittest.TestCase):
             bundle["semantic_next_safe_step"],
         )
         self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
+
+
+class TestAntiNarrativeGuards(unittest.TestCase):
+    """Proof files must contain concrete evidence, not restatements of the task."""
+
+    def test_readback_rejects_single_line(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        # Single line even with a file reference is too thin
+        self.assertFalse(readback_is_semantically_sufficient(
+            "core/router.py: confirmed it works correctly after the change.",
+            ["core/router.py"],
+        ))
+
+    def test_readback_rejects_no_concrete_identifier(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        # Multiple lines but generic prose — no function/class/line/path identifiers
+        self.assertFalse(readback_is_semantically_sufficient(
+            "The change was implemented successfully.\nObserved that the feature now works as intended.\nEverything looks correct.",
+            ["core/router.py"],
+        ))
+
+    def test_readback_rejects_parroting(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        # Proof that just restates task words with a file reference sprinkled in
+        self.assertFalse(readback_is_semantically_sufficient(
+            "core/router.py: cinematic zoom trigger handler confirmed for router animation effects module.\n"
+            "Observed cinematic zoom trigger handler animation effects router module confirmed.",
+            ["core/router.py"],
+            task_identity="implement the cinematic zoom trigger handler for the core router module with animation effects",
+        ))
+
+    def test_readback_accepts_concrete_evidence(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertTrue(readback_is_semantically_sufficient(
+            "core/router.py line 42: observed the function handle_zoom_request().\nIt imports cinematic_helper from core.effects module.\nConfirmed the route /api/zoom dispatches correctly.",
+            ["core/router.py"],
+            task_identity="add cinematic zoom trigger",
+        ))
+
+    def test_readback_rejects_action_narrative_observed(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        # Alpha run 005 pattern: "Observed: Implemented X" is action, not observation
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: api_service/retry_logic.py\n"
+            "Observed: Implemented compute_retry_delay with exponential backoff and cap_seconds.\n"
+            "Changed surface: tests/test_retry_logic.py\n"
+            "Observed: Added tests for cap_seconds and execute_with_retry with mocked sleep.",
+            ["api_service/retry_logic.py", "tests/test_retry_logic.py"],
+        ))
+
+    def test_readback_rejects_confirmed_action_narrative(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        # "Confirmed: Created the handler" is action, not confirmation
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/handler.py\n"
+            "Confirmed: Created the new request handler with retry logic.\n"
+            "Confirmed: Updated the test file to cover edge cases.",
+            ["src/handler.py"],
+        ))
+
+    def test_readback_accepts_genuine_observation_after_label(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        # "Observed: compute_retry_delay returns 2.0" is a genuine observation
+        self.assertTrue(readback_is_semantically_sufficient(
+            "Changed surface: api_service/retry_logic.py\n"
+            "Observed: compute_retry_delay returns 2.0 for attempt=1 with base=1.0.\n"
+            "Observed: execute_with_retry calls sleep() 3 times before raising.",
+            ["api_service/retry_logic.py"],
+        ))
+
+    def test_readback_accepts_mixed_lines_with_one_genuine(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        # One action-narrative line + one genuine observation → accepts
+        self.assertTrue(readback_is_semantically_sufficient(
+            "Changed surface: api_service/retry_logic.py\n"
+            "Observed: Implemented compute_retry_delay with backoff.\n"
+            "Observed: function compute_retry_delay returns float type at line 42.",
+            ["api_service/retry_logic.py"],
+        ))
+
+    def test_scenario_rejects_two_line_generic(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        # Only 2 lines, no command
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: tested locally.\nStatus: PASSED",
+        ))
+
+    def test_scenario_rejects_no_specifics(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        # 3 lines but no concrete command/path/identifier
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: tested the feature end to end.\nObserved the expected behavior after the change.\nStatus: PASSED",
+        ))
+
+    def test_scenario_rejects_parroting(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        # Proof that merely restates task words without concrete evidence
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "cinematic zoom trigger handler for core router module animation effects confirmed\n"
+            "cinematic zoom trigger handler core router animation effects verified\n"
+            "cinematic zoom trigger handler animation effects working",
+            task_identity="implement the cinematic zoom trigger handler for the core router module with animation effects",
+        ))
+
+    def test_scenario_accepts_concrete_evidence(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertTrue(scenario_is_semantically_sufficient(
+            "Scenario: cinematic zoom on core/router.py\nCommand: python -m pytest tests/test_router.py::test_zoom -v\nObserved: test_zoom PASSED, handler returns /api/zoom\nStatus: PASSED",
+            task_identity="add cinematic zoom trigger",
+        ))
+
+    def test_parroting_detector_catches_high_overlap(self) -> None:
+        from synrail_bundle_v0 import _is_parroting_task
+        self.assertTrue(_is_parroting_task(
+            "Added the cinematic zoom trigger to the router handler for the bot",
+            "add cinematic zoom trigger to the router handler",
+        ))
+
+    def test_parroting_detector_allows_genuine_evidence(self) -> None:
+        from synrail_bundle_v0 import _is_parroting_task
+        self.assertFalse(_is_parroting_task(
+            "core/router.py line 42 imports cinematic_helper from core.effects module",
+            "add cinematic zoom trigger to the router handler",
+        ))
+
+    def test_concrete_identifier_detects_file_path(self) -> None:
+        from synrail_bundle_v0 import _has_concrete_identifier
+        self.assertTrue(_has_concrete_identifier("Changed file: src/components/App.tsx"))
+
+    def test_concrete_identifier_detects_snake_case(self) -> None:
+        from synrail_bundle_v0 import _has_concrete_identifier
+        self.assertTrue(_has_concrete_identifier("The function handle_zoom_request was updated"))
+
+    def test_concrete_identifier_detects_camel_case(self) -> None:
+        from synrail_bundle_v0 import _has_concrete_identifier
+        self.assertTrue(_has_concrete_identifier("Updated handleZoomRequest in the router"))
+
+    def test_concrete_identifier_rejects_plain_prose(self) -> None:
+        from synrail_bundle_v0 import _has_concrete_identifier
+        self.assertFalse(_has_concrete_identifier("The feature was added and works correctly"))
 
 
 if __name__ == "__main__":

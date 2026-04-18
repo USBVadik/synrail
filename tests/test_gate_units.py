@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -871,6 +872,359 @@ class TestDoctorCoverageDeployment(unittest.TestCase):
         self.assertEqual("PASS", record["gate_status"])
         self.assertEqual("CRITICAL_FAIL_MODE_MEASURED_COVERAGE_MET", record["gate_reason"])
         self.assertFalse(record["deployment_context_confirmed"])
+
+
+class TestPreRunSnapshot(unittest.TestCase):
+    """Tests for pre-run snapshot checkpoint support (bug 007 fix)."""
+
+    def test_initialized_state_is_safe_point(self) -> None:
+        from synrail_checkpoint_v0 import classify_safe_point
+        state = default_state("run1", "bounded_change")
+        safe_class, eligible, failures = classify_safe_point(state)
+        self.assertEqual("PRE_RUN_SNAPSHOT", safe_class)
+        self.assertTrue(eligible)
+        self.assertEqual([], failures)
+
+    def test_ready_state_without_gates_is_not_safe(self) -> None:
+        from synrail_checkpoint_v0 import classify_safe_point
+        state = default_state("run1", "bounded_change")
+        state["state"] = "READY"
+        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+        # READY + CLAIMED_NOT_ACCEPTED matches VERIFIED_WORKING_STATE but
+        # doctor/target/integrity are still UNKNOWN, so it should fail.
+        safe_class, eligible, failures = classify_safe_point(state)
+        self.assertEqual("VERIFIED_WORKING_STATE", safe_class)
+        self.assertFalse(eligible)
+        self.assertTrue(len(failures) > 0)
+
+    def test_create_record_from_initialized_succeeds(self) -> None:
+        import argparse
+        import tempfile
+        from synrail_checkpoint_v0 import create_record
+        from synrail_spine_v0 import default_state as make_state
+        state = make_state("run1", "bounded_change")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            state_path = Path(tmpdir) / "state.json"
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = Path(tmpdir) / "checkpoint"
+            args = argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=tmpdir,
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            )
+            record = create_record(args)
+            self.assertEqual("OK", record["result"])
+            self.assertEqual("PRE_RUN_SNAPSHOT", record["safe_point_class"])
+            self.assertTrue(record["safe_point_eligible"])
+            # State artifact should be in manifest
+            artifact_ids = [a["artifact_id"] for a in record["artifact_manifest"]]
+            self.assertIn("state", artifact_ids)
+
+    def test_verify_pre_run_snapshot_passes(self) -> None:
+        import argparse
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, verify_record
+        from synrail_spine_v0 import default_state as make_state
+        state = make_state("run1", "bounded_change")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            state_path = Path(tmpdir) / "state.json"
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = Path(tmpdir) / "checkpoint"
+            args = argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=tmpdir,
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            )
+            record = create_record(args)
+            verified = verify_record(record)
+            self.assertEqual("OK", verified["result"])
+            self.assertEqual("PASSED", verified["verification"]["status"])
+
+
+class TestRestoreRoundTrip(unittest.TestCase):
+    """Full save → break → restore round-trip using git workspace snapshot."""
+
+    def test_restore_recovers_committed_file(self) -> None:
+        import argparse
+        import os
+        import subprocess
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, restore_record, verify_record
+        from synrail_spine_v0 import default_state as make_state
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            target = project / "hello.py"
+            target.write_text('print("hello")\n')
+            env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+                   "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+            subprocess.run(["git", "init"], cwd=str(project), capture_output=True, env=env)
+            subprocess.run(["git", "add", "."], cwd=str(project), capture_output=True, env=env)
+            subprocess.run(["git", "commit", "-m", "init"], cwd=str(project), capture_output=True, env=env)
+
+            state = make_state("run1", "bounded_change")
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+
+            args = argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=str(project),
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            )
+            record = create_record(args)
+            self.assertEqual("OK", record["result"])
+            self.assertIn("workspace_snapshot", record)
+
+            # Break the file
+            target.write_text("BROKEN\n")
+            self.assertEqual("BROKEN", target.read_text().strip())
+
+            # Restore
+            restored = restore_record(record, project / ".synrail")
+            self.assertEqual("OK", restored["result"])
+            self.assertTrue(restored["restore"]["workspace_restored"])
+
+            # File should be recovered
+            self.assertEqual('print("hello")', target.read_text().strip())
+
+    def test_restore_recovers_uncommitted_changes(self) -> None:
+        import argparse
+        import os
+        import subprocess
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, restore_record
+        from synrail_spine_v0 import default_state as make_state
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            target = project / "hello.py"
+            target.write_text('print("hello")\n')
+            env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+                   "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+            subprocess.run(["git", "init"], cwd=str(project), capture_output=True, env=env)
+            subprocess.run(["git", "add", "."], cwd=str(project), capture_output=True, env=env)
+            subprocess.run(["git", "commit", "-m", "init"], cwd=str(project), capture_output=True, env=env)
+
+            # Add uncommitted change before save
+            target.write_text('print("modified")\n')
+
+            state = make_state("run1", "bounded_change")
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+
+            args = argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=str(project),
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            )
+            record = create_record(args)
+            self.assertEqual("OK", record["result"])
+            self.assertTrue(record["workspace_snapshot"]["has_uncommitted"])
+
+            # Break the file
+            target.write_text("BROKEN\n")
+
+            # Restore
+            restored = restore_record(record, project / ".synrail")
+            self.assertEqual("OK", restored["result"])
+
+            # Should restore to the uncommitted state (not the commit)
+            self.assertEqual('print("modified")', target.read_text().strip())
+
+
+class TestRestoreHonestyWithoutGit(unittest.TestCase):
+    """Restore must fail honestly when workspace snapshot is unavailable."""
+
+    def test_create_record_without_git_includes_workspace_snapshot_none(self) -> None:
+        import argparse
+        import tempfile
+        from synrail_checkpoint_v0 import create_record
+        from synrail_spine_v0 import default_state as make_state
+
+        state = make_state("run1", "bounded_change")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # tmpdir is NOT a git repo
+            state_path = Path(tmpdir) / "state.json"
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = Path(tmpdir) / "checkpoint"
+            args = argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=tmpdir,
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            )
+            record = create_record(args)
+            self.assertEqual("OK", record["result"])
+            self.assertEqual("PRE_RUN_SNAPSHOT", record["safe_point_class"])
+            # workspace_snapshot must be present even without git
+            self.assertIn("workspace_snapshot", record)
+            self.assertEqual("none", record["workspace_snapshot"]["type"])
+
+    def test_restore_fails_honestly_when_workspace_snapshot_is_none(self) -> None:
+        import argparse
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, restore_record
+        from synrail_spine_v0 import default_state as make_state
+
+        state = make_state("run1", "bounded_change")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Non-git project
+            state_path = Path(tmpdir) / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = Path(tmpdir) / ".synrail" / "checkpoints" / "working"
+            args = argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=tmpdir,
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            )
+            record = create_record(args)
+            self.assertEqual("OK", record["result"])
+            self.assertEqual("none", record["workspace_snapshot"]["type"])
+
+            # Attempt restore — must fail honestly
+            target_root = Path(tmpdir) / ".synrail"
+            restored = restore_record(record, target_root)
+            self.assertFalse(restored["restore"]["workspace_restored"])
+            self.assertEqual("RESTORE_FAILED", restored["restore"]["status"])
+            self.assertTrue(
+                any("workspace restore failed" in f for f in restored["restore"]["failure_reasons"]),
+                f"Expected workspace failure reason, got: {restored['restore']['failure_reasons']}",
+            )
+
+    def test_restore_reports_restored_with_git(self) -> None:
+        """Sanity check: with git, restore still reports RESTORED."""
+        import argparse
+        import os
+        import subprocess
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, restore_record
+        from synrail_spine_v0 import default_state as make_state
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            target = project / "hello.py"
+            target.write_text('print("hello")\n')
+            env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+                   "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+            subprocess.run(["git", "init"], cwd=str(project), capture_output=True, env=env)
+            subprocess.run(["git", "add", "."], cwd=str(project), capture_output=True, env=env)
+            subprocess.run(["git", "commit", "-m", "init"], cwd=str(project), capture_output=True, env=env)
+
+            state = make_state("run1", "bounded_change")
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+            args = argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=str(project),
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            )
+            record = create_record(args)
+            self.assertEqual("git", record["workspace_snapshot"]["type"])
+
+            # Break and restore
+            target.write_text("BROKEN\n")
+            restored = restore_record(record, project / ".synrail")
+            self.assertEqual("OK", restored["result"])
+            self.assertTrue(restored["restore"]["workspace_restored"])
+            self.assertEqual("RESTORED", restored["restore"]["status"])
+
+
+class TestCleanSurfaceAutoDetect(unittest.TestCase):
+    """Validates the auto-detection rule: active run → clean_surface=True."""
+
+    def _apply_auto_detect(self, state: dict, initial_clean_surface: bool = False) -> bool:
+        """Replicate the auto-detect logic from cmd_check."""
+        import argparse
+        args = argparse.Namespace(clean_surface=initial_clean_surface)
+        if not getattr(args, "clean_surface", False):
+            current_state = state.get("state", "")
+            if current_state and current_state not in {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}:
+                args.clean_surface = True
+        return args.clean_surface
+
+    def test_initialized_state_auto_sets_clean_surface(self) -> None:
+        state = default_state("r1", "bounded_change")
+        self.assertEqual(state["state"], "INITIALIZED")
+        self.assertTrue(self._apply_auto_detect(state))
+
+    def test_ready_state_auto_sets_clean_surface(self) -> None:
+        state = default_state("r1", "bounded_change")
+        state["state"] = "READY"
+        self.assertTrue(self._apply_auto_detect(state))
+
+    def test_execution_completed_auto_sets_clean_surface(self) -> None:
+        state = default_state("r1", "bounded_change")
+        state["state"] = "EXECUTION_COMPLETED"
+        self.assertTrue(self._apply_auto_detect(state))
+
+    def test_closure_accepted_does_not_auto_set(self) -> None:
+        state = default_state("r1", "bounded_change")
+        state["state"] = "CLOSURE_ACCEPTED"
+        self.assertFalse(self._apply_auto_detect(state))
+
+    def test_closure_rejected_does_not_auto_set(self) -> None:
+        state = default_state("r1", "bounded_change")
+        state["state"] = "CLOSURE_REJECTED"
+        self.assertFalse(self._apply_auto_detect(state))
+
+    def test_explicit_flag_not_overridden(self) -> None:
+        state = default_state("r1", "bounded_change")
+        state["state"] = "INITIALIZED"
+        self.assertTrue(self._apply_auto_detect(state, initial_clean_surface=True))
+
+    def test_empty_state_does_not_auto_set(self) -> None:
+        self.assertFalse(self._apply_auto_detect({}))
 
 
 if __name__ == "__main__":

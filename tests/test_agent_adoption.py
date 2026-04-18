@@ -68,12 +68,12 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("Use Synrail as the default local control path", gemini)
             self.assertIn("For every new user task, run Synrail first", gemini)
             self.assertIn('synrail start "Describe the bounded local change."', gemini)
-            self.assertIn("synrail repair-step", gemini)
+            self.assertIn("fix only what check tells you to fix", gemini)
 
             self.assertIn("Use Synrail as the default local control path", claude)
             self.assertIn("For every new user task, run Synrail first", claude)
             self.assertIn('synrail start "Describe the bounded local change."', claude)
-            self.assertIn("synrail repair-step", claude)
+            self.assertIn("fix only what check tells you to fix", claude)
 
     def test_prefers_explicit_binary_when_path_points_elsewhere(self) -> None:
         with mock.patch("synrail_cli_v0.sys.argv", ["/opt/synrail/.venv/bin/synrail"]), mock.patch(

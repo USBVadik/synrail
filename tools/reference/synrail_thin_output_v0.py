@@ -284,8 +284,8 @@ SEMANTIC_SECTION_HINTS = {
     "scope_alignment": "keep the implementation inside the requested additive scope and remove unrelated adjacent rewrites or spacing tweaks",
     "presentation_alignment": "keep the newly added surface visually plain and remove extra emphasis styling unless the task asked for it",
     "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record",
-    "readback": "record substantive readback from the changed sections on the attested surface",
-    "scenario_proof": "record an explicit scenario-proof result for the attested target surface",
+    "readback": "record a concrete readback naming actual file paths, function names, or line contents from the changed surface — do not paraphrase the task description",
+    "scenario_proof": "record a scenario-proof with a concrete command or verification step, observed output, and explicit pass/fail — do not just restate the task",
     "artifact_identity": "restore baseline, execution surface, prompt, and task identity values for this run",
     "cleanup_status": "record a successful cleanup status for the execution surface",
 }
@@ -300,9 +300,9 @@ def thin_section_guidance(state: dict) -> list[str]:
 
 def action_now_text(*, next_command: str, outcome_class: str, report: dict, repair_packet: dict | None) -> str:
     focused_action = current_repair_action_instruction(repair_packet)
-    if next_command == "synrail repair-step" and focused_action:
-        lowered = focused_action[0].lower() + focused_action[1:]
-        return f"Run synrail repair-step, then {lowered}"
+    if next_command == "synrail check" and focused_action:
+        lowered = focused_action[0].lower() + focused_action[1:].rstrip(".")
+        return f"Fix the issue shown below: {lowered}. Then rerun synrail check."
     if next_command == "synrail refresh-acceptance":
         return "Run synrail refresh-acceptance."
     if next_command == "synrail start":
@@ -371,11 +371,11 @@ def human_next_step(
             return "Restore the original task request and intended task target, then run synrail check for the next bounded attempt."
         return "Run the next bounded forward attempt through synrail check."
     if outcome_class == "PROOF_INVALID":
-        return "Replace the broken final result or proof inputs, then ask Synrail for the next bounded repair step."
+        return "Replace the broken final result or proof inputs, then rerun synrail check."
     if outcome_class == "PROOF_THIN":
-        return "Strengthen only the thin proof evidence, then ask Synrail for the next bounded repair step."
+        return "Strengthen only the thin proof sections shown above, then rerun synrail check."
     if outcome_class == "PROOF_PARTIAL":
-        return "Add the missing proof inputs, then ask Synrail for the next bounded repair step."
+        return "Add the missing proof inputs, then rerun synrail check."
     if outcome_class == "REPAIR_STOP":
         return "Stop replaying this contour. Restore a verified restore point or start a new run."
     if outcome_class == "SCOPE_VIOLATION":
@@ -385,11 +385,11 @@ def human_next_step(
     if outcome_class == "DOCTOR_BLOCKED":
         if has_doctor_coverage_block(doctor):
             return "Treat this doctor as bounded for now. Close the agreed missing fail modes before trusting readiness."
-        return "Repair readiness first, then retry only the current bounded step."
+        return "Repair readiness first, then rerun synrail check."
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
         return "Do not assume resume is safe yet. Restore a verified fallback or rerun from a clearer starting point."
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTINUATION_INPUTS_MISSING":
-        return "Finish the current bounded repair from synrail repair-step, then run synrail retry."
+        return "Finish the current bounded repair, then rerun synrail check."
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
         return "Run synrail refresh-acceptance, then rerun synrail check."
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
@@ -457,9 +457,9 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
     next_command = ""
     restore_command = ""
     if outcome_class in {"PROOF_INVALID", "PROOF_THIN", "PROOF_PARTIAL", "SCOPE_VIOLATION", "DOCTOR_BLOCKED", "NON_GREEN"} and can_resume:
-        next_command = "synrail repair-step"
+        next_command = "synrail check"
     if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
-        next_command = "synrail repair-step"
+        next_command = "synrail check"
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
         next_command = "synrail refresh-acceptance"
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":

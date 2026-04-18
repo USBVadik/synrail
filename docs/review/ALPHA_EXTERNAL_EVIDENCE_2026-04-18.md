@@ -1,0 +1,294 @@
+# Alpha External Evidence 2026-04-18
+
+This document summarizes what the current external alpha runs do and do not prove about `Synrail` relative to a simpler baseline workflow.
+
+It is intentionally narrow.
+
+It does not try to sell the project.
+
+It tries to answer one question:
+
+- after these runs, is there enough evidence to say that `Synrail` can already be worth its cost on its narrow wedge?
+
+## Short Verdict
+
+**Partial yes, now a little stronger on the narrow wedge, but still not decisive.**
+
+The current alpha runs are enough to support this weaker claim:
+
+- `Synrail` is no longer just an internal theory artifact.
+- On some bounded local workflows, it already shows real product value that a simpler baseline may not match as well.
+- That case is a little stronger now after the second valid handoff success and another pair of accepted Gemini bugfix runs.
+- But the evidence is still mixed, because operator tax remains visible and the restore contour is still broken in a core scenario.
+
+So the honest current verdict is:
+
+- **promising wedge signal**
+- **not yet a clear overall baseline win**
+- **worth continued investment on the narrow local lane**
+- **not yet justified for broad expansion**
+
+## What The Runs Already Show
+
+### 1. Happy-path closure is real, not hypothetical
+
+Runs [003](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_003/REPORT.md), [005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_005/REPORT.md), [006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_006/REPORT.md), [008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md), [010](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_010/REPORT.md), [013](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_013/REPORT.md), [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md), [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md), [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md), and [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md) reached `Accepted` on real agent-driven loops.
+
+That matters because it means:
+
+- agents can enter the governed contour
+- produce proof artifacts
+- and reach accepted closure without a human hand-writing the result
+
+This is enough to say the kernel is operational on a real bounded local path.
+
+### 2. Handoff is a genuinely strong product signal
+
+Runs [008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md) and [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md) are now the strongest positive signals so far.
+
+A second operator inherited an already-started, non-green run and still:
+
+- oriented on `.synrail`
+- understood the active task
+- verified the changed surface
+- completed the proof
+- reached `Accepted`
+
+This is a real wedge candidate because the baseline alternative is usually much weaker here:
+
+- chat memory
+- ad hoc notes
+- or no structured continuation at all
+
+The second positive handoff matters because it reduces the chance that run [008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md) was just a lucky one-off.
+
+So on **continuation / handoff**, `Synrail` already looks materially stronger than baseline in the current Gemini-side evidence.
+
+### 3. False-green did not reproduce in the tested bug-fix contour
+
+Runs [006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_006/REPORT.md), [013](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_013/REPORT.md), and [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md) all add positive bug-fix closure evidence.
+
+The agent made the minimal correct fix.
+
+`Synrail` accepted it.
+
+The hidden oracle also passed.
+
+This does **not** prove that false-green protection is solved in general.
+
+But it does show:
+
+- the proof path is not obviously fake
+- the current contour can survive multiple bounded bug-fix slices without collapsing into empty ceremony
+
+### 4. Proof hardening looks materially better than in the early runs
+
+Runs [010](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_010/REPORT.md) and [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md) are the clearest signals here.
+
+They do **not** prove full proof independence.
+
+But they do show that accepted readback is being pushed toward:
+
+- line-level observation
+- concrete test output
+- real surface description
+
+rather than simply letting narrative self-description glide through untouched.
+
+### 5. The system is now strong enough to reveal real product bugs, not just harness noise
+
+Runs [007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_007/REPORT.md), [011b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011b/REPORT.md), [014](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014/REPORT.md), [014c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014c/REPORT.md), and [014d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014d/REPORT.md) are especially important.
+
+They found a core product failure:
+
+- `save`
+- `confirm-restore`
+- `restore`
+
+Run [007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_007/REPORT.md) showed that the old restore contour failed completely.
+
+Runs [011b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011b/REPORT.md), [014](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014/REPORT.md), [014c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014c/REPORT.md), and [014d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014d/REPORT.md) sharpened that diagnosis:
+
+- pre-run `save` now arms a fallback successfully
+- deployed `confirm-restore` now succeeds on the corrected build
+- `014c` showed that `restore` could still claim `RESTORED` while the workspace remained broken
+- `014d` fixed that honesty bug: for a no-commit workspace it now fails explicitly with `workspace_snapshot.type = "none"` and `RESTORE_FAILED`
+- but actual recovery is still missing for that contour
+
+That is bad news operationally.
+
+But as evidence, it is actually useful:
+
+- the alpha process is now surfacing real kernel weaknesses
+- not merely speculative critique or style complaints
+
+That means the testing program is already doing valuable work.
+
+## What The Runs Do **Not** Yet Prove
+
+### 1. They do not yet prove that `Synrail` clearly beats the simpler baseline overall
+
+The strongest reasons are runs [007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_007/REPORT.md) and [011b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011b/REPORT.md).
+
+If restore is one of the wedge claims, then a failed restore contour is a direct strike against baseline advantage.
+
+Right now the honest statement is:
+
+- `Synrail` may already beat baseline on continuation/handoff honesty
+- but it does **not** yet beat baseline convincingly on restore/recovery
+
+### 2. They do not yet prove that operator tax is low enough
+
+Runs [002](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_002/REPORT.md), [009](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_009/REPORT.md), and [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md) are the clearest counterweights.
+
+On trivial docstring tasks, Gemini still needed multiple proof-oriented loops and remained slower than the simpler baseline.
+
+Runs [003](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_003/REPORT.md), [005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_005/REPORT.md), [008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md), and [009](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_009/REPORT.md) still show visible ceremony such as:
+
+- `repair-step`
+- `check --clean-surface`
+- explicit proof shaping
+
+Run [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md) improves that picture somewhat:
+
+- help surface is smaller
+- the visible `--clean-surface` dance dropped out
+- but the trivial lane still does not look cheap enough to recommend over baseline
+
+So we cannot yet say:
+
+- first-run cheapness is good enough
+- commands/artifacts consistently feel worth their cost
+
+### 3. They do not yet prove full proof independence
+
+Run [005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_005/REPORT.md) still passed with readback that was somewhat narrative-heavy.
+
+That means the system is better than before, but still not fully independent of structured self-description.
+
+Runs [010](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_010/REPORT.md) and [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md) make that picture better, but not solved.
+
+So the current claim must stay modest:
+
+- proof quality is improving
+- but proof independence is not yet strong enough to call this solved
+
+### 4. They do not yet isolate product value perfectly from harness issues
+
+Runs [001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_001/REPORT.md) and [004](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_004/REPORT.md) were dominated by Claude harness problems, not product behavior.
+
+That means some of the current evidence is still noisy.
+
+## Per-Run Contribution
+
+| Run | Contribution | How much it helps the case |
+| --- | --- | --- |
+| [001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_001/REPORT.md) | Harness failure only | Little direct product evidence |
+| [002](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_002/REPORT.md) | Shows trivial-task overhead clearly | Useful negative evidence |
+| [003](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_003/REPORT.md) | Shows happy-path closure on Claude lane | Moderate positive evidence |
+| [004](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_004/REPORT.md) | Invalid false-green probe | Not counted as product evidence |
+| [005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_005/REPORT.md) | Accepted Gemini run + hidden oracle pass + parroting seam found | Strong mixed evidence |
+| [006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_006/REPORT.md) | Replacement false-green probe passed honestly | Moderate positive evidence |
+| [007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_007/REPORT.md) | Restore contour failed | Strong negative evidence |
+| [008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md) | Handoff/continuation succeeded | Strong positive evidence |
+| [009](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_009/REPORT.md) | Trivial-task overhead is still heavy in live Gemini flow | Useful negative evidence |
+| [010](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_010/REPORT.md) | Proof hardening forced a more concrete accepted readback | Moderate positive evidence |
+| [011b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011b/REPORT.md) | Pre-run save improved, but restore still did not recover the broken state | Strong negative evidence |
+| [012](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_012/REPORT.md) | Claude-first handoff probe blocked by shell approval gate | Harness evidence only |
+| [012b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_012b/REPORT.md) | Claude-first handoff rerun blocked by root bypass restriction | Harness evidence only |
+| [013](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_013/REPORT.md) | Independent Gemini bugfix reached accepted closure | Moderate positive evidence |
+| [014](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014/REPORT.md) | Restore round-trip still failed even after pre-run snapshot arming | Strong negative evidence |
+| [014c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014c/REPORT.md) | Current deployed build still reports RESTORED while leaving the workspace broken | Strong negative evidence |
+| [014d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014d/REPORT.md) | Latest build now fails restore honestly on a no-commit workspace instead of reporting false success | Mixed but useful evidence |
+| [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md) | Trivial lane improved, but still slower/heavier than baseline | Mixed evidence |
+| [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md) | Proof-heavy accepted run with more observational readback | Moderate positive evidence |
+| [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md) | Another fresh accepted bugfix on a distinct contour | Moderate positive evidence |
+| [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md) | Second valid handoff success | Strong positive evidence |
+
+## Current Best Honest Claim Against Baseline
+
+Today the most defensible claim is:
+
+- `Synrail` already looks **materially more useful than baseline** on **handoff / continuation honesty**.
+- It also looks **increasingly credible** on bounded accepted closure for local bug-fix tasks.
+- But it is **not yet clearly better than baseline overall**, because restore still does not recover unsupported workspaces and trivial-task operator tax is still too visible.
+
+That is enough to justify:
+
+- continuing the alpha program
+- fixing the current restore bug as a top priority
+- tightening proof quality and reducing ceremony
+
+It is **not** enough to justify:
+
+- broad expansion
+- a wide platform story
+- or a claim that `Synrail` has already won the baseline comparison on its whole wedge
+
+## What Is Already Recorded In The Repo
+
+The evidence is already stored in these run reports:
+
+- [001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_001/REPORT.md)
+- [002](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_002/REPORT.md)
+- [003](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_003/REPORT.md)
+- [004](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_004/REPORT.md)
+- [005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_005/REPORT.md)
+- [006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_006/REPORT.md)
+- [007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_007/REPORT.md)
+- [008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md)
+- [009](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_009/REPORT.md)
+- [010](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_010/REPORT.md)
+- [011](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011/REPORT.md)
+- [011b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011b/REPORT.md)
+- [012](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_012/REPORT.md)
+- [012b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_012b/REPORT.md)
+- [013](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_013/REPORT.md)
+- [014](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014/REPORT.md)
+- [014b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014b/REPORT.md)
+- [014c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014c/REPORT.md)
+- [014d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014d/REPORT.md)
+- [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md)
+- [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md)
+- [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md)
+- [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md)
+
+There was also already a generic scoring template here:
+
+- [ALPHA_SIGNAL_SCORECARD_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/review/ALPHA_SIGNAL_SCORECARD_001.md)
+
+There is now also a compact ledger here:
+
+- [ALPHA_LEDGER_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/review/ALPHA_LEDGER_001.md)
+
+And a reusable report template here:
+
+- [ALPHA_RUN_REPORT_TEMPLATE_002.md](/Users/usbdick/Documents/New%20project/synrail/docs/review/ALPHA_RUN_REPORT_TEMPLATE_002.md)
+
+What was missing was a single synthesis document that says, in plain language, what these runs currently prove.
+
+This file is that synthesis.
+
+## Bottom Line
+
+If the question is:
+
+- **"Do the current alpha tests show that `Synrail` may be worth its cost?"**
+
+the answer is:
+
+- **yes, partially**
+
+If the question is:
+
+- **"Do they already prove that `Synrail` is clearly better than the simpler baseline on its wedge?"**
+
+the answer is:
+
+- **not yet**
+
+The strongest positive signal is still handoff.
+
+The strongest negative signal is still restore.
+
+That is exactly enough clarity to justify the next round of focused fixes.

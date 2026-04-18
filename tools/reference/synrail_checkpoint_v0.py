@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -41,6 +43,11 @@ SAFE_POINT_CLASSES = {
     ("READY", "CLAIMED_NOT_ACCEPTED"): "VERIFIED_WORKING_STATE",
 }
 
+# States eligible for a lightweight pre-run snapshot. These do not require
+# doctor/target_surface/integrity to pass — the user is saving workspace
+# state *before* changes, not after verification.
+PRE_RUN_SNAPSHOT_STATES = {"INITIALIZED"}
+
 ARTIFACT_FLAGS = [
     ("state_file", "state", "STATE", True),
     ("report_file", "report", "REPORT", False),
@@ -63,6 +70,86 @@ def load_json(path: Path) -> dict:
 def save_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+
+
+def _git_head_ref(project_root: Path) -> str:
+    """Return the current git HEAD commit hash, or empty string if not in a git repo."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(project_root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return ""
+
+
+def _git_has_uncommitted(project_root: Path) -> bool:
+    """Return True if the workspace has uncommitted changes (staged or unstaged)."""
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=str(project_root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return bool(result.stdout.strip())
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return False
+
+
+def _git_stash_create(project_root: Path) -> str:
+    """Create a git stash entry without modifying the working tree. Returns stash ref or empty."""
+    try:
+        result = subprocess.run(
+            ["git", "stash", "create", "synrail pre-run snapshot"],
+            cwd=str(project_root),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return ""
+
+
+def _git_restore_snapshot(project_root: Path, *, head_ref: str, stash_ref: str) -> tuple[bool, str]:
+    """Restore workspace to the snapshot state. Returns (success, error_message)."""
+    try:
+        # First reset to the original HEAD
+        reset = subprocess.run(
+            ["git", "checkout", head_ref, "--force"],
+            cwd=str(project_root),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if reset.returncode != 0:
+            return False, f"git checkout failed: {reset.stderr.strip()}"
+        # Then apply stashed changes if any
+        if stash_ref:
+            apply = subprocess.run(
+                ["git", "stash", "apply", stash_ref],
+                cwd=str(project_root),
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if apply.returncode != 0:
+                return False, f"git stash apply failed: {apply.stderr.strip()}"
+        return True, ""
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        return False, str(exc)
 
 
 def build_manifest(args: argparse.Namespace, checkpoint_root: Path) -> list[dict]:
@@ -123,8 +210,16 @@ def rollback_template() -> dict:
 
 def classify_safe_point(state: dict) -> tuple[str, bool, list[str]]:
     failures: list[str] = []
+    current_state = state.get("state", "")
+
+    # Pre-run snapshot: allow saving from INITIALIZED before any check has run.
+    # No doctor/target_surface/integrity requirements — the user is preserving
+    # the workspace before making changes, not after verification.
+    if current_state in PRE_RUN_SNAPSHOT_STATES:
+        return "PRE_RUN_SNAPSHOT", True, []
+
     safe_point_class = SAFE_POINT_CLASSES.get(
-        (state.get("state", ""), state.get("closure", {}).get("status", ""))
+        (current_state, state.get("closure", {}).get("status", ""))
     )
     if not safe_point_class:
         failures.append("state is not an eligible accepted or working checkpoint surface")
@@ -145,7 +240,34 @@ def create_record(args: argparse.Namespace) -> dict:
     resumability = build_resumability(state)
     safe_point_class, safe_point_eligible, safe_point_failures = classify_safe_point(state)
     manifest = build_manifest(args, checkpoint_root) if safe_point_eligible else []
-    return {
+
+    # For pre-run snapshots, capture the git workspace state so restore can
+    # bring back the actual project files, not just .synrail/ artifacts.
+    # Always include workspace_snapshot for PRE_RUN_SNAPSHOT so that
+    # restore_record can detect when workspace recovery is impossible.
+    workspace_snapshot: dict = {}
+    if safe_point_class == "PRE_RUN_SNAPSHOT":
+        project_root = Path(getattr(args, "project_root", "") or ".").resolve()
+        head_ref = _git_head_ref(project_root)
+        if head_ref:
+            stash_ref = ""
+            if _git_has_uncommitted(project_root):
+                stash_ref = _git_stash_create(project_root)
+            workspace_snapshot = {
+                "type": "git",
+                "project_root": str(project_root),
+                "head_ref": head_ref,
+                "stash_ref": stash_ref,
+                "has_uncommitted": bool(stash_ref),
+            }
+        else:
+            workspace_snapshot = {
+                "type": "none",
+                "project_root": str(project_root),
+                "reason": "project is not a git repository or has no commits",
+            }
+
+    record = {
         "schema_version": "checkpoint_record_v0",
         "checkpoint_id": args.checkpoint_id,
         "run_id": state["run_id"],
@@ -172,6 +294,13 @@ def create_record(args: argparse.Namespace) -> dict:
             else "; ".join(safe_point_failures)
         ),
     }
+    if workspace_snapshot:
+        record["workspace_snapshot"] = workspace_snapshot
+    # For PRE_RUN_SNAPSHOT, workspace_snapshot must always be present so
+    # restore_record can detect when workspace recovery is impossible.
+    elif safe_point_class == "PRE_RUN_SNAPSHOT":
+        record["workspace_snapshot"] = {"type": "none", "reason": "no workspace snapshot available"}
+    return record
 
 
 def validate_manifest_artifacts(record: dict, *, root_override: Path | None = None) -> tuple[list[str], list[str]]:
@@ -227,13 +356,16 @@ def state_consistency_errors(record: dict, *, root_override: Path | None = None)
     closure_status = state.get("closure", {}).get("status", "")
     if closure_status != record.get("source_closure_status"):
         errors.append("state.closure.status does not match checkpoint source_closure_status")
+    # For pre-run snapshots, classify_safe_point will return PRE_RUN_SNAPSHOT
+    # with no failures — skip the strict gate checks that don't apply here.
     safe_point_class, safe_point_eligible, safe_point_failures = classify_safe_point(state)
     if safe_point_class != record.get("safe_point_class", ""):
         errors.append("state safe_point_class does not match checkpoint safe_point_class")
     if safe_point_eligible != record.get("safe_point_eligible", False):
         errors.append("state safe_point_eligible does not match checkpoint safe_point_eligible")
-    for failure in safe_point_failures:
-        errors.append(f"safe point eligibility failed: {failure}")
+    if record.get("safe_point_class") != "PRE_RUN_SNAPSHOT":
+        for failure in safe_point_failures:
+            errors.append(f"safe point eligibility failed: {failure}")
     return errors
 
 
@@ -337,6 +469,22 @@ def restore_record(record: dict, target_root: Path) -> dict:
         blocked["next_safe_step"] = "verify checkpoint successfully before attempting restore"
         return blocked
 
+    # For pre-run snapshots with a git workspace, restore the project files first.
+    workspace_snapshot = record.get("workspace_snapshot", {})
+    workspace_restored = False
+    workspace_error = ""
+    if workspace_snapshot.get("type") == "git" and workspace_snapshot.get("head_ref"):
+        project_root = Path(workspace_snapshot["project_root"])
+        ok, err = _git_restore_snapshot(
+            project_root,
+            head_ref=workspace_snapshot["head_ref"],
+            stash_ref=workspace_snapshot.get("stash_ref", ""),
+        )
+        workspace_restored = ok
+        workspace_error = err
+    elif workspace_snapshot.get("type") == "none":
+        workspace_error = workspace_snapshot.get("reason", "no workspace snapshot available")
+
     restored = dict(record)
     restored["restore"] = restore_template()
     restored["rollback"] = rollback_template()
@@ -344,14 +492,26 @@ def restore_record(record: dict, target_root: Path) -> dict:
     restored_ids = restore_manifest(record, target_root)
     verify_after_restore = verify_record(record, root_override=target_root)
     restored["verification"] = verify_after_restore["verification"]
+
+    artifact_ok = verify_after_restore["result"] == "OK"
+    # For pre-run snapshots, success means workspace was restored (or no snapshot needed)
+    overall_ok = artifact_ok and (not workspace_snapshot or workspace_restored)
+
+    restore_failures = []
+    if not artifact_ok:
+        restore_failures.extend(list(verify_after_restore["verification"].get("failure_reasons", [])))
+    if workspace_snapshot and not workspace_restored:
+        restore_failures.append(f"workspace restore failed: {workspace_error}")
+
     restored["restore"] = {
-        "status": "RESTORED" if verify_after_restore["result"] == "OK" else "RESTORE_FAILED",
+        "status": "RESTORED" if overall_ok else "RESTORE_FAILED",
         "target_root": str(target_root),
         "restore_verification_required": True,
         "restored_artifact_ids": restored_ids,
-        "failure_reasons": [] if verify_after_restore["result"] == "OK" else list(verify_after_restore["verification"].get("failure_reasons", [])),
+        "failure_reasons": restore_failures,
+        "workspace_restored": workspace_restored,
     }
-    if verify_after_restore["result"] == "OK":
+    if overall_ok:
         restored["event_type"] = "RESTORE"
         restored["result"] = "OK"
         restored["rollback"] = rollback_template()
@@ -384,6 +544,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_create.add_argument("--checkpoint-id", required=True)
     p_create.add_argument("--checkpoint-root", required=True)
     p_create.add_argument("--state-file", required=True)
+    p_create.add_argument("--project-root")
     p_create.add_argument("--report-file")
     p_create.add_argument("--orchestration-file")
     p_create.add_argument("--bundle-file")

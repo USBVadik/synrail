@@ -224,12 +224,11 @@ def readback_repair_checklist(*, current_step_subsurface_id: str, current_step_t
         return []
     return [
         f"Checklist for {current_step_target_path}:",
-        "- Changed surface: name the changed file or surface explicitly",
-        "- Observed: describe the concrete property that was seen on that changed surface",
-        "- For UI, route, or rendered output changes, prefer local runtime or response evidence over source-only grep when possible",
-        "- Need a quick local path? run `synrail runtime-helper` and prefer curl or template-render checks before browser automation",
-        "- Need a canonical shape? run `synrail readback-template`",
-        "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+        "- Changed surface: name the actual changed file path explicitly (e.g. src/app.js, not 'the file')",
+        "- Observed: describe a concrete property from the changed surface — a function name, class name, line content, or rendered element",
+        "- Do not paraphrase or restate the task description — prove you read the actual changed code or output",
+        "- At least 2 lines with at least one concrete identifier (file path, function/class name, line number, or code token)",
+        "- For UI or rendered changes, prefer local runtime evidence (curl, test output) over source-only grep when possible",
     ]
 
 
@@ -240,14 +239,12 @@ def scenario_proof_repair_checklist(*, current_step_subsurface_id: str, current_
         return []
     return [
         f"Checklist for {current_step_target_path}:",
-        "- Scenario: describe the exact runtime context on the attested target surface",
-        "- Command: include the local command, request, or test used to verify the change",
-        "- Observed: include the concrete output, rendered fragment, or behavior that was seen",
+        "- Scenario: name the exact runtime context (file path, URL, command)",
+        "- Command: include the actual command, request, or test that was run (e.g. 'python -m pytest tests/test_x.py', 'curl localhost:3000/api')",
+        "- Observed: include concrete output — a status code, a rendered fragment, a returned value, not just 'it works'",
         "- Status: PASSED when the expected outcome was observed; otherwise use FAILED or BLOCKED truthfully",
-        "- For UI, route, or rendered output changes, prefer local runtime or response evidence over source-only grep when possible",
-        "- Need a quick local path? run `synrail runtime-helper` and prefer curl or template-render checks before browser automation",
-        "- Need a canonical shape? run `synrail scenario-proof-template`",
-        "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+        "- At least 3 lines with at least one concrete identifier or command",
+        "- Do not restate the task description — prove the verification actually happened",
     ]
 
 
@@ -294,7 +291,7 @@ def next_command(repair_packet: dict, current_step_id: str) -> str:
         resumability.get("status", "") == "REPAIRABLE"
         and termination.get("status", "CONTINUE") != "TERMINATE"
     ):
-        return "synrail retry"
+        return "synrail check"
     if (
         repair_packet.get("resumability_family", "") == "NOT_RESUMABLE_FRESH_ORCHESTRATION"
         or current_step_id == "continue_forward_orchestration"

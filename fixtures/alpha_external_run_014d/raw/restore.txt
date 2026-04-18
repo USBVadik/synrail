@@ -1,0 +1,1 @@
+{"result": "BLOCKED", "event_type": "RESTORE_ROLLBACK", "rollback_status": "ROLLED_BACK"}

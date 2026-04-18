@@ -1,0 +1,5 @@
+start=2026-04-18T12:50:02+00:00
+remote_head=4790036f80f440f6d485c64c8e99d97520acfa5e
+synrail_path=/root/synrail/.venv/bin/synrail
+test_cmd=PYTHONPATH=. python3 tests/test_retry_logic.py
+end=2026-04-18T12:50:04+00:00

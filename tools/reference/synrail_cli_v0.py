@@ -340,13 +340,11 @@ def render_agent_policy_markdown(
         commands["check"],
         "```",
         "",
-        "If Synrail is non-green, run:",
+        "If Synrail is non-green, fix only what check tells you to fix, then rerun:",
         "",
         "```bash",
-        commands["repair"],
+        commands["check"],
         "```",
-        "",
-        "Then repair only the named gap and re-check.",
         "",
         "## Important",
         "",
@@ -409,7 +407,7 @@ def render_gemini_policy_markdown(
         commands["check"],
         "```",
         "",
-        f"If non-green, run `{commands['repair']}`, repair only the named gap, and re-check.",
+        f"If non-green, fix only what check tells you to fix, then rerun `{commands['check']}`.",
         "",
         "Do not bypass Synrail and do not claim success without real local verification.",
         "",
@@ -468,7 +466,7 @@ def render_claude_policy_markdown(
         commands["check"],
         "```",
         "",
-        f"If non-green, run `{commands['repair']}`, repair only the named gap, and re-check.",
+        f"If non-green, fix only what check tells you to fix, then rerun `{commands['check']}`.",
         "",
         "Do not bypass Synrail and do not claim success without real local verification.",
         "",
@@ -1417,18 +1415,14 @@ def print_prompt_summary_compact(output_file: Path, *, include_prompt: bool = Fa
     required_input_labels = list(payload.get("required_input_labels", []))
     forbidden_scope = list(payload.get("forbidden_scope", []))
     lines = [
-        "The next bounded repair instruction is ready.",
         (
             f"Do this now: {payload.get('current_step_action_instruction', '')}"
             if payload.get("current_step_action_instruction", "")
-            else "Do this now: keep the repair inside the current bounded repair surface."
+            else "Do this now: fix the issue described above."
         ),
         f"What failed: {payload.get('failure_label', payload.get('failure_reason', ''))}",
-        f"Current repair task: {payload.get('current_step_label', payload.get('current_step_id', ''))}",
-        f"Stale artifacts: {', '.join(stale_artifacts) if stale_artifacts else 'none'}",
-        f"Stale subsurfaces: {', '.join(stale_subsurfaces) if stale_subsurfaces else 'none'}",
+        f"Repair task: {payload.get('current_step_label', payload.get('current_step_id', ''))}",
         f"Allowed scope: {', '.join(allowed_scope_labels) if allowed_scope_labels else (', '.join(allowed_scope) if allowed_scope else 'current repair step only')}",
-        f"Required inputs: {', '.join(required_input_labels) if required_input_labels else 'none'}",
         f"Do not touch: {', '.join(forbidden_scope) if forbidden_scope else 'unrelated files or acceptance logic'}",
     ]
     current_step_focus_summary = payload.get("current_step_focus_summary", "")
@@ -1466,8 +1460,6 @@ def print_init_summary(*, root: Path, state_file: Path) -> None:
         lines.append("Workspace note: " + profile["workspace_isolation_note"])
     if profile.get("prefers_runtime_evidence", False):
         lines.append("Runtime helper: synrail runtime-helper")
-    checkpoint_suggestion = shell_command(root, "save", project_root=Path.cwd().resolve())
-    lines.append(f"Optional safety fallback: {checkpoint_suggestion}")
     print("\n".join(lines))
 
 
@@ -1486,7 +1478,6 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
         f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
         "Then run: " + shell_command(root, "check", project_root=project_root),
-        "Optional safety fallback: " + shell_command(root, "save", project_root=project_root),
     ]
     if profile.get("workspace_isolation_note", ""):
         lines.append("Workspace note: " + profile["workspace_isolation_note"])
@@ -1817,7 +1808,7 @@ def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
         section["section"] in {"readback", "scenario_proof"} for section in structural_gaps + semantic_gaps
     ):
         helper_commands.append("synrail runtime-helper")
-    helper_commands.append("synrail repair-step")
+    helper_commands.append("synrail check")
     final_result_target = display_path(root / "final_result.json") if root else "final_result.json"
     readback_target = display_path(root / "readback.txt") if root else "readback.txt"
     scenario_proof_target = display_path(root / "scenario_proof.txt") if root else "scenario_proof.txt"
@@ -1939,6 +1930,7 @@ def human_safe_point_class(value: str) -> str:
     mapping = {
         "VERIFIED_WORKING_STATE": "Verified working state",
         "VERIFIED_ACCEPTED_STATE": "Verified accepted state",
+        "PRE_RUN_SNAPSHOT": "Pre-run workspace snapshot",
         "NOT_SAFE_POINT": "Not a verified restore point",
     }
     return mapping.get(value, value)
@@ -2639,11 +2631,13 @@ def cmd_save(args: argparse.Namespace) -> int:
     record_output = Path(getattr(args, "output", "") or checkpoint_record_file(root, checkpoint_id))
     record_root = Path(getattr(args, "checkpoint_root", "") or checkpoint_root(root, checkpoint_id))
     state_file = Path(getattr(args, "state_file", "") or alpha_file(root, "state"))
+    project_root = Path(getattr(args, "project_root", "") or ".").resolve()
     create_forwarded = [
         "create",
         "--checkpoint-id", checkpoint_id,
         "--checkpoint-root", str(record_root),
         "--state-file", str(state_file),
+        "--project-root", str(project_root),
         "--output", str(record_output),
     ]
     for attr, flag in [
@@ -2995,6 +2989,12 @@ def cmd_check(args: argparse.Namespace) -> int:
 
     if runtime_requested:
         state = load_json(Path(args.state_file))
+        # Auto-detect clean_surface: during an active controlled run,
+        # the workspace is expected to have uncommitted changes.
+        if not getattr(args, "clean_surface", False):
+            current_state = state.get("state", "")
+            if current_state and current_state not in {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}:
+                args.clean_surface = True
         orchestrate_args = argparse.Namespace(
             artifact_root=args.artifact_root,
             state_file=args.state_file,
@@ -3115,7 +3115,7 @@ def cmd_check(args: argparse.Namespace) -> int:
             prompt_completed = run_python_capture(PROMPT_BRIDGE, forwarded)
             if prompt_completed.returncode == 0:
                 print("")
-                print("Bounded repair summary:")
+                print("What to fix:")
                 print_prompt_summary_compact(Path(prompt_output), include_prompt=False)
     return thin_code
 
@@ -4268,11 +4268,40 @@ def add_orchestration_args(
     parser.add_argument("--project-profile-file")
 
 
+class _SuppressingHelpFormatter(argparse.HelpFormatter):
+    """Formatter that genuinely hides subcommands with help=SUPPRESS."""
+
+    def _format_action(self, action: argparse.Action) -> str:
+        if isinstance(action, argparse._SubParsersAction):
+            parts: list[str] = []
+            for choice_action in action._get_subactions():
+                if choice_action.help != argparse.SUPPRESS:
+                    parts.append(self._format_action(choice_action))
+            return self._join_parts(parts)
+        return super()._format_action(action)
+
+    def _format_usage(self, usage, actions, groups, prefix):  # type: ignore[override]
+        # Show only visible subcommands in the usage line
+        for action in actions:
+            if isinstance(action, argparse._SubParsersAction):
+                visible_names = {
+                    ca.dest for ca in action._choices_actions
+                    if ca.help != argparse.SUPPRESS
+                }
+                if visible_names:
+                    orig_choices = action.choices
+                    action.choices = {k: v for k, v in orig_choices.items() if k in visible_names}
+                    result = super()._format_usage(usage, actions, groups, prefix)
+                    action.choices = orig_choices
+                    return result
+        return super()._format_usage(usage, actions, groups, prefix)
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="synrail")
+    parser = argparse.ArgumentParser(prog="synrail", formatter_class=_SuppressingHelpFormatter)
     sub = parser.add_subparsers(dest="cmd")
 
-    p_init = sub.add_parser("init")
+    p_init = sub.add_parser("init", help=argparse.SUPPRESS)
     p_init.add_argument("--run-id")
     p_init.add_argument("--task-class", default=DEFAULT_ALPHA_TASK_CLASS)
     p_init.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
@@ -4285,7 +4314,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--output")
     p_init.set_defaults(func=cmd_init)
 
-    p_start = sub.add_parser("start")
+    p_start = sub.add_parser("start", help="Begin a new controlled run")
     p_start.add_argument("--run-id")
     p_start.add_argument("--task-class", default=DEFAULT_ALPHA_TASK_CLASS)
     p_start.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
@@ -4299,18 +4328,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_start.add_argument("task_request", nargs="?")
     p_start.set_defaults(func=cmd_start)
 
-    p_install_agent_files = sub.add_parser("install-agent-files")
+    p_install_agent_files = sub.add_parser("install-agent-files", help="Write CLAUDE.md/GEMINI.md/AGENTS.md for agent discovery")
     p_install_agent_files.add_argument("--project-root", default=".")
     p_install_agent_files.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_install_agent_files.add_argument("--force", action="store_true")
     p_install_agent_files.set_defaults(func=cmd_install_agent_files)
 
-    p_refresh_acceptance = sub.add_parser("refresh-acceptance", aliases=["acceptance-refresh"])
+    p_refresh_acceptance = sub.add_parser("refresh-acceptance", aliases=["acceptance-refresh"], help=argparse.SUPPRESS)
     p_refresh_acceptance.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_refresh_acceptance.add_argument("--mode", default="default", choices=["default", "dev"])
     p_refresh_acceptance.set_defaults(func=cmd_refresh_acceptance)
 
-    p_check = sub.add_parser("check")
+    p_check = sub.add_parser("check", help="Run the full verification pipeline")
     p_check.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_check.add_argument("--state-file")
     p_check.add_argument("--report-file")
@@ -4368,39 +4397,39 @@ def build_parser() -> argparse.ArgumentParser:
     p_check.add_argument("--target-identity-file")
     p_check.set_defaults(func=cmd_check)
 
-    p_status = sub.add_parser("status", aliases=["dashboard"])
+    p_status = sub.add_parser("status", aliases=["dashboard"], help="Show current run state")
     p_status.add_argument("state_file", nargs="?")
     p_status.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_status.add_argument("--json", action="store_true")
     p_status.set_defaults(func=cmd_status)
 
-    p_explain_proof = sub.add_parser("explain-proof", aliases=["proof-explain"])
+    p_explain_proof = sub.add_parser("explain-proof", aliases=["proof-explain"], help="Show what proof files are needed and why")
     p_explain_proof.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_explain_proof.add_argument("--bundle-file")
     p_explain_proof.add_argument("--json", action="store_true")
     p_explain_proof.set_defaults(func=cmd_explain_proof)
 
-    p_final_result_template = sub.add_parser("final-result-template")
+    p_final_result_template = sub.add_parser("final-result-template", help="Show template for final_result.json")
     p_final_result_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_final_result_template.add_argument("--output")
     p_final_result_template.set_defaults(func=cmd_final_result_template)
 
-    p_readback_template = sub.add_parser("readback-template")
+    p_readback_template = sub.add_parser("readback-template", help="Show template for readback.txt")
     p_readback_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_readback_template.add_argument("--output")
     p_readback_template.set_defaults(func=cmd_readback_template)
 
-    p_scenario_proof_template = sub.add_parser("scenario-proof-template")
+    p_scenario_proof_template = sub.add_parser("scenario-proof-template", help="Show template for scenario_proof.txt")
     p_scenario_proof_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_scenario_proof_template.add_argument("--output")
     p_scenario_proof_template.set_defaults(func=cmd_scenario_proof_template)
 
-    p_runtime_helper = sub.add_parser("runtime-helper")
+    p_runtime_helper = sub.add_parser("runtime-helper", help="Generate a runtime verification helper script")
     p_runtime_helper.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_runtime_helper.add_argument("--output")
     p_runtime_helper.set_defaults(func=cmd_runtime_helper)
 
-    p_bundle = sub.add_parser("bundle-check")
+    p_bundle = sub.add_parser("bundle-check", help=argparse.SUPPRESS)
     p_bundle.add_argument("--final-result", required=True)
     p_bundle.add_argument("--task-class", required=True)
     p_bundle.add_argument("--output", required=True)
@@ -4413,24 +4442,24 @@ def build_parser() -> argparse.ArgumentParser:
     p_bundle.add_argument("--task-identity")
     p_bundle.set_defaults(func=cmd_bundle_check)
 
-    p_apply_bundle = sub.add_parser("apply-bundle")
+    p_apply_bundle = sub.add_parser("apply-bundle", help=argparse.SUPPRESS)
     p_apply_bundle.add_argument("state_file")
     p_apply_bundle.add_argument("bundle_file")
     p_apply_bundle.set_defaults(func=cmd_apply_bundle)
 
-    p_closure = sub.add_parser("closure")
+    p_closure = sub.add_parser("closure", help=argparse.SUPPRESS)
     p_closure.add_argument("--state-file", required=True)
     p_closure.add_argument("--bundle-file", required=True)
     p_closure.add_argument("--output", required=True)
     p_closure.add_argument("--update-state", action="store_true")
     p_closure.set_defaults(func=cmd_closure)
 
-    p_apply_closure = sub.add_parser("apply-closure")
+    p_apply_closure = sub.add_parser("apply-closure", help=argparse.SUPPRESS)
     p_apply_closure.add_argument("state_file")
     p_apply_closure.add_argument("closure_file")
     p_apply_closure.set_defaults(func=cmd_apply_closure)
 
-    p_refresh = sub.add_parser("refresh")
+    p_refresh = sub.add_parser("refresh", help=argparse.SUPPRESS)
     p_refresh.add_argument("--state-file", required=True)
     p_refresh.add_argument("--event-type", required=True)
     p_refresh.add_argument("--output", required=True)
@@ -4442,12 +4471,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_refresh.add_argument("--update-state", action="store_true")
     p_refresh.set_defaults(func=cmd_refresh)
 
-    p_validate = sub.add_parser("validate")
+    p_validate = sub.add_parser("validate", help=argparse.SUPPRESS)
     p_validate.add_argument("--schema", required=True)
     p_validate.add_argument("--document", required=True)
     p_validate.set_defaults(func=cmd_validate)
 
-    p_doctor = sub.add_parser("doctor")
+    p_doctor = sub.add_parser("doctor", help=argparse.SUPPRESS)
     p_doctor.add_argument("--doctor-run-id", required=True)
     p_doctor.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
     p_doctor.add_argument("--target-path", required=True)
@@ -4473,24 +4502,24 @@ def build_parser() -> argparse.ArgumentParser:
     p_doctor.add_argument("--allowed-scope-path", action="append", default=[])
     p_doctor.set_defaults(func=cmd_doctor)
 
-    p_compare = sub.add_parser("compare")
+    p_compare = sub.add_parser("compare", help=argparse.SUPPRESS)
     p_compare.add_argument("--baseline-file", required=True)
     p_compare.add_argument("--synrail-file", required=True)
     p_compare.add_argument("--output", required=True)
     p_compare.set_defaults(func=cmd_compare)
 
-    p_substitute_pressure = sub.add_parser("substitute-pressure")
+    p_substitute_pressure = sub.add_parser("substitute-pressure", help=argparse.SUPPRESS)
     p_substitute_pressure.add_argument("--record", action="append", required=True)
     p_substitute_pressure.add_argument("--output", required=True)
     p_substitute_pressure.set_defaults(func=cmd_substitute_pressure)
 
-    p_hybrid = sub.add_parser("hybrid-status")
+    p_hybrid = sub.add_parser("hybrid-status", help=argparse.SUPPRESS)
     p_hybrid.add_argument("--cost-record", required=True)
     p_hybrid.add_argument("--hybrid-record", action="append", required=True)
     p_hybrid.add_argument("--output", required=True)
     p_hybrid.set_defaults(func=cmd_hybrid_status)
 
-    p_mode = sub.add_parser("recommend-mode")
+    p_mode = sub.add_parser("recommend-mode", help=argparse.SUPPRESS)
     p_mode.add_argument("--cost-record", required=True)
     p_mode.add_argument("--hybrid-status")
     p_mode.add_argument("--scenario-class", required=True)
@@ -4504,14 +4533,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_mode.add_argument("--output", required=True)
     p_mode.set_defaults(func=cmd_recommend_mode)
 
-    p_select = sub.add_parser("select-mode")
+    p_select = sub.add_parser("select-mode", help=argparse.SUPPRESS)
     p_select.add_argument("--recommendation-file", required=True)
     p_select.add_argument("--selected-mode", choices=["FULL_GOVERNED_PATH", "LIGHTWEIGHT_BASELINE", "HYBRID_EXCEPTION"])
     p_select.add_argument("--selected-with-preparation", action="store_true")
     p_select.add_argument("--output", required=True)
     p_select.set_defaults(func=cmd_select_mode)
 
-    p_plan = sub.add_parser("plan-proof")
+    p_plan = sub.add_parser("plan-proof", help=argparse.SUPPRESS)
     p_plan.add_argument("--run-id", required=True)
     p_plan.add_argument("--task-class", required=True)
     p_plan.add_argument("--artifact-root", required=True)
@@ -4522,19 +4551,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_plan.add_argument("--output", required=True)
     p_plan.set_defaults(func=cmd_plan_proof)
 
-    p_prep = sub.add_parser("preparation-receipt")
+    p_prep = sub.add_parser("preparation-receipt", help=argparse.SUPPRESS)
     p_prep.add_argument("--plan-file", required=True)
     p_prep.add_argument("--bundle-file", required=True)
     p_prep.add_argument("--output", required=True)
     p_prep.set_defaults(func=cmd_preparation_receipt)
 
-    p_governed_cost = sub.add_parser("governed-cost")
+    p_governed_cost = sub.add_parser("governed-cost", help=argparse.SUPPRESS)
     p_governed_cost.add_argument("--unprepared-file", required=True)
     p_governed_cost.add_argument("--prepared-file", required=True)
     p_governed_cost.add_argument("--output", required=True)
     p_governed_cost.set_defaults(func=cmd_governed_cost)
 
-    p_checkpoint_create = sub.add_parser("create-checkpoint")
+    p_checkpoint_create = sub.add_parser("create-checkpoint", help=argparse.SUPPRESS)
     p_checkpoint_create.add_argument("--checkpoint-id")
     p_checkpoint_create.add_argument("--artifact-root")
     p_checkpoint_create.add_argument("--checkpoint-root")
@@ -4553,11 +4582,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_create.add_argument("--output")
     p_checkpoint_create.set_defaults(func=cmd_create_checkpoint)
 
-    p_save = sub.add_parser("save")
+    p_save = sub.add_parser("save", help="Save a checkpoint of the current verified state")
     p_save.add_argument("--checkpoint-id", default="working")
     p_save.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_save.add_argument("--checkpoint-root")
     p_save.add_argument("--state-file")
+    p_save.add_argument("--project-root")
     p_save.add_argument("--report-file")
     p_save.add_argument("--orchestration-file")
     p_save.add_argument("--bundle-file")
@@ -4572,16 +4602,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_save.add_argument("--output")
     p_save.set_defaults(func=cmd_save)
 
-    p_checkpoint_verify = sub.add_parser("verify-checkpoint", aliases=["confirm-restore"])
-    p_checkpoint_verify.add_argument("--artifact-root")
+    p_checkpoint_verify = sub.add_parser("verify-checkpoint", aliases=["confirm-restore"], help=argparse.SUPPRESS)
+    p_checkpoint_verify.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_checkpoint_verify.add_argument("--checkpoint-id")
     p_checkpoint_verify.add_argument("--checkpoint-record-file")
     p_checkpoint_verify.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_verify.add_argument("--output")
     p_checkpoint_verify.set_defaults(func=cmd_verify_checkpoint)
 
-    p_checkpoint_restore = sub.add_parser("restore-checkpoint")
-    p_checkpoint_restore.add_argument("--artifact-root")
+    p_checkpoint_restore = sub.add_parser("restore-checkpoint", help=argparse.SUPPRESS)
+    p_checkpoint_restore.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_checkpoint_restore.add_argument("--checkpoint-id")
     p_checkpoint_restore.add_argument("--checkpoint-record-file")
     p_checkpoint_restore.add_argument("--target-root")
@@ -4589,7 +4619,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_restore.add_argument("--output")
     p_checkpoint_restore.set_defaults(func=cmd_restore_checkpoint)
 
-    p_checkpoint = sub.add_parser("checkpoint")
+    p_checkpoint = sub.add_parser("checkpoint", help=argparse.SUPPRESS)
     checkpoint_sub = p_checkpoint.add_subparsers(dest="checkpoint_cmd", required=True)
 
     p_checkpoint_nested_create = checkpoint_sub.add_parser("create")
@@ -4628,7 +4658,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_nested_restore.add_argument("--output")
     p_checkpoint_nested_restore.set_defaults(func=cmd_restore_checkpoint)
 
-    p_restore = sub.add_parser("restore")
+    p_restore = sub.add_parser("restore", help="Restore workspace from a saved checkpoint")
     p_restore.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_restore.add_argument("--checkpoint-id")
     p_restore.add_argument("--checkpoint-record-file")
@@ -4637,7 +4667,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_restore.add_argument("--output")
     p_restore.set_defaults(func=cmd_restore)
 
-    p_telemetry = sub.add_parser("telemetry")
+    p_telemetry = sub.add_parser("telemetry", help=argparse.SUPPRESS)
     telemetry_sub = p_telemetry.add_subparsers(dest="telemetry_cmd", required=True)
 
     p_telemetry_enable = telemetry_sub.add_parser("enable")
@@ -4651,7 +4681,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_telemetry_export.add_argument("--issue-output")
     p_telemetry_export.set_defaults(func=cmd_telemetry_export)
 
-    p_artifact_consistency = sub.add_parser("artifact-consistency")
+    p_artifact_consistency = sub.add_parser("artifact-consistency", help=argparse.SUPPRESS)
     p_artifact_consistency.add_argument("--artifact-root")
     p_artifact_consistency.add_argument("--state-file")
     p_artifact_consistency.add_argument("--output")
@@ -4663,7 +4693,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_artifact_consistency.add_argument("--repair-receipt-file")
     p_artifact_consistency.set_defaults(func=cmd_artifact_consistency)
 
-    p_observability = sub.add_parser("observability")
+    p_observability = sub.add_parser("observability", help=argparse.SUPPRESS)
     p_observability.add_argument("--state-file", required=True)
     p_observability.add_argument("--report-file", required=True)
     p_observability.add_argument("--output", required=True)
@@ -4672,7 +4702,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_observability.add_argument("--refresh-file")
     p_observability.set_defaults(func=cmd_observability)
 
-    p_session_export = sub.add_parser("session-export")
+    p_session_export = sub.add_parser("session-export", help="Export session replay for review")
     p_session_export.add_argument("--artifact-root")
     p_session_export.add_argument("--state-file")
     p_session_export.add_argument("--report-file")
@@ -4682,7 +4712,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_session_export.add_argument("--refresh-file")
     p_session_export.set_defaults(func=cmd_session_export)
 
-    p_deploy = sub.add_parser("deploy")
+    p_deploy = sub.add_parser("deploy", help="Deploy with acceptance guard")
     p_deploy.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_deploy.add_argument("--state-file")
     p_deploy.add_argument("--deploy-run-id")
@@ -4690,12 +4720,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_deploy.add_argument("--mode", default="default", choices=["default", "dev"])
     p_deploy.set_defaults(func=cmd_deploy)
 
-    p_deploy_check = sub.add_parser("deploy-check")
+    p_deploy_check = sub.add_parser("deploy-check", help="Check if deployment is allowed")
     p_deploy_check.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_deploy_check.add_argument("--state-file")
     p_deploy_check.set_defaults(func=cmd_deploy_check)
 
-    p_bug_packet = sub.add_parser("bug-packet")
+    p_bug_packet = sub.add_parser("bug-packet", help="Export a bug report packet")
     p_bug_packet.add_argument("--artifact-root")
     p_bug_packet.add_argument("--state-file")
     p_bug_packet.add_argument("--report-file")
@@ -4708,7 +4738,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_bug_packet.add_argument("--issue-output")
     p_bug_packet.set_defaults(func=cmd_bug_packet)
 
-    p_thin_output = sub.add_parser("thin-output")
+    p_thin_output = sub.add_parser("thin-output", help=argparse.SUPPRESS)
     p_thin_output.add_argument("--artifact-root")
     p_thin_output.add_argument("--state-file")
     p_thin_output.add_argument("--report-file")
@@ -4721,7 +4751,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_thin_output.add_argument("--consistency-recovery-file")
     p_thin_output.set_defaults(func=cmd_thin_output)
 
-    p_generate_prompt = sub.add_parser("generate-prompt", aliases=["next-step", "repair-step"])
+    p_generate_prompt = sub.add_parser("generate-prompt", aliases=["next-step", "repair-step"], help="Show what to fix next")
     p_generate_prompt.add_argument("--artifact-root")
     p_generate_prompt.add_argument("--repair-packet-file")
     p_generate_prompt.add_argument("--mode", default="default", choices=["default", "dev"])
@@ -4731,7 +4761,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_generate_prompt.add_argument("--doctor-file")
     p_generate_prompt.set_defaults(func=cmd_generate_prompt)
 
-    p_thin_output_reading = sub.add_parser("thin-output-reading")
+    p_thin_output_reading = sub.add_parser("thin-output-reading", help=argparse.SUPPRESS)
     p_thin_output_reading.add_argument("--thin-output-file", required=True)
     p_thin_output_reading.add_argument("--prompt-bridge-file", required=True)
     p_thin_output_reading.add_argument("--report-file", required=True)
@@ -4739,14 +4769,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_thin_output_reading.add_argument("--output", required=True)
     p_thin_output_reading.set_defaults(func=cmd_thin_output_reading)
 
-    p_prompt_followup = sub.add_parser("prompt-followup")
+    p_prompt_followup = sub.add_parser("prompt-followup", help=argparse.SUPPRESS)
     p_prompt_followup.add_argument("--repair-packet-file", required=True)
     p_prompt_followup.add_argument("--prompt-bridge-file", required=True)
     p_prompt_followup.add_argument("--output", required=True)
     p_prompt_followup.add_argument("--thin-output-file")
     p_prompt_followup.set_defaults(func=cmd_prompt_followup)
 
-    p_prompt_retry_guard = sub.add_parser("prompt-retry-guard")
+    p_prompt_retry_guard = sub.add_parser("prompt-retry-guard", help=argparse.SUPPRESS)
     p_prompt_retry_guard.add_argument("--packet-a-file", required=True)
     p_prompt_retry_guard.add_argument("--prompt-a-file", required=True)
     p_prompt_retry_guard.add_argument("--packet-b-file", required=True)
@@ -4754,45 +4784,45 @@ def build_parser() -> argparse.ArgumentParser:
     p_prompt_retry_guard.add_argument("--output", required=True)
     p_prompt_retry_guard.set_defaults(func=cmd_prompt_retry_guard)
 
-    p_consistency_recovery = sub.add_parser("consistency-recovery")
+    p_consistency_recovery = sub.add_parser("consistency-recovery", help=argparse.SUPPRESS)
     p_consistency_recovery.add_argument("--consistency-file", required=True)
     p_consistency_recovery.add_argument("--output", required=True)
     p_consistency_recovery.add_argument("--checkpoint-record-file")
     p_consistency_recovery.set_defaults(func=cmd_consistency_recovery)
 
-    p_checkpoint_operator_reading = sub.add_parser("checkpoint-operator-reading")
+    p_checkpoint_operator_reading = sub.add_parser("checkpoint-operator-reading", help=argparse.SUPPRESS)
     p_checkpoint_operator_reading.add_argument("--second-operator-file", required=True)
     p_checkpoint_operator_reading.add_argument("--thin-output-file", required=True)
     p_checkpoint_operator_reading.add_argument("--repair-packet-file", required=True)
     p_checkpoint_operator_reading.add_argument("--output", required=True)
     p_checkpoint_operator_reading.set_defaults(func=cmd_checkpoint_operator_reading)
 
-    p_consistency_recovery_prompt = sub.add_parser("consistency-recovery-prompt")
+    p_consistency_recovery_prompt = sub.add_parser("consistency-recovery-prompt", help=argparse.SUPPRESS)
     p_consistency_recovery_prompt.add_argument("--consistency-recovery-file", required=True)
     p_consistency_recovery_prompt.add_argument("--output", required=True)
     p_consistency_recovery_prompt.add_argument("--thin-output-file")
     p_consistency_recovery_prompt.set_defaults(func=cmd_consistency_recovery_prompt)
 
-    p_consistency_recovery_prompt_reading = sub.add_parser("consistency-recovery-prompt-reading")
+    p_consistency_recovery_prompt_reading = sub.add_parser("consistency-recovery-prompt-reading", help=argparse.SUPPRESS)
     p_consistency_recovery_prompt_reading.add_argument("--consistency-recovery-file", required=True)
     p_consistency_recovery_prompt_reading.add_argument("--prompt-file", required=True)
     p_consistency_recovery_prompt_reading.add_argument("--output", required=True)
     p_consistency_recovery_prompt_reading.set_defaults(func=cmd_consistency_recovery_prompt_reading)
 
-    p_reproducibility = sub.add_parser("reproducibility")
+    p_reproducibility = sub.add_parser("reproducibility", help=argparse.SUPPRESS)
     p_reproducibility.add_argument("--run-a", required=True)
     p_reproducibility.add_argument("--run-b", required=True)
     p_reproducibility.add_argument("--output", required=True)
     p_reproducibility.set_defaults(func=cmd_reproducibility)
 
-    p_second_operator = sub.add_parser("second-operator")
+    p_second_operator = sub.add_parser("second-operator", help=argparse.SUPPRESS)
     p_second_operator.add_argument("--state-file", required=True)
     p_second_operator.add_argument("--repair-packet-file", required=True)
     p_second_operator.add_argument("--run-file", required=True)
     p_second_operator.add_argument("--output", required=True)
     p_second_operator.set_defaults(func=cmd_second_operator)
 
-    p_operator_brief = sub.add_parser("operator-brief")
+    p_operator_brief = sub.add_parser("operator-brief", help=argparse.SUPPRESS)
     p_operator_brief.add_argument("--state-file", required=True)
     p_operator_brief.add_argument("--report-file", required=True)
     p_operator_brief.add_argument("--repair-packet-file", required=True)
@@ -4800,30 +4830,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_operator_brief.add_argument("--output", required=True)
     p_operator_brief.set_defaults(func=cmd_operator_brief)
 
-    p_operator_brief_chain = sub.add_parser("operator-brief-chain")
+    p_operator_brief_chain = sub.add_parser("operator-brief-chain", help=argparse.SUPPRESS)
     p_operator_brief_chain.add_argument("--brief", action="append", required=True)
     p_operator_brief_chain.add_argument("--output", required=True)
     p_operator_brief_chain.set_defaults(func=cmd_operator_brief_chain)
 
-    p_operator_render = sub.add_parser("operator-render")
+    p_operator_render = sub.add_parser("operator-render", help=argparse.SUPPRESS)
     p_operator_render.add_argument("--brief-file")
     p_operator_render.add_argument("--chain-file")
     p_operator_render.add_argument("--output", required=True)
     p_operator_render.set_defaults(func=cmd_operator_render)
 
-    p_operator_render_adoption = sub.add_parser("operator-render-adoption")
+    p_operator_render_adoption = sub.add_parser("operator-render-adoption", help=argparse.SUPPRESS)
     p_operator_render_adoption.add_argument("--source", required=True)
     p_operator_render_adoption.add_argument("--render", required=True)
     p_operator_render_adoption.add_argument("--label", required=True)
     p_operator_render_adoption.add_argument("--output", required=True)
     p_operator_render_adoption.set_defaults(func=cmd_operator_render_adoption)
 
-    p_operator_render_adoption_delta = sub.add_parser("operator-render-adoption-delta")
+    p_operator_render_adoption_delta = sub.add_parser("operator-render-adoption-delta", help=argparse.SUPPRESS)
     p_operator_render_adoption_delta.add_argument("--record", action="append", required=True)
     p_operator_render_adoption_delta.add_argument("--output", required=True)
     p_operator_render_adoption_delta.set_defaults(func=cmd_operator_render_adoption_delta)
 
-    p_operator_reading = sub.add_parser("operator-reading")
+    p_operator_reading = sub.add_parser("operator-reading", help=argparse.SUPPRESS)
     p_operator_reading.add_argument("--second-operator-file", required=True)
     p_operator_reading.add_argument("--brief-file", required=True)
     p_operator_reading.add_argument("--render-file", required=True)
@@ -4831,7 +4861,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_operator_reading.add_argument("--output", required=True)
     p_operator_reading.set_defaults(func=cmd_operator_reading)
 
-    p_externality_pressure = sub.add_parser("externality-pressure")
+    p_externality_pressure = sub.add_parser("externality-pressure", help=argparse.SUPPRESS)
     p_externality_pressure.add_argument("--reproducibility-file", required=True)
     p_externality_pressure.add_argument("--second-operator-file", required=True)
     p_externality_pressure.add_argument("--operator-reading-file", required=True)
@@ -4839,12 +4869,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_externality_pressure.add_argument("--output", required=True)
     p_externality_pressure.set_defaults(func=cmd_externality_pressure)
 
-    p_repair_handoff = sub.add_parser("repair-handoff")
+    p_repair_handoff = sub.add_parser("repair-handoff", help=argparse.SUPPRESS)
     p_repair_handoff.add_argument("--state-file", required=True)
     p_repair_handoff.add_argument("--output", required=True)
     p_repair_handoff.set_defaults(func=cmd_repair_handoff)
 
-    p_repair_packet = sub.add_parser("repair-packet")
+    p_repair_packet = sub.add_parser("repair-packet", help=argparse.SUPPRESS)
     p_repair_packet.add_argument("--state-file", required=True)
     p_repair_packet.add_argument("--artifact-root", required=True)
     p_repair_packet.add_argument("--output", required=True)
@@ -4883,11 +4913,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_repair_packet.add_argument("--refresh-use-closure", action="store_true", default=None)
     p_repair_packet.set_defaults(func=cmd_repair_packet)
 
-    p_orchestrate = sub.add_parser("orchestrate")
+    p_orchestrate = sub.add_parser("orchestrate", help=argparse.SUPPRESS)
     add_orchestration_args(p_orchestrate, include_resume_from_state=True)
     p_orchestrate.set_defaults(func=cmd_orchestrate)
 
-    p_resume = sub.add_parser("resume", aliases=["continue", "retry"])
+    p_resume = sub.add_parser("resume", aliases=["continue", "retry"], help=argparse.SUPPRESS)
     add_orchestration_args(p_resume, include_resume_from_state=False, relaxed_runtime=True)
     p_resume.add_argument("--mode", default="default", choices=["default", "dev"])
     p_resume.set_defaults(func=cmd_resume)

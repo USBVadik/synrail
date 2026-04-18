@@ -32,6 +32,6 @@ synrail start "Describe the bounded local change."
 synrail check
 ```
 
-If non-green, run `synrail repair-step`, repair only the named gap, and re-check.
+If non-green, fix only what check tells you to fix, then rerun `synrail check`.
 
 Do not bypass Synrail and do not claim success without real local verification.
