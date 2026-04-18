@@ -53,6 +53,8 @@ The purpose of this file is simple:
 | [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md) | Gemini CLI | bugfix / proof_heavy | ACCEPTED | mixed | yes | high | 1.0 | 1.2 | +0.2 | 1 | 2 | +1 |
 | [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md) | Gemini CLI | bugfix | ACCEPTED | none | yes | high | 0.8 | 1.0 | +0.2 | 1 | 1 | 0 |
 | [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md) | Gemini CLI + Gemini CLI | handoff | ACCEPTED | none | yes | high | 2.0 | 1.8 | -0.2 | 3 | 3 | 0 |
+| [019](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019/REPORT.md) | Gemini CLI | orientation | ORIENTATION_SUMMARIZED_WITH_OVEREXPLORATION | mixed | unclear | medium | 0.4 | 0.9 | +0.5 | 0 | 0 | 0 |
+| [020](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020/REPORT.md) | Claude Code | orientation | ORIENTATION_SUMMARIZED | none | yes | medium | 0.4 | 0.3 | -0.1 | 0 | 0 | 0 |
 
 ## Per-Run Records
 
@@ -548,6 +550,46 @@ The purpose of this file is simple:
   - first operator left a real semantically insufficient state; second operator inherited that state, repaired the proof, and reached accepted closure
   - handoff / continuation honesty remains the clearest place where `Synrail` looks materially stronger than the simpler baseline
 
+### Run 019
+
+- Report: [fixtures/alpha_external_run_019/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019/REPORT.md)
+- Task class: `orientation`
+- Failure owner: `mixed`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.4`
+- Synrail minutes actual: `0.9`
+- Delta time: `+0.5`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - Gemini can now recover governed project context without drifting into sibling probe folders
+  - but the orientation lane still over-explores and does not visibly standardize on a literal `synrail` CLI-first entry
+
+### Run 020
+
+- Report: [fixtures/alpha_external_run_020/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020/REPORT.md)
+- Task class: `orientation`
+- Failure owner: `none`
+- Reuse tomorrow: `yes`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.4`
+- Synrail minutes actual: `0.3`
+- Delta time: `-0.1`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - Claude answered accurately and quickly from governed artifacts with no write attempts and no parent-directory drift
+  - but even this stronger run still used direct `.synrail` reads rather than a literal `synrail status` entrypoint
+
 ## Current Read
 
 If we force the current ledger into one brutally practical sentence:
@@ -557,6 +599,7 @@ If we force the current ledger into one brutally practical sentence:
 - looks materially stronger than before on proof hardening for bounded bug-fix runs
 - still looks too heavy on trivial tasks, even though the newer compressed-loop tranche improved the path from run 009 to run 015
 - and now has a materially stronger restore story: `014d` fixed the false-success lie, and `014e` validates real recovery on the no-commit git contour via `file_copy`
+- orientation on governed roots is better than before, but still not yet standardized to a visible literal `synrail` CLI-first habit
 - the Claude-first handoff lane is still harness-limited under the current root server setup, so new handoff strength is still coming mostly from Gemini-side evidence
 
 ## Next Runs

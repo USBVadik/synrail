@@ -1,0 +1,13 @@
+Agent adoption files are ready.
+Project root: /root/alpha_external_run_020c/workspace
+Artifact root hint: .synrail
+Synrail command: /root/synrail/.venv/bin/synrail
+Workspace note: Parent git repo detected above the project root at /root. Treat only this project root as the execution surface for the run. If git status or git diff climbs to the parent repo, do not use that parent output as proof here.
+Runtime note: use `/root/synrail/.venv/bin/synrail runtime-helper` for a small curl or template-render verification path.
+AGENTS.md: written
+GEMINI.md: written
+CLAUDE.md: written
+AGENTS.md backup: /root/alpha_external_run_020c/workspace/AGENTS.md.synrail.bak.20260418T151907Z
+GEMINI.md backup: /root/alpha_external_run_020c/workspace/GEMINI.md.synrail.bak.20260418T151907Z
+CLAUDE.md backup: /root/alpha_external_run_020c/workspace/CLAUDE.md.synrail.bak.20260418T151907Z
+What to do next: run `synrail` in this repo. Commit these files if you want local agents to keep discovering Synrail before editing.

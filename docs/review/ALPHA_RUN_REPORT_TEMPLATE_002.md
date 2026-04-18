@@ -25,7 +25,7 @@ Use `estimate` language for baseline fields unless a real side-by-side baseline 
 - Task:
 - Project:
 - Task class:
-  - one of: `trivial`, `bugfix`, `additive_change`, `handoff`, `restore`, `proof_heavy`, `ui_runtime`, `mixed`
+  - one of: `trivial`, `bugfix`, `additive_change`, `handoff`, `restore`, `proof_heavy`, `ui_runtime`, `orientation`, `mixed`
 - Start time:
 - End time:
 - Elapsed minutes:
