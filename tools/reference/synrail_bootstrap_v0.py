@@ -143,6 +143,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
         final_result = json.dumps(starter_guidance, indent=2, ensure_ascii=True) + "\n"
     readback_lines = [
         f"### READBACK: {task_identity.strip()}",
+        "Starter note: if final_result.json already carries strong structured verification, leave this file untouched unless synrail check explicitly asks for readback.",
         "Changed surface: path/to/changed_file.ext",
         "Observed: describe what this changed surface now contains, returns, or renders",
     ]
@@ -152,6 +153,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
         )
     scenario_lines = [
         f"### SCENARIO PROOF: {task_identity.strip()}",
+        "Starter note: if final_result.json already carries strong structured verification, leave this file untouched unless synrail check explicitly asks for scenario proof.",
         "Scenario: describe the exact runtime context on the attested target surface",
         "Command: paste the local command, request, or test that verified the change",
         "Observed: paste the concrete output, rendered fragment, or behavior that was seen",

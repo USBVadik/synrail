@@ -170,6 +170,14 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertTrue((artifact_root / "final_result.json").exists())
             self.assertTrue((artifact_root / "readback.txt").exists())
             self.assertTrue((artifact_root / "scenario_proof.txt").exists())
+            self.assertIn(
+                "leave this file untouched unless synrail check explicitly asks for readback",
+                (artifact_root / "readback.txt").read_text(),
+            )
+            self.assertIn(
+                "leave this file untouched unless synrail check explicitly asks for scenario proof",
+                (artifact_root / "scenario_proof.txt").read_text(),
+            )
 
             bootstrap = load_json(artifact_root / "bootstrap.json")
             validation = load_json(artifact_root / "bootstrap_validation.json")
