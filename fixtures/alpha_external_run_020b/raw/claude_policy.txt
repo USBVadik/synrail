@@ -1,0 +1,49 @@
+# Claude Workflow
+
+Use Synrail as the default local control path for this repo.
+
+## First Command
+
+For every new user task, run Synrail first so you can see the current governed state:
+
+```bash
+/root/synrail/.venv/bin/synrail
+```
+
+Synrail is a CLI control kernel, not a background daemon.
+
+## Project Orientation
+
+If the user asks what this project is, where work stopped, or what the current status is, treat that as a Synrail-guided orientation task too.
+
+- Start with `/root/synrail/.venv/bin/synrail` before broader repo search.
+- Stay inside this project root and prefer read-only inspection first.
+- Summarize the governed state before exploring older files, sibling probes, or unrelated surfaces.
+- Do not create helper scripts or make edits for an orientation-only question.
+
+## Start
+
+If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:
+
+```bash
+/root/synrail/.venv/bin/synrail start "Describe the bounded local change."
+```
+
+## Work
+
+- Keep edits bounded and local to this repo.
+- Update the starter proof files in `.synrail/` as the change becomes real.
+- Run the local verification commands needed for the task.
+
+## Finish
+
+```bash
+/root/synrail/.venv/bin/synrail check
+```
+
+If non-green, fix only what check tells you to fix, then rerun `/root/synrail/.venv/bin/synrail check`.
+
+Do not bypass Synrail and do not claim success without real local verification.
+
+- Parent git repo detected above the project root at /root. Treat only this project root as the execution surface for the run. If git status or git diff climbs to the parent repo, do not use that parent output as proof here.
+- For UI or rendered-output tasks, prefer `/root/synrail/.venv/bin/synrail runtime-helper` and a simple curl or template-render check before browser automation.

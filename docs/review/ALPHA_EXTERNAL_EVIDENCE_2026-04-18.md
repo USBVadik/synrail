@@ -144,6 +144,18 @@ So the honest current claim is:
 - governed project recall is materially better
 - explicit CLI-first orientation is still not yet learned strongly enough
 
+Runs [019b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019b/REPORT.md) and [020b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020b/REPORT.md) retest that same contour after the orientation-guidance wording fix.
+
+They split the result by lane:
+
+- Gemini still over-explores, even after explicitly mentioning Synrail
+- Claude now literally starts with `synrail`, then stays read-only and summarizes the governed state correctly
+
+So the updated honest claim is:
+
+- the fix is validated on the Claude lane
+- the Gemini lane still needs stronger shaping than text-only guidance
+
 ## What The Runs Do **Not** Yet Prove
 
 ### 1. They do not yet prove that `Synrail` clearly beats the simpler baseline overall
@@ -204,11 +216,14 @@ That means some of the current evidence is still noisy.
 
 Runs [019](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019/REPORT.md) and [020](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020/REPORT.md) are encouraging, but they stop short of the strict ideal.
 
-Both agents used governed artifacts.
+Both original runs used governed artifacts.
 
-Neither run provides clean evidence of a visible `synrail` or `synrail status` command as the first standardized step.
+The retests refine that picture:
 
-That means the project is improving on recall and context recovery, but the operator-facing entry habit is still only partially internalized.
+- [020b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020b/REPORT.md) does provide clean evidence of a literal `synrail`-first start on Claude
+- [019b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019b/REPORT.md) shows that Gemini still does not reliably collapse orientation into that same small loop
+
+That means the project is improving on recall and context recovery, but the operator-facing entry habit is still only partially internalized across agents.
 
 ## Per-Run Contribution
 
@@ -238,6 +253,8 @@ That means the project is improving on recall and context recovery, but the oper
 | [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md) | Second valid handoff success | Strong positive evidence |
 | [019](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019/REPORT.md) | Gemini can orient on a governed project without sibling drift, but still over-explores and does not visibly start with `synrail` | Mixed evidence |
 | [020](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020/REPORT.md) | Claude can answer accurately from `.synrail` artifacts in a short read-only run, but still without a literal CLI-first entry | Moderate positive evidence |
+| [019b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019b/REPORT.md) | Gemini retest still over-explores even after the orientation guidance wording fix | Mixed evidence |
+| [020b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020b/REPORT.md) | Claude retest now literally starts with `synrail`, giving the first clean CLI-first orientation signal | Strong positive evidence |
 
 ## Current Best Honest Claim Against Baseline
 
@@ -290,6 +307,8 @@ The evidence is already stored in these run reports:
 - [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md)
 - [019](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019/REPORT.md)
 - [020](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020/REPORT.md)
+- [019b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019b/REPORT.md)
+- [020b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020b/REPORT.md)
 
 There was also already a generic scoring template here:
 
@@ -327,6 +346,6 @@ the answer is:
 
 The strongest positive signal is still handoff, but restore now has a real positive external recovery signal too.
 
-The strongest negative signal is no longer the old false-success restore bug; the clearest remaining negative signal is now trivial-task operator tax, while restore still needs broader contour coverage and orientation still needs a more explicit CLI-first entry path.
+The strongest negative signal is no longer the old false-success restore bug; the clearest remaining negative signal is now trivial-task operator tax, while restore still needs broader contour coverage and orientation still needs that smaller CLI-first loop to generalize beyond the Claude lane.
 
 That is exactly enough clarity to justify the next round of focused fixes.
