@@ -313,6 +313,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn(state["run_id"], template.stdout)
             self.assertIn("Scenario:", template.stdout)
             self.assertIn("Observed:", template.stdout)
+            self.assertIn("keep this scenario proof brief and explanatory", template.stdout)
             self.assertIn("Status: PASSED", template.stdout)
 
     def test_runtime_helper_offers_small_ui_paths(self) -> None:

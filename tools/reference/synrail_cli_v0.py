@@ -1559,7 +1559,7 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
         "Proof shape reminders:",
         "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; Synrail can carry run identity and doctor-ready cleanup truth during a normal check.",
         "- readback.txt: briefly name the changed surface and what you observed there; if final_result.json already carries strong structured verification, readback can stay explanatory instead of carrying the trust decision.",
-        "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines instead of prose-only proof.",
+        "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines; if final_result.json already carries strong structured verification, scenario proof can stay brief and explanatory instead of carrying the trust decision.",
         "Then run: " + shell_command(root, "check", project_root=project_root),
     ]
     if profile.get("workspace_isolation_note", ""):
@@ -1585,7 +1585,7 @@ def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Pa
         "Proof shape reminders:",
         "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and explicit diff_provenance verification_command plus verification_result; Synrail can carry run identity and doctor-ready cleanup truth during a normal check.",
         "- readback.txt: briefly name the changed surface and what you observed there; if final_result.json already carries strong structured verification, readback can stay explanatory instead of carrying the trust decision.",
-        "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines instead of prose-only proof.",
+        "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines; if final_result.json already carries strong structured verification, scenario proof can stay brief and explanatory instead of carrying the trust decision.",
         "Next command: " + shell_command(root, "check", project_root=project_root),
     ]
     print("\n".join(lines))
@@ -1835,6 +1835,7 @@ def scenario_proof_template_text(*, root: Path | None) -> str:
         "Command: paste the local command, request, or test that verified the change",
         "Observed: paste the concrete output, rendered fragment, or behavior that was seen",
     ]
+    lines.append("Note: if final_result.json already carries explicit structured verification, keep this scenario proof brief and explanatory instead of repeating the whole proof payload.")
     if profile.get("prefers_runtime_evidence", False):
         lines.append("Runtime hint: prefer a local request, rendered response, or observed runtime output over a source-only grep when possible; run `synrail runtime-helper` for a small curl or template-render path before browser automation")
     lines.extend(["Status: PASSED", ""])

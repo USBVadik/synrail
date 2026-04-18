@@ -723,6 +723,114 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertNotIn("readback", bundle["semantically_insufficient_sections"])
         self.assertEqual("ACCEPTED", verdict["closure_status"])
 
+    def test_missing_scenario_proof_is_waived_when_final_result_carries_strong_runtime_corroboration(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_runtime_corroborated_without_scenario_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["warroom/templates/index.html"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "warroom/templates/index.html",
+                    "added_line": "                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                    "context_before": "                </h2>",
+                    "context_after": "                <form action=\"/add_token\" method=\"post\" class=\"mb-6 flex gap-2\">",
+                    "verification_command": "grep -n 'Local signals only' warroom/templates/index.html",
+                    "verification_result": "24:                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only warroom/templates/index.html with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text(
+                "### READBACK: add watchlist subtitle\n"
+                "Changed surface: warroom/templates/index.html\n"
+                "Observed: the template now contains a Local signals only subtitle directly under the Watchlist heading.\n"
+            )
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(tmp / "missing_scenario.txt")
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("COMPLETE", bundle["status"])
+        self.assertEqual("SUFFICIENT", bundle["semantic_status"])
+        self.assertNotIn("scenario_proof", bundle["missing_sections"])
+        self.assertNotIn("scenario_proof", bundle["semantically_insufficient_sections"])
+        self.assertTrue(bundle["scenario_proof"]["waived_by_runtime_corroboration"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
+    def test_semantically_thin_scenario_proof_is_waived_when_final_result_carries_strong_runtime_corroboration(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_runtime_corroborated_with_brief_scenario_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["warroom/templates/index.html"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "warroom/templates/index.html",
+                    "added_line": "                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                    "context_before": "                </h2>",
+                    "context_after": "                <form action=\"/add_token\" method=\"post\" class=\"mb-6 flex gap-2\">",
+                    "verification_command": "grep -n 'Local signals only' warroom/templates/index.html",
+                    "verification_result": "24:                <p class=\"text-sm text-gray-400 -mt-3 mb-4\">Local signals only</p>",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only warroom/templates/index.html with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text(
+                "### READBACK: add watchlist subtitle\n"
+                "Changed surface: warroom/templates/index.html\n"
+                "Observed: the template now contains a Local signals only subtitle directly under the Watchlist heading.\n"
+            )
+            scenario.write_text("Scenario passed.\n")
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("COMPLETE", bundle["status"])
+        self.assertEqual("SUFFICIENT", bundle["semantic_status"])
+        self.assertFalse(bundle["scenario_proof"]["content_semantically_sufficient"])
+        self.assertTrue(bundle["scenario_proof"]["waived_by_runtime_corroboration"])
+        self.assertNotIn("scenario_proof", bundle["semantically_insufficient_sections"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
     def test_already_satisfied_noop_rejects_invented_patch(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_already_satisfied_fake_patch_") as tmpdir:
             tmp = Path(tmpdir)

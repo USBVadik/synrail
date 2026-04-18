@@ -259,6 +259,7 @@ def scenario_proof_repair_checklist(*, current_step_subsurface_id: str, current_
         "- Status: PASSED when the expected outcome was observed; otherwise use FAILED or BLOCKED truthfully",
         "- At least 3 lines with at least one concrete identifier or command",
         "- Do not restate the task description — prove the verification actually happened",
+        "- If final_result.json already carries structured diff_provenance with verification_command plus verification_result, keep scenario proof short and explanatory instead of duplicating the main proof payload",
     ]
 
 

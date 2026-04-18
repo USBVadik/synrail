@@ -555,6 +555,18 @@ def readback_requirement_is_semantically_sufficient(
     return waived_by_runtime_corroboration, waived_by_runtime_corroboration
 
 
+def scenario_requirement_is_semantically_sufficient(
+    *,
+    scenario_sufficient: bool,
+    structured_diff_sufficient: bool,
+    final_result_status_sufficient: bool,
+) -> tuple[bool, bool]:
+    if scenario_sufficient:
+        return True, False
+    waived_by_runtime_corroboration = structured_diff_sufficient and final_result_status_sufficient
+    return waived_by_runtime_corroboration, waived_by_runtime_corroboration
+
+
 def cleanup_is_semantically_sufficient(cleanup: dict) -> bool:
     if not cleanup.get("success", False):
         return False
@@ -726,6 +738,13 @@ def build_bundle(args: argparse.Namespace) -> dict:
             final_result_status_sufficient=final_result_status_semantically_sufficient,
         )
     )
+    scenario_requirement_semantically_sufficient, scenario_waived_by_runtime_corroboration = (
+        scenario_requirement_is_semantically_sufficient(
+            scenario_sufficient=scenario_semantically_sufficient,
+            structured_diff_sufficient=diff_record_semantically_sufficient,
+            final_result_status_sufficient=final_result_status_semantically_sufficient,
+        )
+    )
     scope_alignment_evaluated, scope_alignment_semantically_sufficient = scope_alignment_is_semantically_sufficient(
         change_disposition=change_disposition,
         git_diff=git_diff,
@@ -805,13 +824,17 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "non_empty": bool(readback_text),
             "content_semantically_sufficient": readback_semantically_sufficient,
             "waived_by_runtime_corroboration": readback_waived_by_runtime_corroboration,
+            "structurally_complete": readback_present or readback_waived_by_runtime_corroboration,
             "semantically_sufficient": readback_requirement_semantically_sufficient,
         },
         "scenario_proof": {
             "present": scenario_present,
             "path": scenario_path,
             "non_empty": bool(scenario_text),
-            "semantically_sufficient": scenario_semantically_sufficient,
+            "content_semantically_sufficient": scenario_semantically_sufficient,
+            "waived_by_runtime_corroboration": scenario_waived_by_runtime_corroboration,
+            "structurally_complete": scenario_present or scenario_waived_by_runtime_corroboration,
+            "semantically_sufficient": scenario_requirement_semantically_sufficient,
         },
         "artifact_identity": {
             "baseline_identity": baseline_identity,
@@ -851,7 +874,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
         missing.append("diff_provenance")
     if not bundle["readback"]["present"] and not readback_waived_by_runtime_corroboration:
         missing.append("readback")
-    if not bundle["scenario_proof"]["present"]:
+    if not bundle["scenario_proof"]["present"] and not scenario_waived_by_runtime_corroboration:
         missing.append("scenario_proof")
 
     if not identity_fields_present:
@@ -894,20 +917,28 @@ def build_bundle(args: argparse.Namespace) -> dict:
         structural_trace_entry(
             section="readback",
             present=bundle["readback"]["present"],
-            structurally_complete=bundle["readback"]["present"],
+            structurally_complete=bundle["readback"]["structurally_complete"],
             why=(
-                "readback evidence file is present"
-                if bundle["readback"]["present"]
+                (
+                    "readback evidence file is present"
+                    if bundle["readback"]["present"]
+                    else "readback evidence file is missing, but structured runtime corroboration already covers the trust-bearing contour so readback is optional on this run"
+                )
+                if bundle["readback"]["structurally_complete"]
                 else "readback evidence file is missing"
             ),
         ),
         structural_trace_entry(
             section="scenario_proof",
             present=bundle["scenario_proof"]["present"],
-            structurally_complete=bundle["scenario_proof"]["present"],
+            structurally_complete=bundle["scenario_proof"]["structurally_complete"],
             why=(
-                "scenario-proof evidence file is present"
-                if bundle["scenario_proof"]["present"]
+                (
+                    "scenario-proof evidence file is present"
+                    if bundle["scenario_proof"]["present"]
+                    else "scenario-proof evidence file is missing, but structured runtime corroboration already covers the trust-bearing contour so scenario proof is optional on this run"
+                )
+                if bundle["scenario_proof"]["structurally_complete"]
                 else "scenario-proof evidence file is missing"
             ),
         ),
@@ -951,7 +982,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
             semantically_insufficient_sections.append("verification_corroboration")
         if not readback_requirement_semantically_sufficient:
             semantically_insufficient_sections.append("readback")
-        if not scenario_semantically_sufficient:
+        if not scenario_requirement_semantically_sufficient:
             semantically_insufficient_sections.append("scenario_proof")
         if not identity_semantically_sufficient:
             semantically_insufficient_sections.append("artifact_identity")
@@ -1070,11 +1101,15 @@ def build_bundle(args: argparse.Namespace) -> dict:
         semantic_trace_entry(
             section="scenario_proof",
             evaluated=not missing,
-            semantically_sufficient=scenario_semantically_sufficient,
+            semantically_sufficient=scenario_requirement_semantically_sufficient,
             why=(
-                "scenario-proof evidence records a concrete scenario context and outcome"
-                if scenario_semantically_sufficient
-                else "scenario-proof evidence does not yet record a concrete scenario context and outcome"
+                (
+                    "scenario-proof evidence records a concrete scenario context and outcome"
+                    if scenario_semantically_sufficient
+                    else "structured runtime corroboration already closes the trust decision, so scenario proof stays explanatory instead of blocking acceptance on this run"
+                )
+                if scenario_requirement_semantically_sufficient
+                else "scenario-proof evidence does not yet record a concrete scenario context and outcome, and the bundle still needs that explanatory verification surface because runtime corroboration is not yet strong enough to waive it"
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["scenario_proof"],
         ),
