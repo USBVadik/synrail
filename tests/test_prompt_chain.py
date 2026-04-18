@@ -283,6 +283,7 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertIn("artifact_identity", record["prompt"])
         self.assertIn("synrail final-result-template", record["prompt"])
         self.assertIn("synrail explain-proof", record["prompt"])
+        self.assertIn("verification_command", record["prompt"])
 
     def test_artifact_identity_subsurface_includes_checklist(self) -> None:
         packet = _minimal_packet(
@@ -333,6 +334,8 @@ class TestBuildPromptBridge(unittest.TestCase):
         record = build_prompt_bridge(repair_packet=packet)
         self.assertEqual("scenario_proof_record", record["current_step_subsurface_id"])
         self.assertIn("Checklist for /tmp/synrail/scenario_proof.txt:", record["prompt"])
+        self.assertIn("Command:", record["prompt"])
+        self.assertIn("Observed:", record["prompt"])
         self.assertIn("Status: PASSED", record["prompt"])
         self.assertIn("Do not restate the task description", record["prompt"])
 

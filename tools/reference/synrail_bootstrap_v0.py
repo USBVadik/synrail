@@ -224,7 +224,7 @@ def build_proof_request_record(
         "run_id": run_id,
         "task_class": task_class,
         "task_identity": task_identity.strip(),
-        "summary": "Synrail is waiting for proof artifacts from this controlled run.",
+        "summary": "Synrail is waiting for explicit proof artifacts and local verification evidence from this controlled run.",
         "starter_mode": "edit_in_place",
         "starter_hashes": {
             artifact_id: text_sha256(contents)
@@ -244,7 +244,7 @@ def build_proof_request_record(
             "artifact_identity",
             "cleanup_status",
         ],
-        "next_safe_step": "Edit the starter proof files in place, then run synrail check.",
+        "next_safe_step": "Run local verification, record explicit verification anchors in the starter proof files, then run synrail check.",
     }
 
 

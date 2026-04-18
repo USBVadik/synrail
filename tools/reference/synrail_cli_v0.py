@@ -336,8 +336,8 @@ def render_agent_policy_markdown(
         "```",
         "",
         "2. Keep the change local and bounded to the stated task.",
-        f"3. Edit the starter proof files under `{artifact_root}/` in place as the work becomes real.",
-        "4. Run the local commands needed to verify the change honestly.",
+        f"3. Run the local commands needed to verify the change honestly, then edit the starter proof files under `{artifact_root}/` in place as the work becomes real.",
+        "4. Keep proof explicit: final_result should carry patch or diff provenance, readback should name the observed changed surface, and scenario proof should use labeled Command plus Observed or Result lines.",
         "",
         "## Before You Claim Success",
         "",
@@ -409,8 +409,8 @@ def render_gemini_policy_markdown(
         "## Work",
         "",
         f"- Keep edits bounded and local to this repo.",
-        f"- Update the starter proof files in `{artifact_root}/` as the change becomes real.",
-        "- Run the local verification commands needed for the task.",
+        f"- Run the local verification commands needed for the task before updating the starter proof files in `{artifact_root}/`.",
+        "- Keep proof explicit: final_result should carry patch or diff provenance, readback should name the observed changed surface, and scenario proof should use labeled Command plus Observed or Result lines.",
         "",
         "## Finish",
         "",
@@ -472,8 +472,8 @@ def render_claude_policy_markdown(
         "## Work",
         "",
         f"- Keep edits bounded and local to this repo.",
-        f"- Update the starter proof files in `{artifact_root}/` as the change becomes real.",
-        "- Run the local verification commands needed for the task.",
+        f"- Run the local verification commands needed for the task before updating the starter proof files in `{artifact_root}/`.",
+        "- Keep proof explicit: final_result should carry patch or diff provenance, readback should name the observed changed surface, and scenario proof should use labeled Command plus Observed or Result lines.",
         "",
         "## Finish",
         "",
@@ -1515,13 +1515,17 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
     profile = load_project_profile(root) or {}
     lines = [
         "Controlled run started.",
-        "Do this now: Edit only the starter proof files below in place. Leave every other surface unchanged.",
+        "Do this now: make the bounded change, run local verification, then edit only the starter proof files below in place. Leave every other surface unchanged.",
         f"Artifact root: {display_path(root)}",
         f"Run id: {state.get('run_id', '')}",
         "Starter proof files are ready for this run.",
         f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
         f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
+        "Proof shape reminders:",
+        "- final_result.json: keep git_diff patch-shaped when possible, or keep diff_provenance explicit with verification_command plus verification_result.",
+        "- readback.txt: name the changed surface and what you observed there; do not paraphrase the task.",
+        "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines instead of prose-only proof.",
         "Then run: " + shell_command(root, "check", project_root=project_root),
     ]
     if profile.get("workspace_isolation_note", ""):
@@ -1540,10 +1544,14 @@ def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Pa
         "What happened: this artifact root still points at the current untouched run, so Synrail did not start a second one.",
         f"Artifact root: {display_path(root)}",
         f"Run id: {state.get('run_id', '')}",
-        "Continue this run by editing only the starter proof files below in place.",
+        "Continue this run by making the bounded change, running local verification, and editing only the starter proof files below in place.",
         f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
         f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
+        "Proof shape reminders:",
+        "- final_result.json: keep git_diff patch-shaped when possible, or keep diff_provenance explicit with verification_command plus verification_result.",
+        "- readback.txt: name the changed surface and what you observed there; do not paraphrase the task.",
+        "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines instead of prose-only proof.",
         "Next command: " + shell_command(root, "check", project_root=project_root),
     ]
     print("\n".join(lines))
@@ -3196,11 +3204,15 @@ def cmd_check(args: argparse.Namespace) -> int:
                 if proof_request_file and proof_request_file.exists():
                     proof_request = load_bootstrap_json(proof_request_file)
                     preferred = proof_request.get("preferred_artifacts", {})
-                    print("What is missing: Synrail is still waiting for the proof artifacts for this controlled run.")
-                    print("What to do next: edit the starter proof files already placed at these paths, then rerun synrail check.")
+                    print("What is missing: Synrail is still waiting for explicit proof artifacts and local verification evidence for this controlled run.")
+                    print("What to do next: make the bounded change, run local verification, then edit the starter proof files already placed at these paths and rerun synrail check.")
                     for label in ["final_result", "readback", "scenario_proof"]:
                         if preferred.get(label, ""):
                             print(f"- {label}: {preferred[label]}")
+                    print("Proof shape reminders:")
+                    print("- final_result.json should carry a real patch or explicit diff_provenance verification_command plus verification_result.")
+                    print("- readback.txt should name the changed surface and what you observed there, not just restate the task.")
+                    print("- scenario_proof.txt should use labeled Command: plus Observed: or Result: lines.")
                     print("Need a canonical readback shape? run synrail readback-template")
                     print("Need a canonical final_result shape? run synrail final-result-template")
                     print("Need a canonical scenario_proof shape? run synrail scenario-proof-template")
