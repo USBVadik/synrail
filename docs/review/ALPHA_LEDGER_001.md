@@ -48,6 +48,7 @@ The purpose of this file is simple:
 | [014b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014b/REPORT.md) | Codex manual | restore | PARTIAL_DIAGNOSTIC_ONLY | operator | unclear | high | n/a | 0.0 | n/a | n/a | 0 | n/a |
 | [014c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014c/REPORT.md) | Codex manual | restore | RESTORE_REPORTED_BUT_WORKSPACE_NOT_RESTORED | product | no | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
 | [014d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014d/REPORT.md) | Codex manual | restore | RESTORE_FAILED_HONESTLY_FOR_UNSUPPORTED_WORKSPACE | product | unclear | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
+| [014e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014e/REPORT.md) | Codex manual | restore | RESTORED | none | yes | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
 | [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md) | Gemini CLI | trivial / additive_change | ACCEPTED | product | no | low | 0.3 | 1.0 | +0.7 | 0 | 2 | +2 |
 | [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md) | Gemini CLI | bugfix / proof_heavy | ACCEPTED | mixed | yes | high | 1.0 | 1.2 | +0.2 | 1 | 2 | +1 |
 | [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md) | Gemini CLI | bugfix | ACCEPTED | none | yes | high | 0.8 | 1.0 | +0.2 | 1 | 1 | 0 |
@@ -443,6 +444,27 @@ The purpose of this file is simple:
   - the workspace is in git but has no commits, so restore correctly records `workspace_snapshot.type = none`
   - the product no longer lies about restore success, but it still cannot recover the workspace for this contour
 
+### Run 014e
+
+- Report: [fixtures/alpha_external_run_014e/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014e/REPORT.md)
+- Task class: `restore`
+- Failure owner: `none`
+- Reuse tomorrow: `yes`
+- Wedge fit: `high`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.0`
+- Delta time: `-0.3`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `manual revert of the changed file or copy back from the known-good baseline`
+- Synrail restore path: `save (file-copy pre-run snapshot) -> confirm-restore -> restore`
+- Delta recovery: `Synrail now matches or beats baseline on this contour because the broken file is restored automatically and tests return to green`
+- Why it matters:
+  - this is the strongest restore-positive signal in the ledger so far
+  - it validates the `file_copy` fallback on exactly the no-commit git workspace that previously failed in `014d`
+  - restore is no longer just more honest here; it actually works
+
 ### Run 015
 
 - Report: [fixtures/alpha_external_run_015/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md)
@@ -534,7 +556,7 @@ If we force the current ledger into one brutally practical sentence:
 - looks credible on bounded accepted closure
 - looks materially stronger than before on proof hardening for bounded bug-fix runs
 - still looks too heavy on trivial tasks, even though the newer compressed-loop tranche improved the path from run 009 to run 015
-- and still has restore/recovery unresolved: `save` improved, parser/default-path lookup improved, and `014d` fixed the false-success lie, but actual workspace recovery is still missing for no-commit workspaces
+- and now has a materially stronger restore story: `014d` fixed the false-success lie, and `014e` validates real recovery on the no-commit git contour via `file_copy`
 - the Claude-first handoff lane is still harness-limited under the current root server setup, so new handoff strength is still coming mostly from Gemini-side evidence
 
 ## Next Runs

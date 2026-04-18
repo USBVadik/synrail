@@ -12,14 +12,14 @@ It tries to answer one question:
 
 ## Short Verdict
 
-**Partial yes, now a little stronger on the narrow wedge, but still not decisive.**
+**Partial yes, now materially stronger on the narrow wedge, but still not fully decisive.**
 
 The current alpha runs are enough to support this weaker claim:
 
 - `Synrail` is no longer just an internal theory artifact.
 - On some bounded local workflows, it already shows real product value that a simpler baseline may not match as well.
-- That case is a little stronger now after the second valid handoff success and another pair of accepted Gemini bugfix runs.
-- But the evidence is still mixed, because operator tax remains visible and the restore contour is still broken in a core scenario.
+- That case is now stronger after the second valid handoff success, another pair of accepted Gemini bugfix runs, and a real restore recovery win on the no-commit git contour.
+- But the evidence is still mixed, because operator tax remains visible and restore is not yet validated across every workspace contour.
 
 So the honest current verdict is:
 
@@ -97,7 +97,7 @@ rather than simply letting narrative self-description glide through untouched.
 
 ### 5. The system is now strong enough to reveal real product bugs, not just harness noise
 
-Runs [007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_007/REPORT.md), [011b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011b/REPORT.md), [014](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014/REPORT.md), [014c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014c/REPORT.md), and [014d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014d/REPORT.md) are especially important.
+Runs [007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_007/REPORT.md), [011b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011b/REPORT.md), [014](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014/REPORT.md), [014c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014c/REPORT.md), [014d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014d/REPORT.md), and [014e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014e/REPORT.md) are especially important.
 
 They found a core product failure:
 
@@ -107,13 +107,13 @@ They found a core product failure:
 
 Run [007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_007/REPORT.md) showed that the old restore contour failed completely.
 
-Runs [011b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011b/REPORT.md), [014](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014/REPORT.md), [014c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014c/REPORT.md), and [014d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014d/REPORT.md) sharpened that diagnosis:
+Runs [011b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011b/REPORT.md), [014](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014/REPORT.md), [014c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014c/REPORT.md), [014d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014d/REPORT.md), and [014e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014e/REPORT.md) sharpened that diagnosis:
 
 - pre-run `save` now arms a fallback successfully
 - deployed `confirm-restore` now succeeds on the corrected build
 - `014c` showed that `restore` could still claim `RESTORED` while the workspace remained broken
 - `014d` fixed that honesty bug: for a no-commit workspace it now fails explicitly with `workspace_snapshot.type = "none"` and `RESTORE_FAILED`
-- but actual recovery is still missing for that contour
+- `014e` closes that specific gap: on the same no-commit git contour, `workspace_snapshot.type = "file_copy"` and restore now genuinely recovers the broken file
 
 That is bad news operationally.
 
@@ -135,7 +135,8 @@ If restore is one of the wedge claims, then a failed restore contour is a direct
 Right now the honest statement is:
 
 - `Synrail` may already beat baseline on continuation/handoff honesty
-- but it does **not** yet beat baseline convincingly on restore/recovery
+- and it now has at least one strong external restore win on a previously failing contour
+- but it does **not** yet beat baseline convincingly on restore/recovery across all workspace types
 
 ### 2. They do not yet prove that operator tax is low enough
 
@@ -200,6 +201,7 @@ That means some of the current evidence is still noisy.
 | [014](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014/REPORT.md) | Restore round-trip still failed even after pre-run snapshot arming | Strong negative evidence |
 | [014c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014c/REPORT.md) | Current deployed build still reports RESTORED while leaving the workspace broken | Strong negative evidence |
 | [014d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014d/REPORT.md) | Latest build now fails restore honestly on a no-commit workspace instead of reporting false success | Mixed but useful evidence |
+| [014e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014e/REPORT.md) | File-copy fallback restores the broken file and returns tests to green on the no-commit git contour | Strong positive evidence |
 | [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md) | Trivial lane improved, but still slower/heavier than baseline | Mixed evidence |
 | [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md) | Proof-heavy accepted run with more observational readback | Moderate positive evidence |
 | [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md) | Another fresh accepted bugfix on a distinct contour | Moderate positive evidence |
@@ -211,7 +213,8 @@ Today the most defensible claim is:
 
 - `Synrail` already looks **materially more useful than baseline** on **handoff / continuation honesty**.
 - It also looks **increasingly credible** on bounded accepted closure for local bug-fix tasks.
-- But it is **not yet clearly better than baseline overall**, because restore still does not recover unsupported workspaces and trivial-task operator tax is still too visible.
+- And it now has a real restore win on the no-commit git contour via `file_copy`.
+- But it is **not yet clearly better than baseline overall**, because trivial-task operator tax is still too visible and restore is not yet proven across every workspace type.
 
 That is enough to justify:
 
@@ -248,6 +251,7 @@ The evidence is already stored in these run reports:
 - [014b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014b/REPORT.md)
 - [014c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014c/REPORT.md)
 - [014d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014d/REPORT.md)
+- [014e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014e/REPORT.md)
 - [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md)
 - [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md)
 - [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md)
@@ -287,8 +291,8 @@ the answer is:
 
 - **not yet**
 
-The strongest positive signal is still handoff.
+The strongest positive signal is still handoff, but restore now has a real positive external recovery signal too.
 
-The strongest negative signal is still restore.
+The strongest negative signal is no longer the old false-success restore bug; the clearest remaining negative signal is now trivial-task operator tax, while restore still needs broader contour coverage.
 
 That is exactly enough clarity to justify the next round of focused fixes.

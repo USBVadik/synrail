@@ -1,0 +1,45 @@
+{
+  "schema_version": "run_state_v0",
+  "run_id": "ALPHA_RUN_20260418T143428759596Z_e1524f",
+  "task_class": "bounded_change",
+  "state": "INITIALIZED",
+  "target_surface": {
+    "status": "UNKNOWN",
+    "identity": "",
+    "baseline_relation": ""
+  },
+  "doctor": {
+    "status": "UNKNOWN",
+    "blocking_failure_classes": []
+  },
+  "integrity": {
+    "status": "UNKNOWN",
+    "exact_task_identity_ok": false,
+    "bootstrap_provenance_ok": false,
+    "bootstrap_provenance_reason": "CONTROLLED_BOOTSTRAP_MISSING"
+  },
+  "execution": {
+    "status": "NOT_RUN",
+    "artifact_bundle_present": false
+  },
+  "proof_bundle": {
+    "status": "MISSING",
+    "missing_sections": [],
+    "structural_status": "MISSING",
+    "semantic_status": "MISSING",
+    "semantically_insufficient_sections": [],
+    "semantic_next_safe_step": ""
+  },
+  "closure": {
+    "status": "OPEN",
+    "blocking_reason": "",
+    "next_allowed_transition": "TARGET_SURFACE_ATTESTED",
+    "narrow_next_safe_step": "attest target surface",
+    "missing_sections": []
+  },
+  "recovery": {
+    "status": "NOT_REQUIRED",
+    "reverification_complete": false
+  },
+  "next_safe_step": "attest target surface"
+}

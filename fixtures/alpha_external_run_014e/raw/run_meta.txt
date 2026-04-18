@@ -1,0 +1,6 @@
+start=2026-04-18T14:34:28+00:00
+remote_head=4790036f80f440f6d485c64c8e99d97520acfa5e
+checkpoint_sha256=a161d066c1d500536fb4e8aa0c97150ab4ac51daaa379b5d96666ecc55857705
+synrail_path=/root/synrail/.venv/bin/synrail
+test_cmd=PYTHONPATH=. python3 tests/test_retry_logic.py
+end=2026-04-18T14:34:30+00:00

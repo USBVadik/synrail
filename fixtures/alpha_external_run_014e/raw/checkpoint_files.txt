@@ -1,0 +1,7 @@
+.synrail/checkpoints/working/artifacts/state.json
+.synrail/checkpoints/working/checkpoint_record.json
+.synrail/checkpoints/working/checkpoint_verify.json
+.synrail/checkpoints/working/workspace_files/AGENTS.md
+.synrail/checkpoints/working/workspace_files/CLAUDE.md
+.synrail/checkpoints/working/workspace_files/GEMINI.md
+.synrail/checkpoints/working/workspace_files/README.md
