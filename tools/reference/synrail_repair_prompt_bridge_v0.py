@@ -156,6 +156,7 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
         "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files when you can produce one; keep it empty for a truthful already_satisfied no-op attestation",
         "- diff_provenance: if git_diff is unavailable or the file is untracked, record method, changed_file, one exact added_line or removed_line, one stable context_before or context_after anchor, and verification_command plus verification_result",
         "- If diff_provenance.method is missing but the rest of the direct-observation record is strong, Synrail can normalize it to direct_file_observation during a normal check; still include it explicitly when you can",
+        "- If final_result.json already carries that strong structured verification, do not spend this repair step rewriting readback.txt or scenario_proof.txt unless Synrail explicitly targets them",
         "- diff_provenance for already_satisfied: record changed_file, observed_line, verification_command, verification_result, and provenance_note instead of inventing a patch",
         "- artifact_identity: when identity is missing, fill baseline_identity, execution_surface_identity, prompt_identity, and task_identity for this run",
         "- cleanup_status.success: true when the workspace is clean after the intended change",
@@ -207,6 +208,7 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
             "- diff_provenance.observed_line: for already_satisfied, record the concrete line that was already present",
             "- diff_provenance.verification_command and diff_provenance.verification_result: capture the command and observed output that proved the changed line or observed line; for tiny edits, prefer output that includes the changed line plus a stable neighbor",
             "- diff_provenance.provenance_note: explain why this is direct observation, especially for already_satisfied or untracked files",
+            "- If this direct-observation record is already strong, leave readback.txt and scenario_proof.txt alone unless Synrail later names them as the exact blocker",
             "- Need a canonical shape? run `synrail final-result-template`",
             "- Need exact semantic reasons after a check? run `synrail explain-proof`",
         ]
@@ -244,7 +246,7 @@ def readback_repair_checklist(*, current_step_subsurface_id: str, current_step_t
         "- Do not paraphrase or restate the task description — prove you read the actual changed code or output",
         "- At least 2 lines with at least one concrete identifier (file path, function/class name, line number, or code token)",
         "- For UI or rendered changes, prefer local runtime evidence (curl, test output) over source-only grep when possible",
-        "- If final_result.json already carries structured diff_provenance with verification_command plus verification_result, keep readback short and explanatory instead of duplicating the main proof payload",
+        "- If final_result.json already carries structured diff_provenance with verification_command plus verification_result, keep readback short and explanatory, or leave it untouched until Synrail explicitly asks for it",
     ]
 
 
@@ -261,7 +263,7 @@ def scenario_proof_repair_checklist(*, current_step_subsurface_id: str, current_
         "- Status: PASSED when the expected outcome was observed; otherwise use FAILED or BLOCKED truthfully",
         "- At least 3 lines with at least one concrete identifier or command",
         "- Do not restate the task description — prove the verification actually happened",
-        "- If final_result.json already carries structured diff_provenance with verification_command plus verification_result, keep scenario proof short and explanatory instead of duplicating the main proof payload",
+        "- If final_result.json already carries structured diff_provenance with verification_command plus verification_result, keep scenario proof short and explanatory, or leave it untouched until Synrail explicitly asks for it",
     ]
 
 

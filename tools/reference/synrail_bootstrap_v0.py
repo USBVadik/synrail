@@ -129,6 +129,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                     "artifact_identity_hint": "during a normal synrail check, run identity is carried from the current controlled context; only fill artifact_identity manually when a standalone bundle-check lacks that run context",
                     "cleanup_hint": "during a normal synrail check, a doctor-ready workspace can satisfy cleanup_status automatically; only edit cleanup_status manually when standalone proof needs an explicit cleanup attestation",
                     "no_op_hint": "If the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and attest the observed line truthfully through diff_provenance.",
+                    "explanatory_surface_hint": "If final_result.json already carries a strong direct-observation record with verification_command and verification_result, you can leave readback.txt and scenario_proof.txt in their starter or brief explanatory form until synrail check explicitly asks for more.",
                 },
             },
         },
@@ -263,7 +264,7 @@ def build_proof_request_record(
             "readback",
             "scenario_proof",
         ],
-        "next_safe_step": "Run local verification, record explicit verification anchors in the starter proof files, let Synrail carry run identity and doctor-ready cleanup truth when available, then run synrail check.",
+        "next_safe_step": "Run local verification, make final_result.json strong first with trust-bearing status and structured diff_provenance anchors, leave readback.txt and scenario_proof.txt brief or untouched unless Synrail later asks for them, let Synrail carry run identity and doctor-ready cleanup truth when available, then run synrail check.",
     }
 
 

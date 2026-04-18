@@ -1549,7 +1549,7 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
     profile = load_project_profile(root) or {}
     lines = [
         "Controlled run started.",
-        "Do this now: make the bounded change, run local verification, then edit only the starter proof files below in place. Leave every other surface unchanged.",
+        "Do this now: make the bounded change, run local verification, then strengthen final_result.json first. Leave readback.txt and scenario_proof.txt in starter or brief explanatory form unless synrail check later names them.",
         f"Artifact root: {display_path(root)}",
         f"Run id: {state.get('run_id', '')}",
         "Starter proof files are ready for this run.",
@@ -1558,8 +1558,8 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
         "Proof shape reminders:",
         "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and a direct-observation diff_provenance record: changed_file, one concrete added_line or removed_line, one stable context_before or context_after anchor, plus verification_command and verification_result. Include diff_provenance.method when you can, although Synrail can infer direct_file_observation from a strong direct-observation record during a normal check.",
-        "- readback.txt: briefly name the changed surface and what you observed there; if final_result.json already carries strong structured verification, readback can stay explanatory instead of carrying the trust decision.",
-        "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines; if final_result.json already carries strong structured verification, scenario proof can stay brief and explanatory instead of carrying the trust decision.",
+        "- readback.txt: briefly name the changed surface and what you observed there only if synrail check later asks for readback, or if final_result.json cannot yet carry strong structured verification. Otherwise readback can stay starter-level and explanatory.",
+        "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines only if synrail check later asks for scenario proof, or if final_result.json cannot yet carry strong structured verification. Otherwise scenario proof can stay starter-level and explanatory.",
         "Then run: " + shell_command(root, "check", project_root=project_root),
     ]
     if profile.get("workspace_isolation_note", ""):
@@ -1578,14 +1578,14 @@ def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Pa
         "What happened: this artifact root still points at the current untouched run, so Synrail did not start a second one.",
         f"Artifact root: {display_path(root)}",
         f"Run id: {state.get('run_id', '')}",
-        "Continue this run by making the bounded change, running local verification, and editing only the starter proof files below in place.",
+        "Continue this run by making the bounded change, running local verification, and strengthening final_result.json first. Leave readback.txt and scenario_proof.txt in starter or brief explanatory form unless synrail check later names them.",
         f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
         f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
         f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
         "Proof shape reminders:",
         "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and a direct-observation diff_provenance record: changed_file, one concrete added_line or removed_line, one stable context_before or context_after anchor, plus verification_command and verification_result. Include diff_provenance.method when you can, although Synrail can infer direct_file_observation from a strong direct-observation record during a normal check.",
-        "- readback.txt: briefly name the changed surface and what you observed there; if final_result.json already carries strong structured verification, readback can stay explanatory instead of carrying the trust decision.",
-        "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines; if final_result.json already carries strong structured verification, scenario proof can stay brief and explanatory instead of carrying the trust decision.",
+        "- readback.txt: briefly name the changed surface and what you observed there only if synrail check later asks for readback, or if final_result.json cannot yet carry strong structured verification. Otherwise readback can stay starter-level and explanatory.",
+        "- scenario_proof.txt: use labeled Command: plus Observed: or Result: lines only if synrail check later asks for scenario proof, or if final_result.json cannot yet carry strong structured verification. Otherwise scenario proof can stay starter-level and explanatory.",
         "Next command: " + shell_command(root, "check", project_root=project_root),
     ]
     print("\n".join(lines))
@@ -1836,7 +1836,7 @@ def scenario_proof_template_text(*, root: Path | None) -> str:
         "Command: paste the local command, request, or test that verified the change",
         "Observed: paste the concrete output, rendered fragment, or behavior that was seen",
     ]
-    lines.append("Note: if final_result.json already carries explicit structured verification, keep this scenario proof brief and explanatory instead of repeating the whole proof payload.")
+    lines.append("Note: if final_result.json already carries explicit structured verification, you can leave this scenario proof untouched or keep it brief and explanatory until synrail check explicitly asks for more.")
     if profile.get("prefers_runtime_evidence", False):
         lines.append("Runtime hint: prefer a local request, rendered response, or observed runtime output over a source-only grep when possible; run `synrail runtime-helper` for a small curl or template-render path before browser automation")
     lines.extend(["Status: PASSED", ""])
@@ -1863,7 +1863,7 @@ def readback_template_text(*, root: Path | None) -> str:
         f"Changed surface: {changed_surface}",
         "Observed: briefly describe what this changed surface now contains, returns, or renders",
     ]
-    lines.append("Note: if final_result.json already carries explicit structured verification, keep this readback short and explanatory instead of repeating the whole proof.")
+    lines.append("Note: if final_result.json already carries explicit structured verification, you can leave this readback untouched or keep it short and explanatory until synrail check explicitly asks for more.")
     if profile.get("prefers_runtime_evidence", False):
         lines.append("Runtime hint: for UI, route, or rendered output changes, prefer a local response or rendered fragment over source-only grep when possible; run `synrail runtime-helper` for a small curl or template-render path before browser automation")
     lines.append("")
@@ -3258,16 +3258,16 @@ def cmd_check(args: argparse.Namespace) -> int:
                     proof_request = load_bootstrap_json(proof_request_file)
                     preferred = proof_request.get("preferred_artifacts", {})
                     print("What is missing: Synrail is still waiting for explicit proof artifacts and local verification evidence for this controlled run.")
-                    print("What to do next: make the bounded change, run local verification, then edit the starter proof files already placed at these paths and rerun synrail check.")
+                    print("What to do next: make the bounded change, run local verification, then strengthen final_result.json first and rerun synrail check. Only touch readback.txt or scenario_proof.txt if final_result.json cannot yet carry strong structured verification, or if synrail check later names them.")
                     for label in ["final_result", "readback", "scenario_proof"]:
                         if preferred.get(label, ""):
                             print(f"- {label}: {preferred[label]}")
                     print("Proof shape reminders:")
                     print("- final_result.json should carry a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op) plus a real patch or explicit diff_provenance method, one exact changed line, one stable context anchor, verification_command, and verification_result.")
-                    print("- readback.txt should name the changed surface and what you observed there, not just restate the task.")
-                    print("- scenario_proof.txt should use labeled Command: plus Observed: or Result: lines.")
-                    print("Need a canonical readback shape? run synrail readback-template")
+                    print("- readback.txt should name the changed surface and what you observed there only if synrail check later asks for readback, or if final_result.json cannot yet carry the trust with strong structured verification.")
+                    print("- scenario_proof.txt should use labeled Command: plus Observed: or Result: lines only if synrail check later asks for scenario proof, or if final_result.json cannot yet carry the trust with strong structured verification.")
                     print("Need a canonical final_result shape? run synrail final-result-template")
+                    print("Need a canonical readback shape? run synrail readback-template")
                     print("Need a canonical scenario_proof shape? run synrail scenario-proof-template")
                     profile = load_project_profile(root) or {}
                     if profile.get("prefers_runtime_evidence", False):

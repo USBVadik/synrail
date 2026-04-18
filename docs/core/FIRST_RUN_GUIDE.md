@@ -42,15 +42,15 @@ This creates `.synrail/` and opens one governed run for this bounded change.
 
 ### 2. Do the bounded work and keep proof honest
 
-Make the requested change. Then update only the proof surfaces that reflect what you actually changed and verified:
+Make the requested change. Then make `final_result.json` strong first. Only expand the other proof surfaces if `synrail check` later asks for them, or if `final_result.json` still cannot carry strong structured verification by itself:
 
 - `final_result.json` for the changed files and diff/provenance record
-- `readback.txt` for a brief observed readback of the changed surface; when `final_result.json` already carries strong structured verification, treat `readback.txt` as explanatory rather than the main trust-bearing proof
-- `scenario_proof.txt` for labeled verification evidence such as `Command:` plus `Observed:` or `Result:`; when `final_result.json` already carries strong structured verification, treat `scenario_proof.txt` as explanatory rather than the main trust-bearing proof
+- `readback.txt` for a brief observed readback of the changed surface; when `final_result.json` already carries strong structured verification, treat `readback.txt` as explanatory, or leave it in starter form until `synrail check` explicitly names it
+- `scenario_proof.txt` for labeled verification evidence such as `Command:` plus `Observed:` or `Result:`; when `final_result.json` already carries strong structured verification, treat `scenario_proof.txt` as explanatory, or leave it in starter form until `synrail check` explicitly names it
 
 In `final_result.json`, use a trust-bearing status: `PROVEN` for an evidenced bounded edit, or `ALREADY_SATISFIED` only for a truthful no-op attestation where the requested state was already present before any edit.
 
-In the normal `synrail check` path, you usually do not need to hand-copy run identity fields or a cleanup summary into `final_result.json` when the current controlled run context and doctor-ready workspace already provide that truth. Focus first on the status, changed files, diff/provenance, readback, and labeled verification evidence.
+In the normal `synrail check` path, you usually do not need to hand-copy run identity fields or a cleanup summary into `final_result.json` when the current controlled run context and doctor-ready workspace already provide that truth. Focus first on the status, changed files, and diff/provenance. Only spend extra steps on `readback.txt` or `scenario_proof.txt` if `check` still names them after `final_result.json` is already strong.
 
 If you need help with the expected shape, use:
 

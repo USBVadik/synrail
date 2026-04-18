@@ -153,14 +153,15 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(0, start.returncode, start.stdout + start.stderr)
             self.assertIn("Controlled run started.", start.stdout)
             self.assertIn(
-                "Do this now: make the bounded change, run local verification, then edit only the starter proof files below in place. Leave every other surface unchanged.",
+                "Do this now: make the bounded change, run local verification, then strengthen final_result.json first.",
                 start.stdout,
             )
+            self.assertIn("Leave readback.txt and scenario_proof.txt in starter or brief explanatory form unless synrail check later names them.", start.stdout)
             self.assertIn("Proof shape reminders:", start.stdout)
             self.assertIn("plus verification_command and verification_result", start.stdout)
             self.assertIn("context_before or context_after anchor", start.stdout)
             self.assertIn("strong structured verification", start.stdout)
-            self.assertIn("Command: plus Observed: or Result:", start.stdout)
+            self.assertIn("only if synrail check later asks for scenario proof", start.stdout)
             self.assertIn("Starter proof files are ready for this run.", start.stdout)
             self.assertTrue((artifact_root / "bootstrap.json").exists())
             self.assertTrue((artifact_root / "bootstrap_validation.json").exists())
@@ -181,11 +182,16 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(".synrail/final_result.json", proof_request["preferred_artifacts"]["final_result"])
             self.assertEqual(64, len(proof_request["starter_hashes"]["final_result"]))
             self.assertIn("explicit proof artifacts and local verification evidence", proof_request["summary"])
-            self.assertIn("record explicit verification anchors", proof_request["next_safe_step"])
+            self.assertIn("make final_result.json strong first", proof_request["next_safe_step"])
+            self.assertIn("leave readback.txt and scenario_proof.txt brief or untouched", proof_request["next_safe_step"])
             self.assertIn("carry run identity and doctor-ready cleanup truth", proof_request["next_safe_step"])
             self.assertEqual("direct_file_observation", final_result["diff_provenance"]["method"])
             self.assertIn("changed or observed line", final_result["diff_provenance"]["context_before"])
             self.assertIn("exact changed or observed line", final_result["diff_provenance"]["verification_result"])
+            self.assertIn(
+                "leave readback.txt and scenario_proof.txt in their starter or brief explanatory form",
+                final_result["_synrail"]["starter_guidance"]["explanatory_surface_hint"],
+            )
 
     def test_check_after_plain_init_requires_controlled_start(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_bootstrap_block_") as tmpdir:
@@ -239,13 +245,15 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertIn("waiting for explicit proof artifacts and local verification evidence", check.stdout)
             self.assertIn("run local verification", check.stdout)
+            self.assertIn("strengthen final_result.json first", check.stdout)
             self.assertIn("final_result: .synrail/final_result.json", check.stdout)
             self.assertIn("readback: .synrail/readback.txt", check.stdout)
             self.assertIn("scenario_proof: .synrail/scenario_proof.txt", check.stdout)
             self.assertIn("diff_provenance method, one exact changed line, one stable context anchor, verification_command, and verification_result", check.stdout)
             self.assertIn("trust-bearing status", check.stdout)
             self.assertIn("PROVEN", check.stdout)
-            self.assertIn("Command: plus Observed: or Result:", check.stdout)
+            self.assertIn("only if synrail check later asks for readback", check.stdout)
+            self.assertIn("only if synrail check later asks for scenario proof", check.stdout)
             self.assertIn("synrail readback-template", check.stdout)
             self.assertIn("synrail final-result-template", check.stdout)
             self.assertIn("synrail scenario-proof-template", check.stdout)
@@ -296,7 +304,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn(state["run_id"], template.stdout)
             self.assertIn("Changed surface:", template.stdout)
             self.assertIn("Observed:", template.stdout)
-            self.assertIn("keep this readback short and explanatory", template.stdout)
+            self.assertIn("leave this readback untouched or keep it short and explanatory", template.stdout)
             self.assertIn("Runtime hint:", template.stdout)
 
     def test_scenario_proof_template_uses_current_run_context(self) -> None:
@@ -318,7 +326,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn(state["run_id"], template.stdout)
             self.assertIn("Scenario:", template.stdout)
             self.assertIn("Observed:", template.stdout)
-            self.assertIn("keep this scenario proof brief and explanatory", template.stdout)
+            self.assertIn("leave this scenario proof untouched or keep it brief and explanatory", template.stdout)
             self.assertIn("Status: PASSED", template.stdout)
 
     def test_runtime_helper_offers_small_ui_paths(self) -> None:
