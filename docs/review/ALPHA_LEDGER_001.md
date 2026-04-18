@@ -60,6 +60,7 @@ The purpose of this file is simple:
 | [019c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019c/REPORT.md) | Gemini CLI | orientation | ORIENTATION_SUMMARIZED_WITH_REDUCED_EXPLORATION | mixed | unclear | medium | 0.4 | 0.5 | +0.1 | 0 | 0 | 0 |
 | [021b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021b/REPORT.md) | Gemini CLI | trivial / additive_change | INVALID_HARNESS_GEMINI_NONINTERACTIVE_EIO | harness | no | low | n/a | 0.0 | n/a | n/a | 0 | n/a |
 | [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md) | Claude Code | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 0.7 | +0.4 | 0 | 1 | +1 |
+| [021d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 2.2 | +1.9 | 0 | 1 | +1 |
 
 ## Per-Run Records
 
@@ -700,6 +701,27 @@ The purpose of this file is simple:
   - Claude reached accepted closure on a single inferred pass with zero repairs and zero rejections, and the proof pack stayed concrete rather than bloated
   - it improves the trivial picture materially relative to `003` and `015`, but baseline is still cheaper and the evidence is currently stronger on the Claude lane than on Gemini
 
+### Run 021d
+
+- Report: [fixtures/alpha_external_run_021d/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `none`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `2.2`
+- Delta time: `+1.9`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first valid Gemini trivial retest on the current build after `021b` isolated the broken headless path
+  - Gemini reached accepted closure with one check, zero repairs, and zero rejections, so the cheapened trivial contour is now supported by both Claude and Gemini evidence
+  - it still does not make trivial work a baseline win, because the positive result depended on a live interactive TTY Gemini session and remained much slower than the simpler baseline
+
 ## Current Read
 
 If we force the current ledger into one brutally practical sentence:
@@ -708,7 +730,7 @@ If we force the current ledger into one brutally practical sentence:
 - looks credible on bounded accepted closure
 - looks materially stronger than before on proof hardening for bounded bug-fix runs
 - still looks too heavy on trivial tasks, even though the newer compressed-loop tranche improved the path from run 009 to run 015
-- and now looks materially better on the Claude trivial lane than it did earlier, even though the simpler baseline is still cheaper and the Gemini lane is currently harness-blocked by `setRawMode EIO`
+- and now looks materially better on both Claude and Gemini trivial lanes than it did earlier, even though the simpler baseline is still cheaper and the Gemini headless lane is still harness-blocked by `setRawMode EIO`
 - and now has a materially stronger restore story: `014d` fixed the false-success lie, and `014e` validates real recovery on the no-commit git contour via `file_copy`
 - orientation on governed roots is better than before; Claude now shows a literal `synrail`-first entry, while Gemini has narrowed the loop materially in `019c` but still does not converge on that same small shape
 - the Claude-first handoff lane is still harness-limited under the current root server setup, so new handoff strength is still coming mostly from Gemini-side evidence

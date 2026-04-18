@@ -1,0 +1,16 @@
+Agent adoption files are ready.
+Project root: /root/alpha_external_run_021d/workspace
+Artifact root hint: .synrail
+Synrail command: synrail
+Synrail fallback for this machine: /root/alpha_external_run_021d/workspace/.venv/bin/synrail
+AGENTS.md: appended
+GEMINI.md: appended
+CLAUDE.md: appended
+What to do next: run `synrail` in this repo so the dashboard can show the current state, then review and commit the managed Synrail block if the wording fits the repo.
+Synrail alpha install complete.
+Virtualenv: .venv
+Repo path linked via: /root/alpha_external_run_021d/workspace/.venv/lib/python3.12/site-packages/synrail_local_repo.pth
+Command: .venv/bin/synrail
+Agent files installed into: .
+Quick status: run `synrail` inside your project.
+Start a run: `synrail start "Describe the bounded local change."`
