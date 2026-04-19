@@ -321,6 +321,7 @@ Covers:
 File:
 
 - `tests/test_alpha_test_pack_smoke.py`
+- `tests/test_claim_validation_pack.py`
 
 Covers current outside-facing first-run contour plus one legacy helper surface:
 
@@ -328,6 +329,12 @@ Covers current outside-facing first-run contour plus one legacy helper surface:
 - `check`
 - `repair-step`
 - `telemetry export`
+
+The companion claim-validation pack now also checks that:
+
+- the canonical alpha second-operator contour remains followable without author intuition
+- the current evidence-ownership split excludes harness-only runs from kernel roadmap decisions
+- only explicitly strong mixed reports are allowed to count as kernel roadmap evidence with caution
 
 ## Current external review contour
 
