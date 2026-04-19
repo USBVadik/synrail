@@ -91,6 +91,16 @@ It also emits one compact economics summary:
 - added skippable visible surfaces
 - added fixed control mass
 
+The repo now also has one bounded repeatable everyday benchmark class built on top of the same comparison and cost artifacts:
+
+- `fixtures/repeatable_everyday_benchmark_pack_001.json`
+- `fixtures/cost_of_control_everyday_001.json`
+- `tests/test_everyday_benchmark_pack.py`
+
+That pack is intentionally narrow.
+It exists to pressure-test whether the cheapened contour is becoming everyday-cheap,
+not to widen the harness into a broad benchmark platform.
+
 ## Current limitations
 
 The harness currently still does not perform:

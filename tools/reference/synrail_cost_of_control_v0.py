@@ -23,16 +23,16 @@ def save_json(path: Path, payload: dict) -> None:
 def average(records: list[dict], key: str) -> int:
     if not records:
         return 0
-    total = sum(record["economics_summary"][key] for record in records)
+    total = sum(record["economics_summary"].get(key, 0) for record in records)
     return round(total / len(records))
 
 
 def hotspot(records: list[dict], key: str) -> dict:
-    winner = max(records, key=lambda record: record["economics_summary"][key])
+    winner = max(records, key=lambda record: record["economics_summary"].get(key, 0))
     return {
         "scenario_id": winner["scenario_id"],
         "path": winner["synrail_path"],
-        "value": winner["economics_summary"][key],
+        "value": winner["economics_summary"].get(key, 0),
     }
 
 
@@ -79,11 +79,13 @@ def aggregate_verdict_for_class(records: list[dict], scenario_class: str) -> str
     return "UNKNOWN"
 
 
-def build_cost_record(paths: list[Path]) -> dict:
-    records = [load_json(path) for path in paths]
+def build_cost_record_from_records(records: list[dict], *, source_paths: list[str] | None = None) -> dict:
     for record in records:
         if record.get("schema_version") != "baseline_comparison_record_v1":
             raise ValueError("all input records must use baseline_comparison_record_v1")
+    paths = source_paths or ["" for _ in records]
+    if len(paths) != len(records):
+        raise ValueError("source_paths must match record count")
 
     verdict_counts = {verdict: 0 for verdict in VERDICTS}
     for record in records:
@@ -112,12 +114,18 @@ def build_cost_record(paths: list[Path]) -> dict:
             "avg_closure_latency_minutes_added": average(records, "closure_latency_minutes_added"),
             "avg_false_green_exposure_reduced": average(records, "false_green_exposure_reduced"),
             "avg_artifact_completeness_percent_gain": average(records, "artifact_completeness_percent_gain"),
+            "avg_mandatory_mental_steps_added": average(records, "mandatory_mental_steps_added"),
+            "avg_trust_bearing_artifacts_added": average(records, "trust_bearing_artifacts_added"),
+            "avg_required_visible_surfaces_added": average(records, "required_visible_surfaces_added"),
+            "avg_skippable_visible_surfaces_added": average(records, "skippable_visible_surfaces_added"),
+            "avg_fixed_control_mass_added": average(records, "fixed_control_mass_added"),
         },
         "hotspots": {
             "highest_operator_minutes_added": hotspot(records, "operator_minutes_added"),
             "highest_closure_latency_minutes_added": hotspot(records, "closure_latency_minutes_added"),
             "highest_false_green_exposure_reduced": hotspot(records, "false_green_exposure_reduced"),
             "highest_artifact_completeness_percent_gain": hotspot(records, "artifact_completeness_percent_gain"),
+            "highest_fixed_control_mass_added": hotspot(records, "fixed_control_mass_added"),
         },
         "path_buckets": {
             "justified_cost_paths": [record["scenario_id"] for record in records if record["verdict"] == "SYNRAIL_BETTER"],
@@ -127,10 +135,16 @@ def build_cost_record(paths: list[Path]) -> dict:
         "reading": {
             "strongest_justified_path": strongest_justified_path(records),
             "clearest_overhead_path": clearest_overhead_path(records),
+            "everyday_status": aggregate_verdict_for_class(records, "repeatable_everyday_local"),
             "hybrid_status": aggregate_verdict_for_class(records, "medium_risk_ambiguous_closure"),
             "compound_status": aggregate_verdict_for_class(records, "compound_proof_sensitive_repair"),
         },
     }
+
+
+def build_cost_record(paths: list[Path]) -> dict:
+    records = [load_json(path) for path in paths]
+    return build_cost_record_from_records(records, source_paths=[str(path) for path in paths])
 
 
 def build_parser() -> argparse.ArgumentParser:

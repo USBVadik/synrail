@@ -60,7 +60,12 @@
         "avg_invalidation_count_added",
         "avg_closure_latency_minutes_added",
         "avg_false_green_exposure_reduced",
-        "avg_artifact_completeness_percent_gain"
+        "avg_artifact_completeness_percent_gain",
+        "avg_mandatory_mental_steps_added",
+        "avg_trust_bearing_artifacts_added",
+        "avg_required_visible_surfaces_added",
+        "avg_skippable_visible_surfaces_added",
+        "avg_fixed_control_mass_added"
       ],
       "properties": {
         "avg_operator_minutes_added": {"type": "integer"},
@@ -69,7 +74,12 @@
         "avg_invalidation_count_added": {"type": "integer"},
         "avg_closure_latency_minutes_added": {"type": "integer"},
         "avg_false_green_exposure_reduced": {"type": "integer"},
-        "avg_artifact_completeness_percent_gain": {"type": "integer"}
+        "avg_artifact_completeness_percent_gain": {"type": "integer"},
+        "avg_mandatory_mental_steps_added": {"type": "integer"},
+        "avg_trust_bearing_artifacts_added": {"type": "integer"},
+        "avg_required_visible_surfaces_added": {"type": "integer"},
+        "avg_skippable_visible_surfaces_added": {"type": "integer"},
+        "avg_fixed_control_mass_added": {"type": "integer"}
       }
     },
     "hotspots": {
@@ -79,7 +89,8 @@
         "highest_operator_minutes_added",
         "highest_closure_latency_minutes_added",
         "highest_false_green_exposure_reduced",
-        "highest_artifact_completeness_percent_gain"
+        "highest_artifact_completeness_percent_gain",
+        "highest_fixed_control_mass_added"
       ],
       "properties": {
         "highest_operator_minutes_added": {
@@ -121,6 +132,16 @@
             "path": {"type": "string"},
             "value": {"type": "integer"}
           }
+        },
+        "highest_fixed_control_mass_added": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scenario_id", "path", "value"],
+          "properties": {
+            "scenario_id": {"type": "string"},
+            "path": {"type": "string"},
+            "value": {"type": "integer"}
+          }
         }
       }
     },
@@ -149,12 +170,14 @@
       "required": [
         "strongest_justified_path",
         "clearest_overhead_path",
+        "everyday_status",
         "hybrid_status",
         "compound_status"
       ],
       "properties": {
         "strongest_justified_path": {"type": "string"},
         "clearest_overhead_path": {"type": "string"},
+        "everyday_status": {"type": "string"},
         "hybrid_status": {"type": "string"},
         "compound_status": {"type": "string"}
       }

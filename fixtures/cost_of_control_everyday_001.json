@@ -1,0 +1,101 @@
+{
+  "schema_version": "cost_of_control_record_v0",
+  "scenario_count": 5,
+  "source_records": [
+    {
+      "path": "fixtures/repeatable_everyday_benchmark_pack_001.json#EVERYDAY_LOCAL_001",
+      "scenario_id": "EVERYDAY_LOCAL_001",
+      "scenario_class": "repeatable_everyday_local",
+      "verdict": "BASELINE_GOOD_ENOUGH"
+    },
+    {
+      "path": "fixtures/repeatable_everyday_benchmark_pack_001.json#EVERYDAY_LOCAL_002",
+      "scenario_id": "EVERYDAY_LOCAL_002",
+      "scenario_class": "repeatable_everyday_local",
+      "verdict": "UNCLEAR"
+    },
+    {
+      "path": "fixtures/repeatable_everyday_benchmark_pack_001.json#EVERYDAY_LOCAL_003",
+      "scenario_id": "EVERYDAY_LOCAL_003",
+      "scenario_class": "repeatable_everyday_local",
+      "verdict": "BASELINE_GOOD_ENOUGH"
+    },
+    {
+      "path": "fixtures/repeatable_everyday_benchmark_pack_001.json#EVERYDAY_LOCAL_004",
+      "scenario_id": "EVERYDAY_LOCAL_004",
+      "scenario_class": "repeatable_everyday_local",
+      "verdict": "BASELINE_GOOD_ENOUGH"
+    },
+    {
+      "path": "fixtures/repeatable_everyday_benchmark_pack_001.json#EVERYDAY_LOCAL_005",
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "scenario_class": "repeatable_everyday_local",
+      "verdict": "UNCLEAR"
+    }
+  ],
+  "verdict_counts": {
+    "SYNRAIL_BETTER": 0,
+    "BASELINE_GOOD_ENOUGH": 3,
+    "UNCLEAR": 2
+  },
+  "aggregate_deltas": {
+    "avg_operator_minutes_added": 2,
+    "avg_intervention_count_added": 0,
+    "avg_repair_cycles_added": 0,
+    "avg_invalidation_count_added": 0,
+    "avg_closure_latency_minutes_added": 2,
+    "avg_false_green_exposure_reduced": 0,
+    "avg_artifact_completeness_percent_gain": 29,
+    "avg_mandatory_mental_steps_added": 1,
+    "avg_trust_bearing_artifacts_added": 1,
+    "avg_required_visible_surfaces_added": 0,
+    "avg_skippable_visible_surfaces_added": 2,
+    "avg_fixed_control_mass_added": 2
+  },
+  "hotspots": {
+    "highest_operator_minutes_added": {
+      "scenario_id": "EVERYDAY_LOCAL_002",
+      "path": "governed_final_result_first",
+      "value": 2
+    },
+    "highest_closure_latency_minutes_added": {
+      "scenario_id": "EVERYDAY_LOCAL_002",
+      "path": "governed_final_result_first",
+      "value": 2
+    },
+    "highest_false_green_exposure_reduced": {
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "path": "governed_final_result_first",
+      "value": 1
+    },
+    "highest_artifact_completeness_percent_gain": {
+      "scenario_id": "EVERYDAY_LOCAL_002",
+      "path": "governed_final_result_first",
+      "value": 35
+    },
+    "highest_fixed_control_mass_added": {
+      "scenario_id": "EVERYDAY_LOCAL_004",
+      "path": "governed_final_result_first",
+      "value": 3
+    }
+  },
+  "path_buckets": {
+    "justified_cost_paths": [],
+    "baseline_sufficient_paths": [
+      "EVERYDAY_LOCAL_001",
+      "EVERYDAY_LOCAL_003",
+      "EVERYDAY_LOCAL_004"
+    ],
+    "under_proven_paths": [
+      "EVERYDAY_LOCAL_002",
+      "EVERYDAY_LOCAL_005"
+    ]
+  },
+  "reading": {
+    "strongest_justified_path": "",
+    "clearest_overhead_path": "EVERYDAY_LOCAL_002",
+    "everyday_status": "BASELINE_GOOD_ENOUGH",
+    "hybrid_status": "UNKNOWN",
+    "compound_status": "UNKNOWN"
+  }
+}

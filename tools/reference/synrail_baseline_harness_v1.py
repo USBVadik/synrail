@@ -57,6 +57,21 @@ def economics_summary(baseline: dict, synrail: dict) -> dict:
     }
 
 
+def validate_inputs(baseline: dict, synrail: dict) -> None:
+    if baseline.get("schema_version") != "comparison_input_v1":
+        raise ValueError("BASELINE_INPUT_SCHEMA_MISMATCH")
+    if synrail.get("schema_version") != "comparison_input_v1":
+        raise ValueError("SYNRAIL_INPUT_SCHEMA_MISMATCH")
+    if baseline["system"] != "baseline":
+        raise ValueError("BASELINE_INPUT_SYSTEM_MISMATCH")
+    if synrail["system"] != "synrail":
+        raise ValueError("SYNRAIL_INPUT_SYSTEM_MISMATCH")
+    if baseline["scenario_id"] != synrail["scenario_id"]:
+        raise ValueError("SCENARIO_ID_MISMATCH")
+    if baseline["scenario_class"] != synrail["scenario_class"]:
+        raise ValueError("SCENARIO_CLASS_MISMATCH")
+
+
 def compare(baseline: dict, synrail: dict) -> tuple[str, list[str], str, dict]:
     reasons: list[str] = []
     economics = economics_summary(baseline, synrail)
@@ -137,6 +152,25 @@ def compare(baseline: dict, synrail: dict) -> tuple[str, list[str], str, dict]:
     return "UNCLEAR", reasons, why, economics
 
 
+def build_record(baseline: dict, synrail: dict) -> dict:
+    validate_inputs(baseline, synrail)
+    verdict, reasons, why, economics = compare(baseline, synrail)
+    return {
+        "schema_version": "baseline_comparison_record_v1",
+        "scenario_id": baseline["scenario_id"],
+        "scenario_class": baseline["scenario_class"],
+        "task_class": baseline["task_class"],
+        "baseline_path": baseline["path_id"],
+        "synrail_path": synrail["path_id"],
+        "baseline": baseline,
+        "synrail": synrail,
+        "economics_summary": economics,
+        "verdict": verdict,
+        "why_verdict": why,
+        "reasons": reasons,
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="synrail-baseline-harness-v1")
     parser.add_argument("--baseline-file", required=True)
@@ -152,42 +186,14 @@ def main() -> int:
     baseline = load_json(Path(args.baseline_file))
     synrail = load_json(Path(args.synrail_file))
 
-    if baseline.get("schema_version") != "comparison_input_v1":
-        print(json.dumps({"result": "ERROR", "reason": "BASELINE_INPUT_SCHEMA_MISMATCH"}, ensure_ascii=True))
-        return 2
-    if synrail.get("schema_version") != "comparison_input_v1":
-        print(json.dumps({"result": "ERROR", "reason": "SYNRAIL_INPUT_SCHEMA_MISMATCH"}, ensure_ascii=True))
-        return 2
-    if baseline["system"] != "baseline":
-        print(json.dumps({"result": "ERROR", "reason": "BASELINE_INPUT_SYSTEM_MISMATCH"}, ensure_ascii=True))
-        return 2
-    if synrail["system"] != "synrail":
-        print(json.dumps({"result": "ERROR", "reason": "SYNRAIL_INPUT_SYSTEM_MISMATCH"}, ensure_ascii=True))
-        return 2
-    if baseline["scenario_id"] != synrail["scenario_id"]:
-        print(json.dumps({"result": "ERROR", "reason": "SCENARIO_ID_MISMATCH"}, ensure_ascii=True))
-        return 2
-    if baseline["scenario_class"] != synrail["scenario_class"]:
-        print(json.dumps({"result": "ERROR", "reason": "SCENARIO_CLASS_MISMATCH"}, ensure_ascii=True))
+    try:
+        record = build_record(baseline, synrail)
+    except ValueError as exc:
+        print(json.dumps({"result": "ERROR", "reason": str(exc)}, ensure_ascii=True))
         return 2
 
-    verdict, reasons, why, economics = compare(baseline, synrail)
-    record = {
-        "schema_version": "baseline_comparison_record_v1",
-        "scenario_id": baseline["scenario_id"],
-        "scenario_class": baseline["scenario_class"],
-        "task_class": baseline["task_class"],
-        "baseline_path": baseline["path_id"],
-        "synrail_path": synrail["path_id"],
-        "baseline": baseline,
-        "synrail": synrail,
-        "economics_summary": economics,
-        "verdict": verdict,
-        "why_verdict": why,
-        "reasons": reasons,
-    }
     save_json(Path(args.output), record)
-    print(json.dumps({"result": "OK", "verdict": verdict}, ensure_ascii=True))
+    print(json.dumps({"result": "OK", "verdict": record["verdict"]}, ensure_ascii=True))
     return 0
 
 
