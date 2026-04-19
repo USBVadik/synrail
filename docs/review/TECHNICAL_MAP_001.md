@@ -333,6 +333,8 @@ Covers current outside-facing first-run contour plus one legacy helper surface:
 The companion claim-validation pack now also checks that:
 
 - the canonical alpha second-operator contour remains followable without author intuition
+- one uglier repeated-doctor continuation contour remains followable even when the loop has already hit its bounded stop condition
+- one non-resumable fresh-orchestration contour remains followable without inviting a false resume path
 - the current evidence-ownership split excludes harness-only runs from kernel roadmap decisions
 - only explicitly strong mixed reports are allowed to count as kernel roadmap evidence with caution
 

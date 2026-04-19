@@ -72,6 +72,60 @@ class ClaimValidationPackTests(unittest.TestCase):
         self.assertEqual("STRONG_MIXED_SIGNAL", strong_mixed["roadmap_signal_class"])
         self.assertTrue(strong_mixed["kernel_roadmap_eligible"])
 
+    def test_uglier_second_operator_compound_doctor_block_remains_followable(self) -> None:
+        lane = REPO_ROOT / "fixtures" / "second_operator_test_002"
+        second_operator = load_json(lane / "second_operator.json")
+        repair_packet = load_json(lane / "starting_repair_packet.json")
+        run_record = load_json(lane / "starting_run.json")
+
+        self.assertEqual("FOLLOWABLE_BY_SECOND_OPERATOR", second_operator["verdict"])
+        self.assertTrue(second_operator["packet_only_entry"])
+        self.assertFalse(second_operator["requires_author_intuition"])
+        self.assertEqual("DOCTOR_NOT_GREEN", second_operator["expected_reason"])
+        self.assertEqual(
+            "restore the trusted baseline and expected target-surface identity",
+            second_operator["expected_next_safe_step"],
+        )
+
+        self.assertEqual("REPAIRABLE_COMPOUND", repair_packet["resumability"]["family"])
+        self.assertEqual("restore_readiness_truth", repair_packet["repair_policy"]["next_step_id"])
+        self.assertTrue(repair_packet["repair_handoff"]["continuation_allowed"])
+        self.assertEqual("DOCTOR_BLOCKED", repair_packet["repair_handoff"]["from_state"])
+
+        self.assertEqual("MAX_REPAIR_ATTEMPTS", run_record["repair_history"]["termination_reason"])
+        self.assertEqual("TERMINATE", run_record["repair_history"]["termination_status"])
+        self.assertEqual(
+            second_operator["expected_next_safe_step"],
+            run_record["resulting_state"]["next_safe_step"],
+        )
+
+    def test_non_resumable_second_operator_boundary_is_explicit(self) -> None:
+        lane = REPO_ROOT / "fixtures" / "second_operator_test_006"
+        second_operator = load_json(lane / "second_operator.json")
+        repair_packet = load_json(lane / "repair_packet.json")
+        run_record = load_json(lane / "run.json")
+
+        self.assertEqual("FOLLOWABLE_BY_SECOND_OPERATOR", second_operator["verdict"])
+        self.assertTrue(second_operator["packet_only_entry"])
+        self.assertFalse(second_operator["requires_author_intuition"])
+        self.assertEqual("STATE_NOT_RESUMABLE", second_operator["expected_reason"])
+        self.assertEqual(
+            "continue through the governed forward path instead of named resume",
+            second_operator["expected_next_safe_step"],
+        )
+
+        self.assertEqual("NOT_RESUMABLE_FRESH_ORCHESTRATION", repair_packet["resumability"]["family"])
+        self.assertEqual("NON_RESUMABLE_NEXT_STEP", repair_packet["repair_policy"]["policy_type"])
+        self.assertFalse(repair_packet["repair_handoff"]["continuation_allowed"])
+        self.assertEqual("continue_forward_orchestration", repair_packet["repair_policy"]["next_step_id"])
+
+        self.assertEqual("NON_RESUMABLE", run_record["repair_history"]["termination_reason"])
+        self.assertEqual("TERMINATE", run_record["repair_history"]["termination_status"])
+        self.assertEqual(
+            second_operator["expected_next_safe_step"],
+            run_record["resulting_state"]["next_safe_step"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
