@@ -1571,11 +1571,10 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
         f"Run id: {state.get('run_id', '')}",
         "Starter proof surface is ready for this run.",
         f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
-        f"- optional fallback surfaces stay unmaterialized by default; if synrail check later asks for them, create readback with {shell_command(root, 'readback-template', project_root=project_root)} > {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))} and scenario proof with {shell_command(root, 'scenario-proof-template', project_root=project_root)} > {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
+        "- optional fallback surfaces stay unmaterialized by default; if a later synrail check explicitly requires one, Synrail can prepare the needed fallback surface then.",
         "Proof shape reminders:",
         "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and a direct-observation diff_provenance record: changed_file, one concrete added_line or removed_line, one stable context_before or context_after anchor, plus verification_command and verification_result. Include diff_provenance.method when you can, although Synrail can infer direct_file_observation from a strong direct-observation record during a normal check.",
-        "- readback.txt: fallback-only surface. Do not touch it on the happy path; only record readback if synrail check later asks for it, or if final_result.json still cannot carry strong structured verification.",
-        "- scenario_proof.txt: fallback-only surface. Do not touch it on the happy path; only record scenario proof if synrail check later asks for it, or if final_result.json still cannot carry strong structured verification.",
+        "- keep readback.txt and scenario_proof.txt untouched on the happy path; only use a fallback surface if a later synrail check explicitly asks for it, or if final_result.json still cannot carry strong structured verification.",
         "Then run: " + shell_command(root, "check", project_root=project_root),
     ]
     if profile.get("workspace_isolation_note", ""):
@@ -1596,11 +1595,10 @@ def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Pa
         f"Run id: {state.get('run_id', '')}",
         "Continue this run by making the bounded change, running local verification, and strengthening final_result.json first. Treat readback.txt and scenario_proof.txt as fallback-only surfaces and leave them untouched unless synrail check later names them or final_result.json still cannot carry the trust.",
         f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
-        f"- optional fallback surfaces stay unmaterialized by default; if synrail check later asks for them, create readback with {shell_command(root, 'readback-template', project_root=project_root)} > {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))} and scenario proof with {shell_command(root, 'scenario-proof-template', project_root=project_root)} > {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
+        "- optional fallback surfaces stay unmaterialized by default; if a later synrail check explicitly requires one, Synrail can prepare the needed fallback surface then.",
         "Proof shape reminders:",
         "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and a direct-observation diff_provenance record: changed_file, one concrete added_line or removed_line, one stable context_before or context_after anchor, plus verification_command and verification_result. Include diff_provenance.method when you can, although Synrail can infer direct_file_observation from a strong direct-observation record during a normal check.",
-        "- readback.txt: fallback-only surface. Do not touch it on the happy path; only record readback if synrail check later asks for it, or if final_result.json still cannot carry strong structured verification.",
-        "- scenario_proof.txt: fallback-only surface. Do not touch it on the happy path; only record scenario proof if synrail check later asks for it, or if final_result.json still cannot carry strong structured verification.",
+        "- keep readback.txt and scenario_proof.txt untouched on the happy path; only use a fallback surface if a later synrail check explicitly asks for it, or if final_result.json still cannot carry strong structured verification.",
         "Next command: " + shell_command(root, "check", project_root=project_root),
     ]
     print("\n".join(lines))
@@ -3295,16 +3293,12 @@ def cmd_check(args: argparse.Namespace) -> int:
                     preferred = proof_request.get("preferred_artifacts", {})
                     print("What is missing: Synrail is still waiting for explicit proof artifacts and local verification evidence for this controlled run.")
                     print("What to do next: make the bounded change, run local verification, then strengthen final_result.json first and rerun synrail check. Treat readback.txt and scenario_proof.txt as fallback-only surfaces and do not touch them unless synrail check later names them, or final_result.json still cannot carry strong structured verification.")
-                    for label in ["final_result", "readback", "scenario_proof"]:
-                        if preferred.get(label, ""):
-                            print(f"- {label}: {preferred[label]}")
+                    if preferred.get("final_result", ""):
+                        print(f"- final_result: {preferred['final_result']}")
+                    print("- fallback note: readback.txt and scenario_proof.txt stay hidden by default; if a later synrail check explicitly requires one, Synrail can prepare the needed fallback surface then.")
                     print("Proof shape reminders:")
                     print("- final_result.json should carry a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op) plus a real patch or explicit diff_provenance method, one exact changed line, one stable context anchor, verification_command, and verification_result.")
-                    print("- readback.txt is a fallback-only surface: do not touch it on the happy path unless synrail check later asks for readback, or final_result.json still cannot carry the trust with strong structured verification.")
-                    print("- scenario_proof.txt is a fallback-only surface: do not touch it on the happy path unless synrail check later asks for scenario proof, or final_result.json still cannot carry the trust with strong structured verification.")
                     print("Need a canonical final_result shape? run synrail final-result-template")
-                    print("Need a canonical readback shape? run synrail readback-template")
-                    print("Need a canonical scenario_proof shape? run synrail scenario-proof-template")
                     profile = load_project_profile(root) or {}
                     if profile.get("prefers_runtime_evidence", False):
                         print("Need a small UI/runtime verification path? run synrail runtime-helper")
