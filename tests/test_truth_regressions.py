@@ -1389,7 +1389,7 @@ class TestAntiNarrativeGuards(unittest.TestCase):
     def test_verification_corroboration_requires_structured_or_labeled_scenario(self) -> None:
         from synrail_bundle_v0 import verification_corroboration_is_semantically_sufficient
         self.assertFalse(verification_corroboration_is_semantically_sufficient(
-            structured_diff_sufficient=False,
+            runtime_verification_sufficient=False,
             scenario_text=(
                 "Scenario: retry delay on attempt 0\n"
                 "python -m pytest tests/test_retry_logic.py::test_attempt_zero_delay -q\n"
@@ -1398,7 +1398,7 @@ class TestAntiNarrativeGuards(unittest.TestCase):
             ),
         ))
         self.assertTrue(verification_corroboration_is_semantically_sufficient(
-            structured_diff_sufficient=False,
+            runtime_verification_sufficient=False,
             scenario_text=(
                 "Scenario: retry delay on attempt 0\n"
                 "Command: python -m pytest tests/test_retry_logic.py::test_attempt_zero_delay -q\n"

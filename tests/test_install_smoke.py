@@ -42,7 +42,7 @@ class InstallSmokeTests(unittest.TestCase):
 
         self.assertIn("Controlled run started.", start_result.stdout)
         self.assertIn(
-            "Do this now: make the bounded change, run local verification, then edit only the starter proof files below in place. Leave every other surface unchanged.",
+            "Do this now: make the bounded change, run local verification, then strengthen final_result.json first. Leave readback.txt and scenario_proof.txt in starter or brief explanatory form unless synrail check later names them.",
             start_result.stdout,
         )
         self.assertIn("Starter proof files are ready for this run.", start_result.stdout)

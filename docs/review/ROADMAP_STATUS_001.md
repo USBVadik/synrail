@@ -31,6 +31,8 @@ Completed:
 4. continuation arbiter
 5. regression harness
 6. observability only where it supports those weak spots
+7. explicit evidence-ownership split for roadmap eligibility
+8. task-class-scoped hostile observation heuristics on measured proof-sensitive lanes
 
 ### External-alpha readiness slice
 
@@ -39,6 +41,7 @@ Completed:
 - current tester-pack doc aligned to current shell
 - current runnable tester-pack smoke
 - current canonical tester-pack fixture
+- current claim-validation pack for second-operator followability and evidence-ownership discipline
 - fresh-path identity plumbing through `init -> check`
 - removal of acceptance self-staleness on harmless artifact-path drift
 
@@ -73,9 +76,9 @@ Partially built because:
 
 These are the most likely next moves, but they should depend on real external signal.
 
-1. cut or simplify anything in the first workflow that critics still call ceremony
-2. strengthen any truth anchor that still looks self-validating under outside review
-3. improve the strongest alpha contour before broadening surface area
+1. run fresh unseen validation on the current wedge instead of inventing new control surface
+2. pressure-test one uglier second-operator contour, not just the neat packet-first alpha pack
+3. cut or simplify anything in the first workflow that critics still call ceremony
 4. only then decide whether broader product packaging is worth doing
 
 ## Deliberately frozen for now
@@ -95,7 +98,7 @@ Not the next move:
 
 These are the major honest risks still worth external pressure.
 
-1. semantic proof may still be too thin in domain-specific cases
+1. semantic proof may still be too thin in domain-specific cases, and the newer scoped heuristics still need fresh unseen validation
 2. measured doctor coverage is real but still corpus-bounded
 3. the continuation arbiter covers important surfaces, but still not every imaginable ambiguity
 4. the alpha shell may still compress too much or too little on certain non-green paths

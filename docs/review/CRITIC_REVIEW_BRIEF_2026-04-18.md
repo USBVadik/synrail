@@ -3,8 +3,8 @@
 Status date: 2026-04-18
 Repo: `synrail`
 Current branch: `codex/first-extraction-pr`
-Current reviewed commit: `4790036`
-Current regression status: `305 tests OK`
+Current reviewed commit: `c60854f`
+Current regression status: `409 tests OK`
 
 ## Why this document exists
 
@@ -23,6 +23,17 @@ If you want one sentence:
 
 **Synrail is a local proof-first control kernel for bounded agent work.**
 It tries to stop false-green closure by forcing execution through explicit readiness, proof, repair, and acceptance surfaces instead of narrative trust.
+
+## Current hardening delta since the last outside pass
+
+The current branch has tightened several critic-facing weak spots without broadening product surface area:
+
+- runtime-backed proof now waives optional prose surfaces on the measured trivial lane, and the live agent can already follow that cheaper contour on the best current runs
+- evidence ownership is now explicit: harness-only and weak mixed reports are no longer allowed to masquerade as clean kernel roadmap signal
+- the newer hostile observation guards are now task-class scoped, so they no longer pretend to be universal policy on unmeasured contours
+- the tester-pack now has a companion claim-validation pack that checks both second-operator followability and evidence-ownership discipline
+
+These are real hardening moves, but they do **not** yet change the broad verdict: the wedge is more credible and cleaner than before, while trivial-task economics and broader validation still lag behind baseline.
 
 ## The problem Synrail is trying to solve
 
@@ -474,6 +485,12 @@ That is probably the right current move, but it means critics should ask:
 - are these heuristics too brittle?
 - are they overfitting to the observed probe tasks?
 - do they generalize?
+
+The current branch already takes one step to limit that risk:
+
+- hostile observation guards are now scoped to the measured proof-sensitive task families instead of applying as a universal default
+
+That helps, but it is still not enough to call the overfitting risk solved.
 
 ### 6. Claude automation on server still has harness friction
 
