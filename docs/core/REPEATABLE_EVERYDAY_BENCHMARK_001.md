@@ -38,6 +38,7 @@ The current aggregate reading is:
 The shortest honest reading is:
 
 - the cheapened contour is materially lighter than before
+- on-demand fallback materialization trims one manual intervention from the ambiguous copy-fix contour
 - one near-zero-drag contour now exists
 - but the everyday class is still not won overall
 
@@ -45,7 +46,7 @@ The shortest honest reading is:
 
 Across the current five-scenario pack, `Synrail` currently adds on average:
 
-- `2` operator minutes
+- `1` operator minute
 - `1` mandatory mental step
 - `1` trust-bearing artifact
 - `0` required visible surfaces

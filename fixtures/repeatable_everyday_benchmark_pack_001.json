@@ -101,18 +101,18 @@
         "proof_completeness": "MEDIUM",
         "recovery_cost": "LOW",
         "coordination_overhead": "MEDIUM",
-        "operator_minutes": 4,
-        "intervention_count": 1,
+        "operator_minutes": 3,
+        "intervention_count": 0,
         "repair_cycles": 0,
         "invalidation_count": 0,
-        "closure_latency_minutes": 4,
+        "closure_latency_minutes": 3,
         "false_green_exposure": 0,
         "artifact_completeness_percent": 70,
         "mandatory_mental_steps": 2,
         "trust_bearing_artifact_count": 2,
         "visible_surface_count": 2,
         "skippable_visible_surface_count": 1,
-        "notes": "Runtime-backed proof narrows ambiguity here, but the economics are still close rather than clearly won."
+        "notes": "Runtime-backed proof still narrows ambiguity here, and on-demand fallback materialization removes one manual intervention on the non-green path."
       }
     },
     {

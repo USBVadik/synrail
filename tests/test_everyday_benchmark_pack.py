@@ -49,13 +49,13 @@ class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
         self.assertEqual(0, cost_record["verdict_counts"]["SYNRAIL_BETTER"])
         self.assertEqual(3, cost_record["verdict_counts"]["BASELINE_GOOD_ENOUGH"])
         self.assertEqual(2, cost_record["verdict_counts"]["UNCLEAR"])
-        self.assertEqual(2, cost_record["aggregate_deltas"]["avg_operator_minutes_added"])
+        self.assertEqual(1, cost_record["aggregate_deltas"]["avg_operator_minutes_added"])
         self.assertEqual(1, cost_record["aggregate_deltas"]["avg_mandatory_mental_steps_added"])
         self.assertEqual(0, cost_record["aggregate_deltas"]["avg_required_visible_surfaces_added"])
         self.assertEqual(1, cost_record["aggregate_deltas"]["avg_skippable_visible_surfaces_added"])
         self.assertEqual(29, cost_record["aggregate_deltas"]["avg_artifact_completeness_percent_gain"])
         self.assertEqual(2, cost_record["aggregate_deltas"]["avg_fixed_control_mass_added"])
-        self.assertEqual("EVERYDAY_LOCAL_002", cost_record["reading"]["clearest_overhead_path"])
+        self.assertEqual("EVERYDAY_LOCAL_003", cost_record["reading"]["clearest_overhead_path"])
         self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_fixed_control_mass_added"]["scenario_id"])
 
     def test_pack_contains_one_near_zero_drag_contour_without_claiming_a_win(self) -> None:

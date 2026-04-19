@@ -39,11 +39,11 @@
     "UNCLEAR": 2
   },
   "aggregate_deltas": {
-    "avg_operator_minutes_added": 2,
+    "avg_operator_minutes_added": 1,
     "avg_intervention_count_added": 0,
     "avg_repair_cycles_added": 0,
     "avg_invalidation_count_added": 0,
-    "avg_closure_latency_minutes_added": 2,
+    "avg_closure_latency_minutes_added": 1,
     "avg_false_green_exposure_reduced": 0,
     "avg_artifact_completeness_percent_gain": 29,
     "avg_mandatory_mental_steps_added": 1,
@@ -54,12 +54,12 @@
   },
   "hotspots": {
     "highest_operator_minutes_added": {
-      "scenario_id": "EVERYDAY_LOCAL_002",
+      "scenario_id": "EVERYDAY_LOCAL_003",
       "path": "governed_final_result_first",
       "value": 2
     },
     "highest_closure_latency_minutes_added": {
-      "scenario_id": "EVERYDAY_LOCAL_002",
+      "scenario_id": "EVERYDAY_LOCAL_003",
       "path": "governed_final_result_first",
       "value": 2
     },
@@ -93,7 +93,7 @@
   },
   "reading": {
     "strongest_justified_path": "",
-    "clearest_overhead_path": "EVERYDAY_LOCAL_002",
+    "clearest_overhead_path": "EVERYDAY_LOCAL_003",
     "everyday_status": "BASELINE_GOOD_ENOUGH",
     "hybrid_status": "UNKNOWN",
     "compound_status": "UNKNOWN"
