@@ -138,6 +138,23 @@ def compare(baseline: dict, synrail: dict) -> tuple[str, list[str], str, dict]:
     if (
         false_advantage <= 0
         and economics["false_green_exposure_reduced"] <= 0
+        and recovery_advantage <= 0
+        and economics["artifact_completeness_percent_gain"] <= 35
+        and economics["operator_minutes_added"] <= 1
+        and economics["intervention_count_added"] <= 0
+        and economics["closure_latency_minutes_added"] <= 1
+        and economics["trust_bearing_artifacts_added"] >= 1
+        and economics["fixed_control_mass_added"] >= 2
+    ):
+        why = (
+            "The baseline already keeps false-green exposure low enough here, so Synrail's "
+            "extra proof richness does not earn the added trust-bearing control burden."
+        )
+        return "BASELINE_GOOD_ENOUGH", reasons, why, economics
+
+    if (
+        false_advantage <= 0
+        and economics["false_green_exposure_reduced"] <= 0
         and economics["artifact_completeness_percent_gain"] < 35
         and recovery_advantage <= 0
         and economics["operator_minutes_added"] >= 10

@@ -128,6 +128,41 @@ class BaselineHarnessV1Tests(unittest.TestCase):
         self.assertIn("synrail_improves_artifact_completeness", reasons)
         self.assertIn("low-drag trust win", why)
 
+    def test_compare_can_recognize_safety_neutral_low_drag_baseline_path(self) -> None:
+        baseline = comparison_input(
+            system="baseline",
+            path_id="baseline",
+            false_success_risk="LOW",
+            false_green_exposure=0,
+            proof_completeness="LOW",
+            artifact_completeness_percent=35,
+        )
+        synrail = comparison_input(
+            system="synrail",
+            path_id="synrail-safety-neutral",
+            false_success_risk="LOW",
+            false_green_exposure=0,
+            proof_completeness="MEDIUM",
+            artifact_completeness_percent=70,
+            operator_minutes=3,
+            intervention_count=0,
+            closure_latency_minutes=3,
+            mandatory_mental_steps=2,
+            trust_bearing_artifact_count=2,
+            visible_surface_count=2,
+            skippable_visible_surface_count=1,
+        )
+
+        verdict, reasons, why, summary = compare(baseline, synrail)
+
+        self.assertEqual("BASELINE_GOOD_ENOUGH", verdict)
+        self.assertEqual(0, summary["false_green_exposure_reduced"])
+        self.assertEqual(35, summary["artifact_completeness_percent_gain"])
+        self.assertEqual(1, summary["trust_bearing_artifacts_added"])
+        self.assertEqual(2, summary["fixed_control_mass_added"])
+        self.assertIn("synrail_improves_artifact_completeness", reasons)
+        self.assertIn("baseline already keeps false-green exposure low enough", why)
+
 
 if __name__ == "__main__":
     unittest.main()

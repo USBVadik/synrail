@@ -47,8 +47,8 @@ class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
         self.assertEqual(5, cost_record["scenario_count"])
         self.assertEqual("BASELINE_GOOD_ENOUGH", cost_record["reading"]["everyday_status"])
         self.assertEqual(1, cost_record["verdict_counts"]["SYNRAIL_BETTER"])
-        self.assertEqual(3, cost_record["verdict_counts"]["BASELINE_GOOD_ENOUGH"])
-        self.assertEqual(1, cost_record["verdict_counts"]["UNCLEAR"])
+        self.assertEqual(4, cost_record["verdict_counts"]["BASELINE_GOOD_ENOUGH"])
+        self.assertEqual(0, cost_record["verdict_counts"]["UNCLEAR"])
         self.assertEqual(1, cost_record["aggregate_deltas"]["avg_operator_minutes_added"])
         self.assertEqual(1, cost_record["aggregate_deltas"]["avg_mandatory_mental_steps_added"])
         self.assertEqual(0, cost_record["aggregate_deltas"]["avg_required_visible_surfaces_added"])
@@ -71,6 +71,12 @@ class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
         self.assertEqual(1, len(near_zero_drag))
         self.assertEqual("EVERYDAY_LOCAL_005", near_zero_drag[0]["scenario_id"])
         self.assertEqual("SYNRAIL_BETTER", near_zero_drag[0]["verdict"])
+
+    def test_pack_has_no_remaining_unclear_paths(self) -> None:
+        pack = load_pack()
+        records = [build_record(task["baseline"], task["synrail"]) for task in pack["tasks"]]
+
+        self.assertEqual([], [record["scenario_id"] for record in records if record["verdict"] == "UNCLEAR"])
 
 
 if __name__ == "__main__":

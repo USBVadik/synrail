@@ -94,6 +94,7 @@ It also emits one compact economics summary:
 The current compare logic now also recognizes one deliberately narrow case:
 
 - a `low-drag trust win`
+- a `safety-neutral low-drag baseline-sufficient path`
 
 That means `Synrail` can earn `SYNRAIL_BETTER` on an everyday contour when it:
 
@@ -109,6 +110,19 @@ Near-zero burden here is intentionally strict:
 - no added required visible surface
 - no added trust-bearing artifact
 - at most `1` added fixed control-mass unit
+
+The baseline-sufficient mirror case is also intentionally narrow:
+
+- no false-green reduction
+- no recovery advantage
+- at most `35` points of artifact-completeness gain
+- at most `1` added operator minute
+- no added intervention
+- at most `1` added closure-latency minute
+- but still at least `1` extra trust-bearing artifact and at least `2` fixed control-mass units
+
+That case means the baseline already looks safe enough, and Synrail's added proof richness
+does not yet earn the extra control burden.
 
 The repo now also has one bounded repeatable everyday benchmark class built on top of the same comparison and cost artifacts:
 
