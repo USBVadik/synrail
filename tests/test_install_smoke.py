@@ -42,10 +42,10 @@ class InstallSmokeTests(unittest.TestCase):
 
         self.assertIn("Controlled run started.", start_result.stdout)
         self.assertIn(
-            "Do this now: make the bounded change, run local verification, then strengthen final_result.json first. Leave readback.txt and scenario_proof.txt in starter or brief explanatory form unless synrail check later names them.",
+            "Do this now: make the bounded change, run local verification, then strengthen final_result.json first. Treat readback.txt and scenario_proof.txt as fallback-only surfaces and leave them untouched unless synrail check later names them or final_result.json still cannot carry the trust.",
             start_result.stdout,
         )
-        self.assertIn("Starter proof files are ready for this run.", start_result.stdout)
+        self.assertIn("Starter proof surface is ready for this run.", start_result.stdout)
         self.assertIn("Artifact root: .synrail", start_result.stdout)
         self.assertIn("Then run: synrail check", start_result.stdout)
         self.assertTrue((artifact_root / "state.json").exists())
@@ -54,8 +54,8 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertTrue((artifact_root / "bootstrap.json").exists())
         self.assertTrue((artifact_root / "proof_request.json").exists())
         self.assertTrue((artifact_root / "final_result.json").exists())
-        self.assertTrue((artifact_root / "readback.txt").exists())
-        self.assertTrue((artifact_root / "scenario_proof.txt").exists())
+        self.assertFalse((artifact_root / "readback.txt").exists())
+        self.assertFalse((artifact_root / "scenario_proof.txt").exists())
         self.assertTrue((artifact_root / "target_identity.txt").exists())
         self.assertTrue((artifact_root / "task_identity.txt").exists())
         self.assertTrue((artifact_root / "prompt_identity.txt").exists())
