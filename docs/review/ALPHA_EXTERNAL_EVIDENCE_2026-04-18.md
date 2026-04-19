@@ -305,6 +305,17 @@ So the refined statement becomes:
 - on at least one live unattended Gemini trivial contour, `Synrail` now makes prose proof surfaces both semantically secondary and operationally skippable
 - the main remaining trivial-lane gap is now baseline cost, not whether the trust path intrinsically requires extra authored prose
 
+Run [030](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_030/REPORT.md) then isolates the next source of trivial-lane drag:
+
+- the new checkout-local fallback guidance works in the intended direction: Gemini no longer reads `setup.py` or falls back to `python3 alpha.py` to discover the local Synrail entrypoint
+- but that improvement does not yet produce a cheaper lane, because the same run re-authors the optional prose files and burns a cleanup mini-loop (`check -> explain-proof -> doctor -> check`) before acceptance
+
+So the refined statement becomes:
+
+- entrypoint discovery is no longer the main unattended Gemini trivial-lane tax on this host
+- the next dominant cost seam is cleanup follow-through plus unstable optional-prose behavior
+- the product has become more diagnosable again, but it still does not have a clear baseline win on trivial work
+
 So the honest updated statement is:
 
 - trivial-task tax is getting better
@@ -408,6 +419,7 @@ That means the project is improving on recall and context recovery, but the oper
 | [027](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_027/REPORT.md) | Valid unattended Gemini retest after waiver-on-runtime tranche: accepted in one pass with `readback` and `scenario_proof` semantically waived by runtime corroboration, making the prose proof surfaces secondary on a real live contour | Very strong positive evidence |
 | [028b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_028b/REPORT.md) | Valid unattended Gemini retest after final-result-first wording: accepted with the same runtime-backed waived contour, and the live agent now prioritizes `final_result.json`, but it still rewrites the prose proof surfaces | Strong mixed-positive evidence |
 | [029](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_029/REPORT.md) | Valid unattended Gemini retest after starter-note shaping: accepted with runtime-backed proof, waived prose surfaces, and untouched starter `readback/scenario`, showing the cheapened contour now affects live agent behavior too | Very strong positive evidence |
+| [030](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_030/REPORT.md) | Valid unattended Gemini retest after checkout-local fallback guidance: accepted again and removes the old `setup.py` / `python3 alpha.py` entrypoint archaeology, but time stays flat because optional prose authoring and a cleanup second-check loop still absorb the savings | Strong mixed-positive evidence |
 
 ## Current Best Honest Claim Against Baseline
 

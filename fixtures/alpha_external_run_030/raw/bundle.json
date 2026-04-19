@@ -1,0 +1,201 @@
+{
+  "schema_version": "proof_bundle_v0",
+  "run_id": "ALPHA_RUN_20260419T062901655387Z_52eed3",
+  "task_class": "bounded_change",
+  "status": "COMPLETE",
+  "structural_status": "COMPLETE",
+  "semantic_status": "SUFFICIENT",
+  "final_result": {
+    "present": true,
+    "parseable": true,
+    "status": "PROVEN",
+    "normalized_status": "PROVEN",
+    "expected_status": "PROVEN",
+    "semantically_sufficient": true,
+    "request_id": "ALPHA_RUN_20260419T062901655387Z_52eed3",
+    "change_disposition": "modified"
+  },
+  "modified_files": {
+    "present": true,
+    "count": 1,
+    "semantically_sufficient": true
+  },
+  "scope_alignment": {
+    "evaluated": false,
+    "semantically_sufficient": true
+  },
+  "presentation_alignment": {
+    "evaluated": false,
+    "semantically_sufficient": true,
+    "suspicious_classes": []
+  },
+  "diff_provenance": {
+    "present": true,
+    "non_empty": true,
+    "has_diff_markers": true,
+    "has_structured_record": true,
+    "normalized_method": "direct_file_observation",
+    "method_inferred": true,
+    "structured_record_sufficient": true,
+    "semantically_sufficient": true
+  },
+  "verification_corroboration": {
+    "semantically_sufficient": true,
+    "has_structured_runtime_verification": true,
+    "has_patch_runtime_verification": true,
+    "runtime_verification_sufficient": true,
+    "scenario_has_explicit_command": true,
+    "scenario_has_explicit_observation": true
+  },
+  "readback": {
+    "present": true,
+    "path": "/root/synrail_030_checkout/workspace/.synrail/readback.txt",
+    "non_empty": true,
+    "content_semantically_sufficient": true,
+    "waived_by_runtime_corroboration": true,
+    "structurally_complete": true,
+    "semantically_sufficient": true
+  },
+  "scenario_proof": {
+    "present": true,
+    "path": "/root/synrail_030_checkout/workspace/.synrail/scenario_proof.txt",
+    "non_empty": true,
+    "content_semantically_sufficient": true,
+    "waived_by_runtime_corroboration": true,
+    "structurally_complete": true,
+    "semantically_sufficient": true
+  },
+  "artifact_identity": {
+    "baseline_identity": "autodetected_python_baseline",
+    "execution_surface_identity": "autodetected_python_worktree",
+    "prompt_identity": "Add one-line docstring to main function in alpha.py",
+    "task_identity": "Add one-line docstring to main function in alpha.py",
+    "from_final_result": true,
+    "semantically_sufficient": true
+  },
+  "cleanup_status": {
+    "present": true,
+    "success": true,
+    "from_doctor": false,
+    "semantically_sufficient": true
+  },
+  "missing_sections": [],
+  "semantically_insufficient_sections": [],
+  "semantic_next_safe_step": "",
+  "structural_decision_trace": [
+    {
+      "section": "final_result",
+      "present": true,
+      "structurally_complete": true,
+      "why": "the final result artifact is present and parseable"
+    },
+    {
+      "section": "modified_files",
+      "present": true,
+      "structurally_complete": true,
+      "why": "the modified-files section is present in the final result artifact"
+    },
+    {
+      "section": "diff_provenance",
+      "present": true,
+      "structurally_complete": true,
+      "why": "git_diff or structured diff_provenance evidence is present in the final result artifact"
+    },
+    {
+      "section": "readback",
+      "present": true,
+      "structurally_complete": true,
+      "why": "readback evidence file is present"
+    },
+    {
+      "section": "scenario_proof",
+      "present": true,
+      "structurally_complete": true,
+      "why": "scenario-proof evidence file is present"
+    },
+    {
+      "section": "artifact_identity",
+      "present": true,
+      "structurally_complete": true,
+      "why": "baseline, surface, prompt, and task identity fields are all present from the current run or final result artifact"
+    },
+    {
+      "section": "cleanup_status",
+      "present": true,
+      "structurally_complete": true,
+      "why": "cleanup status is present in the final result artifact"
+    }
+  ],
+  "semantic_decision_trace": [
+    {
+      "section": "modified_files",
+      "evaluated": true,
+      "semantically_sufficient": true,
+      "why": "the modified-files list names at least one concrete changed file",
+      "recommended_action": "record the actual changed files in the final result artifact, or mark the run as already_satisfied only when the requested state was already present before edits"
+    },
+    {
+      "section": "scope_alignment",
+      "evaluated": false,
+      "semantically_sufficient": true,
+      "why": "the task reads like an add-only request and the proof stays additive without rewriting adjacent existing lines",
+      "recommended_action": "keep the implementation inside the requested additive scope and remove unrelated adjacent rewrites or spacing tweaks"
+    },
+    {
+      "section": "presentation_alignment",
+      "evaluated": false,
+      "semantically_sufficient": true,
+      "why": "the task reads like a plain add-only request and the newly added surface stays visually plain without extra emphasis styling",
+      "recommended_action": "keep the newly added surface visually plain and close to the requested text-only intent; remove extra emphasis styling unless the task asked for it"
+    },
+    {
+      "section": "diff_provenance",
+      "evaluated": true,
+      "semantically_sufficient": true,
+      "why": "git_diff or structured diff_provenance proves a concrete patch for the named modified files",
+      "recommended_action": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record, or use a truthful already_satisfied observation record when no edit was required"
+    },
+    {
+      "section": "verification_corroboration",
+      "evaluated": true,
+      "semantically_sufficient": true,
+      "why": "the proof includes explicit local verification evidence through structured provenance or a labeled scenario command and observed result",
+      "recommended_action": "tie acceptance to explicit local verification evidence inside the current proof surfaces instead of prose-only readback and scenario text"
+    },
+    {
+      "section": "final_result_status",
+      "evaluated": true,
+      "semantically_sufficient": true,
+      "why": "final_result.status truthfully marks this run as PROVEN for an evidenced modification run",
+      "recommended_action": "state a trust-bearing final_result.status: use PROVEN for an evidenced modification run, or ALREADY_SATISFIED for a truthful no-op attestation"
+    },
+    {
+      "section": "readback",
+      "evaluated": true,
+      "semantically_sufficient": true,
+      "why": "readback evidence names the changed surface and records an observed property of it",
+      "recommended_action": "record substantive readback from the changed sections on the attested surface"
+    },
+    {
+      "section": "scenario_proof",
+      "evaluated": true,
+      "semantically_sufficient": true,
+      "why": "scenario-proof evidence records a concrete scenario context and outcome",
+      "recommended_action": "record an explicit scenario-proof result for the attested target surface"
+    },
+    {
+      "section": "artifact_identity",
+      "evaluated": true,
+      "semantically_sufficient": true,
+      "why": "baseline, surface, prompt, and task identity fields are all non-empty from the current run or final result artifact",
+      "recommended_action": "restore baseline, execution surface, prompt, and task identity values for this run"
+    },
+    {
+      "section": "cleanup_status",
+      "evaluated": true,
+      "semantically_sufficient": true,
+      "why": "cleanup status reports success with an explicit clean-surface summary",
+      "recommended_action": "record a successful cleanup status for the execution surface"
+    }
+  ]
+}

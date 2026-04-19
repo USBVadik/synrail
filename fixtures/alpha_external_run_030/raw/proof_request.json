@@ -1,0 +1,26 @@
+{
+  "schema_version": "proof_request_record_v0",
+  "run_id": "ALPHA_RUN_20260419T062901655387Z_52eed3",
+  "task_class": "bounded_change",
+  "task_identity": "Add one-line docstring to main function in alpha.py",
+  "summary": "Synrail is waiting for explicit proof artifacts and local verification evidence from this controlled run.",
+  "starter_mode": "edit_in_place",
+  "starter_hashes": {
+    "final_result": "cc72820e733ddf81a475d2f17628032eb5d3cbc20db8f0222a6174433232cbff",
+    "readback": "5eb48f48872cb7cbc4dbfc19e756e5a43fe2469dca0cf3e7162b06bfea3dc6db",
+    "scenario_proof": "5ab6f382d67181cc1fbe97c3a1533b0f0ecaaee5cf658ba5f61442063a6e1883"
+  },
+  "preferred_artifacts": {
+    "final_result": ".synrail/final_result.json",
+    "readback": ".synrail/readback.txt",
+    "scenario_proof": ".synrail/scenario_proof.txt"
+  },
+  "required_sections": [
+    "final_result",
+    "modified_files",
+    "diff_provenance",
+    "readback",
+    "scenario_proof"
+  ],
+  "next_safe_step": "Run local verification, record explicit verification anchors in the starter proof files, let Synrail carry run identity and doctor-ready cleanup truth when available, then run synrail check."
+}
