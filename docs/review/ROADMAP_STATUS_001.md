@@ -75,6 +75,14 @@ Partially built because:
 - that pack currently reads as baseline-favorable overall, with one near-zero-drag contour but no decisive everyday win yet
 - this is still not a broad external benchmark program
 
+### Restore maturity
+
+Partially built because:
+
+- the local restore matrix now has explicit regression coverage for clean git, dirty tracked, dirty untracked, mixed file state, non-git file-copy, no-commit git via file-copy fallback, and unsupported honest fail
+- the no-commit git contour is now locally covered as a distinct file-copy restore contour instead of living only in external evidence
+- this is still a narrow matrix, not a broad claim that restore is mature on arbitrary workspaces
+
 ## Planned next after outside critique
 
 These are the most likely next moves, but they should depend on real external signal.

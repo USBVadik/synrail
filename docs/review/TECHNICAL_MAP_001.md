@@ -184,6 +184,16 @@ It still goes through the same kernel continuation logic.
 
 `confirm-restore` explicitly re-checks it.
 
+The current local matrix is intentionally narrow but explicit:
+
+- clean git workspace
+- dirty tracked git workspace
+- dirty untracked git workspace via file-copy fallback
+- mixed tracked + untracked git workspace via file-copy fallback
+- git workspace without a committed HEAD via file-copy fallback
+- non-git file-copy restore
+- unsupported contours that fail early and honestly
+
 ### Telemetry export / bug packet
 
 These do not replace runtime truth.

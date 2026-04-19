@@ -89,6 +89,23 @@ def _git_head_ref(project_root: Path) -> str:
     return ""
 
 
+def _git_is_repository(project_root: Path) -> bool:
+    """Return True when project_root is inside a git work tree, even without commits."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=str(project_root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip() == "true"
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return False
+
+
 def _git_has_uncommitted(project_root: Path) -> bool:
     """Return True if the workspace has tracked staged/unstaged changes."""
     try:
@@ -416,6 +433,10 @@ def restore_contract(record: dict) -> dict:
             "This restore removes current non-excluded project files before copying the saved snapshot back.",
             ("Saved project root: " + project_root) if project_root else "Saved project root is recorded in the checkpoint.",
         ]
+        if workspace_snapshot.get("source_control") == "git" and not workspace_snapshot.get("head_ref"):
+            contour = "pre_run_snapshot_git_no_commit_file_copy"
+            summary = "Restore will use a file-copy workspace snapshot because this git workspace had no committed HEAD to restore from."
+            notes.insert(1, "Workspace contour: git repository without a committed HEAD.")
         if workspace_family in {"dirty_untracked", "mixed_file_state"}:
             contour = f"pre_run_snapshot_git_{workspace_family}_file_copy"
             summary = "Restore will use a file-copy workspace snapshot because plain git restore cannot faithfully recover the saved untracked state."
@@ -597,23 +618,37 @@ def create_record(args: argparse.Namespace) -> dict:
                         "has_untracked": False,
                     }
         else:
-            # No git HEAD available — fall back to file-copy snapshot.
+            # No git HEAD available — either not a git repo, or a git repo with no commits yet.
             snapshot_dir = checkpoint_root / "workspace_files"
             ok, err, count = _file_copy_snapshot(project_root, snapshot_dir)
+            source_control = "git" if _git_is_repository(project_root) else "none"
+            reason = (
+                "git repository has no committed HEAD; using file-copy snapshot"
+                if source_control == "git"
+                else ""
+            )
             if ok:
                 workspace_snapshot = {
                     "type": "file_copy",
                     "workspace_family": "file_copy",
+                    "source_control": source_control,
                     "project_root": str(project_root),
                     "snapshot_dir": str(snapshot_dir),
                     "file_count": count,
                 }
+                if reason:
+                    workspace_snapshot["reason"] = reason
             else:
                 workspace_snapshot = {
                     "type": "none",
                     "workspace_family": "unsupported",
+                    "source_control": source_control,
                     "project_root": str(project_root),
-                    "reason": f"file-copy snapshot failed: {err}",
+                    "reason": (
+                        f"git repository has no committed HEAD and file-copy snapshot failed: {err}"
+                        if source_control == "git"
+                        else f"file-copy snapshot failed: {err}"
+                    ),
                 }
 
     record = {

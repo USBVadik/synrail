@@ -1065,6 +1065,11 @@ class TestRestoreRoundTrip(unittest.TestCase):
 class TestRestoreHonestyWithoutGit(unittest.TestCase):
     """Restore must fail honestly when workspace snapshot is unavailable."""
 
+    def _init_git_without_commit(self, project: Path) -> None:
+        import subprocess
+
+        subprocess.run(["git", "init"], cwd=str(project), capture_output=True, check=True)
+
     def test_create_record_without_git_uses_file_copy(self) -> None:
         import argparse
         import tempfile
@@ -1099,6 +1104,44 @@ class TestRestoreHonestyWithoutGit(unittest.TestCase):
             self.assertIn("workspace_snapshot", record)
             self.assertEqual("file_copy", record["workspace_snapshot"]["type"])
             self.assertGreater(record["workspace_snapshot"]["file_count"], 0)
+
+    def test_no_commit_git_uses_file_copy_with_git_specific_preview(self) -> None:
+        import argparse
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, restore_preview
+        from synrail_spine_v0 import default_state as make_state
+
+        state = make_state("run1", "bounded_change")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            self._init_git_without_commit(project)
+            (project / "hello.py").write_text('print("hello")\n')
+
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+            args = argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=str(project),
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            )
+            record = create_record(args)
+            preview = restore_preview(record, project / ".synrail")
+
+        self.assertEqual("file_copy", record["workspace_snapshot"]["type"])
+        self.assertEqual("git", record["workspace_snapshot"]["source_control"])
+        self.assertIn("no committed HEAD", record["workspace_snapshot"]["reason"])
+        self.assertEqual("pre_run_snapshot_git_no_commit_file_copy", preview["supported_contour"])
+        self.assertEqual("file_copy", preview["workspace_restore_mode"])
+        self.assertTrue(any("without a committed HEAD" in note for note in preview["notes"]))
 
     def test_restore_fails_honestly_when_workspace_snapshot_is_none(self) -> None:
         """If workspace_snapshot.type is 'none', restore must fail honestly."""
@@ -1214,6 +1257,49 @@ class TestRestoreHonestyWithoutGit(unittest.TestCase):
             # Verify files recovered
             self.assertEqual('print("hello")', target.read_text().strip())
             self.assertEqual("original data", (project / "subdir" / "data.txt").read_text().strip())
+
+    def test_no_commit_git_file_copy_restore_round_trip(self) -> None:
+        """Git workspace without commits still restores honestly via file-copy fallback."""
+        import argparse
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, restore_preview, restore_record
+        from synrail_spine_v0 import default_state as make_state
+
+        state = make_state("run1", "bounded_change")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            self._init_git_without_commit(project)
+            target = project / "hello.py"
+            target.write_text('print("hello")\n')
+
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+            args = argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=str(project),
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            )
+            record = create_record(args)
+            preview = restore_preview(record, project / ".synrail")
+            self.assertEqual("pre_run_snapshot_git_no_commit_file_copy", preview["supported_contour"])
+
+            target.write_text("BROKEN\n")
+
+            restored = restore_record(record, project / ".synrail")
+
+            self.assertEqual("OK", restored["result"])
+            self.assertEqual("RESTORED", restored["restore"]["status"])
+            self.assertTrue(restored["restore"]["workspace_restored"])
+            self.assertEqual('print("hello")', target.read_text().strip())
 
     def test_restore_reports_restored_with_git(self) -> None:
         """Sanity check: with git, restore still reports RESTORED."""
