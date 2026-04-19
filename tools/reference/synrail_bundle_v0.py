@@ -781,10 +781,16 @@ def verification_corroboration_is_semantically_sufficient(
     *,
     runtime_verification_sufficient: bool,
     scenario_text: str,
+    task_identity: str = "",
+    task_class: str = "bounded_change",
 ) -> bool:
     if runtime_verification_sufficient:
         return True
-    return scenario_has_explicit_command(scenario_text) and scenario_has_explicit_observation(scenario_text)
+    return scenario_is_semantically_sufficient(
+        scenario_text,
+        task_identity=task_identity,
+        task_class=task_class,
+    )
 
 
 def readback_requirement_is_semantically_sufficient(
@@ -1000,6 +1006,8 @@ def build_bundle(args: argparse.Namespace) -> dict:
     verification_corroboration_semantically_sufficient = verification_corroboration_is_semantically_sufficient(
         runtime_verification_sufficient=runtime_verification_semantically_sufficient,
         scenario_text=scenario_text,
+        task_identity=scope_task_text,
+        task_class=args.task_class,
     )
     final_result_status_semantically_sufficient = final_result_status_is_semantically_sufficient(
         status=normalized_status,

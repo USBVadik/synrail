@@ -1402,9 +1402,52 @@ class TestAntiNarrativeGuards(unittest.TestCase):
             scenario_text=(
                 "Scenario: retry delay on attempt 0\n"
                 "Command: python -m pytest tests/test_retry_logic.py::test_attempt_zero_delay -q\n"
-                "Observed: test passed and delay 0.0 was returned for attempt 0\n"
+                "Observed: line 1 shows 'delay 0.0 returned for attempt 0'\n"
                 "Status: PASSED"
             ),
+        ))
+
+    def test_verification_corroboration_rejects_labeled_action_narrative(self) -> None:
+        from synrail_bundle_v0 import verification_corroboration_is_semantically_sufficient
+        self.assertFalse(verification_corroboration_is_semantically_sufficient(
+            runtime_verification_sufficient=False,
+            scenario_text=(
+                "Scenario: verify import\n"
+                "Command: grep -n logging src/app.py\n"
+                "Observed: I added the import to line 2\n"
+                "Status: PASSED"
+            ),
+            task_identity="add logging import to src/app.py",
+            task_class="bounded_change",
+        ))
+
+    def test_verification_corroboration_rejects_labeled_restatement_without_evidence(self) -> None:
+        from synrail_bundle_v0 import verification_corroboration_is_semantically_sufficient
+        self.assertFalse(verification_corroboration_is_semantically_sufficient(
+            runtime_verification_sufficient=False,
+            scenario_text=(
+                "Scenario: verify import\n"
+                "Command: grep -n logging src/app.py\n"
+                "Observed: logging import added to src/app.py\n"
+                "Result: logging import is in src/app.py\n"
+                "Status: PASSED"
+            ),
+            task_identity="add logging import to src/app.py",
+            task_class="bounded_change",
+        ))
+
+    def test_verification_corroboration_runtime_path_remains_primary(self) -> None:
+        from synrail_bundle_v0 import verification_corroboration_is_semantically_sufficient
+        self.assertTrue(verification_corroboration_is_semantically_sufficient(
+            runtime_verification_sufficient=True,
+            scenario_text=(
+                "Scenario: verify import\n"
+                "Command: grep -n logging src/app.py\n"
+                "Observed: I added the import to line 2\n"
+                "Status: PASSED"
+            ),
+            task_identity="add logging import to src/app.py",
+            task_class="bounded_change",
         ))
 
     def test_parroting_detector_catches_high_overlap(self) -> None:
