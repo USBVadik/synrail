@@ -589,8 +589,10 @@ def _scenario_observation_lacks_evidence(line: str) -> bool:
             after = lowered[lowered.index(label) + len(label):].lstrip()
             if not after:
                 return True
+            if after in {"ok", "okay", "pass", "passed", "success", "succeeded", "true"}:
+                return True
             # Prose assertions about what "is in" or "was found" are not command output
-            if contains_any_keyword(after, ["is in ", "is present", "is there", "exists", "was found"]):
+            if contains_any_keyword(after, ["is in ", "is present", "is there", "exists", "was found", "found in ", "found at ", "confirm", "confirmed"]):
                 return True
             has_action = any(f" {verb} " in f" {after} " or after.startswith(verb) for verb in _ACTION_VERBS)
             if has_action:
@@ -607,6 +609,8 @@ def _scenario_observation_lacks_evidence(line: str) -> bool:
         # If there's concrete evidence (line numbers, quotes, output), it's a real observation
         if has_evidence:
             return False
+        if contains_any_keyword(after, ["confirm", "confirmed", "exit code", "return code", "status code"]):
+            return True
         # If action verbs present without evidence → restatement
         has_action = any(f" {verb} " in f" {after} " or after.startswith(verb) for verb in _ACTION_VERBS)
         if has_action:

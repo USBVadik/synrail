@@ -1450,6 +1450,62 @@ class TestAntiNarrativeGuards(unittest.TestCase):
             task_class="bounded_change",
         ))
 
+    def test_verification_corroboration_rejects_command_confirms_without_output(self) -> None:
+        from synrail_bundle_v0 import verification_corroboration_is_semantically_sufficient
+        self.assertFalse(verification_corroboration_is_semantically_sufficient(
+            runtime_verification_sufficient=False,
+            scenario_text=(
+                "Scenario: verify import\n"
+                "Command: grep -n logging src/app.py\n"
+                "Observed: grep confirms logging import in src/app.py\n"
+                "Status: PASSED"
+            ),
+            task_identity="add logging import to src/app.py",
+            task_class="bounded_change",
+        ))
+
+    def test_verification_corroboration_rejects_output_found_without_literal_output(self) -> None:
+        from synrail_bundle_v0 import verification_corroboration_is_semantically_sufficient
+        self.assertFalse(verification_corroboration_is_semantically_sufficient(
+            runtime_verification_sufficient=False,
+            scenario_text=(
+                "Scenario: verify import\n"
+                "Command: grep -n logging src/app.py\n"
+                "Output: logging import found in src/app.py\n"
+                "Status: PASSED"
+            ),
+            task_identity="add logging import to src/app.py",
+            task_class="bounded_change",
+        ))
+
+    def test_verification_corroboration_rejects_output_ok_without_command_evidence(self) -> None:
+        from synrail_bundle_v0 import verification_corroboration_is_semantically_sufficient
+        self.assertFalse(verification_corroboration_is_semantically_sufficient(
+            runtime_verification_sufficient=False,
+            scenario_text=(
+                "Scenario: verify import\n"
+                "Command: grep -n logging src/app.py\n"
+                "Output: ok\n"
+                "Status: PASSED"
+            ),
+            task_identity="add logging import to src/app.py",
+            task_class="bounded_change",
+        ))
+
+    def test_verification_corroboration_rejects_exit_code_only_observation(self) -> None:
+        from synrail_bundle_v0 import verification_corroboration_is_semantically_sufficient
+        self.assertFalse(verification_corroboration_is_semantically_sufficient(
+            runtime_verification_sufficient=False,
+            scenario_text=(
+                "Scenario: verify import\n"
+                "Command: grep -n logging src/app.py\n"
+                "Observed: exit code 0 for grep on src/app.py\n"
+                "Status: PASSED"
+            ),
+            task_identity="add logging import to src/app.py",
+            task_class="bounded_change",
+        ))
+
     def test_parroting_detector_catches_high_overlap(self) -> None:
         from synrail_bundle_v0 import _is_parroting_task
         self.assertTrue(_is_parroting_task(
@@ -1625,6 +1681,46 @@ class TestHostileProofIndependence(unittest.TestCase):
             "Scenario: verify import\n"
             "Command: grep -n logging src/app.py\n"
             "Observed: 2:import logging\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_command_confirms_without_literal_output(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: grep confirms logging import in src/app.py\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_output_found_without_literal_output(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Output: logging import found in src/app.py\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_output_ok_without_command_evidence(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Output: ok\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_exit_code_only_observation(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: exit code 0 for grep on src/app.py\n"
             "Status: PASSED",
             task_identity=self.TASK,
         ))
