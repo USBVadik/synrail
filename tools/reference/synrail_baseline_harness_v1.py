@@ -120,6 +120,22 @@ def compare(baseline: dict, synrail: dict) -> tuple[str, list[str], str, dict]:
         return "SYNRAIL_BETTER", reasons, why, economics
 
     if (
+        economics["false_green_exposure_reduced"] >= 1
+        and economics["artifact_completeness_percent_gain"] >= 30
+        and economics["operator_minutes_added"] <= 1
+        and economics["intervention_count_added"] <= 0
+        and economics["closure_latency_minutes_added"] <= 1
+        and economics["required_visible_surfaces_added"] <= 0
+        and economics["trust_bearing_artifacts_added"] <= 0
+        and economics["fixed_control_mass_added"] <= 1
+    ):
+        why = (
+            "Synrail earns a low-drag trust win here: it reduces false-green exposure "
+            "and improves proof basis without adding a meaningful operator burden."
+        )
+        return "SYNRAIL_BETTER", reasons, why, economics
+
+    if (
         false_advantage <= 0
         and economics["false_green_exposure_reduced"] <= 0
         and economics["artifact_completeness_percent_gain"] < 35

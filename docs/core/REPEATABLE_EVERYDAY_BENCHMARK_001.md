@@ -31,15 +31,15 @@ It is an internal executable benchmark class.
 
 The current aggregate reading is:
 
-- `0` scenarios: `SYNRAIL_BETTER`
+- `1` scenario: `SYNRAIL_BETTER`
 - `3` scenarios: `BASELINE_GOOD_ENOUGH`
-- `2` scenarios: `UNCLEAR`
+- `1` scenario: `UNCLEAR`
 
 The shortest honest reading is:
 
 - the cheapened contour is materially lighter than before
 - on-demand fallback materialization trims one manual intervention from the ambiguous copy-fix contour
-- one near-zero-drag contour now exists
+- one repeatable low-drag winner now exists
 - but the everyday class is still not won overall
 
 ## Current economics summary

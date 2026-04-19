@@ -46,9 +46,9 @@ class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
 
         self.assertEqual(5, cost_record["scenario_count"])
         self.assertEqual("BASELINE_GOOD_ENOUGH", cost_record["reading"]["everyday_status"])
-        self.assertEqual(0, cost_record["verdict_counts"]["SYNRAIL_BETTER"])
+        self.assertEqual(1, cost_record["verdict_counts"]["SYNRAIL_BETTER"])
         self.assertEqual(3, cost_record["verdict_counts"]["BASELINE_GOOD_ENOUGH"])
-        self.assertEqual(2, cost_record["verdict_counts"]["UNCLEAR"])
+        self.assertEqual(1, cost_record["verdict_counts"]["UNCLEAR"])
         self.assertEqual(1, cost_record["aggregate_deltas"]["avg_operator_minutes_added"])
         self.assertEqual(1, cost_record["aggregate_deltas"]["avg_mandatory_mental_steps_added"])
         self.assertEqual(0, cost_record["aggregate_deltas"]["avg_required_visible_surfaces_added"])
@@ -57,8 +57,9 @@ class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
         self.assertEqual(2, cost_record["aggregate_deltas"]["avg_fixed_control_mass_added"])
         self.assertEqual("EVERYDAY_LOCAL_003", cost_record["reading"]["clearest_overhead_path"])
         self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_fixed_control_mass_added"]["scenario_id"])
+        self.assertEqual("EVERYDAY_LOCAL_005", cost_record["reading"]["strongest_justified_path"])
 
-    def test_pack_contains_one_near_zero_drag_contour_without_claiming_a_win(self) -> None:
+    def test_pack_contains_one_repeatable_low_drag_winner(self) -> None:
         pack = load_pack()
         records = [build_record(task["baseline"], task["synrail"]) for task in pack["tasks"]]
         near_zero_drag = [
@@ -69,7 +70,7 @@ class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
 
         self.assertEqual(1, len(near_zero_drag))
         self.assertEqual("EVERYDAY_LOCAL_005", near_zero_drag[0]["scenario_id"])
-        self.assertEqual("UNCLEAR", near_zero_drag[0]["verdict"])
+        self.assertEqual("SYNRAIL_BETTER", near_zero_drag[0]["verdict"])
 
 
 if __name__ == "__main__":

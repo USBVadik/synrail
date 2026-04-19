@@ -91,6 +91,25 @@ It also emits one compact economics summary:
 - added skippable visible surfaces
 - added fixed control mass
 
+The current compare logic now also recognizes one deliberately narrow case:
+
+- a `low-drag trust win`
+
+That means `Synrail` can earn `SYNRAIL_BETTER` on an everyday contour when it:
+
+- reduces false-green exposure
+- materially improves proof basis
+- and does so with near-zero added burden
+
+Near-zero burden here is intentionally strict:
+
+- at most `1` added operator minute
+- no added intervention
+- at most `1` added closure-latency minute
+- no added required visible surface
+- no added trust-bearing artifact
+- at most `1` added fixed control-mass unit
+
 The repo now also has one bounded repeatable everyday benchmark class built on top of the same comparison and cost artifacts:
 
 - `fixtures/repeatable_everyday_benchmark_pack_001.json`

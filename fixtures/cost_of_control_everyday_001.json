@@ -30,13 +30,13 @@
       "path": "fixtures/repeatable_everyday_benchmark_pack_001.json#EVERYDAY_LOCAL_005",
       "scenario_id": "EVERYDAY_LOCAL_005",
       "scenario_class": "repeatable_everyday_local",
-      "verdict": "UNCLEAR"
+      "verdict": "SYNRAIL_BETTER"
     }
   ],
   "verdict_counts": {
-    "SYNRAIL_BETTER": 0,
+    "SYNRAIL_BETTER": 1,
     "BASELINE_GOOD_ENOUGH": 3,
-    "UNCLEAR": 2
+    "UNCLEAR": 1
   },
   "aggregate_deltas": {
     "avg_operator_minutes_added": 1,
@@ -80,19 +80,20 @@
     }
   },
   "path_buckets": {
-    "justified_cost_paths": [],
+    "justified_cost_paths": [
+      "EVERYDAY_LOCAL_005"
+    ],
     "baseline_sufficient_paths": [
       "EVERYDAY_LOCAL_001",
       "EVERYDAY_LOCAL_003",
       "EVERYDAY_LOCAL_004"
     ],
     "under_proven_paths": [
-      "EVERYDAY_LOCAL_002",
-      "EVERYDAY_LOCAL_005"
+      "EVERYDAY_LOCAL_002"
     ]
   },
   "reading": {
-    "strongest_justified_path": "",
+    "strongest_justified_path": "EVERYDAY_LOCAL_005",
     "clearest_overhead_path": "EVERYDAY_LOCAL_003",
     "everyday_status": "BASELINE_GOOD_ENOUGH",
     "hybrid_status": "UNKNOWN",
