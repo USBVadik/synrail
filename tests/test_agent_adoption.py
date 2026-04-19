@@ -68,6 +68,8 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn('synrail start "Describe the bounded local change."', agents)
             self.assertIn("synrail check", agents)
             self.assertIn("Do not skip Synrail", agents)
+            self.assertIn("./.venv/bin/synrail", agents)
+            self.assertIn("python3 alpha.py", agents)
             self.assertNotIn('ARTIFACT_ROOT="$(pwd)/.synrail"', agents)
             self.assertIn("run `synrail` in this repo", result.stdout)
 
@@ -79,6 +81,8 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("Do not turn project recall into repo archaeology.", gemini)
             self.assertIn('synrail start "Describe the bounded local change."', gemini)
             self.assertIn("fix only what check tells you to fix", gemini)
+            self.assertIn("./.venv/bin/synrail", gemini)
+            self.assertIn("python3 alpha.py", gemini)
 
             self.assertIn("Use Synrail as the default local control path", claude)
             self.assertIn("For every new user task, run Synrail first", claude)
@@ -86,6 +90,8 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", claude)
             self.assertIn('synrail start "Describe the bounded local change."', claude)
             self.assertIn("fix only what check tells you to fix", claude)
+            self.assertIn("./.venv/bin/synrail", claude)
+            self.assertIn("python3 alpha.py", claude)
 
     def test_prefers_repo_portable_command_when_path_points_elsewhere(self) -> None:
         with mock.patch("synrail_cli_v0.sys.argv", ["/opt/synrail/.venv/bin/synrail"]), mock.patch(
@@ -134,6 +140,29 @@ class AgentAdoptionTests(unittest.TestCase):
         ):
             self.assertEqual("synrail", preferred_synrail_command())
             self.assertIsNone(preferred_synrail_fallback_command())
+
+    def test_install_agent_files_keeps_generic_checkout_fallbacks_without_machine_specific_path(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_agent_generic_fallback_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            stdout = StringIO()
+            args = mock.Mock(
+                project_root=str(project_root),
+                artifact_root=".synrail",
+                force=False,
+            )
+            with mock.patch("synrail_cli_v0.sys.argv", ["-c"]), mock.patch(
+                "synrail_cli_v0.sys.executable",
+                "/tmp/no-wrapper/python",
+            ), redirect_stdout(stdout):
+                rc = cmd_install_agent_files(args)
+            self.assertEqual(0, rc)
+            gemini = (project_root / "GEMINI.md").read_text()
+            self.assertIn("./.venv/bin/synrail", gemini)
+            self.assertIn("python3 alpha.py", gemini)
+            self.assertNotIn("Synrail fallback for this machine:", stdout.getvalue())
 
     def test_install_agent_files_is_idempotent_and_merges_existing_gemini_file(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_agent_adoption_force_") as tmpdir:

@@ -305,6 +305,12 @@ def policy_portability_note_lines(*, fallback_command: str | None) -> list[str]:
     lines = [
         "- Keep repo instructions portable: prefer `synrail` in commands and committed docs.",
     ]
+    lines.extend(
+        [
+            "- If `synrail` from PATH is unavailable in this checkout, try a local wrapper like `./.venv/bin/synrail` before assuming the control tool is missing.",
+            "- If this repo exposes a local alpha entrypoint at `alpha.py`, use `python3 alpha.py` as the next checkout-local fallback instead of reverse-engineering the entrypoint from setup metadata.",
+        ]
+    )
     if fallback_command:
         lines.append(
             f"- If this machine cannot resolve the right Synrail binary from PATH, use `{fallback_command}` as the local fallback for this checkout."
@@ -370,7 +376,8 @@ def render_agent_policy_markdown(
         "",
         "- Do not skip Synrail and try to legalize edits afterward.",
         "- Do not claim success without real local verification.",
-        "- If `synrail` is unavailable on this machine, stop and report that the control tool is missing instead of bypassing it.",
+        "- If `synrail` is unavailable from PATH here, try the checkout-local fallbacks first instead of reverse-engineering the entrypoint.",
+        "- Only report the control tool missing after the local checkout fallbacks fail too.",
         "",
     ])
     lines.extend(portability_lines)

@@ -35,3 +35,44 @@ synrail check
 If non-green, fix only what check tells you to fix, then rerun `synrail check`.
 
 Do not bypass Synrail and do not claim success without real local verification.
+
+<!-- SYNRAIL_GEMINI_START -->
+## Synrail Local Workflow
+
+Use Synrail as the default local control path for this repo.
+
+First command for every new task:
+
+```bash
+synrail
+```
+
+## Project Orientation
+
+If the user asks what this project is, where work stopped, or what the current status is, treat that as a Synrail-guided orientation task too.
+
+- Start with `synrail` before broader repo search.
+- Stay inside this project root and prefer read-only inspection first.
+- Summarize the governed state before exploring older files, sibling probes, or unrelated surfaces.
+- Do not turn project recall into repo archaeology.
+- Do not create helper scripts or make edits for an orientation-only question.
+
+If Synrail shows that no controlled run is active, start one:
+
+```bash
+synrail start "Describe the bounded local change."
+```
+
+Before claiming success, run:
+
+```bash
+synrail check
+```
+
+If non-green, run `synrail repair-step` and repair only the named gap before re-checking.
+
+Do not bypass Synrail and do not claim success without real local verification.
+- Keep repo instructions portable: prefer `synrail` in commands and committed docs.
+- If `synrail` from PATH is unavailable in this checkout, try a local wrapper like `./.venv/bin/synrail` before assuming the control tool is missing.
+- If this repo exposes a local alpha entrypoint at `alpha.py`, use `python3 alpha.py` as the next checkout-local fallback instead of reverse-engineering the entrypoint from setup metadata.
+<!-- SYNRAIL_GEMINI_END -->
