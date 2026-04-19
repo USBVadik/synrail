@@ -768,6 +768,9 @@ class ControlledStartSmokeTests(unittest.TestCase):
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertTrue((artifact_root / "readback.txt").exists())
+            self.assertIn("Prepared fallback surface: .synrail/readback.txt", check.stdout)
+            self.assertIn("Fallback-only note", (artifact_root / "readback.txt").read_text())
 
             repair_step = self.run_alpha("repair-step", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, repair_step.returncode, repair_step.stdout + repair_step.stderr)
@@ -882,6 +885,9 @@ class ControlledStartSmokeTests(unittest.TestCase):
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, check.returncode, check.stdout + check.stderr)
             self.assertIn("record scenario proof in .synrail/scenario_proof.txt", check.stdout)
+            self.assertTrue((artifact_root / "scenario_proof.txt").exists())
+            self.assertIn("Prepared fallback surface: .synrail/scenario_proof.txt", check.stdout)
+            self.assertIn("Fallback-only note", (artifact_root / "scenario_proof.txt").read_text())
 
             (artifact_root / "repair_packet.json").unlink(missing_ok=True)
             (artifact_root / "prompt.json").unlink(missing_ok=True)

@@ -1881,6 +1881,26 @@ def readback_template_text(*, root: Path | None) -> str:
     return "\n".join(lines)
 
 
+def maybe_materialize_requested_fallback_surface(*, root: Path | None, prompt_file: Path) -> str:
+    if not root or not prompt_file.exists():
+        return ""
+    payload = load_json(prompt_file)
+    subsurface_id = payload.get("current_step_subsurface_id", "")
+    if subsurface_id == "readback_record":
+        target = root / "readback.txt"
+        if not target.exists():
+            target.write_text(readback_template_text(root=root))
+            return display_path(target)
+        return ""
+    if subsurface_id == "scenario_proof_record":
+        target = root / "scenario_proof.txt"
+        if not target.exists():
+            target.write_text(scenario_proof_template_text(root=root))
+            return display_path(target)
+        return ""
+    return ""
+
+
 def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
     structural_gaps = [
         {
@@ -3126,6 +3146,9 @@ def cmd_generate_prompt(args: argparse.Namespace) -> int:
         if completed.stdout.strip():
             print(completed.stdout.strip())
         return completed.returncode
+    created_fallback = maybe_materialize_requested_fallback_surface(root=root, prompt_file=Path(args.output))
+    if created_fallback:
+        print(f"Prepared fallback surface: {created_fallback}")
     print_prompt_summary(Path(args.output))
     return 0
 
@@ -3321,7 +3344,10 @@ def cmd_check(args: argparse.Namespace) -> int:
                 forwarded.extend(["--doctor-file", args.doctor_file])
             prompt_completed = run_python_capture(PROMPT_BRIDGE, forwarded)
             if prompt_completed.returncode == 0:
+                created_fallback = maybe_materialize_requested_fallback_surface(root=root, prompt_file=Path(prompt_output))
                 print("")
+                if created_fallback:
+                    print(f"Prepared fallback surface: {created_fallback}")
                 print("What to fix:")
                 print_prompt_summary_compact(Path(prompt_output), include_prompt=False)
     return thin_code
