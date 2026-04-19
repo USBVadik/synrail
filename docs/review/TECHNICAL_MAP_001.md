@@ -347,6 +347,7 @@ The companion claim-validation pack now also checks that:
 - one non-resumable fresh-orchestration contour remains followable without inviting a false resume path
 - the current evidence-ownership split excludes harness-only runs from kernel roadmap decisions
 - only explicitly strong mixed reports are allowed to count as kernel roadmap evidence with caution
+- roadmap moves should now be gated on the classified evidence set, not justified from a single noisy report in isolation
 
 Fresh unseen validation now also lives beside those pack checks:
 

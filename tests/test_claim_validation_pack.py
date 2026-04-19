@@ -15,7 +15,7 @@ TOOLS_ROOT = REPO_ROOT / "tools" / "reference"
 if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
-from synrail_alpha_evidence_ownership_v0 import build_record  # noqa: E402
+from synrail_alpha_evidence_ownership_v0 import build_record, summarize_roadmap_evidence  # noqa: E402
 
 
 def load_json(path: Path) -> dict:
@@ -71,6 +71,26 @@ class ClaimValidationPackTests(unittest.TestCase):
 
         self.assertEqual("STRONG_MIXED_SIGNAL", strong_mixed["roadmap_signal_class"])
         self.assertTrue(strong_mixed["kernel_roadmap_eligible"])
+
+    def test_real_reports_pass_through_roadmap_decision_gate(self) -> None:
+        report_021b = (REPO_ROOT / "fixtures" / "alpha_external_run_021b" / "REPORT.md").read_text(encoding="utf-8")
+        report_019c = (REPO_ROOT / "fixtures" / "alpha_external_run_019c" / "REPORT.md").read_text(encoding="utf-8")
+        report_031 = (REPO_ROOT / "fixtures" / "alpha_external_run_031" / "REPORT.md").read_text(encoding="utf-8")
+
+        harness = build_record(report_text=report_021b, report_path="021b")
+        weak_mixed = build_record(report_text=report_019c, report_path="019c")
+        strong_mixed = build_record(report_text=report_031, report_path="031")
+
+        blocked = summarize_roadmap_evidence([harness, weak_mixed])
+        cautious = summarize_roadmap_evidence([harness, strong_mixed])
+
+        self.assertFalse(blocked["kernel_roadmap_allowed"])
+        self.assertEqual("MANUAL_REVIEW_REQUIRED", blocked["decision"])
+        self.assertEqual("manual_review", blocked["recommended_track"])
+
+        self.assertTrue(cautious["kernel_roadmap_allowed"])
+        self.assertEqual("ALLOW_KERNEL_MOVE_WITH_CAUTION", cautious["decision"])
+        self.assertEqual("kernel_with_caution", cautious["recommended_track"])
 
     def test_uglier_second_operator_compound_doctor_block_remains_followable(self) -> None:
         lane = REPO_ROOT / "fixtures" / "second_operator_test_002"

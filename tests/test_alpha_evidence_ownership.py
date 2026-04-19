@@ -17,6 +17,7 @@ from synrail_alpha_evidence_ownership_v0 import (  # noqa: E402
     build_record,
     classify_roadmap_signal,
     extract_markdown_field,
+    summarize_roadmap_evidence,
 )
 
 
@@ -57,6 +58,38 @@ class TestAlphaEvidenceOwnership(unittest.TestCase):
         self.assertEqual("MIXED_SIGNAL_TOO_WEAK", record["roadmap_signal_class"])
         self.assertEqual("manual_review", record["roadmap_track"])
         self.assertFalse(record["kernel_roadmap_eligible"])
+
+    def test_harness_only_evidence_reroutes_to_harness_track(self) -> None:
+        harness = build_record(report_text=self._report("021b"), report_path="021b")
+        decision = summarize_roadmap_evidence([harness])
+        self.assertFalse(decision["kernel_roadmap_allowed"])
+        self.assertEqual("REROUTE_NON_KERNEL", decision["decision"])
+        self.assertEqual("harness", decision["recommended_track"])
+
+    def test_strong_mixed_only_evidence_allows_kernel_with_caution(self) -> None:
+        strong_mixed = build_record(report_text=self._report("031"), report_path="031")
+        decision = summarize_roadmap_evidence([strong_mixed])
+        self.assertTrue(decision["kernel_roadmap_allowed"])
+        self.assertEqual("ALLOW_KERNEL_MOVE_WITH_CAUTION", decision["decision"])
+        self.assertEqual("kernel_with_caution", decision["recommended_track"])
+
+    def test_product_owned_evidence_allows_kernel_move(self) -> None:
+        clean = classify_roadmap_signal(
+            failure_owner="product",
+            verdict="strong product evidence with a cleanly isolated kernel seam",
+        )
+        decision = summarize_roadmap_evidence([clean])
+        self.assertTrue(decision["kernel_roadmap_allowed"])
+        self.assertEqual("ALLOW_KERNEL_MOVE", decision["decision"])
+        self.assertEqual("kernel", decision["recommended_track"])
+
+    def test_ineligible_mixed_and_harness_combination_requires_manual_review(self) -> None:
+        weak_mixed = build_record(report_text=self._report("019c"), report_path="019c")
+        harness = build_record(report_text=self._report("021b"), report_path="021b")
+        decision = summarize_roadmap_evidence([weak_mixed, harness])
+        self.assertFalse(decision["kernel_roadmap_allowed"])
+        self.assertEqual("MANUAL_REVIEW_REQUIRED", decision["decision"])
+        self.assertEqual("manual_review", decision["recommended_track"])
 
 
 if __name__ == "__main__":

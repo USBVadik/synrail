@@ -74,6 +74,7 @@ Use `estimate` language for baseline fields unless a real side-by-side baseline 
   - Example: broken restore semantics = `product`
 - Roadmap rule: only `product` / `none` runs, plus explicitly strong `mixed` verdicts, should directly drive kernel roadmap changes.
   - `harness`, `operator`, `agent`, and non-strong `mixed` runs are still useful, but they should update lane health or conditioning work instead of pretending to be clean kernel evidence.
+  - Process rule: do not move the kernel roadmap off a single bad run by default. Classify each report first, then gate the actual roadmap move on the resulting evidence set.
 - `Reuse tomorrow` should be brutally practical:
   - if you would actually choose `Synrail` again for this same task tomorrow, say `yes`
   - if not, say `no`

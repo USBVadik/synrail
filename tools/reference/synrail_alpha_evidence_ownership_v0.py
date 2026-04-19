@@ -157,6 +157,86 @@ def build_record(*, report_text: str, report_path: str = "") -> dict:
     }
 
 
+def summarize_roadmap_evidence(records: list[dict]) -> dict:
+    """Turn per-report ownership records into a roadmap decision gate.
+
+    This is the process rule version of the ownership split:
+    kernel roadmap moves must be backed by kernel-eligible evidence, not just
+    by any run that ended badly.
+    """
+    normalized = [record for record in records if isinstance(record, dict)]
+    eligible = [record for record in normalized if record.get("kernel_roadmap_eligible", False)]
+    kernel_direct = [record for record in eligible if record.get("roadmap_track") == "kernel"]
+    kernel_caution = [record for record in eligible if record.get("roadmap_track") == "kernel_with_caution"]
+    has_manual_review = any(record.get("roadmap_track") == "manual_review" for record in normalized)
+    non_kernel_tracks = {
+        record.get("roadmap_track", "")
+        for record in normalized
+        if record.get("roadmap_track", "") not in {"", "kernel", "kernel_with_caution", "manual_review"}
+    }
+
+    summary = {
+        "total_reports": len(normalized),
+        "eligible_report_count": len(eligible),
+        "kernel_roadmap_allowed": False,
+        "decision": "NO_EVIDENCE",
+        "recommended_track": "manual_review",
+        "why": "no evidence records were supplied",
+    }
+    if not normalized:
+        return summary
+
+    if kernel_direct:
+        return {
+            "total_reports": len(normalized),
+            "eligible_report_count": len(eligible),
+            "kernel_roadmap_allowed": True,
+            "decision": "ALLOW_KERNEL_MOVE",
+            "recommended_track": "kernel",
+            "why": "at least one clean or product-owned report directly supports a kernel roadmap move",
+        }
+
+    if kernel_caution:
+        return {
+            "total_reports": len(normalized),
+            "eligible_report_count": len(eligible),
+            "kernel_roadmap_allowed": True,
+            "decision": "ALLOW_KERNEL_MOVE_WITH_CAUTION",
+            "recommended_track": "kernel_with_caution",
+            "why": "only explicitly strong mixed evidence supports this kernel roadmap move, so the decision should stay caution-labeled",
+        }
+
+    if has_manual_review:
+        return {
+            "total_reports": len(normalized),
+            "eligible_report_count": len(eligible),
+            "kernel_roadmap_allowed": False,
+            "decision": "MANUAL_REVIEW_REQUIRED",
+            "recommended_track": "manual_review",
+            "why": "at least one supplied report is still manual-review-only, so the evidence set should not be auto-rerouted into a cleaner track",
+        }
+
+    if len(non_kernel_tracks) == 1:
+        only_track = next(iter(non_kernel_tracks))
+        return {
+            "total_reports": len(normalized),
+            "eligible_report_count": len(eligible),
+            "kernel_roadmap_allowed": False,
+            "decision": "REROUTE_NON_KERNEL",
+            "recommended_track": only_track,
+            "why": f"all supplied evidence points at the {only_track} track rather than a kernel roadmap move",
+        }
+
+    return {
+        "total_reports": len(normalized),
+        "eligible_report_count": len(eligible),
+        "kernel_roadmap_allowed": False,
+        "decision": "MANUAL_REVIEW_REQUIRED",
+        "recommended_track": "manual_review",
+        "why": "the supplied evidence does not cleanly support a kernel move and does not collapse to one non-kernel track, so it needs manual review",
+    }
+
+
 def load_report(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
