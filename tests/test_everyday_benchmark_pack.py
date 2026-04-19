@@ -52,6 +52,7 @@ class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
         self.assertEqual(2, cost_record["aggregate_deltas"]["avg_operator_minutes_added"])
         self.assertEqual(1, cost_record["aggregate_deltas"]["avg_mandatory_mental_steps_added"])
         self.assertEqual(0, cost_record["aggregate_deltas"]["avg_required_visible_surfaces_added"])
+        self.assertEqual(1, cost_record["aggregate_deltas"]["avg_skippable_visible_surfaces_added"])
         self.assertEqual(29, cost_record["aggregate_deltas"]["avg_artifact_completeness_percent_gain"])
         self.assertEqual(2, cost_record["aggregate_deltas"]["avg_fixed_control_mass_added"])
         self.assertEqual("EVERYDAY_LOCAL_002", cost_record["reading"]["clearest_overhead_path"])

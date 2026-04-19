@@ -54,8 +54,8 @@
         "artifact_completeness_percent": 50,
         "mandatory_mental_steps": 2,
         "trust_bearing_artifact_count": 2,
-        "visible_surface_count": 3,
-        "skippable_visible_surface_count": 2,
+        "visible_surface_count": 2,
+        "skippable_visible_surface_count": 1,
         "notes": "Cheapened path keeps optional prose skippable, but still adds one extra guided step."
       }
     },
@@ -110,8 +110,8 @@
         "artifact_completeness_percent": 70,
         "mandatory_mental_steps": 2,
         "trust_bearing_artifact_count": 2,
-        "visible_surface_count": 3,
-        "skippable_visible_surface_count": 2,
+        "visible_surface_count": 2,
+        "skippable_visible_surface_count": 1,
         "notes": "Runtime-backed proof narrows ambiguity here, but the economics are still close rather than clearly won."
       }
     },
@@ -166,8 +166,8 @@
         "artifact_completeness_percent": 45,
         "mandatory_mental_steps": 2,
         "trust_bearing_artifact_count": 2,
-        "visible_surface_count": 2,
-        "skippable_visible_surface_count": 1,
+        "visible_surface_count": 1,
+        "skippable_visible_surface_count": 0,
         "notes": "The path is still stricter, but this low-risk contour does not earn the extra control yet."
       }
     },
@@ -222,8 +222,8 @@
         "artifact_completeness_percent": 73,
         "mandatory_mental_steps": 3,
         "trust_bearing_artifact_count": 2,
-        "visible_surface_count": 3,
-        "skippable_visible_surface_count": 2,
+        "visible_surface_count": 2,
+        "skippable_visible_surface_count": 1,
         "notes": "This is still not a clean win, but the runtime-backed path is plausibly near baseline rather than wildly heavier."
       }
     },
@@ -278,8 +278,8 @@
         "artifact_completeness_percent": 70,
         "mandatory_mental_steps": 2,
         "trust_bearing_artifact_count": 1,
-        "visible_surface_count": 3,
-        "skippable_visible_surface_count": 2,
+        "visible_surface_count": 2,
+        "skippable_visible_surface_count": 1,
         "notes": "This is the closest cheapened contour in the initial pack: one extra mental step, no extra trust-bearing artifact, optional prose still skippable."
       }
     }

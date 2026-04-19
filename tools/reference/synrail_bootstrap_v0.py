@@ -170,13 +170,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
 
 def write_proof_starter_files(*, artifact_root: Path, starter_contents: dict[str, str]) -> None:
     artifact_root.mkdir(parents=True, exist_ok=True)
-    mapping = {
-        "final_result": artifact_root / "final_result.json",
-        "readback": artifact_root / "readback.txt",
-        "scenario_proof": artifact_root / "scenario_proof.txt",
-    }
-    for artifact_id, target in mapping.items():
-        target.write_text(starter_contents[artifact_id])
+    (artifact_root / "final_result.json").write_text(starter_contents["final_result"])
 
 
 def build_bootstrap_record(

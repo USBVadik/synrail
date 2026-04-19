@@ -49,7 +49,7 @@ Across the current five-scenario pack, `Synrail` currently adds on average:
 - `1` mandatory mental step
 - `1` trust-bearing artifact
 - `0` required visible surfaces
-- `2` skippable visible surfaces
+- `1` skippable visible surface
 - `2` fixed control-mass units
 
 It currently gains on average:
