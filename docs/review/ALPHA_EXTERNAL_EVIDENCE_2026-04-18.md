@@ -316,6 +316,18 @@ So the refined statement becomes:
 - the next dominant cost seam is cleanup follow-through plus unstable optional-prose behavior
 - the product has become more diagnosable again, but it still does not have a clear baseline win on trivial work
 
+Run [031](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_031/REPORT.md) then validates the next cleanup-specific hypothesis:
+
+- removing the controlled-run `cleanup_status` placeholder does cut the old second-check seam out of the live lane
+- the run drops back to one check and about `0.9` minutes instead of `1.2`
+- but Gemini still manually writes `cleanup_status`, `readback.txt`, and `scenario_proof.txt`, so the remaining tax is now mostly agent behavior rather than kernel truth requirements
+
+So the refined statement becomes:
+
+- entrypoint discovery and cleanup second-check churn are no longer the dominant trivial-lane blockers
+- the remaining cost is concentrated in optional proof-surface authorship that the agent still performs out of habit
+- Synrail is closer to a baseline-comparable trivial contour than before, but it still has not earned a clean baseline win
+
 So the honest updated statement is:
 
 - trivial-task tax is getting better
@@ -420,6 +432,7 @@ That means the project is improving on recall and context recovery, but the oper
 | [028b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_028b/REPORT.md) | Valid unattended Gemini retest after final-result-first wording: accepted with the same runtime-backed waived contour, and the live agent now prioritizes `final_result.json`, but it still rewrites the prose proof surfaces | Strong mixed-positive evidence |
 | [029](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_029/REPORT.md) | Valid unattended Gemini retest after starter-note shaping: accepted with runtime-backed proof, waived prose surfaces, and untouched starter `readback/scenario`, showing the cheapened contour now affects live agent behavior too | Very strong positive evidence |
 | [030](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_030/REPORT.md) | Valid unattended Gemini retest after checkout-local fallback guidance: accepted again and removes the old `setup.py` / `python3 alpha.py` entrypoint archaeology, but time stays flat because optional prose authoring and a cleanup second-check loop still absorb the savings | Strong mixed-positive evidence |
+| [031](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_031/REPORT.md) | Valid unattended Gemini retest after removing the controlled-run cleanup placeholder: accepted in one check and materially faster than `030`, showing the cleanup second-check seam was real, but the agent still authors optional proof surfaces and manual cleanup anyway | Strong positive evidence |
 
 ## Current Best Honest Claim Against Baseline
 

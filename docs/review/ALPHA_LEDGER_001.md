@@ -70,6 +70,7 @@ The purpose of this file is simple:
 | [028b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_028b/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_FINAL_RESULT_FIRST_BUT_PROSE_STILL_AUTHORED | mixed | yes | medium | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
 | [029](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_029/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_STARTER_PROSE_LEFT_UNTOUCHED | mixed | yes | medium | 0.3 | 1.2 | +0.9 | 0 | 1 | +1 |
 | [030](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_030/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_ENTRYPOINT_ARCHAEOLOGY_REMOVED_BUT_REGRESSED_CHEAPNESS | mixed | yes | medium | 0.3 | 1.2 | +0.9 | 0 | 2 | +2 |
+| [031](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_031/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_SECOND_CHECK_REMOVED_BUT_PROSE_STILL_AUTHORED | mixed | yes | medium | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
 
 ## Per-Run Records
 
@@ -924,6 +925,27 @@ The purpose of this file is simple:
   - the accepted trust path stays strong and waived, but the lane does not get cheaper because optional prose authoring returns and a cleanup mini-loop (`check -> explain-proof -> doctor -> check`) burns the saved time
   - so the next trivial-lane seam is no longer entrypoint discovery; it is cleanup follow-through and behavioral stability around when optional prose should stay untouched
 
+### Run 031
+
+- Report: [fixtures/alpha_external_run_031/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_031/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `mixed`
+- Reuse tomorrow: `yes`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.9`
+- Delta time: `+0.6`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this run shows that the cleanup-placeholder seam from `030` was real: after removing `cleanup_status` from the controlled starter, Gemini gets back to a one-check accepted lane and drops from `73s` to `55s`
+  - the entrypoint improvement from `030` remains in place, so the lane no longer burns time on either `setup.py` archaeology or the old `explain-proof -> doctor -> check` detour
+  - the remaining trivial-lane tax is now narrower still: Gemini still re-authors `cleanup_status`, `readback.txt`, and `scenario_proof.txt` even though trust is already carried by the runtime-backed `final_result`
+
 ## Current Read
 
 If we force the current ledger into one brutally practical sentence:
@@ -938,6 +960,7 @@ If we force the current ledger into one brutally practical sentence:
 - and now also shows that the cheaper evidence-first contour can fully materialize on a real Gemini run: `027` keeps the prose surfaces present but semantically waived, so the trust decision now lives in runtime-backed proof rather than in those extra artifacts
 - and now also shows the next live step beyond that: `028b` reorders the agent toward `final_result.json` first, and `029` finally leaves `readback/scenario` untouched in starter form while the waived runtime-backed contour still reaches `Accepted`
 - and now also sharpens what remains after that: `030` removes the old `setup.py` / `python3 alpha.py` entrypoint archaeology, but the lane still fails to get cheaper because cleanup/doctor churn and optional-prose reauthoring can immediately eat those savings
+- and now also shows the next cut after that: `031` removes the cleanup second-check seam and materially lowers elapsed time, which means the remaining trivial-lane tax is increasingly concentrated in unnecessary manual authorship of optional proof surfaces rather than in kernel blocking logic
 - and now has a materially stronger restore story: `014d` fixed the false-success lie, and `014e` validates real recovery on the no-commit git contour via `file_copy`
 - orientation on governed roots is better than before; Claude now shows a literal `synrail`-first entry, while Gemini has narrowed the loop materially in `019c` but still does not converge on that same small shape
 - the Claude-first handoff lane is still harness-limited under the current root server setup, so new handoff strength is still coming mostly from Gemini-side evidence

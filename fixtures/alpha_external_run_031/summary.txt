@@ -1,0 +1,13 @@
+final_status=PROVEN
+cleanup_present_in_final=True
+semantic_status=SUFFICIENT
+closure=ACCEPTED
+repair_count=0
+rejection_count=0
+normalized_method=direct_file_observation
+method_inferred=True
+cleanup_from_doctor=False
+readback_present=True
+scenario_present=True
+readback_waived=True
+scenario_waived=True
