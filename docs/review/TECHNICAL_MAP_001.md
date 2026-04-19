@@ -338,6 +338,12 @@ The companion claim-validation pack now also checks that:
 - the current evidence-ownership split excludes harness-only runs from kernel roadmap decisions
 - only explicitly strong mixed reports are allowed to count as kernel roadmap evidence with caution
 
+Fresh unseen validation now also lives beside those pack checks:
+
+- measured strict proof lanes must still accept concrete terse evidence on new task shapes
+- measured strict proof lanes must still reject narrative-only readback and scenario assertions on new task shapes
+- unknown task classes must not inherit strict hostile proof guards automatically
+
 ## Current external review contour
 
 See:

@@ -81,6 +81,12 @@ These are the most likely next moves, but they should depend on real external si
 3. cut or simplify anything in the first workflow that critics still call ceremony
 4. only then decide whether broader product packaging is worth doing
 
+Fresh unseen validation is the credibility gate for the current scoped heuristics:
+
+- measured strict proof lanes should still accept concrete terse evidence on new task shapes
+- measured strict proof lanes should still reject narrative-only readback and scenario assertions on new task shapes
+- unknown task classes should not silently inherit global hostile proof policy
+
 ## Deliberately frozen for now
 
 Not the next move:
