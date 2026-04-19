@@ -70,6 +70,7 @@ Partially built because:
 Partially built because:
 
 - some substitute and economics pressure slices exist
+- the active baseline economics harness now also tracks fixed control mass through mental steps, trust-bearing artifacts, and required visible surfaces
 - this is still not a broad external benchmark program
 
 ## Planned next after outside critique

@@ -71,6 +71,10 @@ The active economics harness now also records:
 - closure latency in minutes
 - false-green exposure
 - artifact completeness percent
+- mandatory mental steps
+- trust-bearing artifact count
+- visible surface count
+- skippable visible surface count
 
 It also emits one compact economics summary:
 
@@ -81,6 +85,11 @@ It also emits one compact economics summary:
 - added closure latency
 - reduced false-green exposure
 - gained artifact completeness
+- added mandatory mental steps
+- added trust-bearing artifacts
+- added required visible surfaces
+- added skippable visible surfaces
+- added fixed control mass
 
 ## Current limitations
 

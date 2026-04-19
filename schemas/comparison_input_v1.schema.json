@@ -98,6 +98,22 @@
       "type": "integer",
       "minimum": 0
     },
+    "mandatory_mental_steps": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "trust_bearing_artifact_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "visible_surface_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "skippable_visible_surface_count": {
+      "type": "integer",
+      "minimum": 0
+    },
     "notes": {
       "type": "string"
     }

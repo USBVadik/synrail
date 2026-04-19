@@ -82,7 +82,8 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn('synrail start "Describe the bounded local change."', gemini)
             self.assertIn("fix only what check tells you to fix", gemini)
             self.assertIn("cheapest honest order", gemini)
-            self.assertIn("only deepen readback or scenario proof if synrail check later names them", gemini)
+            self.assertIn("fallback-only surfaces", gemini)
+            self.assertIn("do not touch them unless synrail check later names them", gemini)
             self.assertIn("./.venv/bin/synrail", gemini)
             self.assertIn("python3 alpha.py", gemini)
 
@@ -93,7 +94,8 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn('synrail start "Describe the bounded local change."', claude)
             self.assertIn("fix only what check tells you to fix", claude)
             self.assertIn("cheapest honest order", claude)
-            self.assertIn("only deepen readback or scenario proof if synrail check later names them", claude)
+            self.assertIn("fallback-only surfaces", claude)
+            self.assertIn("do not touch them unless synrail check later names them", claude)
             self.assertIn("./.venv/bin/synrail", claude)
             self.assertIn("python3 alpha.py", claude)
 

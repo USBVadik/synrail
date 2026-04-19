@@ -55,7 +55,12 @@
         "closure_latency_minutes_added",
         "blocker_to_closure_cycles_added",
         "false_green_exposure_reduced",
-        "artifact_completeness_percent_gain"
+        "artifact_completeness_percent_gain",
+        "mandatory_mental_steps_added",
+        "trust_bearing_artifacts_added",
+        "required_visible_surfaces_added",
+        "skippable_visible_surfaces_added",
+        "fixed_control_mass_added"
       ],
       "properties": {
         "operator_minutes_added": {
@@ -80,6 +85,21 @@
           "type": "integer"
         },
         "artifact_completeness_percent_gain": {
+          "type": "integer"
+        },
+        "mandatory_mental_steps_added": {
+          "type": "integer"
+        },
+        "trust_bearing_artifacts_added": {
+          "type": "integer"
+        },
+        "required_visible_surfaces_added": {
+          "type": "integer"
+        },
+        "skippable_visible_surfaces_added": {
+          "type": "integer"
+        },
+        "fixed_control_mass_added": {
           "type": "integer"
         }
       }

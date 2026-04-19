@@ -20,6 +20,21 @@ def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
+def non_negative_int(record: dict, field: str) -> int:
+    value = record.get(field, 0)
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return max(0, value)
+    return 0
+
+
+def required_visible_surface_count(record: dict) -> int:
+    visible = non_negative_int(record, "visible_surface_count")
+    skippable = non_negative_int(record, "skippable_visible_surface_count")
+    return max(0, visible - skippable)
+
+
 def economics_summary(baseline: dict, synrail: dict) -> dict:
     return {
         "operator_minutes_added": synrail["operator_minutes"] - baseline["operator_minutes"],
@@ -30,6 +45,15 @@ def economics_summary(baseline: dict, synrail: dict) -> dict:
         "blocker_to_closure_cycles_added": synrail["blocker_to_closure_cycles"] - baseline["blocker_to_closure_cycles"],
         "false_green_exposure_reduced": baseline["false_green_exposure"] - synrail["false_green_exposure"],
         "artifact_completeness_percent_gain": synrail["artifact_completeness_percent"] - baseline["artifact_completeness_percent"],
+        "mandatory_mental_steps_added": non_negative_int(synrail, "mandatory_mental_steps") - non_negative_int(baseline, "mandatory_mental_steps"),
+        "trust_bearing_artifacts_added": non_negative_int(synrail, "trust_bearing_artifact_count") - non_negative_int(baseline, "trust_bearing_artifact_count"),
+        "required_visible_surfaces_added": required_visible_surface_count(synrail) - required_visible_surface_count(baseline),
+        "skippable_visible_surfaces_added": non_negative_int(synrail, "skippable_visible_surface_count") - non_negative_int(baseline, "skippable_visible_surface_count"),
+        "fixed_control_mass_added": (
+            (non_negative_int(synrail, "mandatory_mental_steps") - non_negative_int(baseline, "mandatory_mental_steps"))
+            + (non_negative_int(synrail, "trust_bearing_artifact_count") - non_negative_int(baseline, "trust_bearing_artifact_count"))
+            + (required_visible_surface_count(synrail) - required_visible_surface_count(baseline))
+        ),
     }
 
 
@@ -59,6 +83,8 @@ def compare(baseline: dict, synrail: dict) -> tuple[str, list[str], str, dict]:
         reasons.append("synrail_lowers_recovery_cost")
     if overhead_penalty >= 1 or economics["operator_minutes_added"] > 0:
         reasons.append("synrail_adds_control_overhead")
+    if economics["fixed_control_mass_added"] > 0:
+        reasons.append("synrail_adds_fixed_control_mass")
     if economics["intervention_count_added"] > 0:
         reasons.append("synrail_requires_more_operator_interventions")
     if economics["closure_latency_minutes_added"] > 0:
