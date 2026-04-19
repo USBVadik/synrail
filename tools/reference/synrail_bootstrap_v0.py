@@ -79,10 +79,6 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                 "prompt_identity": "",
                 "task_identity": task_identity.strip(),
             },
-            "cleanup_status": {
-                "success": False,
-                "summary": "Replace this starter payload with the actual cleanup result for this run.",
-            },
             "_synrail": {
                 "starter_surface": True,
                 "edit_in_place": True,
@@ -127,7 +123,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                     "presentation_hint": "If the task only asked for a simple added subtitle or label, keep the new line visually plain and avoid extra emphasis styling unless the task explicitly asked for it.",
                     "diff_provenance_hint": "if git_diff is unavailable, use diff_provenance with changed_file, one exact added_line or removed_line, one stable context_before or context_after line, and verification_command plus verification_result; do not leave those anchors only in readback or scenario_proof. If the requested state was already present before edits, set change_disposition to already_satisfied, keep git_diff empty, and use observed_line plus provenance_note instead of inventing a patch",
                     "artifact_identity_hint": "during a normal synrail check, run identity is carried from the current controlled context; only fill artifact_identity manually when a standalone bundle-check lacks that run context",
-                    "cleanup_hint": "during a normal synrail check, a doctor-ready workspace can satisfy cleanup_status automatically; only edit cleanup_status manually when standalone proof needs an explicit cleanup attestation",
+                    "cleanup_hint": "during a normal synrail check, leave cleanup_status absent and let a doctor-ready workspace satisfy it automatically; only add cleanup_status manually when standalone proof or a later synrail check explicitly asks for an explicit cleanup attestation",
                     "no_op_hint": "If the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and attest the observed line truthfully through diff_provenance.",
                     "explanatory_surface_hint": "If final_result.json already carries a strong direct-observation record with verification_command and verification_result, you can leave readback.txt and scenario_proof.txt in their starter or brief explanatory form until synrail check explicitly asks for more.",
                 },
@@ -266,7 +262,7 @@ def build_proof_request_record(
             "readback",
             "scenario_proof",
         ],
-        "next_safe_step": "Run local verification, make final_result.json strong first with trust-bearing status and structured diff_provenance anchors, leave readback.txt and scenario_proof.txt brief or untouched unless Synrail later asks for them, let Synrail carry run identity and doctor-ready cleanup truth when available, then run synrail check.",
+        "next_safe_step": "Run local verification, make final_result.json strong first with trust-bearing status and structured diff_provenance anchors, leave cleanup_status absent unless Synrail later asks for explicit cleanup attestation, leave readback.txt and scenario_proof.txt brief or untouched unless Synrail later asks for them, let Synrail carry run identity and doctor-ready cleanup truth when available, then run synrail check.",
     }
 
 

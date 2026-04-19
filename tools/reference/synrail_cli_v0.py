@@ -1734,7 +1734,7 @@ def final_result_template_payload(*, root: Path | None) -> dict:
         "For tiny edits, do not leave the exact changed line and its stable neighbor only in readback or scenario_proof; copy those anchors into diff_provenance too.",
         "For an already_satisfied no-op, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.",
         "In the normal synrail check path, run identity is already carried from the current controlled context; only fill artifact_identity manually when you are doing a standalone bundle check without that context.",
-        "In the normal synrail check path, doctor-ready cleanup truth can satisfy cleanup_status; only fill cleanup_status manually when standalone proof needs an explicit cleanup attestation.",
+        "In the normal synrail check path, leave cleanup_status absent and let doctor-ready cleanup truth satisfy it automatically; only fill cleanup_status manually when standalone proof or a later synrail check explicitly asks for an explicit cleanup attestation.",
         "Use synrail explain-proof after a check to see exact semantic gaps and reasons.",
     ]
     if profile.get("workspace_isolation_note", ""):
@@ -1972,7 +1972,8 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  Concrete fix: use a trust-bearing closure claim in final_result.json. Set status to PROVEN for an evidenced modification run, or ALREADY_SATISFIED for a truthful no-op attestation.")
                 lines.append("  Avoid generic execution labels like SUCCESS, COMPLETED, or DONE when the bundle is making a trust claim.")
             if gap["section"] == "cleanup_status":
-                lines.append("  Normal check path: if doctor already reports an acceptable clean execution surface, Synrail can satisfy cleanup_status from that current readiness truth; otherwise record an explicit cleanup summary in final_result.json.")
+                lines.append("  Normal check path: if doctor already reports an acceptable clean execution surface, Synrail can satisfy cleanup_status from that current readiness truth.")
+                lines.append("  Concrete fix: if final_result.json still carries a stale starter cleanup placeholder, delete it and rerun synrail check before authoring a manual cleanup attestation.")
     if semantic_gaps:
         lines.append("Semantic gaps:")
         for gap in semantic_gaps:
@@ -1999,7 +2000,8 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
                 lines.append("  Concrete fix: use a trust-bearing closure claim in final_result.json. Set status to PROVEN for an evidenced modification run, or ALREADY_SATISFIED for a truthful no-op attestation.")
                 lines.append("  Avoid generic execution labels like SUCCESS, COMPLETED, or DONE when the bundle is making a trust claim.")
             if gap["section"] == "cleanup_status":
-                lines.append("  Normal check path: if doctor already reports an acceptable clean execution surface, Synrail can satisfy cleanup_status from that current readiness truth; otherwise record an explicit cleanup summary in final_result.json.")
+                lines.append("  Normal check path: if doctor already reports an acceptable clean execution surface, Synrail can satisfy cleanup_status from that current readiness truth.")
+                lines.append("  Concrete fix: if final_result.json still carries a stale starter cleanup placeholder, delete it and rerun synrail check before authoring a manual cleanup attestation.")
     if not structural_gaps and not semantic_gaps:
         lines.append("Synrail did not find structural or semantic proof gaps in the current bundle.")
     if any(gap["section"] in {"final_result", "final_result_status", "modified_files", "diff_provenance", "verification_corroboration", "artifact_identity", "cleanup_status"} for gap in structural_gaps + semantic_gaps):

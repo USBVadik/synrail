@@ -191,11 +191,17 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(64, len(proof_request["starter_hashes"]["final_result"]))
             self.assertIn("explicit proof artifacts and local verification evidence", proof_request["summary"])
             self.assertIn("make final_result.json strong first", proof_request["next_safe_step"])
+            self.assertIn("leave cleanup_status absent unless Synrail later asks for explicit cleanup attestation", proof_request["next_safe_step"])
             self.assertIn("leave readback.txt and scenario_proof.txt brief or untouched", proof_request["next_safe_step"])
             self.assertIn("carry run identity and doctor-ready cleanup truth", proof_request["next_safe_step"])
+            self.assertNotIn("cleanup_status", final_result)
             self.assertEqual("direct_file_observation", final_result["diff_provenance"]["method"])
             self.assertIn("changed or observed line", final_result["diff_provenance"]["context_before"])
             self.assertIn("exact changed or observed line", final_result["diff_provenance"]["verification_result"])
+            self.assertIn(
+                "leave cleanup_status absent and let a doctor-ready workspace satisfy it automatically",
+                final_result["_synrail"]["starter_guidance"]["cleanup_hint"],
+            )
             self.assertIn(
                 "leave readback.txt and scenario_proof.txt in their starter or brief explanatory form",
                 final_result["_synrail"]["starter_guidance"]["explanatory_surface_hint"],
