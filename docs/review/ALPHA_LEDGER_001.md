@@ -24,6 +24,7 @@ The purpose of this file is simple:
   - negative means `Synrail` looked lighter on loop count
   - positive means `Synrail` looked heavier
 - `Delta recovery` is narrative because restore/re-entry value is not reducible to one number yet.
+- Roadmap decisions should be driven only by clean product-owned evidence (`Failure owner: none/product`) or explicitly strong mixed evidence. Harness, operator, and weak mixed runs should stay out of kernel decision-making.
 
 ## Summary Table
 

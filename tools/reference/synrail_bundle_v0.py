@@ -475,6 +475,13 @@ _ACTION_VERBS = [
 _OBSERVATION_LABELS = ["observed", "confirmed"]
 _SCENARIO_COMMAND_LABELS = ["command:", "cmd:"]
 _SCENARIO_OBSERVED_LABELS = ["observed:", "result:", "output:"]
+_STRICT_OBSERVATION_GUARD_TASK_CLASS_KEYWORDS = (
+    "bounded_change",
+    "proof_sensitive",
+    "router_trigger_fix",
+    "medium_risk",
+    "restoration_guard",
+)
 
 
 _VACUOUS_OBSERVATION_PHRASES = [
@@ -617,6 +624,23 @@ def _scenario_observation_lacks_evidence(line: str) -> bool:
     return False
 
 
+def observation_guard_profile(task_class: str) -> str:
+    """Return which observation heuristic profile applies to this task class.
+
+    The stricter anti-narrative guard is intentionally limited to the proof-sensitive
+    local change families we have already pressure-tested. New or unmeasured task
+    classes should not inherit these hostile checks automatically.
+    """
+    normalized = (task_class or "").strip().lower().replace("-", "_")
+    if any(keyword in normalized for keyword in _STRICT_OBSERVATION_GUARD_TASK_CLASS_KEYWORDS):
+        return "STRICT_RUNTIME_EVIDENCE"
+    return "BASELINE_OBSERVATION"
+
+
+def strict_observation_guard_enabled(task_class: str) -> bool:
+    return observation_guard_profile(task_class) == "STRICT_RUNTIME_EVIDENCE"
+
+
 def _readback_line_is_action_narrative(line: str) -> bool:
     """Return True if a line uses an observation label but contains action verbs.
 
@@ -647,7 +671,12 @@ def _readback_line_is_action_narrative(line: str) -> bool:
     return False
 
 
-def readback_is_semantically_sufficient(value: str, modified_files: list[str], task_identity: str = "") -> bool:
+def readback_is_semantically_sufficient(
+    value: str,
+    modified_files: list[str],
+    task_identity: str = "",
+    task_class: str = "bounded_change",
+) -> bool:
     if not value:
         return False
     lines = non_empty_lines(value)
@@ -687,7 +716,7 @@ def readback_is_semantically_sufficient(value: str, modified_files: list[str], t
         line for line in matching_lines
         if contains_any_keyword(line, _OBSERVATION_LABELS)
     ]
-    if observation_label_lines and all(
+    if strict_observation_guard_enabled(task_class) and observation_label_lines and all(
         _readback_line_is_action_narrative(line) or _observation_line_is_vacuous(line)
         for line in observation_label_lines
     ):
@@ -703,7 +732,11 @@ def scenario_has_explicit_observation(value: str) -> bool:
     return any(line_starts_with_any_label(line, _SCENARIO_OBSERVED_LABELS) for line in non_empty_lines(value))
 
 
-def scenario_is_semantically_sufficient(value: str, task_identity: str = "") -> bool:
+def scenario_is_semantically_sufficient(
+    value: str,
+    task_identity: str = "",
+    task_class: str = "bounded_change",
+) -> bool:
     if not value:
         return False
     lines = non_empty_lines(value)
@@ -734,7 +767,7 @@ def scenario_is_semantically_sufficient(value: str, task_identity: str = "") -> 
         line for line in lines
         if line_starts_with_any_label(line, _SCENARIO_OBSERVED_LABELS)
     ]
-    if scenario_obs_lines and all(
+    if strict_observation_guard_enabled(task_class) and scenario_obs_lines and all(
         _readback_line_is_action_narrative(line)
         or _observation_line_is_vacuous(line)
         or _scenario_observation_lacks_evidence(line)
@@ -957,8 +990,13 @@ def build_bundle(args: argparse.Namespace) -> dict:
         readback_text,
         surfaces,
         task_identity=scope_task_text,
+        task_class=args.task_class,
     )
-    scenario_semantically_sufficient = scenario_is_semantically_sufficient(scenario_text, task_identity=scope_task_text)
+    scenario_semantically_sufficient = scenario_is_semantically_sufficient(
+        scenario_text,
+        task_identity=scope_task_text,
+        task_class=args.task_class,
+    )
     verification_corroboration_semantically_sufficient = verification_corroboration_is_semantically_sufficient(
         runtime_verification_sufficient=runtime_verification_semantically_sufficient,
         scenario_text=scenario_text,

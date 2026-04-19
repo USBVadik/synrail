@@ -1518,6 +1518,22 @@ class TestHostileProofIndependence(unittest.TestCase):
             self.FILES, task_identity=self.TASK,
         ))
 
+    def test_observation_guard_profile_is_strict_only_on_measured_task_classes(self) -> None:
+        from synrail_bundle_v0 import observation_guard_profile
+        self.assertEqual("STRICT_RUNTIME_EVIDENCE", observation_guard_profile("bounded_change"))
+        self.assertEqual("STRICT_RUNTIME_EVIDENCE", observation_guard_profile("proof_sensitive_fix"))
+        self.assertEqual("BASELINE_OBSERVATION", observation_guard_profile("orientation_probe"))
+
+    def test_readback_hostile_guard_is_scoped_not_global(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertTrue(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: logging import added to src/app.py.",
+            self.FILES,
+            task_identity=self.TASK,
+            task_class="orientation_probe",
+        ))
+
     def test_scenario_rejects_action_narrative_in_observed(self) -> None:
         from synrail_bundle_v0 import scenario_is_semantically_sufficient
         self.assertFalse(scenario_is_semantically_sufficient(
@@ -1526,6 +1542,17 @@ class TestHostileProofIndependence(unittest.TestCase):
             "Observed: I added the import to line 2\n"
             "Status: PASSED",
             task_identity=self.TASK,
+        ))
+
+    def test_scenario_hostile_guard_is_scoped_not_global(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertTrue(scenario_is_semantically_sufficient(
+            "Scenario: check import in src/app.py\n"
+            "Command: grep logging src/app.py\n"
+            "Observed: logging import added to src/app.py\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+            task_class="orientation_probe",
         ))
 
     def test_scenario_rejects_restatement_without_evidence(self) -> None:
