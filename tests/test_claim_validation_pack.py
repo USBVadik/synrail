@@ -126,6 +126,39 @@ class ClaimValidationPackTests(unittest.TestCase):
             run_record["resulting_state"]["next_safe_step"],
         )
 
+    def test_continuation_inputs_missing_contour_remains_followable_without_author_memory(self) -> None:
+        lane = REPO_ROOT / "fixtures" / "continuation_autonomy_run_001"
+        second_operator = load_json(lane / "second_operator.json")
+        report = load_json(lane / "report.json")
+        session_export = load_json(lane / "session_export.json")
+
+        self.assertEqual("FOLLOWABLE_BY_SECOND_OPERATOR", second_operator["verdict"])
+        self.assertTrue(second_operator["packet_only_entry"])
+        self.assertTrue(second_operator["packet_replay_ready"])
+        self.assertFalse(second_operator["requires_author_intuition"])
+        self.assertEqual("CONTINUATION_INPUTS_MISSING", second_operator["expected_reason"])
+        self.assertEqual(
+            "move to a clean or explicitly observed-safe execution surface",
+            second_operator["expected_next_safe_step"],
+        )
+
+        self.assertEqual("BLOCKED", report["result"])
+        self.assertEqual("repair_handoff", report["stopping_stage"])
+        self.assertEqual("CONTINUATION_INPUTS_MISSING", report["reason"])
+        self.assertEqual("DOCTOR_BLOCKED", report["resulting_state"])
+        self.assertEqual(
+            second_operator["expected_next_safe_step"],
+            report["next_safe_step"],
+        )
+
+        self.assertEqual(2, session_export["event_counts"]["repair_attempt_count"])
+        self.assertEqual("DOCTOR_BLOCKED", session_export["resulting_state"])
+        self.assertTrue(session_export["sanitized_session_export"]["packet_replay_ready"])
+        self.assertEqual(
+            second_operator["expected_next_safe_step"],
+            session_export["report_summary"]["next_safe_step"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

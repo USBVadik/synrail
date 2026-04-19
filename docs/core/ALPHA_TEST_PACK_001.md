@@ -197,5 +197,6 @@ The current validation reading should now be interpreted as two linked checks, n
 - the claim-validation pack must also prove that:
   - a second operator can follow the contour without author intuition
   - the same remains true on one uglier repeated-doctor contour and one explicit non-resumable contour
+  - the same remains true on one `CONTINUATION_INPUTS_MISSING` contour where retry pressure is already present
   - harness-owned reports are excluded from kernel roadmap decisions
   - only explicitly strong mixed reports are allowed to move kernel roadmap decisions with caution
