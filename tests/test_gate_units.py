@@ -1301,6 +1301,196 @@ class TestRestoreHonestyWithoutGit(unittest.TestCase):
         self.assertFalse(preview["workspace_restore_supported"])
 
 
+class TestRestoreWorkspaceFamilies(unittest.TestCase):
+    """Explicit restore matrix for git/file-copy workspace families."""
+
+    def _git_env(self) -> dict:
+        import os
+        return {
+            **os.environ,
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@t",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@t",
+        }
+
+    def _init_git_project(self, project: Path) -> None:
+        import subprocess
+        env = self._git_env()
+        subprocess.run(["git", "init"], cwd=str(project), capture_output=True, env=env, check=True)
+        subprocess.run(["git", "add", "."], cwd=str(project), capture_output=True, env=env, check=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=str(project), capture_output=True, env=env, check=True)
+
+    def _checkpoint_args(self, *, checkpoint_root: Path, state_path: Path, project_root: Path):
+        import argparse
+        return argparse.Namespace(
+            checkpoint_id="working",
+            checkpoint_root=str(checkpoint_root),
+            state_file=str(state_path),
+            project_root=str(project_root),
+            report_file=None,
+            orchestration_file=None,
+            bundle_file=None,
+            closure_file=None,
+            refresh_file=None,
+            selection_file=None,
+            preparation_file=None,
+            repair_packet_file=None,
+            repair_handoff_file=None,
+            repair_receipt_file=None,
+        )
+
+    def test_create_record_marks_clean_commit_family(self) -> None:
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, restore_preview
+        from synrail_spine_v0 import default_state as make_state
+
+        with tempfile.TemporaryDirectory(prefix="synrail_restore_family_clean_") as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            (project / "hello.py").write_text('print("hello")\n')
+            self._init_git_project(project)
+
+            state = make_state("run1", "bounded_change")
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+
+            record = create_record(self._checkpoint_args(
+                checkpoint_root=checkpoint_root,
+                state_path=state_path,
+                project_root=project,
+            ))
+            preview = restore_preview(record, project / ".synrail")
+
+        self.assertEqual("clean_commit", record["workspace_snapshot"]["workspace_family"])
+        self.assertEqual("clean_commit", preview["workspace_family"])
+        self.assertEqual("git", preview["workspace_restore_mode"])
+
+    def test_dirty_untracked_family_uses_file_copy_and_restores_untracked_file(self) -> None:
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, restore_preview, restore_record
+        from synrail_spine_v0 import default_state as make_state
+
+        with tempfile.TemporaryDirectory(prefix="synrail_restore_family_untracked_") as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            (project / "hello.py").write_text('print("hello")\n')
+            self._init_git_project(project)
+            notes = project / "notes.txt"
+            notes.write_text("draft note\n")
+
+            state = make_state("run1", "bounded_change")
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+
+            record = create_record(self._checkpoint_args(
+                checkpoint_root=checkpoint_root,
+                state_path=state_path,
+                project_root=project,
+            ))
+            preview = restore_preview(record, project / ".synrail")
+
+            notes.write_text("BROKEN\n")
+            restored = restore_record(record, project / ".synrail")
+            restored_notes = notes.read_text().strip()
+
+        self.assertEqual("file_copy", record["workspace_snapshot"]["type"])
+        self.assertEqual("dirty_untracked", record["workspace_snapshot"]["workspace_family"])
+        self.assertEqual("dirty_untracked", preview["workspace_family"])
+        self.assertEqual("file_copy", preview["workspace_restore_mode"])
+        self.assertEqual("OK", restored["result"])
+        self.assertEqual("draft note", restored_notes)
+
+    def test_mixed_file_state_family_uses_file_copy_and_restores_both_contours(self) -> None:
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, restore_preview, restore_record
+        from synrail_spine_v0 import default_state as make_state
+
+        with tempfile.TemporaryDirectory(prefix="synrail_restore_family_mixed_") as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            tracked = project / "hello.py"
+            tracked.write_text('print("hello")\n')
+            self._init_git_project(project)
+
+            tracked.write_text('print("modified before save")\n')
+            untracked = project / "notes.txt"
+            untracked.write_text("draft note\n")
+
+            state = make_state("run1", "bounded_change")
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+
+            record = create_record(self._checkpoint_args(
+                checkpoint_root=checkpoint_root,
+                state_path=state_path,
+                project_root=project,
+            ))
+            preview = restore_preview(record, project / ".synrail")
+
+            tracked.write_text("BROKEN\n")
+            untracked.write_text("BROKEN NOTE\n")
+            restored = restore_record(record, project / ".synrail")
+            restored_tracked = tracked.read_text().strip()
+            restored_untracked = untracked.read_text().strip()
+
+        self.assertEqual("file_copy", record["workspace_snapshot"]["type"])
+        self.assertEqual("mixed_file_state", record["workspace_snapshot"]["workspace_family"])
+        self.assertEqual("mixed_file_state", preview["workspace_family"])
+        self.assertEqual("file_copy", preview["workspace_restore_mode"])
+        self.assertEqual("OK", restored["result"])
+        self.assertEqual('print("modified before save")', restored_tracked)
+        self.assertEqual("draft note", restored_untracked)
+
+    def test_restore_rolls_back_artifacts_when_dirty_tracked_apply_fails(self) -> None:
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, restore_record
+        from synrail_spine_v0 import default_state as make_state
+
+        with tempfile.TemporaryDirectory(prefix="synrail_restore_apply_fail_") as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            tracked = project / "hello.py"
+            tracked.write_text('print("hello")\n')
+            self._init_git_project(project)
+            tracked.write_text('print("modified before save")\n')
+
+            state = make_state("run1", "bounded_change")
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+
+            record = create_record(self._checkpoint_args(
+                checkpoint_root=checkpoint_root,
+                state_path=state_path,
+                project_root=project,
+            ))
+            self.assertEqual("dirty_tracked", record["workspace_snapshot"]["workspace_family"])
+            record["workspace_snapshot"]["stash_ref"] = "refs/stash-does-not-exist"
+
+            target_root = Path(tmpdir) / "restore_target"
+            target_state = target_root / "artifacts" / "state.json"
+            target_state.parent.mkdir(parents=True, exist_ok=True)
+            target_state.write_text(json.dumps({"run_id": "existing", "task_class": "existing"}) + "\n")
+
+            restored = restore_record(record, target_root)
+
+            rolled_back_state = json.loads(target_state.read_text())
+
+        self.assertEqual("BLOCKED", restored["result"])
+        self.assertEqual("RESTORE_FAILED", restored["restore"]["status"])
+        self.assertEqual("ROLLED_BACK", restored["rollback"]["status"])
+        self.assertTrue(any("stash apply failed" in reason for reason in restored["restore"]["failure_reasons"]))
+        self.assertEqual("existing", rolled_back_state["run_id"])
+
+
 class TestCleanSurfaceAutoDetect(unittest.TestCase):
     """Validates the auto-detection rule: active run → clean_surface=True."""
 

@@ -90,10 +90,10 @@ def _git_head_ref(project_root: Path) -> str:
 
 
 def _git_has_uncommitted(project_root: Path) -> bool:
-    """Return True if the workspace has uncommitted changes (staged or unstaged)."""
+    """Return True if the workspace has tracked staged/unstaged changes."""
     try:
         result = subprocess.run(
-            ["git", "status", "--porcelain"],
+            ["git", "status", "--porcelain", "--untracked-files=no"],
             cwd=str(project_root),
             capture_output=True,
             text=True,
@@ -101,6 +101,28 @@ def _git_has_uncommitted(project_root: Path) -> bool:
         )
         if result.returncode == 0:
             return bool(result.stdout.strip())
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return False
+
+
+def _git_has_untracked(project_root: Path) -> bool:
+    """Return True if the workspace has untracked files (not covered by git stash create)."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            cwd=str(project_root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            visible_untracked = [
+                line.strip()
+                for line in result.stdout.splitlines()
+                if line.strip() and not line.strip().startswith(".synrail/")
+            ]
+            return bool(visible_untracked)
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
     return False
@@ -150,6 +172,36 @@ def _git_restore_snapshot(project_root: Path, *, head_ref: str, stash_ref: str) 
         return True, ""
     except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
         return False, str(exc)
+
+
+def classify_workspace_family(workspace_snapshot: dict) -> str:
+    """Classify the workspace snapshot into a restore family.
+
+    Families:
+        clean_commit    — git, no uncommitted changes, restore is a simple checkout
+        dirty_tracked   — git, uncommitted tracked changes captured via stash
+        dirty_untracked — git, untracked files preserved via file-copy fallback
+        mixed_file_state — git, tracked + untracked changes preserved via file-copy fallback
+        file_copy       — non-git, full directory snapshot
+        unsupported     — no snapshot available
+    """
+    explicit_family = workspace_snapshot.get("workspace_family", "")
+    if explicit_family:
+        return explicit_family
+    ws_type = workspace_snapshot.get("type", "none")
+    if ws_type == "file_copy":
+        return "file_copy"
+    if ws_type == "none":
+        return "unsupported"
+    if ws_type == "git":
+        if workspace_snapshot.get("has_untracked") and workspace_snapshot.get("has_uncommitted"):
+            return "mixed_file_state"
+        if workspace_snapshot.get("has_untracked"):
+            return "dirty_untracked"
+        if workspace_snapshot.get("has_uncommitted"):
+            return "dirty_tracked"
+        return "clean_commit"
+    return "unsupported"
 
 
 # Directories to exclude from file-copy snapshots (relative to project root).
@@ -284,8 +336,10 @@ def restore_contract(record: dict) -> dict:
     workspace_snapshot = record.get("workspace_snapshot", {})
     safe_point_class = record.get("safe_point_class", "")
     artifact_restore_count = len(record.get("artifact_manifest", []))
+    workspace_family = classify_workspace_family(workspace_snapshot) if workspace_snapshot else ""
     contract = {
         "supported_contour": "",
+        "workspace_family": workspace_family,
         "restore_supported": True,
         "workspace_restore_mode": "artifacts_only",
         "workspace_restore_supported": False,
@@ -304,38 +358,86 @@ def restore_contract(record: dict) -> dict:
 
     workspace_type = workspace_snapshot.get("type", "none")
     project_root = workspace_snapshot.get("project_root", "")
-    if workspace_type == "git" and workspace_snapshot.get("head_ref"):
+    if workspace_family == "clean_commit" and workspace_type == "git" and workspace_snapshot.get("head_ref"):
         contract.update(
             {
-                "supported_contour": "pre_run_snapshot_git",
+                "supported_contour": "pre_run_snapshot_git_clean_commit",
                 "workspace_restore_mode": "git",
                 "workspace_restore_supported": True,
                 "workspace_restore_destructive": True,
-                "summary": "Restore will reset the saved git workspace state and then rehydrate checkpoint artifacts.",
+                "summary": "Restore will reset the saved clean git workspace state and then rehydrate checkpoint artifacts.",
                 "notes": [
                     "This restore modifies project files in the saved project root.",
+                    "Workspace family: clean_commit.",
                     ("Saved project root: " + project_root) if project_root else "Saved project root is recorded in the checkpoint.",
                 ],
                 "next_safe_step": "preview this restore carefully, then run restore only if you want to return to the saved pre-run workspace",
             }
         )
         return contract
-    if workspace_type == "file_copy":
+    if workspace_family == "dirty_tracked" and workspace_type == "git" and workspace_snapshot.get("head_ref"):
+        if not workspace_snapshot.get("stash_ref"):
+            contract.update(
+                {
+                    "supported_contour": "pre_run_snapshot_git_dirty_tracked_unsupported",
+                    "restore_supported": False,
+                    "workspace_restore_mode": "none",
+                    "workspace_restore_supported": False,
+                    "workspace_restore_destructive": False,
+                    "summary": "This dirty tracked git workspace cannot be restored because the tracked-change snapshot was not captured.",
+                    "notes": [
+                        "Workspace family: dirty_tracked.",
+                        workspace_snapshot.get("reason", "Tracked git changes were present, but no stash-backed snapshot is available."),
+                    ],
+                    "next_safe_step": "create a new restore point after capturing tracked changes successfully",
+                }
+            )
+            return contract
         contract.update(
             {
-                "supported_contour": "pre_run_snapshot_file_copy",
+                "supported_contour": "pre_run_snapshot_git_dirty_tracked",
+                "workspace_restore_mode": "git",
+                "workspace_restore_supported": True,
+                "workspace_restore_destructive": True,
+                "summary": "Restore will reset the saved dirty tracked git workspace state, reapply the captured tracked changes, and then rehydrate checkpoint artifacts.",
+                "notes": [
+                    "This restore modifies project files in the saved project root.",
+                    "Workspace family: dirty_tracked.",
+                    ("Saved project root: " + project_root) if project_root else "Saved project root is recorded in the checkpoint.",
+                ],
+                "next_safe_step": "preview this restore carefully, then run restore only if you want to recover the saved tracked git workspace state",
+            }
+        )
+        return contract
+    if workspace_type == "file_copy":
+        contour = "pre_run_snapshot_file_copy"
+        summary = "Restore will replace non-excluded project files from the saved file-copy snapshot and then rehydrate checkpoint artifacts."
+        notes = [
+            "This restore removes current non-excluded project files before copying the saved snapshot back.",
+            ("Saved project root: " + project_root) if project_root else "Saved project root is recorded in the checkpoint.",
+        ]
+        if workspace_family in {"dirty_untracked", "mixed_file_state"}:
+            contour = f"pre_run_snapshot_git_{workspace_family}_file_copy"
+            summary = "Restore will use a file-copy workspace snapshot because plain git restore cannot faithfully recover the saved untracked state."
+            notes.insert(1, f"Workspace family: {workspace_family}.")
+        contract.update(
+            {
+                "supported_contour": contour,
                 "workspace_restore_mode": "file_copy",
                 "workspace_restore_supported": True,
                 "workspace_restore_destructive": True,
-                "summary": "Restore will replace non-excluded project files from the saved file-copy snapshot and then rehydrate checkpoint artifacts.",
-                "notes": [
-                    "This restore removes current non-excluded project files before copying the saved snapshot back.",
-                    ("Saved project root: " + project_root) if project_root else "Saved project root is recorded in the checkpoint.",
-                ],
+                "summary": summary,
+                "notes": notes,
                 "next_safe_step": "preview this restore carefully, then run restore only if you want to replace the current pre-run workspace with the saved snapshot",
             }
         )
         return contract
+    unsupported_reason = workspace_snapshot.get("reason", "No workspace snapshot is available for this checkpoint.")
+    if workspace_family in {"dirty_untracked", "mixed_file_state", "dirty_tracked"}:
+        unsupported_reason = (
+            f"workspace family {workspace_family} could not be captured as a trustworthy restore snapshot: "
+            f"{unsupported_reason}"
+        )
     contract.update(
         {
             "supported_contour": "pre_run_snapshot_unsupported",
@@ -345,7 +447,7 @@ def restore_contract(record: dict) -> dict:
             "workspace_restore_destructive": False,
             "summary": "This pre-run snapshot cannot restore workspace files because no supported workspace snapshot was saved.",
             "notes": [
-                workspace_snapshot.get("reason", "No workspace snapshot is available for this checkpoint."),
+                unsupported_reason,
                 "Synrail will not treat this as a trustworthy workspace rollback contour.",
             ],
             "next_safe_step": "create a new restore point on a supported workspace contour before depending on restore",
@@ -386,6 +488,7 @@ def restore_preview(record: dict, target_root: Path) -> dict:
         "restore_supported": restore_supported,
         "safe_point_class": record.get("safe_point_class", ""),
         "supported_contour": contract["supported_contour"],
+        "workspace_family": contract["workspace_family"],
         "workspace_restore_mode": contract["workspace_restore_mode"],
         "workspace_restore_supported": contract["workspace_restore_supported"],
         "workspace_restore_destructive": contract["workspace_restore_destructive"],
@@ -439,16 +542,60 @@ def create_record(args: argparse.Namespace) -> dict:
         project_root = Path(getattr(args, "project_root", "") or ".").resolve()
         head_ref = _git_head_ref(project_root)
         if head_ref:
-            stash_ref = ""
-            if _git_has_uncommitted(project_root):
-                stash_ref = _git_stash_create(project_root)
-            workspace_snapshot = {
-                "type": "git",
-                "project_root": str(project_root),
-                "head_ref": head_ref,
-                "stash_ref": stash_ref,
-                "has_uncommitted": bool(stash_ref),
-            }
+            has_uncommitted = _git_has_uncommitted(project_root)
+            has_untracked = _git_has_untracked(project_root)
+            if has_untracked:
+                family = "mixed_file_state" if has_uncommitted else "dirty_untracked"
+                snapshot_dir = checkpoint_root / "workspace_files"
+                ok, err, count = _file_copy_snapshot(project_root, snapshot_dir)
+                if ok:
+                    workspace_snapshot = {
+                        "type": "file_copy",
+                        "workspace_family": family,
+                        "source_control": "git",
+                        "project_root": str(project_root),
+                        "head_ref": head_ref,
+                        "snapshot_dir": str(snapshot_dir),
+                        "file_count": count,
+                        "has_uncommitted": has_uncommitted,
+                        "has_untracked": has_untracked,
+                    }
+                else:
+                    workspace_snapshot = {
+                        "type": "none",
+                        "workspace_family": family,
+                        "source_control": "git",
+                        "project_root": str(project_root),
+                        "head_ref": head_ref,
+                        "has_uncommitted": has_uncommitted,
+                        "has_untracked": has_untracked,
+                        "reason": f"file-copy snapshot failed: {err}",
+                    }
+            else:
+                stash_ref = ""
+                if has_uncommitted:
+                    stash_ref = _git_stash_create(project_root)
+                if has_uncommitted and not stash_ref:
+                    workspace_snapshot = {
+                        "type": "none",
+                        "workspace_family": "dirty_tracked",
+                        "source_control": "git",
+                        "project_root": str(project_root),
+                        "head_ref": head_ref,
+                        "has_uncommitted": True,
+                        "has_untracked": False,
+                        "reason": "git stash create failed to capture tracked changes",
+                    }
+                else:
+                    workspace_snapshot = {
+                        "type": "git",
+                        "workspace_family": "dirty_tracked" if has_uncommitted else "clean_commit",
+                        "project_root": str(project_root),
+                        "head_ref": head_ref,
+                        "stash_ref": stash_ref,
+                        "has_uncommitted": has_uncommitted,
+                        "has_untracked": False,
+                    }
         else:
             # No git HEAD available — fall back to file-copy snapshot.
             snapshot_dir = checkpoint_root / "workspace_files"
@@ -456,6 +603,7 @@ def create_record(args: argparse.Namespace) -> dict:
             if ok:
                 workspace_snapshot = {
                     "type": "file_copy",
+                    "workspace_family": "file_copy",
                     "project_root": str(project_root),
                     "snapshot_dir": str(snapshot_dir),
                     "file_count": count,
@@ -463,6 +611,7 @@ def create_record(args: argparse.Namespace) -> dict:
             else:
                 workspace_snapshot = {
                     "type": "none",
+                    "workspace_family": "unsupported",
                     "project_root": str(project_root),
                     "reason": f"file-copy snapshot failed: {err}",
                 }

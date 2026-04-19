@@ -477,10 +477,152 @@ _SCENARIO_COMMAND_LABELS = ["command:", "cmd:"]
 _SCENARIO_OBSERVED_LABELS = ["observed:", "result:", "output:"]
 
 
+_VACUOUS_OBSERVATION_PHRASES = [
+    "looks good",
+    "everything looks",
+    "works correctly",
+    "works as expected",
+    "is now present",
+    "is present",
+    "is in place",
+    "change applied",
+    "change is applied",
+    "change completed",
+    "has been applied",
+    "has been made",
+    "has been completed",
+    "has been updated",
+    "has been implemented",
+    "was successful",
+    "was completed",
+    "is correct",
+    "is working",
+    "follows the expected",
+    "as described",
+    "as requested",
+    "as intended",
+    "done correctly",
+    "done successfully",
+]
+
+
+def _strip_subject_prefix(text: str) -> str:
+    """Strip common subject prefixes so action-verb detection works on passive/first-person forms.
+
+    'i implemented ...'       → 'implemented ...'
+    'the file was updated ...' → 'updated ...'
+    'change was applied ...'   → 'applied ...'
+    """
+    # First person: "i ..."
+    if text.startswith("i ") and len(text) > 2:
+        return text[2:]
+    # Passive with article: "the X was ..."
+    if text.startswith("the "):
+        was_pos = text.find(" was ")
+        if was_pos != -1 and was_pos < 40:
+            return text[was_pos + 5:]
+        were_pos = text.find(" were ")
+        if were_pos != -1 and were_pos < 40:
+            return text[were_pos + 6:]
+    # Passive without article: "X was ..."
+    was_pos = text.find(" was ")
+    if was_pos != -1 and was_pos < 30:
+        return text[was_pos + 5:]
+    return text
+
+
+def _observation_line_is_vacuous(line: str) -> bool:
+    """Return True if an observation-labeled line contains no substantive observation.
+
+    Vacuous observations are generic success claims with no specific content.
+    Example vacuous: "Observed: the change is now present in the source code."
+    Example vacuous: "Confirmed: change applied."
+    Example substantive: "Observed: line 2 now imports logging"
+    Example substantive: "Observed: the template now contains a subtitle under the heading"
+    """
+    lowered = line.lower()
+    for label in _OBSERVATION_LABELS:
+        pos = lowered.find(label)
+        if pos == -1:
+            continue
+        after = lowered[pos + len(label):].lstrip(":- \t")
+        if not after:
+            return True
+        has_line_number = any(ch.isdigit() for ch in after) and contains_any_keyword(after, ["line", ":"])
+        has_quoted = "'" in after or '"' in after or "`" in after
+        has_command_output_token = any(tok in after for tok in ["=>", "->", ">>>", "...", "\\n"])
+        if has_line_number or has_quoted or has_command_output_token:
+            return False
+        # Vacuous if it matches known generic phrases
+        for phrase in _VACUOUS_OBSERVATION_PHRASES:
+            if phrase in after:
+                return True
+    return False
+
+
+def _scenario_observation_lacks_evidence(line: str) -> bool:
+    """Return True if a scenario Observed:/Result: line restates action without command-output evidence.
+
+    A genuine scenario observation contains evidence from running a command: line numbers,
+    quoted output, code tokens from stdout. A restatement just says what was done using
+    action verbs, or makes a claim without any numeric or quoted evidence.
+
+    Example lacking: "Observed: logging import added to src/app.py"
+    Example lacking: "Result: logging import is in src/app.py"
+    Example genuine: "Observed: line 2 shows 'import logging'"
+    Example genuine: "Result: 2:import logging"
+    """
+    lowered = line.lower()
+    for label in _SCENARIO_OBSERVED_LABELS:
+        if not lowered.lstrip().startswith(label):
+            continue
+        # Result:/Output: lines should contain literal command output, not prose assertions
+        # Trust them only if they don't look like prose assertions
+        if label in ("result:", "output:"):
+            after = lowered[lowered.index(label) + len(label):].lstrip()
+            if not after:
+                return True
+            # Prose assertions about what "is in" or "was found" are not command output
+            if contains_any_keyword(after, ["is in ", "is present", "is there", "exists", "was found"]):
+                return True
+            has_action = any(f" {verb} " in f" {after} " or after.startswith(verb) for verb in _ACTION_VERBS)
+            if has_action:
+                return True
+            return False
+        # Observed: lines describe what the agent saw — check for substance
+        after = lowered[lowered.index(label) + len(label):].lstrip()
+        if not after:
+            return True
+        has_line_number = any(ch.isdigit() for ch in after) and contains_any_keyword(after, ["line", ":"])
+        has_quoted = "'" in after or '"' in after or "`" in after
+        has_command_output_token = any(tok in after for tok in ["=>", "->", ">>>", "...", "\\n"])
+        has_evidence = has_line_number or has_quoted or has_command_output_token
+        # If there's concrete evidence (line numbers, quotes, output), it's a real observation
+        if has_evidence:
+            return False
+        # If action verbs present without evidence → restatement
+        has_action = any(f" {verb} " in f" {after} " or after.startswith(verb) for verb in _ACTION_VERBS)
+        if has_action:
+            return True
+        # If no action verbs and no evidence, check if it's just a plain assertion
+        # (e.g. "logging import is in src/app.py") — lacks evidence of command output
+        label_pos = lowered.index(label)
+        after_text = line[label_pos + len(label):].lstrip()
+        if after_text and not _has_concrete_identifier(after_text):
+            return True
+        # Has a concrete identifier but no evidence — check for known assertion patterns
+        if contains_any_keyword(after, ["is in ", "is present", "is there", "exists", "was found"]):
+            return True
+        return False
+    return False
+
+
 def _readback_line_is_action_narrative(line: str) -> bool:
     """Return True if a line uses an observation label but contains action verbs.
 
     Example bad line: "Observed: Implemented compute_retry_delay with backoff"
+    Example bad line: "Observed: I added the import to line 2"
+    Example bad line: "Observed: the file was updated correctly"
     Example good line: "Observed: compute_retry_delay returns 2.0 for attempt=1"
     """
     lowered = line.lower()
@@ -494,10 +636,12 @@ def _readback_line_is_action_narrative(line: str) -> bool:
         after = after.lstrip(":- \t")
         if not after:
             continue
-        # Check if the content starts with an action verb
+        # Normalize subject prefixes for passive/first-person detection
+        normalized = _strip_subject_prefix(after)
+        # Check if the (possibly normalized) content starts with an action verb
         for verb in _ACTION_VERBS:
-            if after.startswith(verb) and (
-                len(after) == len(verb) or not after[len(verb)].isalpha()
+            if normalized.startswith(verb) and (
+                len(normalized) == len(verb) or not normalized[len(verb)].isalpha()
             ):
                 return True
     return False
@@ -538,13 +682,14 @@ def readback_is_semantically_sufficient(value: str, modified_files: list[str], t
     ]
     if not matching_lines:
         return False
-    # Reject if every line with an observation label is action-narrative
+    # Reject if every line with an observation label is action-narrative or vacuous
     observation_label_lines = [
         line for line in matching_lines
         if contains_any_keyword(line, _OBSERVATION_LABELS)
     ]
     if observation_label_lines and all(
-        _readback_line_is_action_narrative(line) for line in observation_label_lines
+        _readback_line_is_action_narrative(line) or _observation_line_is_vacuous(line)
+        for line in observation_label_lines
     ):
         return False
     return True
@@ -582,7 +727,21 @@ def scenario_is_semantically_sufficient(value: str, task_identity: str = "") -> 
         contains_any_keyword(line, ["command:", "curl", "python", "node", "npm", "bash", "http", "localhost", "grep", "cat", "run "])
         for line in lines
     )
-    return has_context and has_outcome and has_specifics and has_explicit_command and has_explicit_observation
+    if not (has_context and has_outcome and has_specifics and has_explicit_command and has_explicit_observation):
+        return False
+    # Reject if every observation line is action-narrative, vacuous, or restates without evidence
+    scenario_obs_lines = [
+        line for line in lines
+        if line_starts_with_any_label(line, _SCENARIO_OBSERVED_LABELS)
+    ]
+    if scenario_obs_lines and all(
+        _readback_line_is_action_narrative(line)
+        or _observation_line_is_vacuous(line)
+        or _scenario_observation_lacks_evidence(line)
+        for line in scenario_obs_lines
+    ):
+        return False
+    return True
 
 
 def verification_corroboration_is_semantically_sufficient(
@@ -613,6 +772,22 @@ def scenario_requirement_is_semantically_sufficient(
 ) -> tuple[bool, bool]:
     waived_by_runtime_corroboration = runtime_verification_sufficient and final_result_status_sufficient
     return scenario_sufficient or waived_by_runtime_corroboration, waived_by_runtime_corroboration
+
+
+def cleanup_requirement_is_semantically_sufficient(
+    *,
+    cleanup_sufficient: bool,
+    runtime_verification_sufficient: bool,
+    final_result_status_sufficient: bool,
+    doctor_fallback_present: bool,
+) -> tuple[bool, bool]:
+    """Cleanup is waivable when runtime corroboration + doctor fallback already close trust."""
+    waived_by_runtime_corroboration = (
+        runtime_verification_sufficient
+        and final_result_status_sufficient
+        and doctor_fallback_present
+    )
+    return cleanup_sufficient or waived_by_runtime_corroboration, waived_by_runtime_corroboration
 
 
 def cleanup_is_semantically_sufficient(cleanup: dict) -> bool:
@@ -831,7 +1006,16 @@ def build_bundle(args: argparse.Namespace) -> dict:
     identity_fields_present = all(bool(value.strip()) for value in identity_values)
     identity_semantically_sufficient = identity_fields_present
     cleanup_present = ("cleanup_status" in final) or bool(cleanup_fallback)
-    cleanup_semantically_sufficient = cleanup_present and cleanup_is_semantically_sufficient(cleanup)
+    cleanup_content_semantically_sufficient = cleanup_present and cleanup_is_semantically_sufficient(cleanup)
+    cleanup_requirement_sufficient, cleanup_waived_by_runtime_corroboration = (
+        cleanup_requirement_is_semantically_sufficient(
+            cleanup_sufficient=cleanup_content_semantically_sufficient,
+            runtime_verification_sufficient=runtime_verification_semantically_sufficient,
+            final_result_status_sufficient=final_result_status_semantically_sufficient,
+            doctor_fallback_present=bool(cleanup_fallback),
+        )
+    )
+    cleanup_semantically_sufficient = cleanup_requirement_sufficient
     final_request_id = (final.get("request_id", "") or "").strip()
 
     bundle = {
@@ -921,6 +1105,9 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "present": cleanup_present,
             "success": bool(cleanup.get("success", False)),
             "from_doctor": bool(cleanup_fallback) and not explicit_cleanup_semantically_sufficient,
+            "content_semantically_sufficient": cleanup_content_semantically_sufficient,
+            "waived_by_runtime_corroboration": cleanup_waived_by_runtime_corroboration,
+            "structurally_complete": cleanup_present or cleanup_waived_by_runtime_corroboration,
             "semantically_sufficient": cleanup_semantically_sufficient,
         },
         "missing_sections": [],
@@ -944,7 +1131,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
 
     if not identity_fields_present:
         missing.append("artifact_identity")
-    if not bundle["cleanup_status"]["present"]:
+    if not bundle["cleanup_status"]["present"] and not cleanup_waived_by_runtime_corroboration:
         missing.append("cleanup_status")
 
     bundle["missing_sections"] = missing
@@ -1020,14 +1207,18 @@ def build_bundle(args: argparse.Namespace) -> dict:
         structural_trace_entry(
             section="cleanup_status",
             present=bundle["cleanup_status"]["present"],
-            structurally_complete=bundle["cleanup_status"]["present"],
+            structurally_complete=bundle["cleanup_status"]["structurally_complete"],
             why=(
                 (
                     "cleanup status is present in the final result artifact"
                     if explicit_cleanup_semantically_sufficient
-                    else "cleanup status is satisfied by the current doctor-ready workspace"
+                    else (
+                        "cleanup status is satisfied by the current doctor-ready workspace"
+                        if bundle["cleanup_status"]["from_doctor"]
+                        else "cleanup status is waived because structured runtime corroboration and doctor context already close the trust decision"
+                    )
                 )
-                if bundle["cleanup_status"]["present"]
+                if bundle["cleanup_status"]["structurally_complete"]
                 else "cleanup status is missing from the final result artifact and current doctor context"
             ),
         ),
@@ -1197,7 +1388,11 @@ def build_bundle(args: argparse.Namespace) -> dict:
                 (
                     "cleanup status reports success with an explicit clean-surface summary"
                     if explicit_cleanup_semantically_sufficient
-                    else "doctor already reports an acceptable clean execution surface for this run"
+                    else (
+                        "waived: runtime verification and doctor fallback already close trust on cleanup"
+                        if cleanup_waived_by_runtime_corroboration
+                        else "doctor already reports an acceptable clean execution surface for this run"
+                    )
                 )
                 if cleanup_semantically_sufficient
                 else "cleanup status is present but does not prove a clean post-change surface"

@@ -358,7 +358,7 @@ def render_agent_policy_markdown(
         "",
         "2. Keep the change local and bounded to the stated task.",
         f"3. Run the local commands needed to verify the change honestly, then edit the starter proof files under `{artifact_root}/` in place as the work becomes real.",
-        "4. Keep proof explicit: final_result should carry patch or diff provenance, readback should name the observed changed surface, and scenario proof should use labeled Command plus Observed or Result lines.",
+        "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; only deepen readback or scenario proof if synrail check later names them or if final_result cannot yet carry strong structured verification.",
         "",
         "## Before You Claim Success",
         "",
@@ -435,7 +435,7 @@ def render_gemini_policy_markdown(
         "",
         f"- Keep edits bounded and local to this repo.",
         f"- Run the local verification commands needed for the task before updating the starter proof files in `{artifact_root}/`.",
-        "- Keep proof explicit: final_result should carry patch or diff provenance, readback should name the observed changed surface, and scenario proof should use labeled Command plus Observed or Result lines.",
+        "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; only deepen readback or scenario proof if synrail check later names them or if final_result cannot yet carry strong structured verification.",
         "",
         "## Finish",
         "",
@@ -501,7 +501,7 @@ def render_claude_policy_markdown(
         "",
         f"- Keep edits bounded and local to this repo.",
         f"- Run the local verification commands needed for the task before updating the starter proof files in `{artifact_root}/`.",
-        "- Keep proof explicit: final_result should carry patch or diff provenance, readback should name the observed changed surface, and scenario proof should use labeled Command plus Observed or Result lines.",
+        "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; only deepen readback or scenario proof if synrail check later names them or if final_result cannot yet carry strong structured verification.",
         "",
         "## Finish",
         "",
@@ -553,11 +553,21 @@ def render_agent_policy_block(
     ]
     lines.extend(orientation_lines)
     lines.extend([
+        "## Start",
+        "",
         "If Synrail shows that no controlled run is active, start one:",
         "",
         "```bash",
         commands["start"],
         "```",
+        "",
+        "## Work",
+        "",
+        f"- Keep edits bounded and local to this repo.",
+        f"- Run the local verification commands needed for the task before updating the starter proof files in `{artifact_root}/`.",
+        "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; only deepen readback or scenario proof if synrail check later names them or if final_result cannot yet carry strong structured verification.",
+        "",
+        "## Finish",
         "",
         "Before claiming success, run:",
         "",
@@ -565,7 +575,7 @@ def render_agent_policy_block(
         commands["check"],
         "```",
         "",
-        f"If non-green, run `{commands['repair']}` and repair only the named gap before re-checking.",
+        f"If non-green, fix only what check tells you to fix, then rerun `{commands['check']}`.",
         "",
         "Do not bypass Synrail and do not claim success without real local verification.",
     ])
@@ -4531,7 +4541,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_start.add_argument("task_request", nargs="?")
     p_start.set_defaults(func=cmd_start)
 
-    p_install_agent_files = sub.add_parser("install-agent-files", help="Write CLAUDE.md/GEMINI.md/AGENTS.md for agent discovery")
+    p_install_agent_files = sub.add_parser("install-agent-files", help=argparse.SUPPRESS)
     p_install_agent_files.add_argument("--project-root", default=".")
     p_install_agent_files.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_install_agent_files.add_argument("--force", action="store_true")
@@ -4909,7 +4919,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_observability.add_argument("--refresh-file")
     p_observability.set_defaults(func=cmd_observability)
 
-    p_session_export = sub.add_parser("session-export", help="Export session replay for review")
+    p_session_export = sub.add_parser("session-export", help=argparse.SUPPRESS)
     p_session_export.add_argument("--artifact-root")
     p_session_export.add_argument("--state-file")
     p_session_export.add_argument("--report-file")
@@ -4932,7 +4942,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_deploy_check.add_argument("--state-file")
     p_deploy_check.set_defaults(func=cmd_deploy_check)
 
-    p_bug_packet = sub.add_parser("bug-packet", help="Export a bug report packet")
+    p_bug_packet = sub.add_parser("bug-packet", help=argparse.SUPPRESS)
     p_bug_packet.add_argument("--artifact-root")
     p_bug_packet.add_argument("--state-file")
     p_bug_packet.add_argument("--report-file")

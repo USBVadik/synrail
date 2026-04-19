@@ -1010,7 +1010,9 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertTrue(bundle["verification_corroboration"]["has_patch_runtime_verification"])
         self.assertTrue(bundle["verification_corroboration"]["runtime_verification_sufficient"])
         self.assertTrue(bundle["readback"]["content_semantically_sufficient"])
-        self.assertTrue(bundle["scenario_proof"]["content_semantically_sufficient"])
+        # Scenario prose is now correctly recognized as thin (no command-output evidence in
+        # Observed: line), but waiver still closes trust through runtime corroboration.
+        self.assertFalse(bundle["scenario_proof"]["content_semantically_sufficient"])
         self.assertTrue(bundle["readback"]["waived_by_runtime_corroboration"])
         self.assertTrue(bundle["scenario_proof"]["waived_by_runtime_corroboration"])
         self.assertEqual("ACCEPTED", verdict["closure_status"])
@@ -1434,6 +1436,332 @@ class TestAntiNarrativeGuards(unittest.TestCase):
     def test_concrete_identifier_rejects_plain_prose(self) -> None:
         from synrail_bundle_v0 import _has_concrete_identifier
         self.assertFalse(_has_concrete_identifier("The feature was added and works correctly"))
+
+
+class TestHostileProofIndependence(unittest.TestCase):
+    """Hostile inputs that should be rejected by semantic proof checks (P2 hardening)."""
+
+    FILES = ["src/app.py"]
+    TASK = "add logging import to src/app.py"
+
+    def test_readback_rejects_thin_generic_observation(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Readback: src/app.py\n"
+            "Observed: the file was updated correctly and everything looks good now.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_first_person_action_narrative(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: I implemented the logging import at the top of the file and confirmed it compiles.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_passive_voice_action_narrative(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Readback: src/app.py\n"
+            "Observed: the logging import was added successfully to the application file.\n"
+            "Function: run()",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_vacuous_confirmed(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\nConfirmed: change applied.\nLine 2 updated.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_long_vacuous_observation(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Readback evidence for src/app.py:\n"
+            "The modification has been applied to the target file as described in the task.\n"
+            "Observed: the requested change is now present in the source code.\n"
+            "The implementation follows the expected pattern.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_accepts_concrete_observation(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertTrue(readback_is_semantically_sufficient(
+            'Changed surface: src/app.py\n'
+            'Observed: line 2 now reads "import logging" immediately after the existing os import.',
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_accepts_evidence_with_harmless_generic_tail(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertTrue(readback_is_semantically_sufficient(
+            'Changed surface: src/app.py\n'
+            'Observed: line 2 now reads "import logging" as requested.',
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_accepts_evidence_with_generic_quality_tail(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertTrue(readback_is_semantically_sufficient(
+            'Changed surface: src/app.py\n'
+            'Observed: line 2 now reads "import logging" and works correctly.',
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_accepts_evidence_even_if_confirmation_line_is_generic(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertTrue(readback_is_semantically_sufficient(
+            'Changed surface: src/app.py\n'
+            'Observed: line 2 now reads "import logging". Confirmed: change applied.',
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_action_narrative_in_observed(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: check import\n"
+            "Command: grep import src/app.py\n"
+            "Observed: I added the import to line 2\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_restatement_without_evidence(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: add logging import to src/app.py\n"
+            "Command: grep logging src/app.py\n"
+            "Observed: logging import added to src/app.py\n"
+            "Result: logging import is in src/app.py\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_accepts_concrete_command_output(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertTrue(scenario_is_semantically_sufficient(
+            "Scenario: verify logging import in src/app.py\n"
+            'Command: grep -n "import logging" src/app.py\n'
+            'Observed: line 2 shows "import logging"\n'
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_accepts_line_number_output(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertTrue(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: 2:import logging\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+
+class TestCleanupRuntimeWaiver(unittest.TestCase):
+    """Cleanup_status is waivable when runtime corroboration + doctor fallback already close trust."""
+
+    def _strong_final_result(self, *, state: dict, include_cleanup: bool = False) -> dict:
+        """Build a final_result with strong runtime verification fields."""
+        payload: dict = {
+            "request_id": state["run_id"],
+            "status": "PROVEN",
+            "modified_files": ["src/app.py"],
+            "git_diff": (
+                "diff --git a/src/app.py b/src/app.py\n"
+                "--- a/src/app.py\n"
+                "+++ b/src/app.py\n"
+                "@@ -1,3 +1,4 @@\n"
+                " import os\n"
+                "+import logging\n"
+                " \n"
+                " def run():\n"
+            ),
+            "diff_provenance": {
+                "method": "direct_file_observation",
+                "changed_file": "src/app.py",
+                "added_line": "import logging",
+                "context_before": "import os",
+                "context_after": "",
+                "verification_command": "grep -n 'import logging' src/app.py",
+                "verification_result": "2:import logging",
+            },
+            "artifact_identity": {
+                "baseline_identity": "trusted_clean",
+                "execution_surface_identity": "clean-clone",
+                "prompt_identity": "prompt-001",
+                "task_identity": "task-001",
+            },
+        }
+        if include_cleanup:
+            payload["cleanup_status"] = {
+                "success": True,
+                "summary": "Workspace clean after updating only src/app.py with no unintended changes.",
+            }
+        return payload
+
+    def _doctor_record_clean(self) -> dict:
+        """Build a minimal doctor record that passes cleanup_fallback_from_doctor."""
+        return {
+            "final_verdict": "ACCEPTABLE_READY",
+            "gates": {
+                "clean_execution_surface": {
+                    "status": "PASS",
+                    "note": "workspace is clean, no stray files detected",
+                },
+            },
+        }
+
+    def test_cleanup_waived_when_runtime_and_doctor_close_trust(self) -> None:
+        """No explicit cleanup_status in final_result, but doctor + runtime waive it → COMPLETE."""
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_cleanup_waiver_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            doctor_file = tmp / "doctor.json"
+
+            final_result.write_text(json.dumps(
+                self._strong_final_result(state=state, include_cleanup=False),
+                indent=2, ensure_ascii=True,
+            ) + "\n")
+            doctor_file.write_text(json.dumps(
+                self._doctor_record_clean(), indent=2, ensure_ascii=True,
+            ) + "\n")
+
+            args = bundle_args(final_result=final_result)
+            args.doctor_file = str(doctor_file)
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertTrue(bundle["cleanup_status"]["waived_by_runtime_corroboration"])
+        self.assertTrue(bundle["cleanup_status"]["structurally_complete"])
+        self.assertTrue(bundle["cleanup_status"]["semantically_sufficient"])
+        self.assertTrue(bundle["cleanup_status"]["from_doctor"])
+        self.assertNotIn("cleanup_status", bundle["missing_sections"])
+        self.assertNotIn("cleanup_status", bundle["semantically_insufficient_sections"])
+        self.assertEqual("COMPLETE", bundle["status"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
+    def test_cleanup_not_waived_without_doctor_fallback(self) -> None:
+        """Strong runtime but no doctor → cleanup_status missing → not COMPLETE."""
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_cleanup_no_doctor_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+
+            final_result.write_text(json.dumps(
+                self._strong_final_result(state=state, include_cleanup=False),
+                indent=2, ensure_ascii=True,
+            ) + "\n")
+
+            args = bundle_args(final_result=final_result)
+            bundle = build_bundle(args)
+
+        self.assertFalse(bundle["cleanup_status"]["waived_by_runtime_corroboration"])
+        self.assertFalse(bundle["cleanup_status"]["structurally_complete"])
+        self.assertIn("cleanup_status", bundle["missing_sections"])
+        self.assertIn("PARTIAL", [bundle["status"], bundle["structural_status"]])
+
+    def test_cleanup_not_waived_without_runtime_verification(self) -> None:
+        """Doctor present but runtime corroboration missing → cleanup not waived."""
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_cleanup_no_runtime_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            doctor_file = tmp / "doctor.json"
+
+            weak_final = {
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["src/app.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "changed_file": "src/app.py",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+            }
+            final_result.write_text(json.dumps(weak_final, indent=2, ensure_ascii=True) + "\n")
+            doctor_file.write_text(json.dumps(
+                self._doctor_record_clean(), indent=2, ensure_ascii=True,
+            ) + "\n")
+
+            args = bundle_args(final_result=final_result)
+            args.doctor_file = str(doctor_file)
+            bundle = build_bundle(args)
+
+        self.assertFalse(bundle["cleanup_status"]["waived_by_runtime_corroboration"])
+        self.assertTrue(bundle["cleanup_status"]["from_doctor"])
+        # Doctor fallback makes cleanup present but does NOT waive via runtime path
+        self.assertTrue(bundle["cleanup_status"]["present"])
+
+    def test_explicit_cleanup_takes_precedence_over_waiver(self) -> None:
+        """When final_result has explicit cleanup_status, it is used directly (no waiver needed)."""
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_cleanup_explicit_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            doctor_file = tmp / "doctor.json"
+
+            final_result.write_text(json.dumps(
+                self._strong_final_result(state=state, include_cleanup=True),
+                indent=2, ensure_ascii=True,
+            ) + "\n")
+            doctor_file.write_text(json.dumps(
+                self._doctor_record_clean(), indent=2, ensure_ascii=True,
+            ) + "\n")
+
+            args = bundle_args(final_result=final_result)
+            args.doctor_file = str(doctor_file)
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertTrue(bundle["cleanup_status"]["content_semantically_sufficient"])
+        self.assertFalse(bundle["cleanup_status"]["from_doctor"])
+        self.assertTrue(bundle["cleanup_status"]["semantically_sufficient"])
+        self.assertEqual("COMPLETE", bundle["status"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
+    def test_cleanup_waiver_semantic_trace_message(self) -> None:
+        """When cleanup is waived, the semantic trace explains the waiver reason."""
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_cleanup_trace_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            doctor_file = tmp / "doctor.json"
+
+            final_result.write_text(json.dumps(
+                self._strong_final_result(state=state, include_cleanup=False),
+                indent=2, ensure_ascii=True,
+            ) + "\n")
+            doctor_file.write_text(json.dumps(
+                self._doctor_record_clean(), indent=2, ensure_ascii=True,
+            ) + "\n")
+
+            args = bundle_args(final_result=final_result)
+            args.doctor_file = str(doctor_file)
+            bundle = build_bundle(args)
+
+        cleanup_trace = [
+            e for e in bundle["semantic_decision_trace"]
+            if e["section"] == "cleanup_status"
+        ]
+        self.assertEqual(1, len(cleanup_trace))
+        self.assertIn("waived", cleanup_trace[0]["why"])
+        self.assertIn("runtime verification", cleanup_trace[0]["why"])
 
 
 if __name__ == "__main__":

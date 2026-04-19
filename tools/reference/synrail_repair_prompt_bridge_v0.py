@@ -159,8 +159,7 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
         "- If final_result.json already carries that strong structured verification, do not spend this repair step rewriting readback.txt or scenario_proof.txt unless Synrail explicitly targets them",
         "- diff_provenance for already_satisfied: record changed_file, observed_line, verification_command, verification_result, and provenance_note instead of inventing a patch",
         "- artifact_identity: when identity is missing, fill baseline_identity, execution_surface_identity, prompt_identity, and task_identity for this run",
-        "- cleanup_status.success: true when the workspace is clean after the intended change",
-        "- cleanup_status.summary: say the workspace is clean and only the intended files changed",
+        "- cleanup_status: leave it absent during the normal check path unless Synrail explicitly names cleanup_status as the blocker or standalone proof needs explicit cleanup attestation",
         "- Need a canonical shape? run `synrail final-result-template`",
         "- Need exact semantic reasons after a check? run `synrail explain-proof`",
     ]
@@ -226,6 +225,7 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
     if current_step_subsurface_id == "cleanup_status_record":
         return [
             f"Checklist for {current_step_target_path}:",
+            "- Only fill cleanup_status when Synrail explicitly targets cleanup_status as the blocker for this step",
             "- cleanup_status.success: true when the workspace is clean after the intended change",
             "- cleanup_status.summary: say the workspace is clean and only the intended files changed",
             "- Need a canonical shape? run `synrail final-result-template`",
