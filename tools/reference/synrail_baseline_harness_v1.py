@@ -35,7 +35,26 @@ def required_visible_surface_count(record: dict) -> int:
     return max(0, visible - skippable)
 
 
+def checks_per_accepted_closure(record: dict) -> int:
+    if record.get("closure_result") != "ACCEPTED":
+        return 0
+    return non_negative_int(record, "blocker_to_closure_cycles") + 1
+
+
 def economics_summary(baseline: dict, synrail: dict) -> dict:
+    mandatory_mental_steps_added = non_negative_int(synrail, "mandatory_mental_steps") - non_negative_int(baseline, "mandatory_mental_steps")
+    trust_bearing_artifacts_added = non_negative_int(synrail, "trust_bearing_artifact_count") - non_negative_int(baseline, "trust_bearing_artifact_count")
+    required_visible_surfaces_added = required_visible_surface_count(synrail) - required_visible_surface_count(baseline)
+    operator_visible_actions_added = non_negative_int(synrail, "operator_visible_action_count") - non_negative_int(baseline, "operator_visible_action_count")
+    got_lost_moments_added = non_negative_int(synrail, "got_lost_moment_count") - non_negative_int(baseline, "got_lost_moment_count")
+    kernel_control_mass_added = (
+        mandatory_mental_steps_added
+        + trust_bearing_artifacts_added
+        + required_visible_surfaces_added
+    )
+    fixed_control_mass_added = kernel_control_mass_added
+    behavioral_control_tax_added = operator_visible_actions_added + got_lost_moments_added
+    total_control_burden_added = fixed_control_mass_added + behavioral_control_tax_added
     return {
         "operator_minutes_added": synrail["operator_minutes"] - baseline["operator_minutes"],
         "intervention_count_added": synrail["intervention_count"] - baseline["intervention_count"],
@@ -43,17 +62,19 @@ def economics_summary(baseline: dict, synrail: dict) -> dict:
         "invalidation_count_added": synrail["invalidation_count"] - baseline["invalidation_count"],
         "closure_latency_minutes_added": synrail["closure_latency_minutes"] - baseline["closure_latency_minutes"],
         "blocker_to_closure_cycles_added": synrail["blocker_to_closure_cycles"] - baseline["blocker_to_closure_cycles"],
+        "checks_per_accepted_closure_added": checks_per_accepted_closure(synrail) - checks_per_accepted_closure(baseline),
         "false_green_exposure_reduced": baseline["false_green_exposure"] - synrail["false_green_exposure"],
         "artifact_completeness_percent_gain": synrail["artifact_completeness_percent"] - baseline["artifact_completeness_percent"],
-        "mandatory_mental_steps_added": non_negative_int(synrail, "mandatory_mental_steps") - non_negative_int(baseline, "mandatory_mental_steps"),
-        "trust_bearing_artifacts_added": non_negative_int(synrail, "trust_bearing_artifact_count") - non_negative_int(baseline, "trust_bearing_artifact_count"),
-        "required_visible_surfaces_added": required_visible_surface_count(synrail) - required_visible_surface_count(baseline),
+        "mandatory_mental_steps_added": mandatory_mental_steps_added,
+        "trust_bearing_artifacts_added": trust_bearing_artifacts_added,
+        "required_visible_surfaces_added": required_visible_surfaces_added,
         "skippable_visible_surfaces_added": non_negative_int(synrail, "skippable_visible_surface_count") - non_negative_int(baseline, "skippable_visible_surface_count"),
-        "fixed_control_mass_added": (
-            (non_negative_int(synrail, "mandatory_mental_steps") - non_negative_int(baseline, "mandatory_mental_steps"))
-            + (non_negative_int(synrail, "trust_bearing_artifact_count") - non_negative_int(baseline, "trust_bearing_artifact_count"))
-            + (required_visible_surface_count(synrail) - required_visible_surface_count(baseline))
-        ),
+        "operator_visible_actions_added": operator_visible_actions_added,
+        "got_lost_moments_added": got_lost_moments_added,
+        "kernel_control_mass_added": kernel_control_mass_added,
+        "behavioral_control_tax_added": behavioral_control_tax_added,
+        "fixed_control_mass_added": fixed_control_mass_added,
+        "total_control_burden_added": total_control_burden_added,
     }
 
 
@@ -127,7 +148,7 @@ def compare(baseline: dict, synrail: dict) -> tuple[str, list[str], str, dict]:
         and economics["closure_latency_minutes_added"] <= 1
         and economics["required_visible_surfaces_added"] <= 0
         and economics["trust_bearing_artifacts_added"] <= 0
-        and economics["fixed_control_mass_added"] <= 1
+        and economics["total_control_burden_added"] <= 1
     ):
         why = (
             "Synrail earns a low-drag trust win here: it reduces false-green exposure "

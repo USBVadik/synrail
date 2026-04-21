@@ -57,6 +57,17 @@ If the user asks what this project is, where work stopped, or what the current s
 - Do not turn project recall into repo archaeology.
 - Do not create helper scripts or make edits for an orientation-only question.
 
+## Agent Execution Rules
+
+- **Simplicity First** — Prefer the smallest change that solves the actual problem. Do not add layers, abstractions, or fallback behavior unless runtime truth requires them.
+- **Surgical Changes** — Keep changes tightly bounded to the task. Avoid opportunistic refactors, broad renames, or unrelated cleanup.
+- **Goal-Driven Execution** — Before non-trivial work, state the concrete verification target in one sentence.
+- **Assume Only When Cheap** — If ambiguity would materially change the implementation, ask. Otherwise state the assumption briefly and proceed.
+- **Read Real Files First** — Do not guess file names, tests, classes, commands, or symbols.
+- **No Blind Retry Loops** — After one or two failed retries, switch to root-cause investigation.
+- **Verification Over Motion** — Prefer runtime-backed or test-backed verification over prose confidence.
+- **Update Roadmap With Reality** — If shipped capability, benchmark posture, or roadmap truth changes, update the relevant roadmap or review markdown in the same change.
+
 If Synrail shows that no controlled run is active, start one:
 
 ```bash

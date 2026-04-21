@@ -25,11 +25,18 @@ def write_json(path: Path, payload: dict) -> None:
 
 
 class ControlledStartSmokeTests(unittest.TestCase):
-    def run_alpha(self, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+    def run_alpha(
+        self,
+        *args: str,
+        cwd: Path | None = None,
+        env_overrides: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
         existing = env.get("PYTHONPATH", "")
         repo_path = str(REPO_ROOT)
         env["PYTHONPATH"] = repo_path if not existing else repo_path + os.pathsep + existing
+        if env_overrides:
+            env.update(env_overrides)
         return subprocess.run(
             [sys.executable, str(ALPHA_ENTRY), *args],
             cwd=cwd or REPO_ROOT,
@@ -89,6 +96,43 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("Active run: ALPHA_RUN_", dashboard.stdout)
             self.assertIn("Next step: confirm that this repo/worktree is the intended place for the run", dashboard.stdout)
             self.assertNotIn("Next step: attest target surface", dashboard.stdout)
+
+    def test_dashboard_prefers_local_wrapper_when_synrail_not_on_path(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_dashboard_wrapper_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            wrapper = project_root / ".venv" / "bin" / "synrail"
+            wrapper.parent.mkdir(parents=True, exist_ok=True)
+            wrapper.write_text("#!/bin/sh\nexit 0\n")
+            wrapper.chmod(0o755)
+
+            dashboard = self.run_alpha(cwd=project_root, env_overrides={"PATH": ""})
+            self.assertEqual(0, dashboard.returncode, dashboard.stdout + dashboard.stderr)
+            self.assertIn("Start new run: .venv/bin/synrail start", dashboard.stdout)
+            self.assertIn("Full help: .venv/bin/synrail --help", dashboard.stdout)
+
+    def test_start_and_check_hints_prefer_local_wrapper_when_synrail_not_on_path(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_start_wrapper_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            wrapper = project_root / ".venv" / "bin" / "synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            wrapper.parent.mkdir(parents=True, exist_ok=True)
+            wrapper.write_text("#!/bin/sh\nexit 0\n")
+            wrapper.chmod(0o755)
+
+            start = self.run_alpha(
+                "start",
+                "Keep wrapper-aware hints honest.",
+                cwd=project_root,
+                env_overrides={"PATH": ""},
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+            self.assertIn("Need a canonical final_result shape? run .venv/bin/synrail final-result-template", start.stdout)
+            self.assertIn("Then run: .venv/bin/synrail check", start.stdout)
+
+            check = self.run_alpha("check", cwd=project_root, env_overrides={"PATH": ""})
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
+            self.assertIn("rerun .venv/bin/synrail check.", check.stdout)
+            self.assertIn("Need a canonical final_result shape? run .venv/bin/synrail final-result-template", check.stdout)
 
     def test_restore_preview_surfaces_file_copy_contract(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_restore_preview_") as tmpdir:
@@ -156,15 +200,9 @@ class ControlledStartSmokeTests(unittest.TestCase):
                 "Do this now: make the bounded change, run local verification, then strengthen final_result.json first.",
                 start.stdout,
             )
-            self.assertIn("Treat readback.txt and scenario_proof.txt as fallback-only surfaces", start.stdout)
-            self.assertIn("Proof shape reminders:", start.stdout)
-            self.assertIn("plus verification_command and verification_result", start.stdout)
-            self.assertIn("context_before or context_after anchor", start.stdout)
-            self.assertIn("fallback-only surface", start.stdout)
-            self.assertIn("untouched on the happy path", start.stdout)
+            self.assertIn("fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.", start.stdout)
+            self.assertIn("Need a canonical final_result shape? run synrail final-result-template", start.stdout)
             self.assertIn("Starter proof surface is ready for this run.", start.stdout)
-            self.assertIn("optional fallback surfaces stay unmaterialized by default", start.stdout)
-            self.assertIn("Synrail can prepare the needed fallback surface then", start.stdout)
             self.assertTrue((artifact_root / "bootstrap.json").exists())
             self.assertTrue((artifact_root / "bootstrap_validation.json").exists())
             self.assertTrue((artifact_root / "proof_request.json").exists())
@@ -183,17 +221,20 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual("edit_in_place", proof_request["starter_mode"])
             self.assertEqual(".synrail/final_result.json", proof_request["preferred_artifacts"]["final_result"])
             self.assertEqual(64, len(proof_request["starter_hashes"]["final_result"]))
+            self.assertEqual(
+                ["final_result", "modified_files", "diff_provenance"],
+                proof_request["required_sections"],
+            )
             self.assertIn("strong final_result.json plus local verification evidence", proof_request["summary"])
             self.assertIn("make final_result.json strong first", proof_request["next_safe_step"])
-            self.assertIn("leave cleanup_status absent unless Synrail later asks for explicit cleanup attestation", proof_request["next_safe_step"])
-            self.assertIn("do not touch readback.txt or scenario_proof.txt on the happy path", proof_request["next_safe_step"])
-            self.assertIn("carry run identity and doctor-ready cleanup truth", proof_request["next_safe_step"])
+            self.assertIn("leave cleanup_status absent unless Synrail later asks for it", proof_request["next_safe_step"])
+            self.assertIn("keep readback.txt and scenario_proof.txt untouched unless Synrail later names them", proof_request["next_safe_step"])
             self.assertNotIn("cleanup_status", final_result)
             self.assertEqual("direct_file_observation", final_result["diff_provenance"]["method"])
             self.assertIn("changed or observed line", final_result["diff_provenance"]["context_before"])
             self.assertIn("exact changed or observed line", final_result["diff_provenance"]["verification_result"])
             self.assertIn(
-                "leave cleanup_status absent and let a doctor-ready workspace satisfy it automatically",
+                "leave cleanup_status absent unless Synrail later asks for explicit cleanup attestation",
                 final_result["_synrail"]["starter_guidance"]["cleanup_hint"],
             )
             self.assertIn(
@@ -232,6 +273,105 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertFalse(state["integrity"]["bootstrap_provenance_ok"])
             self.assertEqual("CONTROLLED_BOOTSTRAP_NOT_CONFIRMED", state["closure"]["blocking_reason"])
 
+    def test_thin_output_surfaces_refresh_change_impact(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_refresh_change_impact_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                "--task-identity",
+                "Surface only stale obligations after refresh invalidation.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "DOCTOR_BLOCKED"
+            state["doctor"]["status"] = "FAIL"
+            state["proof_bundle"]["status"] = "COMPLETE"
+            state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+            state["closure"]["blocking_reason"] = "DOCTOR_NOT_GREEN"
+            state["next_safe_step"] = "repair readiness"
+            write_json(artifact_root / "state.json", state)
+            write_json(
+                artifact_root / "report.json",
+                {
+                    "reason": "DOCTOR_NOT_GREEN",
+                    "result": "NON_GREEN",
+                    "next_safe_step": "repair readiness",
+                },
+            )
+            write_json(
+                artifact_root / "refresh.json",
+                {
+                    "schema_version": "refresh_report_v0",
+                    "run_id": state["run_id"],
+                    "event_type": "DOCTOR_EVENT",
+                    "steps_applied": ["doctor_status_refreshed"],
+                    "invalidations": ["closure_invalidated_by_doctor"],
+                    "dominant_invalidation": "closure_invalidated_by_doctor",
+                    "resulting_state": "DOCTOR_BLOCKED",
+                    "resulting_closure_status": "CLAIMED_NOT_ACCEPTED",
+                    "next_safe_step": "run doctor and clear blocking failure classes",
+                },
+            )
+
+            thin_output_result = self.run_alpha("thin-output", "--artifact-root", ".synrail", "--mode", "default", cwd=project_root)
+            self.assertEqual(0, thin_output_result.returncode, thin_output_result.stdout + thin_output_result.stderr)
+            self.assertIn("Do this now: Repair only readiness, then rerun synrail check.", thin_output_result.stdout)
+            self.assertIn("Refresh change impact: closure invalidated by doctor", thin_output_result.stdout)
+            self.assertIn("Applicable invalidations: closure invalidated by doctor", thin_output_result.stdout)
+
+            thin_output = load_json(artifact_root / "thin_output.json")
+            self.assertEqual("refresh change impact: closure invalidated by doctor", thin_output["change_impact_focus"])
+            self.assertEqual("applicable invalidations: closure invalidated by doctor", thin_output["change_impact_scope"])
+
+    def test_proof_plan_keeps_prose_surfaces_fallback_only(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_proof_plan_") as tmpdir:
+            plan_output = Path(tmpdir) / "plan.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_proof_plan_v0.py"),
+                    "--run-id",
+                    "R1",
+                    "--task-class",
+                    "bounded_change",
+                    "--artifact-root",
+                    ".synrail",
+                    "--baseline-identity",
+                    "baseline",
+                    "--execution-surface-identity",
+                    "surface",
+                    "--prompt-identity",
+                    "prompt",
+                    "--task-identity",
+                    "Keep fallback prose off the happy path.",
+                    "--output",
+                    str(plan_output),
+                ],
+                cwd=REPO_ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            plan = load_json(plan_output)
+            self.assertEqual(
+                ["final_result", "modified_files", "diff_provenance", "artifact_identity", "cleanup_status"],
+                plan["required_sections"],
+            )
+            self.assertNotIn("readback", plan["required_sections"])
+            self.assertNotIn("scenario_proof", plan["required_sections"])
+            self.assertEqual(".synrail/readback.txt", plan["recommended_artifacts"]["readback"])
+            self.assertEqual(".synrail/scenario.txt", plan["recommended_artifacts"]["scenario_proof"])
+
     def test_check_without_final_result_uses_proof_request_guidance(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_proof_request_") as tmpdir:
             project_root = Path(tmpdir) / "project"
@@ -255,10 +395,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("run local verification", check.stdout)
             self.assertIn("strengthen final_result.json first", check.stdout)
             self.assertIn("final_result: .synrail/final_result.json", check.stdout)
-            self.assertIn("fallback note: readback.txt and scenario_proof.txt stay hidden by default", check.stdout)
-            self.assertIn("diff_provenance method, one exact changed line, one stable context anchor, verification_command, and verification_result", check.stdout)
-            self.assertIn("trust-bearing status", check.stdout)
-            self.assertIn("PROVEN", check.stdout)
+            self.assertIn("fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.", check.stdout)
             self.assertIn("synrail final-result-template", check.stdout)
 
     def test_final_result_template_uses_current_run_context(self) -> None:
@@ -719,7 +856,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual("", thin_output["next_command"])
             self.assertFalse((artifact_root / "prompt.json").exists())
 
-    def test_repair_step_names_readback_starter_surface(self) -> None:
+    def test_repair_step_prefers_final_result_before_readback_starter_surface(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_readback_focus_") as tmpdir:
             project_root = Path(tmpdir) / "project"
             artifact_root = project_root / ".synrail"
@@ -759,29 +896,27 @@ class ControlledStartSmokeTests(unittest.TestCase):
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, check.returncode, check.stdout + check.stderr)
-            self.assertTrue((artifact_root / "readback.txt").exists())
-            self.assertIn("Prepared fallback surface: .synrail/readback.txt", check.stdout)
-            self.assertIn("Fallback-only note", (artifact_root / "readback.txt").read_text())
+            self.assertFalse((artifact_root / "readback.txt").exists())
+            self.assertNotIn("Prepared fallback surface: .synrail/readback.txt", check.stdout)
+            self.assertIn(".synrail/final_result.json", check.stdout)
+            self.assertNotIn("record readback in .synrail/readback.txt", check.stdout)
 
             repair_step = self.run_alpha("repair-step", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, repair_step.returncode, repair_step.stdout + repair_step.stderr)
-            self.assertIn(".synrail/readback.txt", repair_step.stdout)
-            self.assertIn("Repair target: record readback in .synrail/readback.txt", repair_step.stdout)
-            self.assertIn(
-                "Do this now: Record readback in .synrail/readback.txt. Leave every other proof surface unchanged.",
-                repair_step.stdout,
-            )
+            self.assertIn(".synrail/final_result.json", repair_step.stdout)
+            self.assertIn("Repair target:", repair_step.stdout)
+            self.assertNotIn("Repair target: record readback in .synrail/readback.txt", repair_step.stdout)
 
             prompt = load_json(artifact_root / "prompt.json")
-            self.assertEqual("complete_missing_proof_sections", prompt["current_step_id"])
-            self.assertEqual("readback_record", prompt["current_step_subsurface_id"])
-            self.assertEqual(".synrail/readback.txt", prompt["current_step_target_path"])
-            self.assertEqual("record readback in .synrail/readback.txt", prompt["current_step_focus_summary"])
-            self.assertEqual(
-                "Record readback in .synrail/readback.txt. Leave every other proof surface unchanged.",
-                prompt["current_step_action_instruction"],
+            self.assertEqual("repair_final_result_artifact", prompt["current_step_id"])
+            self.assertIn(
+                prompt["current_step_subsurface_id"],
+                {"final_result_payload", "final_result_status_record", "diff_provenance_record", "artifact_identity_record"},
             )
-            self.assertIn("readback", prompt["current_step_label"])
+            self.assertEqual(".synrail/final_result.json", prompt["current_step_target_path"])
+            self.assertIn("final_result.json", prompt["current_step_focus_summary"])
+            self.assertIn("final_result.json", prompt["current_step_action_instruction"])
+            self.assertIn("final_result.status", prompt["current_step_label"])
 
     def test_retry_preserves_controlled_bootstrap_after_proof_thin_check(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_retry_bootstrap_") as tmpdir:
@@ -837,7 +972,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
                 retried_state["integrity"]["bootstrap_provenance_reason"],
             )
 
-    def test_repair_step_synthesizes_missing_packet_for_scenario_gap(self) -> None:
+    def test_repair_step_synthesizes_missing_packet_with_final_result_first_before_scenario_gap(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_repair_step_scenario_packet_") as tmpdir:
             project_root = Path(tmpdir) / "project"
             artifact_root = project_root / ".synrail"
@@ -875,10 +1010,9 @@ class ControlledStartSmokeTests(unittest.TestCase):
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, check.returncode, check.stdout + check.stderr)
-            self.assertIn("record scenario proof in .synrail/scenario_proof.txt", check.stdout)
-            self.assertTrue((artifact_root / "scenario_proof.txt").exists())
-            self.assertIn("Prepared fallback surface: .synrail/scenario_proof.txt", check.stdout)
-            self.assertIn("Fallback-only note", (artifact_root / "scenario_proof.txt").read_text())
+            self.assertIn("set a trust-bearing final_result.status in .synrail/final_result.json", check.stdout)
+            self.assertFalse((artifact_root / "scenario_proof.txt").exists())
+            self.assertNotIn("Prepared fallback surface: .synrail/scenario_proof.txt", check.stdout)
 
             (artifact_root / "repair_packet.json").unlink(missing_ok=True)
             (artifact_root / "prompt.json").unlink(missing_ok=True)
@@ -886,9 +1020,70 @@ class ControlledStartSmokeTests(unittest.TestCase):
             repair_step = self.run_alpha("repair-step", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, repair_step.returncode, repair_step.stdout + repair_step.stderr)
             self.assertNotIn("does not have the next bounded repair instruction yet", repair_step.stdout.lower())
-            self.assertIn(".synrail/scenario_proof.txt", repair_step.stdout)
-            self.assertIn("Repair target: record scenario proof in .synrail/scenario_proof.txt", repair_step.stdout)
-            self.assertIn("Do not restate the task description", load_json(artifact_root / "prompt.json")["prompt"])
+            self.assertIn(".synrail/final_result.json", repair_step.stdout)
+            self.assertIn("Repair target: set a trust-bearing final_result.status in .synrail/final_result.json", repair_step.stdout)
+            self.assertIn("Do not touch fallback proof surfaces like .synrail/readback.txt or .synrail/scenario_proof.txt unless Synrail explicitly targets them.", load_json(artifact_root / "prompt.json")["prompt"])
+
+
+    def test_check_waives_cleanup_from_runtime_doctor_truth(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_cleanup_happy_path_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                "--task-identity",
+                "Let normal synrail check satisfy cleanup from doctor-ready workspace truth.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            state = load_json(artifact_root / "state.json")
+            write_json(
+                artifact_root / "final_result.json",
+                {
+                    "request_id": state["run_id"],
+                    "task_class": state["task_class"],
+                    "status": "PROVEN",
+                    "change_disposition": "modified",
+                    "summary": "Implemented the bounded change and verified it locally.",
+                    "modified_files": ["src/app.py"],
+                    "git_diff": "",
+                    "diff_provenance": {
+                        "method": "direct_file_observation",
+                        "changed_file": "src/app.py",
+                        "added_line": 'print("patched")',
+                        "context_before": "def main():",
+                        "context_after": "    return 0",
+                        "verification_command": "python3 -c \"print('patched')\"",
+                        "verification_result": "patched",
+                    },
+                    "artifact_identity": {
+                        "baseline_identity": "autodetected_generic_baseline",
+                        "execution_surface_identity": "autodetected_generic_worktree",
+                        "prompt_identity": "Let normal synrail check satisfy cleanup from doctor-ready workspace truth.",
+                        "task_identity": "Let normal synrail check satisfy cleanup from doctor-ready workspace truth.",
+                    },
+                },
+            )
+
+            check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertNotIn("Proof Incomplete", check.stdout)
+            self.assertNotIn("record cleanup status in .synrail/final_result.json", check.stdout)
+
+            bundle = load_json(artifact_root / "bundle.json")
+            thin_output = load_json(artifact_root / "thin_output.json")
+            self.assertTrue(bundle["cleanup_status"]["from_doctor"])
+            self.assertTrue(bundle["cleanup_status"]["waived_by_runtime_corroboration"])
+            self.assertNotIn("cleanup_status", bundle["missing_sections"])
+            self.assertEqual("COMPLETE", bundle["status"])
+            self.assertEqual("ACCEPTED", thin_output["outcome_class"])
 
 
     def test_start_after_terminal_state_auto_clears_proof(self) -> None:

@@ -30,8 +30,21 @@ class CostOfControlV0Tests(unittest.TestCase):
         )
 
         self.assertEqual("BASELINE_GOOD_ENOUGH", cost_record["reading"]["everyday_status"])
+        self.assertEqual(0, cost_record["aggregate_deltas"]["avg_checks_per_accepted_closure_added"])
+        self.assertEqual(1, cost_record["aggregate_deltas"]["avg_operator_visible_actions_added"])
+        self.assertEqual(0, cost_record["aggregate_deltas"]["avg_skippable_visible_surfaces_added"])
+        self.assertEqual(0, cost_record["aggregate_deltas"]["avg_got_lost_moments_added"])
+        self.assertEqual(2, cost_record["aggregate_deltas"]["avg_kernel_control_mass_added"])
+        self.assertEqual(1, cost_record["aggregate_deltas"]["avg_behavioral_control_tax_added"])
         self.assertEqual(2, cost_record["aggregate_deltas"]["avg_fixed_control_mass_added"])
+        self.assertEqual(3, cost_record["aggregate_deltas"]["avg_total_control_burden_added"])
+        self.assertEqual(0, cost_record["hotspots"]["highest_checks_per_accepted_closure_added"]["value"])
+        self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_operator_visible_actions_added"]["scenario_id"])
+        self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_got_lost_moments_added"]["scenario_id"])
+        self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_kernel_control_mass_added"]["scenario_id"])
+        self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_behavioral_control_tax_added"]["scenario_id"])
         self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_fixed_control_mass_added"]["scenario_id"])
+        self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_total_control_burden_added"]["scenario_id"])
 
     def test_old_records_without_control_mass_fields_still_aggregate(self) -> None:
         record = build_cost_record(
@@ -42,8 +55,20 @@ class CostOfControlV0Tests(unittest.TestCase):
         )
 
         self.assertEqual("UNKNOWN", record["reading"]["everyday_status"])
+        self.assertEqual(0, record["aggregate_deltas"]["avg_checks_per_accepted_closure_added"])
+        self.assertEqual(0, record["aggregate_deltas"]["avg_operator_visible_actions_added"])
+        self.assertEqual(0, record["aggregate_deltas"]["avg_got_lost_moments_added"])
+        self.assertEqual(0, record["aggregate_deltas"]["avg_kernel_control_mass_added"])
+        self.assertEqual(0, record["aggregate_deltas"]["avg_behavioral_control_tax_added"])
         self.assertEqual(0, record["aggregate_deltas"]["avg_fixed_control_mass_added"])
+        self.assertEqual(0, record["aggregate_deltas"]["avg_total_control_burden_added"])
+        self.assertEqual(0, record["hotspots"]["highest_checks_per_accepted_closure_added"]["value"])
+        self.assertEqual(0, record["hotspots"]["highest_operator_visible_actions_added"]["value"])
+        self.assertEqual(0, record["hotspots"]["highest_got_lost_moments_added"]["value"])
+        self.assertEqual(0, record["hotspots"]["highest_kernel_control_mass_added"]["value"])
+        self.assertEqual(0, record["hotspots"]["highest_behavioral_control_tax_added"]["value"])
         self.assertEqual(0, record["hotspots"]["highest_fixed_control_mass_added"]["value"])
+        self.assertEqual(0, record["hotspots"]["highest_total_control_burden_added"]["value"])
 
 
 if __name__ == "__main__":

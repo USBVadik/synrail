@@ -97,6 +97,50 @@ def matching_recovery(recovery: dict | None, *, state: dict) -> dict | None:
     return recovery
 
 
+def matching_refresh(refresh: dict | None, *, state: dict) -> dict | None:
+    if not refresh:
+        return None
+    if refresh.get("run_id", "") != state.get("run_id", ""):
+        return None
+    return refresh
+
+
+REFRESH_CHANGE_IMPACT = {
+    "closure_invalidated_by_doctor": {
+        "summary": "A refresh invalidated closure because readiness became stale.",
+        "diagnosis": "Repair only readiness before trusting closure again.",
+        "action": "Repair only readiness, then rerun synrail check.",
+    },
+    "closure_invalidated_by_invalid_bundle": {
+        "summary": "A refresh invalidated closure because the final-result proof artifact became stale.",
+        "diagnosis": "Repair only the final-result proof artifact before trusting closure again.",
+        "action": "Repair only the final-result proof artifact, then rerun synrail check.",
+    },
+    "closure_invalidated_by_semantic_bundle": {
+        "summary": "A refresh invalidated closure because semantic proof evidence became stale.",
+        "diagnosis": "Strengthen only the stale semantic proof evidence before trusting closure again.",
+        "action": "Strengthen only the stale semantic proof evidence, then rerun synrail check.",
+    },
+    "closure_invalidated_by_partial_bundle": {
+        "summary": "A refresh invalidated closure because required proof sections became stale.",
+        "diagnosis": "Complete only the stale proof sections before trusting closure again.",
+        "action": "Complete only the stale proof sections, then rerun synrail check.",
+    },
+    "closure_invalidated_by_recovery": {
+        "summary": "A refresh invalidated closure because recovery reverification became stale.",
+        "diagnosis": "Run only recovery reverification before trusting closure again.",
+        "action": "Run only recovery reverification, then rerun synrail check.",
+    },
+}
+
+
+def change_impact_guidance(refresh: dict | None, *, state: dict) -> dict[str, str]:
+    matched = matching_refresh(refresh, state=state)
+    if not matched:
+        return {}
+    return REFRESH_CHANGE_IMPACT.get(matched.get("dominant_invalidation", ""), {})
+
+
 def classify_outcome(*, state: dict, report: dict, repair_packet: dict | None, doctor: dict | None) -> str:
     termination_reason = report.get("repair_termination_reason", "") or (repair_packet or {}).get("repair_termination", {}).get("reason", "")
     if state.get("state", "") == "CLOSURE_ACCEPTED" or report.get("closure_status", "") == "ACCEPTED":
@@ -243,9 +287,10 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
     return messages[outcome_class]
 
 
-def technical_lines(*, state: dict, report: dict, repair_packet: dict | None, checkpoint: dict | None) -> list[str]:
+def technical_lines(*, state: dict, report: dict, repair_packet: dict | None, checkpoint: dict | None, refresh: dict | None) -> list[str]:
     packet = repair_packet or {}
     continuation = packet.get("continuation_core", {})
+    matched_refresh = matching_refresh(refresh, state=state) or {}
     return [
         f"state={state.get('state', '')}",
         f"result={report.get('result', '')}",
@@ -253,12 +298,94 @@ def technical_lines(*, state: dict, report: dict, repair_packet: dict | None, ch
         f"reason={report.get('reason', '')}",
         f"closure_status={state.get('closure', {}).get('status', '')}",
         f"proof_bundle_status={state.get('proof_bundle', {}).get('status', '')}",
+        f"dominant_invalidation={matched_refresh.get('dominant_invalidation', '')}",
+        f"invalidations={','.join(matched_refresh.get('invalidations', []))}",
         f"repair_termination_reason={report.get('repair_termination_reason', '') or packet.get('repair_termination', {}).get('reason', '')}",
         f"current_step_id={continuation.get('current_step_id', '') or packet.get('repair_history', {}).get('current_step_id', '')}",
         f"next_safe_step={report.get('next_safe_step', '') or state.get('next_safe_step', '')}",
         f"checkpoint_restore_available={checkpoint_restore_available(checkpoint, state=state)}",
         f"bootstrap_provenance_reason={state.get('integrity', {}).get('bootstrap_provenance_reason', '')}",
     ]
+
+
+def maybe_override_summary(summary: str, diagnosis: str, *, refresh: dict | None, state: dict) -> tuple[str, str]:
+    guidance = change_impact_guidance(refresh, state=state)
+    if not guidance:
+        return summary, diagnosis
+    return guidance.get("summary", summary), guidance.get("diagnosis", diagnosis)
+
+
+def maybe_override_next_step(what_to_do_next: str, *, refresh: dict | None, state: dict) -> str:
+    guidance = change_impact_guidance(refresh, state=state)
+    if not guidance:
+        return what_to_do_next
+    return guidance.get("action", what_to_do_next)
+
+
+def maybe_override_action_now(action_now: str, *, refresh: dict | None, state: dict, next_command: str) -> str:
+    guidance = change_impact_guidance(refresh, state=state)
+    if not guidance:
+        return action_now
+    if next_command in {"", "synrail check"}:
+        return guidance.get("action", action_now)
+    return action_now
+
+
+def dominant_invalidation_text(refresh: dict | None, *, state: dict) -> str:
+    matched_refresh = matching_refresh(refresh, state=state) or {}
+    return humanize_token(matched_refresh.get("dominant_invalidation", ""))
+
+
+def invalidation_scope_text(refresh: dict | None, *, state: dict) -> str:
+    matched_refresh = matching_refresh(refresh, state=state) or {}
+    invalidations = list(matched_refresh.get("invalidations", []))
+    if not invalidations:
+        return ""
+    return ", ".join(humanize_token(value) for value in invalidations)
+
+
+def invalidation_focus_line(refresh: dict | None, *, state: dict) -> str:
+    guidance = change_impact_guidance(refresh, state=state)
+    if not guidance:
+        return ""
+    return guidance.get("action", "")
+
+
+def refresh_focus_line(refresh: dict | None, *, state: dict) -> str:
+    dominant = dominant_invalidation_text(refresh, state=state)
+    if not dominant:
+        return ""
+    return f"refresh change impact: {dominant}"
+
+
+def refresh_scope_line(refresh: dict | None, *, state: dict) -> str:
+    scope = invalidation_scope_text(refresh, state=state)
+    if not scope:
+        return ""
+    return f"applicable invalidations: {scope}"
+
+
+def refresh_focus_summary(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    refresh_focus = refresh_focus_line(refresh, state=state)
+    repair_focus = current_repair_focus_summary(repair_packet)
+    if refresh_focus and repair_focus:
+        return f"{refresh_focus}; repair target: {repair_focus}"
+    if refresh_focus:
+        return refresh_focus
+    return repair_focus
+
+
+def refresh_current_step_action(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    refresh_action = invalidation_focus_line(refresh, state=state)
+    repair_action = current_repair_action_instruction(repair_packet)
+    if refresh_action:
+        return refresh_action
+    return repair_action
+
+
+def refresh_next_safe_step(refresh: dict | None, *, state: dict, report: dict) -> str:
+    matched_refresh = matching_refresh(refresh, state=state) or {}
+    return matched_refresh.get("next_safe_step", "") or report.get("next_safe_step", "") or state.get("next_safe_step", "")
 
 
 def current_repair_focus_summary(repair_packet: dict | None) -> str:
@@ -400,7 +527,7 @@ def human_next_step(
     return human_safe_step_text(raw_next_step)
 
 
-def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | None = None, doctor: dict | None = None, checkpoint: dict | None = None, recovery: dict | None = None) -> dict:
+def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | None = None, doctor: dict | None = None, checkpoint: dict | None = None, recovery: dict | None = None, refresh: dict | None = None) -> dict:
     restore_available = checkpoint_restore_available(checkpoint, state=state)
     matching = matching_recovery(recovery, state=state)
     outcome_class = classify_outcome(state=state, report=report, repair_packet=repair_packet, doctor=doctor)
@@ -413,6 +540,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         repair_packet=repair_packet,
         doctor=doctor,
     )
+    summary, diagnosis = maybe_override_summary(summary, diagnosis, refresh=refresh, state=state)
     suggested_command = {
         "ACCEPTED": "no next command required",
         "NON_RESUMABLE": "synrail restore or start a new run",
@@ -444,17 +572,9 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
         suggested_command = "use synrail restore or rerun from a clearer starting point before trusting continuation"
     next_step = report.get("next_safe_step", "") or state.get("next_safe_step", "")
-    focused_summary = current_repair_focus_summary(repair_packet)
     thin_guidance = thin_section_guidance(state) if outcome_class == "PROOF_THIN" else []
     if outcome_class == "ACCEPTED":
         next_step = "No repair step is required."
-    what_to_do_next = human_next_step(
-        outcome_class=outcome_class,
-        raw_next_step=next_step,
-        report=report,
-        repair_packet=repair_packet,
-        doctor=doctor,
-    )
     next_command = ""
     restore_command = ""
     if outcome_class in {"PROOF_INVALID", "PROOF_THIN", "PROOF_PARTIAL", "SCOPE_VIOLATION", "DOCTOR_BLOCKED", "NON_GREEN"} and can_resume:
@@ -473,12 +593,38 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         restore_command = "synrail restore"
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet) and restore_available:
         restore_command = "synrail restore"
-    action_now = action_now_text(
-        next_command=next_command,
+    what_to_do_next = human_next_step(
         outcome_class=outcome_class,
+        raw_next_step=next_step,
         report=report,
         repair_packet=repair_packet,
+        doctor=doctor,
     )
+    what_to_do_next = maybe_override_next_step(what_to_do_next, refresh=refresh, state=state)
+    action_now = maybe_override_action_now(
+        action_now_text(
+            next_command=next_command,
+            outcome_class=outcome_class,
+            report=report,
+            repair_packet=repair_packet,
+        ),
+        refresh=refresh,
+        state=state,
+        next_command=next_command,
+    )
+    focused_summary = refresh_focus_summary(refresh, state=state, repair_packet=repair_packet)
+    current_step_action = refresh_current_step_action(refresh, state=state, repair_packet=repair_packet)
+    if not focused_summary:
+        focused_summary = current_repair_focus_summary(repair_packet)
+    if not current_step_action:
+        current_step_action = current_repair_action_instruction(repair_packet)
+    next_step = refresh_next_safe_step(refresh, state=state, report=report)
+    if outcome_class == "ACCEPTED":
+        next_step = "No repair step is required."
+    fields = {
+        "change_impact_focus": refresh_focus_line(refresh, state=state),
+        "change_impact_scope": refresh_scope_line(refresh, state=state),
+    }
     return {
         "schema_version": "thin_output_record_v0",
         "mode": mode,
@@ -492,7 +638,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "what_it_means": diagnosis,
         "what_to_do_next": what_to_do_next,
         "action_now": action_now,
-        "current_step_action_instruction": current_repair_action_instruction(repair_packet),
+        "current_step_action_instruction": current_step_action,
         "focused_repair_summary": focused_summary,
         "thin_section_guidance": thin_guidance,
         "resume_available": can_resume,
@@ -504,7 +650,9 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "recovery_primary_action": matching.get("primary_action", "") if matching else "",
         "recovery_operator_instructions": list(matching.get("operator_instructions", [])) if matching else [],
         "suggested_command": suggested_command,
-        "technical_lines": technical_lines(state=state, report=report, repair_packet=repair_packet, checkpoint=checkpoint) if mode == "dev" else [],
+        "change_impact_focus": fields["change_impact_focus"],
+        "change_impact_scope": fields["change_impact_scope"],
+        "technical_lines": technical_lines(state=state, report=report, repair_packet=repair_packet, checkpoint=checkpoint, refresh=refresh) if mode == "dev" else [],
     }
 
 
@@ -518,6 +666,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--doctor-file")
     parser.add_argument("--checkpoint-record-file")
     parser.add_argument("--consistency-recovery-file")
+    parser.add_argument("--refresh-file")
     return parser
 
 
@@ -532,6 +681,7 @@ def main() -> int:
         doctor=load_json(Path(args.doctor_file)) if args.doctor_file else None,
         checkpoint=load_json(Path(args.checkpoint_record_file)) if args.checkpoint_record_file else None,
         recovery=load_json(Path(args.consistency_recovery_file)) if args.consistency_recovery_file else None,
+        refresh=load_json(Path(args.refresh_file)) if args.refresh_file else None,
     )
     save_json(Path(args.output), record)
     print(json.dumps({"result": "OK", "outcome_class": record["outcome_class"], "restore_available": record["restore_available"]}, ensure_ascii=True))

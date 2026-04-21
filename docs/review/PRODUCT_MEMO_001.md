@@ -48,13 +48,14 @@ Acceptance has to be earned through explicit runtime artifacts and gates.
 At the current alpha level, `Synrail` provides one narrow workflow:
 
 1. start one controlled run with `synrail start`
-2. auto-detect a minimal project profile
-3. run doctor and execution checks
-4. evaluate the resulting proof bundle
-5. produce a closure reading
-6. if non-green, produce one bounded repair instruction
-7. if a trusted fallback exists, restore it explicitly
-8. if the run fails in an interesting way, export one compact telemetry and bug packet
+2. auto-detect a minimal project profile and prepare `.synrail/final_result.json` as the default proof surface
+3. keep `readback.txt` and `scenario_proof.txt` fallback-only unless a later `synrail check` explicitly names one
+4. run doctor and execution checks
+5. evaluate the resulting proof bundle and closure reading
+6. if refresh invalidation is known, narrow the default non-green summary to the stale obligation class
+7. if non-green, let `synrail check` carry the first bounded fix, with `repair-step` remaining optional
+8. if a trusted fallback exists, restore it explicitly
+9. if the run fails in an interesting way, export one compact telemetry and bug packet
 
 ## Core user value
 
@@ -83,7 +84,7 @@ The current product form is:
 
 - one proof-governed kernel
 - one thin controlled-start alpha shell on top of that kernel
-- one current tester pack for external critique and early alpha pressure
+- one current tester pack plus claim-validation pack for external critique and early alpha pressure
 
 ## Why this matters
 
@@ -104,12 +105,14 @@ Current support boundary:
 Current first-run alpha lane:
 
 1. `synrail start`
-2. do the bounded change and update only the proof surfaces that reflect what was actually changed and verified
-3. `synrail check`
-4. if non-green: fix only the named blocker
-5. `synrail check`
-6. if a trusted fallback exists: `synrail restore`
-7. if needed: `synrail telemetry export` or `synrail bug-packet`
+2. do the bounded change and strengthen `.synrail/final_result.json` first
+3. leave `readback.txt` and `scenario_proof.txt` untouched unless `synrail check` later names one as needed fallback
+4. `synrail check`
+5. if non-green: fix only the named blocker; when refresh invalidation is known, the default summary now points only at the stale obligation class
+6. `synrail check`
+7. if a standalone bounded prompt helps: `synrail repair-step`
+8. if a trusted fallback exists: `synrail restore`
+9. if needed: `synrail telemetry export` or `synrail bug-packet`
 
 Current restore-capable lane:
 

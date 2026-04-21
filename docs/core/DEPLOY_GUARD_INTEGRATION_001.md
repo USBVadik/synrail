@@ -60,10 +60,10 @@ If any of these drift, side effect must stop.
 
 Current reusable helpers:
 
-- [`tools/reference/synrail_deploy_guard.sh`](/Users/usbdick/Documents/New%20project/synrail/tools/reference/synrail_deploy_guard.sh)
-- [`tools/reference/synrail_guarded_side_effect_v0.sh`](/Users/usbdick/Documents/New%20project/synrail/tools/reference/synrail_guarded_side_effect_v0.sh)
-- [`examples/deploy_guard/README.md`](/Users/usbdick/Documents/New%20project/synrail/examples/deploy_guard/README.md)
-- [`examples/deploy_guard/systemd_service_override.conf`](/Users/usbdick/Documents/New%20project/synrail/examples/deploy_guard/systemd_service_override.conf)
+- [`tools/reference/synrail_deploy_guard.sh`](../../tools/reference/synrail_deploy_guard.sh)
+- [`tools/reference/synrail_guarded_side_effect_v0.sh`](../../tools/reference/synrail_guarded_side_effect_v0.sh)
+- [`examples/deploy_guard/README.md`](../../examples/deploy_guard/README.md)
+- [`examples/deploy_guard/systemd_service_override.conf`](../../examples/deploy_guard/systemd_service_override.conf)
 
 ## Smallest Manual Pattern
 
@@ -139,8 +139,8 @@ systemctl restart my-app
 
 Copyable examples now live in:
 
-- [`examples/deploy_guard/systemd_restart_with_synrail.sh`](/Users/usbdick/Documents/New%20project/synrail/examples/deploy_guard/systemd_restart_with_synrail.sh)
-- [`examples/deploy_guard/systemd_service_override.conf`](/Users/usbdick/Documents/New%20project/synrail/examples/deploy_guard/systemd_service_override.conf)
+- [`examples/deploy_guard/systemd_restart_with_synrail.sh`](../../examples/deploy_guard/systemd_restart_with_synrail.sh)
+- [`examples/deploy_guard/systemd_service_override.conf`](../../examples/deploy_guard/systemd_service_override.conf)
 
 ## Review Boundary
 

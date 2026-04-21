@@ -485,6 +485,55 @@ def build_artifact_quality_hints(state: dict) -> list[dict]:
                 why="cleanup status still cannot be trusted from the current final result artifact",
             )
         )
+    if (
+        not final_result_parts
+        and "PARTIAL_PROOF" in collect_active_pressures(state)
+        and state.get("proof_bundle", {}).get("missing_sections")
+    ):
+        final_result_status = state.get("proof_bundle", {}).get("final_result", {})
+        verification = state.get("proof_bundle", {}).get("verification_corroboration", {})
+        artifact_identity = state.get("proof_bundle", {}).get("artifact_identity", {})
+        cleanup_status = state.get("proof_bundle", {}).get("cleanup_status", {})
+        if isinstance(final_result_status, dict) and not final_result_status.get("semantically_sufficient", True):
+            add_unique(final_result_parts, "final_result_status_record")
+            final_result_subsurfaces.append(
+                make_subsurface(
+                    "final_result_status_record",
+                    status="STALE",
+                    mapped_inputs=["final_result"],
+                    why="final_result.status is still not trust-bearing even though supporting proof sections are also missing",
+                )
+            )
+        if isinstance(verification, dict) and not verification.get("semantically_sufficient", True):
+            add_unique(final_result_parts, "diff_provenance_record")
+            final_result_subsurfaces.append(
+                make_subsurface(
+                    "diff_provenance_record",
+                    status="STALE",
+                    mapped_inputs=["final_result"],
+                    why="runtime verification in the final result artifact is still too thin to waive fallback proof sections",
+                )
+            )
+        if isinstance(artifact_identity, dict) and not artifact_identity.get("semantically_sufficient", True):
+            add_unique(final_result_parts, "artifact_identity_record")
+            final_result_subsurfaces.append(
+                make_subsurface(
+                    "artifact_identity_record",
+                    status="STALE",
+                    mapped_inputs=["final_result"],
+                    why="artifact identity is still semantically incomplete while the bundle remains partial",
+                )
+            )
+        if isinstance(cleanup_status, dict) and not cleanup_status.get("semantically_sufficient", True):
+            add_unique(final_result_parts, "cleanup_status_record")
+            final_result_subsurfaces.append(
+                make_subsurface(
+                    "cleanup_status_record",
+                    status="STALE",
+                    mapped_inputs=["final_result"],
+                    why="cleanup truth is still semantically incomplete while the bundle remains partial",
+                )
+            )
     if final_result_parts:
         hints.append(
             make_hint(
@@ -686,7 +735,6 @@ def build_repair_policy(resumability: dict, artifact_quality_hints: list[dict]) 
         ordered_ids
         and ordered_ids[0] == "complete_missing_proof_sections"
         and "final_result_artifact" in stale_artifact_ids
-        and "supporting_proof_artifacts" not in stale_artifact_ids
     ):
         ordered_ids = ["repair_final_result_artifact"] + [
             step_id for step_id in ordered_ids if step_id != "repair_final_result_artifact"

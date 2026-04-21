@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import tempfile
 import unittest
@@ -42,11 +43,13 @@ class InstallSmokeTests(unittest.TestCase):
 
         self.assertIn("Controlled run started.", start_result.stdout)
         self.assertIn(
-            "Do this now: make the bounded change, run local verification, then strengthen final_result.json first. Treat readback.txt and scenario_proof.txt as fallback-only surfaces and leave them untouched unless synrail check later names them or final_result.json still cannot carry the trust.",
+            "Do this now: make the bounded change, run local verification, then strengthen final_result.json first.",
             start_result.stdout,
         )
         self.assertIn("Starter proof surface is ready for this run.", start_result.stdout)
         self.assertIn("Artifact root: .synrail", start_result.stdout)
+        self.assertIn("fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.", start_result.stdout)
+        self.assertIn("Need a canonical final_result shape? run synrail final-result-template", start_result.stdout)
         self.assertIn("Then run: synrail check", start_result.stdout)
         self.assertTrue((artifact_root / "state.json").exists())
         self.assertTrue((artifact_root / "acceptance_criteria.json").exists())
@@ -128,8 +131,11 @@ class InstallSmokeTests(unittest.TestCase):
 
             self.assertIn("Agent adoption files are ready.", result.stdout)
             self.assertIn("Agent files installed into:", result.stdout)
-            self.assertIn("Quick status: run `synrail` inside your project.", result.stdout)
-            self.assertIn('Start a run: `synrail start "Describe the bounded local change."`', result.stdout)
+            self.assertIn("Quick status: run `", result.stdout)
+            self.assertIn("inside your project.", result.stdout)
+            self.assertIn("Command:", result.stdout)
+            self.assertIn('Start a run: `', result.stdout)
+            self.assertIn(' start "Describe the bounded local change."`', result.stdout)
             self.assertTrue((project_root / "AGENTS.md").exists())
             self.assertTrue((project_root / "CLAUDE.md").exists())
             gemini = (project_root / "GEMINI.md").read_text()

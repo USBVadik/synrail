@@ -30,6 +30,7 @@ What to attack:
 - whether the criteria source is independent enough to deserve trust
 - whether refresh semantics are too easy or too opaque
 - whether criteria drift can still be masked in odd contours
+- whether refresh-driven stale-obligation narrowing can become over-confident when multiple degradations apply
 
 ## 3. Doctor coverage is measured, but the corpus is still curated
 
@@ -66,6 +67,7 @@ Still, the product can look like justified ceremony instead of obvious workflow 
 What to attack:
 
 - any step that feels like translation of internal artifacts instead of real workflow help
+- whether the new refresh-driven stale-obligation summary is actually narrower in practice, or just rephrases the same non-green contour
 - whether `save`, `repair-step`, `retry`, and telemetry export are actually the right outer verbs
 - where the shell still leaks compatibility-era assumptions
 

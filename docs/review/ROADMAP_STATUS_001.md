@@ -53,10 +53,12 @@ Completed as shipped tranches on the current branch:
    - only `final_result.json` is materialized by default on `start`
    - fallback proof surfaces stay unmaterialized until explicitly needed
    - first-loop shell guidance now keeps `final_result` as the only default proof target
+   - partial-proof continuation now keeps `repair-step` on `final_result.json` first whenever final-result truth is still stale, before Synrail materializes or targets fallback proof surfaces
 2. repeatable everyday economics benchmark
    - one repeatable everyday benchmark pack now exists
    - it currently shows one repeatable low-drag winner, four baseline-good-enough paths, and zero unclear paths
    - the class verdict is still baseline-favorable overall
+   - the harness and pack now also split the everyday economics lane into machine-readable `fixed_control_mass` vs `behavioral_control_tax`, while keeping `total_control_burden`, `checks_per_accepted_closure`, `operator_visible_actions`, and `got_lost_moments` visible as supporting deltas
 3. proof independence stress
    - labeled-but-thin scenario prose no longer carries verification corroboration on strict proof-sensitive lanes
    - thin command confirmations like `Output: ok`, `grep confirms ...`, or exit-code-only observations are now blocked on those lanes
@@ -64,10 +66,20 @@ Completed as shipped tranches on the current branch:
    - the local restore matrix now covers clean git, dirty tracked, dirty untracked, mixed file state, non-git file-copy, no-commit git via file-copy fallback, and unsupported honest fail
 5. shell compression to actually thin
    - fallback chatter in the first operator loop is now compressed into one note instead of multiple optional branches
+   - the default start/check shell now points to final_result.json plus helper commands instead of inlining the full proof tutorial
+   - the default non-green path now lets `synrail check` carry the first bounded fix, with `repair-step` left as an optional standalone prompt surface
 6. evidence hygiene as process rule
    - roadmap moves are now gated on classified evidence sets, not justified from a single noisy report
 7. strengthen the strongest wedge on ugly contours
    - second-operator and continuation honesty now have uglier validation contours with bounded retry pressure
+8. cleanup truth now follows the cheap happy path
+   - bundle cleanup fallback now recognizes the runtime doctor `gate_results` shape instead of requiring a unit-only gate key
+   - normal `synrail check` can satisfy `cleanup_status` from doctor-ready workspace truth without manual `final_result.json` repair
+   - smoke coverage now proves the real `start -> final_result without cleanup_status -> check` path
+9. change-impact invalidation now narrows the default non-green path
+   - default thin output now reuses refresh `dominant_invalidation` and `invalidations` when they match the active run
+   - the default `synrail check` summary now points only at stale obligations instead of broadly re-describing the whole non-green contour
+   - dev thin output now shows refresh invalidation lines so retry/check guidance stays runtime-visible without adding a new operator surface
 
 ## Partially built
 

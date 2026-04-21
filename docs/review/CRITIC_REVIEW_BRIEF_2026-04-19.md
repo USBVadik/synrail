@@ -1,10 +1,9 @@
 # Synrail Critic Review Brief
 
-Status date: 2026-04-19
+Status date: 2026-04-21
 Repo: `synrail`
-Current branch: `codex/first-extraction-pr`
-Current reviewed code commit: `db4a2d4`
-Current regression status: `449 tests OK`
+Reviewed snapshot: current shipped branch truth prepared for critic handoff
+Verification note: rerun the listed local verification commands on the exact snapshot you send
 
 ## Why this document exists
 
@@ -35,7 +34,7 @@ Important constraint:
 - it did **not** add new runtime artifact surfaces
 - it did **not** expand the shell into a broader platform story
 
-Instead it concentrated on seven narrow product seams:
+Instead it concentrated on nine narrow product seams:
 
 1. cheaper default proof path
 2. repeatable everyday economics reading
@@ -44,6 +43,8 @@ Instead it concentrated on seven narrow product seams:
 5. thinner first-loop shell behavior
 6. evidence hygiene as an actual roadmap-decision rule
 7. uglier handoff / continuation validation
+8. cleanup truth on the cheap happy path
+9. refresh-driven stale-obligation narrowing on non-green contours
 
 That is the right way to read the current branch: not as “more system”, but as “more disciplined pressure on the existing wedge”.
 
@@ -54,11 +55,11 @@ At the user level the intended local contour is now:
 1. `synrail`
 2. `synrail start "Describe the bounded change"`
 3. do the work
-4. strengthen `.synrail/final_result.json` first
+4. strengthen `.synrail/final_result.json` first and keep `readback.txt` plus `scenario_proof.txt` fallback-only unless `synrail check` explicitly names one
 5. `synrail check`
-6. if blocked: `synrail repair-step`
-7. fix only the named gap
-8. `synrail retry` or `synrail check`
+6. if blocked: fix only the named gap from `synrail check`; when refresh invalidation is known, the default summary now points only at the stale obligation class
+7. use `synrail repair-step` only when a standalone bounded repair prompt is actually helpful
+8. use `synrail restore` only when the current contour explicitly calls for it
 9. stop only at accepted closure
 
 Important change from earlier branches:
@@ -66,6 +67,8 @@ Important change from earlier branches:
 - `start` now materializes only `.synrail/final_result.json` by default
 - `readback.txt` and `scenario_proof.txt` are now fallback-only surfaces
 - if a later `synrail check` explicitly needs one of them, `Synrail` can prepare that fallback on demand
+- the default non-green path now lets `synrail check` carry the first bounded fix instead of making `repair-step` the next everyday hop
+- when refresh invalidation matches the active run, the default summary now points only at the stale obligation class instead of broadly restating the whole non-green contour
 
 That means the first-loop proof path is now visibly thinner than the older “three starter proof files” contour.
 
@@ -160,6 +163,12 @@ The intended rule is now explicit:
 - evidence sets containing manual-review-only signals should stay manual-review-only
 
 This is a meaningful maturity step for the development process itself.
+
+### 7. Non-green guidance is narrower when change impact is already known
+
+When refresh invalidation matches the active run, the default thin-output shell now surfaces the dominant invalidation and points only at the stale obligation class.
+
+That matters because the product no longer needs to broadly restate the whole non-green contour when runtime truth already says which obligation actually went stale.
 
 ## What is improved but still not earned
 
@@ -272,25 +281,25 @@ These are the questions I would explicitly want critics to answer.
 If a critic has only 20–30 minutes, I would suggest:
 
 1. Read:
-- [README.md](/Users/usbdick/Documents/New%20project/synrail/README.md)
-- [FIRST_RUN_GUIDE.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/FIRST_RUN_GUIDE.md)
-- [ROADMAP_STATUS_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/review/ROADMAP_STATUS_001.md)
-- [TECHNICAL_MAP_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/review/TECHNICAL_MAP_001.md)
+- [README.md](../../README.md)
+- [FIRST_RUN_GUIDE.md](../../docs/core/FIRST_RUN_GUIDE.md)
+- [ROADMAP_STATUS_001.md](../../docs/review/ROADMAP_STATUS_001.md)
+- [TECHNICAL_MAP_001.md](../../docs/review/TECHNICAL_MAP_001.md)
 
 2. Inspect code:
-- [alpha.py](/Users/usbdick/Documents/New%20project/synrail/alpha.py)
-- [synrail_cli_v0.py](/Users/usbdick/Documents/New%20project/synrail/tools/reference/synrail_cli_v0.py)
-- [synrail_bundle_v0.py](/Users/usbdick/Documents/New%20project/synrail/tools/reference/synrail_bundle_v0.py)
-- [synrail_checkpoint_v0.py](/Users/usbdick/Documents/New%20project/synrail/tools/reference/synrail_checkpoint_v0.py)
-- [synrail_alpha_evidence_ownership_v0.py](/Users/usbdick/Documents/New%20project/synrail/tools/reference/synrail_alpha_evidence_ownership_v0.py)
+- [alpha.py](../../alpha.py)
+- [synrail_cli_v0.py](../../tools/reference/synrail_cli_v0.py)
+- [synrail_bundle_v0.py](../../tools/reference/synrail_bundle_v0.py)
+- [synrail_checkpoint_v0.py](../../tools/reference/synrail_checkpoint_v0.py)
+- [synrail_alpha_evidence_ownership_v0.py](../../tools/reference/synrail_alpha_evidence_ownership_v0.py)
 
 3. Inspect tests:
-- [test_controlled_start_smoke.py](/Users/usbdick/Documents/New%20project/synrail/tests/test_controlled_start_smoke.py)
-- [test_truth_regressions.py](/Users/usbdick/Documents/New%20project/synrail/tests/test_truth_regressions.py)
-- [test_gate_units.py](/Users/usbdick/Documents/New%20project/synrail/tests/test_gate_units.py)
-- [test_everyday_benchmark_pack.py](/Users/usbdick/Documents/New%20project/synrail/tests/test_everyday_benchmark_pack.py)
-- [test_claim_validation_pack.py](/Users/usbdick/Documents/New%20project/synrail/tests/test_claim_validation_pack.py)
-- [test_alpha_evidence_ownership.py](/Users/usbdick/Documents/New%20project/synrail/tests/test_alpha_evidence_ownership.py)
+- [test_controlled_start_smoke.py](../../tests/test_controlled_start_smoke.py)
+- [test_truth_regressions.py](../../tests/test_truth_regressions.py)
+- [test_gate_units.py](../../tests/test_gate_units.py)
+- [test_everyday_benchmark_pack.py](../../tests/test_everyday_benchmark_pack.py)
+- [test_claim_validation_pack.py](../../tests/test_claim_validation_pack.py)
+- [test_alpha_evidence_ownership.py](../../tests/test_alpha_evidence_ownership.py)
 
 ## My current honest assessment
 

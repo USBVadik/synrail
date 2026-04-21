@@ -1769,10 +1769,10 @@ class TestCleanupRuntimeWaiver(unittest.TestCase):
         return payload
 
     def _doctor_record_clean(self) -> dict:
-        """Build a minimal doctor record that passes cleanup_fallback_from_doctor."""
+        """Build a minimal doctor record that matches the runtime doctor shape."""
         return {
             "final_verdict": "ACCEPTABLE_READY",
-            "gates": {
+            "gate_results": {
                 "clean_execution_surface": {
                     "status": "PASS",
                     "note": "workspace is clean, no stray files detected",

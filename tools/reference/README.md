@@ -12,8 +12,8 @@ For the quickest helper-selection view, start with:
 
 For the current installable alpha path, start with:
 
-- [`docs/core/ALPHA_LANE_001.md`](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md)
-- [`docs/core/DEPLOY_GUARD_INTEGRATION_001.md`](/Users/usbdick/Documents/New%20project/synrail/docs/core/DEPLOY_GUARD_INTEGRATION_001.md)
+- [`docs/core/ALPHA_LANE_001.md`](../../docs/core/ALPHA_LANE_001.md)
+- [`docs/core/DEPLOY_GUARD_INTEGRATION_001.md`](../../docs/core/DEPLOY_GUARD_INTEGRATION_001.md)
 
 ## What these helpers are for
 

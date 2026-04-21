@@ -72,6 +72,8 @@ The active economics harness now also records:
 - false-green exposure
 - artifact completeness percent
 - mandatory mental steps
+- operator-visible action count
+- got-lost moment count
 - trust-bearing artifact count
 - visible surface count
 - skippable visible surface count
@@ -83,12 +85,15 @@ It also emits one compact economics summary:
 - added repair cycles
 - added invalidations
 - added closure latency
+- added checks per accepted closure
 - reduced false-green exposure
 - gained artifact completeness
 - added mandatory mental steps
 - added trust-bearing artifacts
 - added required visible surfaces
 - added skippable visible surfaces
+- added operator-visible actions
+- added got-lost moments
 - added fixed control mass
 
 The current compare logic now also recognizes one deliberately narrow case:
@@ -102,6 +107,30 @@ That means `Synrail` can earn `SYNRAIL_BETTER` on an everyday contour when it:
 - materially improves proof basis
 - and does so with near-zero added burden
 
+Checks per accepted closure are derived narrowly from the existing runtime-shaped inputs:
+
+- `0` when the path does not reach `ACCEPTED`
+- otherwise `1 + blocker_to_closure_cycles`
+
+The control-burden split now stays explicit:
+
+- fixed control mass:
+  - mandatory mental steps
+  - trust-bearing artifacts
+  - required visible surfaces
+- behavioral control tax:
+  - operator-visible actions
+  - got-lost moments
+- total control burden:
+  - fixed control mass
+  - behavioral control tax
+
+The harness now emits all three readings machine-readably:
+
+- fixed control mass added
+- behavioral control tax added
+- total control burden added
+
 Near-zero burden here is intentionally strict:
 
 - at most `1` added operator minute
@@ -109,7 +138,7 @@ Near-zero burden here is intentionally strict:
 - at most `1` added closure-latency minute
 - no added required visible surface
 - no added trust-bearing artifact
-- at most `1` added fixed control-mass unit
+- at most `1` added total-control-burden unit
 
 The baseline-sufficient mirror case is also intentionally narrow:
 

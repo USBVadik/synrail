@@ -22,6 +22,12 @@ Preferred tester install path:
 python3 tools/reference/synrail_install_v0.py --venv .venv
 ```
 
+If `synrail` is not on your `PATH` after install, replace `synrail` below with the local wrapper from this checkout:
+
+```bash
+./.venv/bin/synrail
+```
+
 ## 10-Minute Quickstart
 
 This is the cheapest first-run contour we currently trust.
@@ -32,14 +38,13 @@ ARTIFACT_ROOT=".synrail"
 TASK_REQUEST="Reject a plain-text final result and keep the repair bounded."
 
 synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$PROJECT_ROOT" --task-identity "$TASK_REQUEST" --telemetry-opt-in --tester-id your_name
-# synrail start already creates starter proof files under $ARTIFACT_ROOT:
-# - $ARTIFACT_ROOT/final_result.json
-# - $ARTIFACT_ROOT/readback.txt
-# - $ARTIFACT_ROOT/scenario_proof.txt
-# do this now: edit only those starter proof files in place, then run synrail check
+# synrail start already creates $ARTIFACT_ROOT/final_result.json on the default path.
+# readback.txt and scenario_proof.txt stay fallback-only unless a later synrail check explicitly asks for one.
+# do this now: strengthen final_result.json first, then run synrail check
 # or use Wow Scenario A below to see the false-success block
 synrail check --artifact-root "$ARTIFACT_ROOT"
-synrail repair-step --artifact-root "$ARTIFACT_ROOT"
+# optional standalone bounded prompt after a non-green check:
+# synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 synrail telemetry export --artifact-root "$ARTIFACT_ROOT"
 ```
 
@@ -60,7 +65,7 @@ These are the only outer verbs a first tester should care about.
 - `synrail check`
   Why it exists: this is the truth gate that decides accepted, blocked, repairable, or restore-needed.
 - `synrail repair-step`
-  Why it exists: gives one bounded next repair instead of asking the operator to reverse-engineer artifacts.
+  Why it exists: renders the same bounded repair as a standalone prompt when the operator wants that extra surface.
 - `synrail retry`
   Why it exists: reruns only the bounded repair contour, not a broader hopeful loop.
 - `synrail restore`
@@ -91,17 +96,19 @@ Run:
 
 ```bash
 synrail start --artifact-root ".synrail" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
-# synrail already created starter proof files under .synrail/ for the native path
+# synrail already created .synrail/final_result.json on the native default path
 # this scenario intentionally bypasses that path with a plain-text result:
 printf 'Implemented the change and confirmed it locally.\n' > .synrail/final_result.txt
 synrail check --artifact-root ".synrail"
-synrail repair-step --artifact-root ".synrail"
+# optional standalone bounded prompt after the blocked check:
+# synrail repair-step --artifact-root ".synrail"
 ```
 
 Expected shape:
 
 - `check` lands on `PROOF_INVALID`
-- `repair-step` stays bounded to `repair_final_result_artifact`
+- `check` names one bounded fix on the default path
+- `repair-step`, when requested, stays bounded to `repair_final_result_artifact`
 
 Reference:
 

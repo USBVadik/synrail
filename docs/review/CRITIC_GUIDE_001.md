@@ -26,7 +26,8 @@ Read:
 Ask:
 
 - does this feel like a product or a supervised artifact ritual?
-- is the next step actually obvious?
+- which visible step in the everyday lane feels least worth its weight?
+- where does the shell still sound more certain than the current proof has earned?
 - is the exported telemetry actually useful?
 
 ### 2. Attack false accept / false reject boundaries
@@ -62,19 +63,21 @@ Read:
 - `tools/reference/synrail_repair_packet_v0.py`
 - `tools/reference/synrail_continuation_arbiter_v0.py`
 - `fixtures/continuation_arbiter_conflict_run_001/`
+- `tests/test_claim_validation_pack.py`
 
 Ask:
 
 - can a second operator really follow this without author memory?
 - when conflict exists, does the system resolve it convincingly?
+- does restore or handoff create concrete value over a simpler substitute?
 
 ## Questions we want answered bluntly
 
-1. What claim here do you trust the least?
-2. Which runtime artifact still looks self-issued?
-3. Which alpha command would you remove or rename?
-4. Where would you expect the first embarrassing false-positive or false-negative in real usage?
-5. If you had to cut scope by half, what would survive?
+1. Which step in the everyday lane feels least worth its weight?
+2. Which runtime artifact or proof claim still looks self-issued?
+3. Where would a second operator still need author memory during restore or handoff?
+4. What concrete value, if any, does `Synrail` add over a simpler substitute in restore or re-entry?
+5. If that value is not yet strong enough, what would you cut first?
 
 ## We prefer these kinds of criticism
 

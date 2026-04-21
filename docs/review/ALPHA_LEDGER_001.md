@@ -5,8 +5,8 @@ This ledger is the compact decision table for external alpha runs.
 It complements, not replaces:
 
 - the per-run `REPORT.md`
-- the synthesis document in [ALPHA_EXTERNAL_EVIDENCE_2026-04-18.md](/Users/usbdick/Documents/New%20project/synrail/docs/review/ALPHA_EXTERNAL_EVIDENCE_2026-04-18.md)
-- the generic review scorecard in [ALPHA_SIGNAL_SCORECARD_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/review/ALPHA_SIGNAL_SCORECARD_001.md)
+- the synthesis document in [ALPHA_EXTERNAL_EVIDENCE_2026-04-18.md](../../docs/review/ALPHA_EXTERNAL_EVIDENCE_2026-04-18.md)
+- the generic review scorecard in [ALPHA_SIGNAL_SCORECARD_001.md](../../docs/review/ALPHA_SIGNAL_SCORECARD_001.md)
 
 The purpose of this file is simple:
 
@@ -30,54 +30,54 @@ The purpose of this file is simple:
 
 | Run | Agent | Task class | Final outcome | Failure owner | Reuse tomorrow | Wedge fit | Baseline min est | Synrail min | Delta time | Baseline retries est | Synrail checks | Delta loops |
 | --- | --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| [001](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_001/REPORT.md) | Claude Code | trivial / additive_change | BLOCKED | harness | no | low | 0.3 | 0.4 | +0.1 | 0 | 0 | 0 |
-| [002](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_002/REPORT.md) | Gemini CLI | trivial / additive_change | NOT_ACCEPTED | product | no | low | 0.3 | 0.8 | +0.5 | 0 | 4 | +4 |
-| [003](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_003/REPORT.md) | Claude Code | trivial / additive_change | ACCEPTED | mixed | unclear | low | 0.3 | 0.8 | +0.5 | 0 | 2 | +2 |
-| [004](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_004/REPORT.md) | Claude Code | bugfix | INVALID | harness | no | medium | n/a | 2.3 | n/a | n/a | 0 | n/a |
-| [005](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_005/REPORT.md) | Gemini CLI | bugfix / proof_heavy | ACCEPTED | mixed | unclear | high | 1.0 | 1.5 | +0.5 | 1 | 3 | +2 |
-| [006](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_006/REPORT.md) | Claude Code | bugfix | ACCEPTED | harness | unclear | high | 1.5 | 2.1 | +0.6 | 1 | 1 | 0 |
-| [007](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_007/REPORT.md) | Codex manual | restore | RESTORE_FAILED | product | no | high | 0.3 | 0.7 | +0.4 | 1 | 1 | 0 |
-| [008](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md) | Gemini CLI | handoff | ACCEPTED | none | yes | high | 2.0 | 1.4 | -0.6 | 3 | 3 | 0 |
-| [009](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_009/REPORT.md) | Gemini CLI | trivial / additive_change | DOCTOR_BLOCKED | product | no | low | 0.3 | 1.0 | +0.7 | 0 | 4 | +4 |
-| [010](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_010/REPORT.md) | Gemini CLI | bugfix / proof_heavy | ACCEPTED | none | yes | high | 1.0 | 1.0 | 0.0 | 1 | 2 | +1 |
-| [011](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011/REPORT.md) | Codex manual | restore | INVALID_BASELINE | operator | unclear | high | n/a | 0.2 | n/a | n/a | 0 | n/a |
-| [011b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011b/REPORT.md) | Codex manual | restore | RESTORE_REPORTED_BUT_STATE_NOT_RECOVERED | product | no | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
-| [012](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_012/REPORT.md) | Claude Code + Gemini CLI | handoff | INVALID_HARNESS_APPROVAL_GATE | harness | no | high | n/a | 0.0 | n/a | n/a | 0 | n/a |
-| [012b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_012b/REPORT.md) | Claude Code + Gemini CLI | handoff | INVALID_HARNESS_ROOT_BYPASS_BLOCKED | harness | no | high | n/a | 0.0 | n/a | n/a | 0 | n/a |
-| [013](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_013/REPORT.md) | Gemini CLI | bugfix | ACCEPTED | none | yes | high | 0.8 | 1.0 | +0.2 | 1 | 1 | 0 |
-| [014](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014/REPORT.md) | Codex manual | restore | RESTORE_REPORTED_BUT_STATE_NOT_RECOVERED | product | no | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
-| [014b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014b/REPORT.md) | Codex manual | restore | PARTIAL_DIAGNOSTIC_ONLY | operator | unclear | high | n/a | 0.0 | n/a | n/a | 0 | n/a |
-| [014c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014c/REPORT.md) | Codex manual | restore | RESTORE_REPORTED_BUT_WORKSPACE_NOT_RESTORED | product | no | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
-| [014d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014d/REPORT.md) | Codex manual | restore | RESTORE_FAILED_HONESTLY_FOR_UNSUPPORTED_WORKSPACE | product | unclear | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
-| [014e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014e/REPORT.md) | Codex manual | restore | RESTORED | none | yes | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
-| [015](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md) | Gemini CLI | trivial / additive_change | ACCEPTED | product | no | low | 0.3 | 1.0 | +0.7 | 0 | 2 | +2 |
-| [016](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md) | Gemini CLI | bugfix / proof_heavy | ACCEPTED | mixed | yes | high | 1.0 | 1.2 | +0.2 | 1 | 2 | +1 |
-| [017](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md) | Gemini CLI | bugfix | ACCEPTED | none | yes | high | 0.8 | 1.0 | +0.2 | 1 | 1 | 0 |
-| [018](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md) | Gemini CLI + Gemini CLI | handoff | ACCEPTED | none | yes | high | 2.0 | 1.8 | -0.2 | 3 | 3 | 0 |
-| [019](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019/REPORT.md) | Gemini CLI | orientation | ORIENTATION_SUMMARIZED_WITH_OVEREXPLORATION | mixed | unclear | medium | 0.4 | 0.9 | +0.5 | 0 | 0 | 0 |
-| [020](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020/REPORT.md) | Claude Code | orientation | ORIENTATION_SUMMARIZED | none | yes | medium | 0.4 | 0.3 | -0.1 | 0 | 0 | 0 |
-| [019b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019b/REPORT.md) | Gemini CLI | orientation | ORIENTATION_SUMMARIZED_WITH_OVEREXPLORATION | mixed | unclear | medium | 0.4 | 0.8 | +0.4 | 0 | 0 | 0 |
-| [020b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020b/REPORT.md) | Claude Code | orientation | ORIENTATION_SUMMARIZED_WITH_SYNRAIL_FIRST | none | yes | medium | 0.4 | 0.3 | -0.1 | 0 | 0 | 0 |
-| [019c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019c/REPORT.md) | Gemini CLI | orientation | ORIENTATION_SUMMARIZED_WITH_REDUCED_EXPLORATION | mixed | unclear | medium | 0.4 | 0.5 | +0.1 | 0 | 0 | 0 |
-| [021b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021b/REPORT.md) | Gemini CLI | trivial / additive_change | INVALID_HARNESS_GEMINI_NONINTERACTIVE_EIO | harness | no | low | n/a | 0.0 | n/a | n/a | 0 | n/a |
-| [021c](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md) | Claude Code | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 0.7 | +0.4 | 0 | 1 | +1 |
-| [021d](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 2.2 | +1.9 | 0 | 1 | +1 |
-| [021e](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
-| [022](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_022/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS | none | unclear | low | 0.3 | 0.8 | +0.5 | 0 | 1 | +1 |
-| [023](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_023/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS_BUT_NO_WAIVER | mixed | unclear | low | 0.3 | 2.8 | +2.5 | 0 | 1 | +1 |
-| [024](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_024/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS_BUT_STILL_NO_WAIVER | mixed | unclear | low | 0.3 | 1.0 | +0.7 | 0 | 2 | +2 |
-| [025](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_025/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_INFERRED_METHOD_AND_RUNTIME_VERIFICATION | mixed | yes | low | 0.3 | 0.4 | +0.1 | 0 | 1 | +1 |
-| [027](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_027/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_WAIVER_REALIZED | mixed | yes | medium | 0.3 | 0.4 | +0.1 | 0 | 1 | +1 |
-| [028b](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_028b/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_FINAL_RESULT_FIRST_BUT_PROSE_STILL_AUTHORED | mixed | yes | medium | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
-| [029](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_029/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_STARTER_PROSE_LEFT_UNTOUCHED | mixed | yes | medium | 0.3 | 1.2 | +0.9 | 0 | 1 | +1 |
-| [030](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_030/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_ENTRYPOINT_ARCHAEOLOGY_REMOVED_BUT_REGRESSED_CHEAPNESS | mixed | yes | medium | 0.3 | 1.2 | +0.9 | 0 | 2 | +2 |
-| [031](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_031/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_SECOND_CHECK_REMOVED_BUT_PROSE_STILL_AUTHORED | mixed | yes | medium | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
+| [001](../../fixtures/alpha_external_run_001/REPORT.md) | Claude Code | trivial / additive_change | BLOCKED | harness | no | low | 0.3 | 0.4 | +0.1 | 0 | 0 | 0 |
+| [002](../../fixtures/alpha_external_run_002/REPORT.md) | Gemini CLI | trivial / additive_change | NOT_ACCEPTED | product | no | low | 0.3 | 0.8 | +0.5 | 0 | 4 | +4 |
+| [003](../../fixtures/alpha_external_run_003/REPORT.md) | Claude Code | trivial / additive_change | ACCEPTED | mixed | unclear | low | 0.3 | 0.8 | +0.5 | 0 | 2 | +2 |
+| [004](../../fixtures/alpha_external_run_004/REPORT.md) | Claude Code | bugfix | INVALID | harness | no | medium | n/a | 2.3 | n/a | n/a | 0 | n/a |
+| [005](../../fixtures/alpha_external_run_005/REPORT.md) | Gemini CLI | bugfix / proof_heavy | ACCEPTED | mixed | unclear | high | 1.0 | 1.5 | +0.5 | 1 | 3 | +2 |
+| [006](../../fixtures/alpha_external_run_006/REPORT.md) | Claude Code | bugfix | ACCEPTED | harness | unclear | high | 1.5 | 2.1 | +0.6 | 1 | 1 | 0 |
+| [007](../../fixtures/alpha_external_run_007/REPORT.md) | Codex manual | restore | RESTORE_FAILED | product | no | high | 0.3 | 0.7 | +0.4 | 1 | 1 | 0 |
+| [008](../../fixtures/alpha_external_run_008/REPORT.md) | Gemini CLI | handoff | ACCEPTED | none | yes | high | 2.0 | 1.4 | -0.6 | 3 | 3 | 0 |
+| [009](../../fixtures/alpha_external_run_009/REPORT.md) | Gemini CLI | trivial / additive_change | DOCTOR_BLOCKED | product | no | low | 0.3 | 1.0 | +0.7 | 0 | 4 | +4 |
+| [010](../../fixtures/alpha_external_run_010/REPORT.md) | Gemini CLI | bugfix / proof_heavy | ACCEPTED | none | yes | high | 1.0 | 1.0 | 0.0 | 1 | 2 | +1 |
+| [011](../../fixtures/alpha_external_run_011/REPORT.md) | Codex manual | restore | INVALID_BASELINE | operator | unclear | high | n/a | 0.2 | n/a | n/a | 0 | n/a |
+| [011b](../../fixtures/alpha_external_run_011b/REPORT.md) | Codex manual | restore | RESTORE_REPORTED_BUT_STATE_NOT_RECOVERED | product | no | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
+| [012](../../fixtures/alpha_external_run_012/REPORT.md) | Claude Code + Gemini CLI | handoff | INVALID_HARNESS_APPROVAL_GATE | harness | no | high | n/a | 0.0 | n/a | n/a | 0 | n/a |
+| [012b](../../fixtures/alpha_external_run_012b/REPORT.md) | Claude Code + Gemini CLI | handoff | INVALID_HARNESS_ROOT_BYPASS_BLOCKED | harness | no | high | n/a | 0.0 | n/a | n/a | 0 | n/a |
+| [013](../../fixtures/alpha_external_run_013/REPORT.md) | Gemini CLI | bugfix | ACCEPTED | none | yes | high | 0.8 | 1.0 | +0.2 | 1 | 1 | 0 |
+| [014](../../fixtures/alpha_external_run_014/REPORT.md) | Codex manual | restore | RESTORE_REPORTED_BUT_STATE_NOT_RECOVERED | product | no | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
+| [014b](../../fixtures/alpha_external_run_014b/REPORT.md) | Codex manual | restore | PARTIAL_DIAGNOSTIC_ONLY | operator | unclear | high | n/a | 0.0 | n/a | n/a | 0 | n/a |
+| [014c](../../fixtures/alpha_external_run_014c/REPORT.md) | Codex manual | restore | RESTORE_REPORTED_BUT_WORKSPACE_NOT_RESTORED | product | no | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
+| [014d](../../fixtures/alpha_external_run_014d/REPORT.md) | Codex manual | restore | RESTORE_FAILED_HONESTLY_FOR_UNSUPPORTED_WORKSPACE | product | unclear | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
+| [014e](../../fixtures/alpha_external_run_014e/REPORT.md) | Codex manual | restore | RESTORED | none | yes | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
+| [015](../../fixtures/alpha_external_run_015/REPORT.md) | Gemini CLI | trivial / additive_change | ACCEPTED | product | no | low | 0.3 | 1.0 | +0.7 | 0 | 2 | +2 |
+| [016](../../fixtures/alpha_external_run_016/REPORT.md) | Gemini CLI | bugfix / proof_heavy | ACCEPTED | mixed | yes | high | 1.0 | 1.2 | +0.2 | 1 | 2 | +1 |
+| [017](../../fixtures/alpha_external_run_017/REPORT.md) | Gemini CLI | bugfix | ACCEPTED | none | yes | high | 0.8 | 1.0 | +0.2 | 1 | 1 | 0 |
+| [018](../../fixtures/alpha_external_run_018/REPORT.md) | Gemini CLI + Gemini CLI | handoff | ACCEPTED | none | yes | high | 2.0 | 1.8 | -0.2 | 3 | 3 | 0 |
+| [019](../../fixtures/alpha_external_run_019/REPORT.md) | Gemini CLI | orientation | ORIENTATION_SUMMARIZED_WITH_OVEREXPLORATION | mixed | unclear | medium | 0.4 | 0.9 | +0.5 | 0 | 0 | 0 |
+| [020](../../fixtures/alpha_external_run_020/REPORT.md) | Claude Code | orientation | ORIENTATION_SUMMARIZED | none | yes | medium | 0.4 | 0.3 | -0.1 | 0 | 0 | 0 |
+| [019b](../../fixtures/alpha_external_run_019b/REPORT.md) | Gemini CLI | orientation | ORIENTATION_SUMMARIZED_WITH_OVEREXPLORATION | mixed | unclear | medium | 0.4 | 0.8 | +0.4 | 0 | 0 | 0 |
+| [020b](../../fixtures/alpha_external_run_020b/REPORT.md) | Claude Code | orientation | ORIENTATION_SUMMARIZED_WITH_SYNRAIL_FIRST | none | yes | medium | 0.4 | 0.3 | -0.1 | 0 | 0 | 0 |
+| [019c](../../fixtures/alpha_external_run_019c/REPORT.md) | Gemini CLI | orientation | ORIENTATION_SUMMARIZED_WITH_REDUCED_EXPLORATION | mixed | unclear | medium | 0.4 | 0.5 | +0.1 | 0 | 0 | 0 |
+| [021b](../../fixtures/alpha_external_run_021b/REPORT.md) | Gemini CLI | trivial / additive_change | INVALID_HARNESS_GEMINI_NONINTERACTIVE_EIO | harness | no | low | n/a | 0.0 | n/a | n/a | 0 | n/a |
+| [021c](../../fixtures/alpha_external_run_021c/REPORT.md) | Claude Code | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 0.7 | +0.4 | 0 | 1 | +1 |
+| [021d](../../fixtures/alpha_external_run_021d/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 2.2 | +1.9 | 0 | 1 | +1 |
+| [021e](../../fixtures/alpha_external_run_021e/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
+| [022](../../fixtures/alpha_external_run_022/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS | none | unclear | low | 0.3 | 0.8 | +0.5 | 0 | 1 | +1 |
+| [023](../../fixtures/alpha_external_run_023/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS_BUT_NO_WAIVER | mixed | unclear | low | 0.3 | 2.8 | +2.5 | 0 | 1 | +1 |
+| [024](../../fixtures/alpha_external_run_024/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS_BUT_STILL_NO_WAIVER | mixed | unclear | low | 0.3 | 1.0 | +0.7 | 0 | 2 | +2 |
+| [025](../../fixtures/alpha_external_run_025/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_INFERRED_METHOD_AND_RUNTIME_VERIFICATION | mixed | yes | low | 0.3 | 0.4 | +0.1 | 0 | 1 | +1 |
+| [027](../../fixtures/alpha_external_run_027/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_WAIVER_REALIZED | mixed | yes | medium | 0.3 | 0.4 | +0.1 | 0 | 1 | +1 |
+| [028b](../../fixtures/alpha_external_run_028b/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_FINAL_RESULT_FIRST_BUT_PROSE_STILL_AUTHORED | mixed | yes | medium | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
+| [029](../../fixtures/alpha_external_run_029/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_STARTER_PROSE_LEFT_UNTOUCHED | mixed | yes | medium | 0.3 | 1.2 | +0.9 | 0 | 1 | +1 |
+| [030](../../fixtures/alpha_external_run_030/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_ENTRYPOINT_ARCHAEOLOGY_REMOVED_BUT_REGRESSED_CHEAPNESS | mixed | yes | medium | 0.3 | 1.2 | +0.9 | 0 | 2 | +2 |
+| [031](../../fixtures/alpha_external_run_031/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_SECOND_CHECK_REMOVED_BUT_PROSE_STILL_AUTHORED | mixed | yes | medium | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
 
 ## Per-Run Records
 
 ### Run 001
 
-- Report: [fixtures/alpha_external_run_001/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_001/REPORT.md)
+- Report: [fixtures/alpha_external_run_001/REPORT.md](../../fixtures/alpha_external_run_001/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `harness`
 - Reuse tomorrow: `no`
@@ -97,7 +97,7 @@ The purpose of this file is simple:
 
 ### Run 002
 
-- Report: [fixtures/alpha_external_run_002/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_002/REPORT.md)
+- Report: [fixtures/alpha_external_run_002/REPORT.md](../../fixtures/alpha_external_run_002/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `product`
 - Reuse tomorrow: `no`
@@ -117,7 +117,7 @@ The purpose of this file is simple:
 
 ### Run 003
 
-- Report: [fixtures/alpha_external_run_003/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_003/REPORT.md)
+- Report: [fixtures/alpha_external_run_003/REPORT.md](../../fixtures/alpha_external_run_003/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `mixed`
 - Reuse tomorrow: `unclear`
@@ -137,7 +137,7 @@ The purpose of this file is simple:
 
 ### Run 004
 
-- Report: [fixtures/alpha_external_run_004/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_004/REPORT.md)
+- Report: [fixtures/alpha_external_run_004/REPORT.md](../../fixtures/alpha_external_run_004/REPORT.md)
 - Task class: `bugfix`
 - Failure owner: `harness`
 - Reuse tomorrow: `no`
@@ -157,7 +157,7 @@ The purpose of this file is simple:
 
 ### Run 005
 
-- Report: [fixtures/alpha_external_run_005/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_005/REPORT.md)
+- Report: [fixtures/alpha_external_run_005/REPORT.md](../../fixtures/alpha_external_run_005/REPORT.md)
 - Task class: `bugfix / proof_heavy`
 - Failure owner: `mixed`
 - Reuse tomorrow: `unclear`
@@ -178,7 +178,7 @@ The purpose of this file is simple:
 
 ### Run 006
 
-- Report: [fixtures/alpha_external_run_006/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_006/REPORT.md)
+- Report: [fixtures/alpha_external_run_006/REPORT.md](../../fixtures/alpha_external_run_006/REPORT.md)
 - Task class: `bugfix`
 - Failure owner: `harness`
 - Reuse tomorrow: `unclear`
@@ -198,7 +198,7 @@ The purpose of this file is simple:
 
 ### Run 007
 
-- Report: [fixtures/alpha_external_run_007/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_007/REPORT.md)
+- Report: [fixtures/alpha_external_run_007/REPORT.md](../../fixtures/alpha_external_run_007/REPORT.md)
 - Task class: `restore`
 - Failure owner: `product`
 - Reuse tomorrow: `no`
@@ -218,7 +218,7 @@ The purpose of this file is simple:
 
 ### Run 008
 
-- Report: [fixtures/alpha_external_run_008/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_008/REPORT.md)
+- Report: [fixtures/alpha_external_run_008/REPORT.md](../../fixtures/alpha_external_run_008/REPORT.md)
 - Task class: `handoff`
 - Failure owner: `none`
 - Reuse tomorrow: `yes`
@@ -239,7 +239,7 @@ The purpose of this file is simple:
 
 ### Run 009
 
-- Report: [fixtures/alpha_external_run_009/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_009/REPORT.md)
+- Report: [fixtures/alpha_external_run_009/REPORT.md](../../fixtures/alpha_external_run_009/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `product`
 - Reuse tomorrow: `no`
@@ -260,7 +260,7 @@ The purpose of this file is simple:
 
 ### Run 010
 
-- Report: [fixtures/alpha_external_run_010/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_010/REPORT.md)
+- Report: [fixtures/alpha_external_run_010/REPORT.md](../../fixtures/alpha_external_run_010/REPORT.md)
 - Task class: `bugfix / proof_heavy`
 - Failure owner: `none`
 - Reuse tomorrow: `yes`
@@ -281,7 +281,7 @@ The purpose of this file is simple:
 
 ### Run 011
 
-- Report: [fixtures/alpha_external_run_011/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011/REPORT.md)
+- Report: [fixtures/alpha_external_run_011/REPORT.md](../../fixtures/alpha_external_run_011/REPORT.md)
 - Task class: `restore`
 - Failure owner: `operator`
 - Reuse tomorrow: `unclear`
@@ -301,7 +301,7 @@ The purpose of this file is simple:
 
 ### Run 011b
 
-- Report: [fixtures/alpha_external_run_011b/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_011b/REPORT.md)
+- Report: [fixtures/alpha_external_run_011b/REPORT.md](../../fixtures/alpha_external_run_011b/REPORT.md)
 - Task class: `restore`
 - Failure owner: `product`
 - Reuse tomorrow: `no`
@@ -322,7 +322,7 @@ The purpose of this file is simple:
 
 ### Run 012
 
-- Report: [fixtures/alpha_external_run_012/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_012/REPORT.md)
+- Report: [fixtures/alpha_external_run_012/REPORT.md](../../fixtures/alpha_external_run_012/REPORT.md)
 - Task class: `handoff`
 - Failure owner: `harness`
 - Reuse tomorrow: `no`
@@ -342,7 +342,7 @@ The purpose of this file is simple:
 
 ### Run 012b
 
-- Report: [fixtures/alpha_external_run_012b/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_012b/REPORT.md)
+- Report: [fixtures/alpha_external_run_012b/REPORT.md](../../fixtures/alpha_external_run_012b/REPORT.md)
 - Task class: `handoff`
 - Failure owner: `harness`
 - Reuse tomorrow: `no`
@@ -362,7 +362,7 @@ The purpose of this file is simple:
 
 ### Run 013
 
-- Report: [fixtures/alpha_external_run_013/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_013/REPORT.md)
+- Report: [fixtures/alpha_external_run_013/REPORT.md](../../fixtures/alpha_external_run_013/REPORT.md)
 - Task class: `bugfix`
 - Failure owner: `none`
 - Reuse tomorrow: `yes`
@@ -382,7 +382,7 @@ The purpose of this file is simple:
 
 ### Run 014
 
-- Report: [fixtures/alpha_external_run_014/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014/REPORT.md)
+- Report: [fixtures/alpha_external_run_014/REPORT.md](../../fixtures/alpha_external_run_014/REPORT.md)
 - Task class: `restore`
 - Failure owner: `product`
 - Reuse tomorrow: `no`
@@ -403,7 +403,7 @@ The purpose of this file is simple:
 
 ### Run 014b
 
-- Report: [fixtures/alpha_external_run_014b/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014b/REPORT.md)
+- Report: [fixtures/alpha_external_run_014b/REPORT.md](../../fixtures/alpha_external_run_014b/REPORT.md)
 - Task class: `restore`
 - Failure owner: `operator`
 - Reuse tomorrow: `unclear`
@@ -423,7 +423,7 @@ The purpose of this file is simple:
 
 ### Run 014c
 
-- Report: [fixtures/alpha_external_run_014c/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014c/REPORT.md)
+- Report: [fixtures/alpha_external_run_014c/REPORT.md](../../fixtures/alpha_external_run_014c/REPORT.md)
 - Task class: `restore`
 - Failure owner: `product`
 - Reuse tomorrow: `no`
@@ -444,7 +444,7 @@ The purpose of this file is simple:
 
 ### Run 014d
 
-- Report: [fixtures/alpha_external_run_014d/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014d/REPORT.md)
+- Report: [fixtures/alpha_external_run_014d/REPORT.md](../../fixtures/alpha_external_run_014d/REPORT.md)
 - Task class: `restore`
 - Failure owner: `product`
 - Reuse tomorrow: `unclear`
@@ -465,7 +465,7 @@ The purpose of this file is simple:
 
 ### Run 014e
 
-- Report: [fixtures/alpha_external_run_014e/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_014e/REPORT.md)
+- Report: [fixtures/alpha_external_run_014e/REPORT.md](../../fixtures/alpha_external_run_014e/REPORT.md)
 - Task class: `restore`
 - Failure owner: `none`
 - Reuse tomorrow: `yes`
@@ -486,7 +486,7 @@ The purpose of this file is simple:
 
 ### Run 015
 
-- Report: [fixtures/alpha_external_run_015/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_015/REPORT.md)
+- Report: [fixtures/alpha_external_run_015/REPORT.md](../../fixtures/alpha_external_run_015/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `product`
 - Reuse tomorrow: `no`
@@ -507,7 +507,7 @@ The purpose of this file is simple:
 
 ### Run 016
 
-- Report: [fixtures/alpha_external_run_016/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_016/REPORT.md)
+- Report: [fixtures/alpha_external_run_016/REPORT.md](../../fixtures/alpha_external_run_016/REPORT.md)
 - Task class: `bugfix / proof_heavy`
 - Failure owner: `mixed`
 - Reuse tomorrow: `yes`
@@ -528,7 +528,7 @@ The purpose of this file is simple:
 
 ### Run 017
 
-- Report: [fixtures/alpha_external_run_017/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_017/REPORT.md)
+- Report: [fixtures/alpha_external_run_017/REPORT.md](../../fixtures/alpha_external_run_017/REPORT.md)
 - Task class: `bugfix`
 - Failure owner: `none`
 - Reuse tomorrow: `yes`
@@ -548,7 +548,7 @@ The purpose of this file is simple:
 
 ### Run 018
 
-- Report: [fixtures/alpha_external_run_018/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_018/REPORT.md)
+- Report: [fixtures/alpha_external_run_018/REPORT.md](../../fixtures/alpha_external_run_018/REPORT.md)
 - Task class: `handoff`
 - Failure owner: `none`
 - Reuse tomorrow: `yes`
@@ -569,7 +569,7 @@ The purpose of this file is simple:
 
 ### Run 019
 
-- Report: [fixtures/alpha_external_run_019/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019/REPORT.md)
+- Report: [fixtures/alpha_external_run_019/REPORT.md](../../fixtures/alpha_external_run_019/REPORT.md)
 - Task class: `orientation`
 - Failure owner: `mixed`
 - Reuse tomorrow: `unclear`
@@ -589,7 +589,7 @@ The purpose of this file is simple:
 
 ### Run 020
 
-- Report: [fixtures/alpha_external_run_020/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020/REPORT.md)
+- Report: [fixtures/alpha_external_run_020/REPORT.md](../../fixtures/alpha_external_run_020/REPORT.md)
 - Task class: `orientation`
 - Failure owner: `none`
 - Reuse tomorrow: `yes`
@@ -609,7 +609,7 @@ The purpose of this file is simple:
 
 ### Run 019b
 
-- Report: [fixtures/alpha_external_run_019b/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019b/REPORT.md)
+- Report: [fixtures/alpha_external_run_019b/REPORT.md](../../fixtures/alpha_external_run_019b/REPORT.md)
 - Task class: `orientation`
 - Failure owner: `mixed`
 - Reuse tomorrow: `unclear`
@@ -630,7 +630,7 @@ The purpose of this file is simple:
 
 ### Run 020b
 
-- Report: [fixtures/alpha_external_run_020b/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_020b/REPORT.md)
+- Report: [fixtures/alpha_external_run_020b/REPORT.md](../../fixtures/alpha_external_run_020b/REPORT.md)
 - Task class: `orientation`
 - Failure owner: `none`
 - Reuse tomorrow: `yes`
@@ -651,7 +651,7 @@ The purpose of this file is simple:
 
 ### Run 019c
 
-- Report: [fixtures/alpha_external_run_019c/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_019c/REPORT.md)
+- Report: [fixtures/alpha_external_run_019c/REPORT.md](../../fixtures/alpha_external_run_019c/REPORT.md)
 - Task class: `orientation`
 - Failure owner: `mixed`
 - Reuse tomorrow: `unclear`
@@ -672,7 +672,7 @@ The purpose of this file is simple:
 
 ### Run 021b
 
-- Report: [fixtures/alpha_external_run_021b/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021b/REPORT.md)
+- Report: [fixtures/alpha_external_run_021b/REPORT.md](../../fixtures/alpha_external_run_021b/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `harness`
 - Reuse tomorrow: `no`
@@ -693,7 +693,7 @@ The purpose of this file is simple:
 
 ### Run 021c
 
-- Report: [fixtures/alpha_external_run_021c/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021c/REPORT.md)
+- Report: [fixtures/alpha_external_run_021c/REPORT.md](../../fixtures/alpha_external_run_021c/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `none`
 - Reuse tomorrow: `unclear`
@@ -714,7 +714,7 @@ The purpose of this file is simple:
 
 ### Run 021d
 
-- Report: [fixtures/alpha_external_run_021d/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021d/REPORT.md)
+- Report: [fixtures/alpha_external_run_021d/REPORT.md](../../fixtures/alpha_external_run_021d/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `none`
 - Reuse tomorrow: `unclear`
@@ -735,7 +735,7 @@ The purpose of this file is simple:
 
 ### Run 021e
 
-- Report: [fixtures/alpha_external_run_021e/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_021e/REPORT.md)
+- Report: [fixtures/alpha_external_run_021e/REPORT.md](../../fixtures/alpha_external_run_021e/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `none`
 - Reuse tomorrow: `unclear`
@@ -756,7 +756,7 @@ The purpose of this file is simple:
 
 ### Run 022
 
-- Report: [fixtures/alpha_external_run_022/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_022/REPORT.md)
+- Report: [fixtures/alpha_external_run_022/REPORT.md](../../fixtures/alpha_external_run_022/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `none`
 - Reuse tomorrow: `unclear`
@@ -777,7 +777,7 @@ The purpose of this file is simple:
 
 ### Run 023
 
-- Report: [fixtures/alpha_external_run_023/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_023/REPORT.md)
+- Report: [fixtures/alpha_external_run_023/REPORT.md](../../fixtures/alpha_external_run_023/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `mixed`
 - Reuse tomorrow: `unclear`
@@ -799,7 +799,7 @@ The purpose of this file is simple:
 
 ### Run 024
 
-- Report: [fixtures/alpha_external_run_024/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_024/REPORT.md)
+- Report: [fixtures/alpha_external_run_024/REPORT.md](../../fixtures/alpha_external_run_024/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `mixed`
 - Reuse tomorrow: `unclear`
@@ -821,7 +821,7 @@ The purpose of this file is simple:
 
 ### Run 025
 
-- Report: [fixtures/alpha_external_run_025/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_025/REPORT.md)
+- Report: [fixtures/alpha_external_run_025/REPORT.md](../../fixtures/alpha_external_run_025/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `mixed`
 - Reuse tomorrow: `yes`
@@ -843,7 +843,7 @@ The purpose of this file is simple:
 
 ### Run 027
 
-- Report: [fixtures/alpha_external_run_027/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_027/REPORT.md)
+- Report: [fixtures/alpha_external_run_027/REPORT.md](../../fixtures/alpha_external_run_027/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `mixed`
 - Reuse tomorrow: `yes`
@@ -865,7 +865,7 @@ The purpose of this file is simple:
 
 ### Run 028b
 
-- Report: [fixtures/alpha_external_run_028b/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_028b/REPORT.md)
+- Report: [fixtures/alpha_external_run_028b/REPORT.md](../../fixtures/alpha_external_run_028b/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `mixed`
 - Reuse tomorrow: `yes`
@@ -886,7 +886,7 @@ The purpose of this file is simple:
 
 ### Run 029
 
-- Report: [fixtures/alpha_external_run_029/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_029/REPORT.md)
+- Report: [fixtures/alpha_external_run_029/REPORT.md](../../fixtures/alpha_external_run_029/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `mixed`
 - Reuse tomorrow: `yes`
@@ -907,7 +907,7 @@ The purpose of this file is simple:
 
 ### Run 030
 
-- Report: [fixtures/alpha_external_run_030/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_030/REPORT.md)
+- Report: [fixtures/alpha_external_run_030/REPORT.md](../../fixtures/alpha_external_run_030/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `mixed`
 - Reuse tomorrow: `yes`
@@ -928,7 +928,7 @@ The purpose of this file is simple:
 
 ### Run 031
 
-- Report: [fixtures/alpha_external_run_031/REPORT.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/alpha_external_run_031/REPORT.md)
+- Report: [fixtures/alpha_external_run_031/REPORT.md](../../fixtures/alpha_external_run_031/REPORT.md)
 - Task class: `trivial / additive_change`
 - Failure owner: `mixed`
 - Reuse tomorrow: `yes`
@@ -970,7 +970,7 @@ If we force the current ledger into one brutally practical sentence:
 
 Append new runs using:
 
-- [ALPHA_RUN_REPORT_TEMPLATE_002.md](/Users/usbdick/Documents/New%20project/synrail/docs/review/ALPHA_RUN_REPORT_TEMPLATE_002.md)
+- [ALPHA_RUN_REPORT_TEMPLATE_002.md](../../docs/review/ALPHA_RUN_REPORT_TEMPLATE_002.md)
 
 For each new run:
 

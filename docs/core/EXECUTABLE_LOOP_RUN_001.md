@@ -11,7 +11,8 @@ This document exists so the repo can point to one concrete internal proof run ra
 - run id: `EXECUTABLE_LOOP_RUN_001`
 - task class: `bounded_router_trigger_fix`
 - final-result source:
-  - `/Users/usbdick/Documents/New project/docs/context/runtime_artifacts/NODE2_IMAGE_TRIGGER_FIX_001_CAMPAIGN_RUN_012.json`
+  - internal archival runtime artifact from the original campaign run
+  - external reviewers should rely on the portable fixture set under `fixtures/executable_loop_run_001/`
 
 ## Artifacts
 

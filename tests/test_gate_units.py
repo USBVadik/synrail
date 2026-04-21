@@ -387,6 +387,21 @@ class TestApplyBundle(unittest.TestCase):
         self.assertEqual("PROOF_BUNDLE_PARTIAL", new_state["state"])
         self.assertEqual("MISSING_PROOF_SECTIONS", new_state["closure"]["blocking_reason"])
 
+    def test_partial_bundle_preserves_semantic_detail_for_later_handoff(self) -> None:
+        state = self._exec_state()
+        bundle = {
+            "status": "PARTIAL",
+            "missing_sections": ["readback"],
+            "final_result": {"status": "DONE", "semantically_sufficient": False},
+            "verification_corroboration": {"semantically_sufficient": False},
+            "artifact_identity": {"semantically_sufficient": True},
+            "cleanup_status": {"semantically_sufficient": True},
+        }
+        code, new_state, report = apply_bundle(state, bundle)
+        self.assertEqual(0, code)
+        self.assertFalse(new_state["proof_bundle"]["final_result"]["semantically_sufficient"])
+        self.assertFalse(new_state["proof_bundle"]["verification_corroboration"]["semantically_sufficient"])
+
 
 # ---------------------------------------------------------------------------
 # build_verdict tests (synrail_closure_v0)

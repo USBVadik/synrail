@@ -943,8 +943,29 @@ def is_default_workspace_artifact_root(root: Path, *, project_root: Path | None 
     return root.resolve() == default_workspace_artifact_root(project_root=project_root)
 
 
+def preferred_cli_executable(*, project_root: Path | None = None) -> str:
+    if shutil.which("synrail"):
+        return "synrail"
+    search_roots: list[Path] = []
+    if project_root is not None:
+        search_roots.append(project_root.resolve())
+    cwd = Path.cwd().resolve()
+    if cwd not in search_roots:
+        search_roots.append(cwd)
+    for base in search_roots:
+        candidate = base / ".venv" / "bin" / "synrail"
+        if candidate.exists() and candidate.is_file():
+            return display_path(candidate)
+    return "synrail"
+
+
+def plain_shell_command(*parts: str, project_root: Path | None = None) -> str:
+    command = [preferred_cli_executable(project_root=project_root), *parts]
+    return " ".join(shlex.quote(part) for part in command)
+
+
 def shell_command(root: Path | None, *parts: str, project_root: Path | None = None) -> str:
-    command = ["synrail", *parts]
+    command = [preferred_cli_executable(project_root=project_root), *parts]
     if root is not None and not is_default_workspace_artifact_root(root, project_root=project_root):
         command.extend(["--artifact-root", display_path(root)])
     return " ".join(shlex.quote(part) for part in command)
@@ -1478,6 +1499,12 @@ def print_thin_output_summary(output_file: Path) -> None:
         f"What it means: {payload.get('what_it_means', payload.get('diagnosis', ''))}",
         f"What to do next: {payload.get('what_to_do_next', payload.get('next_step', ''))}",
     ])
+    change_impact_focus = payload.get("change_impact_focus", "")
+    if change_impact_focus:
+        lines.append(change_impact_focus[:1].upper() + change_impact_focus[1:])
+    change_impact_scope = payload.get("change_impact_scope", "")
+    if change_impact_scope:
+        lines.append(change_impact_scope[:1].upper() + change_impact_scope[1:])
     focused_repair_summary = payload.get("focused_repair_summary", "")
     if focused_repair_summary:
         lines.append(f"Repair target: {focused_repair_summary}")
@@ -1555,7 +1582,7 @@ def print_init_summary(*, root: Path, state_file: Path) -> None:
     if profile.get("workspace_isolation_note", ""):
         lines.append("Workspace note: " + profile["workspace_isolation_note"])
     if profile.get("prefers_runtime_evidence", False):
-        lines.append("Runtime helper: synrail runtime-helper")
+        lines.append("Runtime helper: " + plain_shell_command("runtime-helper", project_root=Path.cwd().resolve()))
     print("\n".join(lines))
 
 
@@ -1566,21 +1593,19 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
     profile = load_project_profile(root) or {}
     lines = [
         "Controlled run started.",
-        "Do this now: make the bounded change, run local verification, then strengthen final_result.json first. Treat readback.txt and scenario_proof.txt as fallback-only surfaces and leave them untouched unless synrail check later names them or final_result.json still cannot carry the trust.",
+        "Do this now: make the bounded change, run local verification, then strengthen final_result.json first.",
         f"Artifact root: {display_path(root)}",
         f"Run id: {state.get('run_id', '')}",
         "Starter proof surface is ready for this run.",
         f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
-        "- optional fallback surfaces stay unmaterialized by default; if a later synrail check explicitly requires one, Synrail can prepare the needed fallback surface then.",
-        "Proof shape reminders:",
-        "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and a direct-observation diff_provenance record: changed_file, one concrete added_line or removed_line, one stable context_before or context_after anchor, plus verification_command and verification_result. Include diff_provenance.method when you can, although Synrail can infer direct_file_observation from a strong direct-observation record during a normal check.",
-        "- keep readback.txt and scenario_proof.txt untouched on the happy path; only use a fallback surface if a later synrail check explicitly asks for it, or if final_result.json still cannot carry strong structured verification.",
+        "- fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.",
+        "Need a canonical final_result shape? run " + plain_shell_command("final-result-template", project_root=project_root),
         "Then run: " + shell_command(root, "check", project_root=project_root),
     ]
     if profile.get("workspace_isolation_note", ""):
         lines.append("Workspace note: " + profile["workspace_isolation_note"])
     if profile.get("prefers_runtime_evidence", False):
-        lines.append("Runtime helper: synrail runtime-helper")
+        lines.append("Runtime helper: " + plain_shell_command("runtime-helper", project_root=project_root))
     print("\n".join(lines))
 
 
@@ -1593,12 +1618,10 @@ def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Pa
         "What happened: this artifact root still points at the current untouched run, so Synrail did not start a second one.",
         f"Artifact root: {display_path(root)}",
         f"Run id: {state.get('run_id', '')}",
-        "Continue this run by making the bounded change, running local verification, and strengthening final_result.json first. Treat readback.txt and scenario_proof.txt as fallback-only surfaces and leave them untouched unless synrail check later names them or final_result.json still cannot carry the trust.",
+        "Continue this run by making the bounded change, running local verification, and strengthening final_result.json first.",
         f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
-        "- optional fallback surfaces stay unmaterialized by default; if a later synrail check explicitly requires one, Synrail can prepare the needed fallback surface then.",
-        "Proof shape reminders:",
-        "- final_result.json: use a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op), then focus on summary, modified_files, and a direct-observation diff_provenance record: changed_file, one concrete added_line or removed_line, one stable context_before or context_after anchor, plus verification_command and verification_result. Include diff_provenance.method when you can, although Synrail can infer direct_file_observation from a strong direct-observation record during a normal check.",
-        "- keep readback.txt and scenario_proof.txt untouched on the happy path; only use a fallback surface if a later synrail check explicitly asks for it, or if final_result.json still cannot carry strong structured verification.",
+        "- fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.",
+        "Need a canonical final_result shape? run " + plain_shell_command("final-result-template", project_root=project_root),
         "Next command: " + shell_command(root, "check", project_root=project_root),
     ]
     print("\n".join(lines))
@@ -1694,7 +1717,7 @@ def build_workspace_status(root: Path, *, project_root: Path, state_path: Path |
         "next_step": human_next_step,
         "next_step_raw": next_step,
         "start_command": shell_command(root, "start", "Describe the bounded local change.", project_root=project_root),
-        "help_command": "synrail --help",
+        "help_command": plain_shell_command("--help", project_root=project_root),
     }
 
 
@@ -2376,7 +2399,11 @@ def cmd_start(args: argparse.Namespace) -> int:
         else:
             print("Synrail could not start a controlled run yet.")
             print("What is missing: the original task request for this run.")
-            print('What to do next: run `synrail start "Describe the bounded local change."` or pass --task-identity, then retry.')
+            print(
+                "What to do next: run `"
+                + plain_shell_command("start", "Describe the bounded local change.", project_root=project_root)
+                + "` or pass --task-identity, then retry."
+            )
         return 2
 
     existing_proof = existing_preferred_proof_artifacts(root)
@@ -3059,6 +3086,10 @@ def cmd_thin_output(args: argparse.Namespace) -> int:
         existing = maybe_existing_alpha_file(root, "consistency_recovery")
         if existing:
             args.consistency_recovery_file = existing
+    if root and not getattr(args, "refresh_file", None):
+        existing = maybe_existing_alpha_file(root, "refresh")
+        if existing:
+            args.refresh_file = existing
     if root and not getattr(args, "checkpoint_record_file", None):
         discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
         if discovered:
@@ -3074,6 +3105,7 @@ def cmd_thin_output(args: argparse.Namespace) -> int:
         ("--doctor-file", args.doctor_file),
         ("--checkpoint-record-file", args.checkpoint_record_file),
         ("--consistency-recovery-file", args.consistency_recovery_file),
+        ("--refresh-file", getattr(args, "refresh_file", None)),
     ]:
         if value:
             forwarded.extend([flag, value])
@@ -3153,6 +3185,9 @@ def cmd_generate_prompt(args: argparse.Namespace) -> int:
 
 def cmd_check(args: argparse.Namespace) -> int:
     root = alpha_root_from_args(args, ensure=True)
+    project_profile = load_project_profile(root) or {} if root else {}
+    project_root_text = (project_profile.get("project_root", "") or "").strip()
+    project_root = Path(project_root_text).resolve() if project_root_text else Path.cwd().resolve()
     if root and not getattr(args, "state_file", None):
         args.state_file = str(alpha_file(root, "state"))
     if root and not getattr(args, "report_file", None):
@@ -3292,16 +3327,18 @@ def cmd_check(args: argparse.Namespace) -> int:
                     proof_request = load_bootstrap_json(proof_request_file)
                     preferred = proof_request.get("preferred_artifacts", {})
                     print("What is missing: Synrail is still waiting for explicit proof artifacts and local verification evidence for this controlled run.")
-                    print("What to do next: make the bounded change, run local verification, then strengthen final_result.json first and rerun synrail check. Treat readback.txt and scenario_proof.txt as fallback-only surfaces and do not touch them unless synrail check later names them, or final_result.json still cannot carry strong structured verification.")
+                    print(
+                        "What to do next: make the bounded change, run local verification, then strengthen final_result.json first and rerun "
+                        + plain_shell_command("check", project_root=project_root)
+                        + "."
+                    )
                     if preferred.get("final_result", ""):
                         print(f"- final_result: {preferred['final_result']}")
-                    print("- fallback note: readback.txt and scenario_proof.txt stay hidden by default; if a later synrail check explicitly requires one, Synrail can prepare the needed fallback surface then.")
-                    print("Proof shape reminders:")
-                    print("- final_result.json should carry a trust-bearing status (PROVEN for an evidenced edit, ALREADY_SATISFIED for a truthful no-op) plus a real patch or explicit diff_provenance method, one exact changed line, one stable context anchor, verification_command, and verification_result.")
-                    print("Need a canonical final_result shape? run synrail final-result-template")
+                    print("- fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.")
+                    print("Need a canonical final_result shape? run " + plain_shell_command("final-result-template", project_root=project_root))
                     profile = load_project_profile(root) or {}
                     if profile.get("prefers_runtime_evidence", False):
-                        print("Need a small UI/runtime verification path? run synrail runtime-helper")
+                        print("Need a small UI/runtime verification path? run " + plain_shell_command("runtime-helper", project_root=project_root))
                 else:
                     profile = load_project_profile(root)
                     candidates = (profile or {}).get("final_result_candidates", [])
@@ -4977,6 +5014,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_thin_output.add_argument("--output")
     p_thin_output.add_argument("--repair-packet-file")
     p_thin_output.add_argument("--doctor-file")
+    p_thin_output.add_argument("--refresh-file")
     p_thin_output.add_argument("--checkpoint-id")
     p_thin_output.add_argument("--checkpoint-record-file")
     p_thin_output.add_argument("--consistency-recovery-file")

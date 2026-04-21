@@ -30,7 +30,9 @@
         "trust_bearing_artifact_count": 1,
         "visible_surface_count": 1,
         "skippable_visible_surface_count": 0,
-        "notes": "Tiny bounded text/doc change on a trusted local file."
+        "notes": "Tiny bounded text/doc change on a trusted local file.",
+        "operator_visible_action_count": 1,
+        "got_lost_moment_count": 0
       },
       "synrail": {
         "schema_version": "comparison_input_v1",
@@ -54,9 +56,11 @@
         "artifact_completeness_percent": 50,
         "mandatory_mental_steps": 2,
         "trust_bearing_artifact_count": 2,
-        "visible_surface_count": 2,
-        "skippable_visible_surface_count": 1,
-        "notes": "Cheapened path keeps optional prose skippable, but still adds one extra guided step."
+        "visible_surface_count": 1,
+        "skippable_visible_surface_count": 0,
+        "notes": "Cheapened path keeps the default contour on final_result first and no longer adds an extra visible fallback surface, but still adds one extra guided step.",
+        "operator_visible_action_count": 2,
+        "got_lost_moment_count": 0
       }
     },
     {
@@ -86,7 +90,9 @@
         "trust_bearing_artifact_count": 1,
         "visible_surface_count": 1,
         "skippable_visible_surface_count": 0,
-        "notes": "Simple additive text fix with one plausible weak-check ambiguity."
+        "notes": "Simple additive text fix with one plausible weak-check ambiguity.",
+        "operator_visible_action_count": 1,
+        "got_lost_moment_count": 0
       },
       "synrail": {
         "schema_version": "comparison_input_v1",
@@ -110,9 +116,11 @@
         "artifact_completeness_percent": 70,
         "mandatory_mental_steps": 2,
         "trust_bearing_artifact_count": 2,
-        "visible_surface_count": 2,
-        "skippable_visible_surface_count": 1,
-        "notes": "Runtime-backed proof still narrows ambiguity here, and on-demand fallback materialization removes one manual intervention on the non-green path."
+        "visible_surface_count": 1,
+        "skippable_visible_surface_count": 0,
+        "notes": "Runtime-backed proof still narrows ambiguity here, and the default non-green path now keeps the first bounded fix inside check instead of adding an extra visible repair surface.",
+        "operator_visible_action_count": 2,
+        "got_lost_moment_count": 0
       }
     },
     {
@@ -142,7 +150,9 @@
         "trust_bearing_artifact_count": 1,
         "visible_surface_count": 1,
         "skippable_visible_surface_count": 0,
-        "notes": "Low-risk comment-only refresh."
+        "notes": "Low-risk comment-only refresh.",
+        "operator_visible_action_count": 1,
+        "got_lost_moment_count": 0
       },
       "synrail": {
         "schema_version": "comparison_input_v1",
@@ -168,7 +178,9 @@
         "trust_bearing_artifact_count": 2,
         "visible_surface_count": 1,
         "skippable_visible_surface_count": 0,
-        "notes": "The path is still stricter, but this low-risk contour does not earn the extra control yet."
+        "notes": "The path is still stricter, but this low-risk contour does not earn the extra control yet.",
+        "operator_visible_action_count": 2,
+        "got_lost_moment_count": 0
       }
     },
     {
@@ -198,7 +210,9 @@
         "trust_bearing_artifact_count": 1,
         "visible_surface_count": 1,
         "skippable_visible_surface_count": 0,
-        "notes": "Small code insertion with one plausible weak verification outcome."
+        "notes": "Small code insertion with one plausible weak verification outcome.",
+        "operator_visible_action_count": 1,
+        "got_lost_moment_count": 0
       },
       "synrail": {
         "schema_version": "comparison_input_v1",
@@ -222,9 +236,11 @@
         "artifact_completeness_percent": 73,
         "mandatory_mental_steps": 3,
         "trust_bearing_artifact_count": 2,
-        "visible_surface_count": 2,
-        "skippable_visible_surface_count": 1,
-        "notes": "This is still not a clean win, but the runtime-backed path is plausibly near baseline rather than wildly heavier."
+        "visible_surface_count": 1,
+        "skippable_visible_surface_count": 0,
+        "notes": "This is still not a clean win, but the check-first default contour removes the extra visible repair-step surface while staying plausibly near baseline rather than wildly heavier.",
+        "operator_visible_action_count": 3,
+        "got_lost_moment_count": 1
       }
     },
     {
@@ -254,7 +270,9 @@
         "trust_bearing_artifact_count": 1,
         "visible_surface_count": 1,
         "skippable_visible_surface_count": 0,
-        "notes": "Short bounded UI copy update."
+        "notes": "Short bounded UI copy update.",
+        "operator_visible_action_count": 1,
+        "got_lost_moment_count": 0
       },
       "synrail": {
         "schema_version": "comparison_input_v1",
@@ -278,9 +296,11 @@
         "artifact_completeness_percent": 70,
         "mandatory_mental_steps": 2,
         "trust_bearing_artifact_count": 1,
-        "visible_surface_count": 2,
-        "skippable_visible_surface_count": 1,
-        "notes": "This is the closest cheapened contour in the initial pack: one extra mental step, no extra trust-bearing artifact, optional prose still skippable."
+        "visible_surface_count": 1,
+        "skippable_visible_surface_count": 0,
+        "notes": "This is the closest cheapened contour in the initial pack: one extra mental step, no extra trust-bearing artifact, and no extra visible fallback surface on the default path.",
+        "operator_visible_action_count": 1,
+        "got_lost_moment_count": 0
       }
     }
   ]

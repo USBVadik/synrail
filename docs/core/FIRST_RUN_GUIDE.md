@@ -18,6 +18,14 @@ python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd
 
 This installs the current Synrail CLI into `.venv` and immediately creates missing `AGENTS.md` / `GEMINI.md` / `CLAUDE.md` files in the repo root or appends a managed Synrail block to existing ones. If you later rerun with `--force`, Synrail first writes a timestamped `.synrail.bak.*` backup of the existing policy file before replacing it. It is optional for humans, but useful when you want the local agent workflow to start in controlled mode without adding Synrail instructions to every prompt.
 
+If `synrail` is not on your `PATH` after install, use the local wrapper from this checkout:
+
+```bash
+./.venv/bin/synrail
+```
+
+The rest of this guide still uses `synrail` for brevity.
+
 ## Quick Status
 
 Run this first in the repo:
@@ -102,7 +110,7 @@ synrail session-export --artifact-root .synrail
 ```
 
 If a later deploy or restart script must cause a side effect, do not call it raw.
-Use the deploy-guard pattern described in [DEPLOY_GUARD_INTEGRATION_001.md](/Users/usbdick/Documents/New%20project/synrail/docs/core/DEPLOY_GUARD_INTEGRATION_001.md).
+Use the deploy-guard pattern described in [DEPLOY_GUARD_INTEGRATION_001.md](./DEPLOY_GUARD_INTEGRATION_001.md).
 
 ## If something breaks
 

@@ -13,8 +13,6 @@ REQUIRED_SECTION_NAMES = [
     "final_result",
     "modified_files",
     "diff_provenance",
-    "readback",
-    "scenario_proof",
     "artifact_identity",
     "cleanup_status",
 ]

@@ -67,14 +67,14 @@ It also preserves:
 
 Fixture:
 
-- [continuation_autonomy_run_001](/Users/usbdick/Documents/New%20project/synrail/fixtures/continuation_autonomy_run_001)
+- [continuation_autonomy_run_001](../../fixtures/continuation_autonomy_run_001)
 
 Key artifacts:
 
-- [repair_packet.json](/Users/usbdick/Documents/New%20project/synrail/fixtures/continuation_autonomy_run_001/repair_packet.json)
-- [session_export.json](/Users/usbdick/Documents/New%20project/synrail/fixtures/continuation_autonomy_run_001/session_export.json)
-- [session_replay.json](/Users/usbdick/Documents/New%20project/synrail/fixtures/continuation_autonomy_run_001/session_replay.json)
-- [second_operator.json](/Users/usbdick/Documents/New%20project/synrail/fixtures/continuation_autonomy_run_001/second_operator.json)
+- [repair_packet.json](../../fixtures/continuation_autonomy_run_001/repair_packet.json)
+- [session_export.json](../../fixtures/continuation_autonomy_run_001/session_export.json)
+- [session_replay.json](../../fixtures/continuation_autonomy_run_001/session_replay.json)
+- [second_operator.json](../../fixtures/continuation_autonomy_run_001/second_operator.json)
 
 Key results:
 

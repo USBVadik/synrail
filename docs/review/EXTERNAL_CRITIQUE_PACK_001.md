@@ -79,7 +79,8 @@ Deep technical review path:
 - measured doctor coverage gate
 - executable continuation arbiter
 - regression tests for truth-critical failures
-- a compact external tester pack
+- a compact external tester pack plus claim-validation pack
+- refresh-driven stale-obligation guidance in the default non-green shell
 
 But it is still intentionally narrow:
 
@@ -95,11 +96,10 @@ We do not want polite feedback.
 
 We want pressure on:
 
-1. whether the truth surfaces are actually strict enough
-2. whether the kernel still self-validates in hidden ways
-3. whether the first alpha contour still has unnecessary ceremony
-4. whether the default shell says something useful or just translates internal jargon
-5. whether the system wins against simpler substitutes in enough real situations
+1. whether the everyday lane beats simpler substitutes or just adds control mass
+2. which proof surface still feels self-issued or too author-shaped to trust
+3. whether restore, re-entry, or handoff value is concrete enough to justify the ceremony
+4. what you would cut first if that value is still too weak
 
 ## Current runnable review surfaces
 
@@ -110,6 +110,7 @@ Start here for live runnable and fixture-backed review:
 - [../core/ALPHA_TELEMETRY_001.md](../core/ALPHA_TELEMETRY_001.md)
 - [../../tests/test_truth_regressions.py](../../tests/test_truth_regressions.py)
 - [../../tests/test_alpha_test_pack_smoke.py](../../tests/test_alpha_test_pack_smoke.py)
+- [../../tests/test_claim_validation_pack.py](../../tests/test_claim_validation_pack.py)
 
 ## Recommended review commands
 
@@ -131,10 +132,16 @@ Run the current alpha tester-pack smoke only:
 python3 -m unittest tests.test_alpha_test_pack_smoke -v
 ```
 
+Run the current claim-validation pack:
+
+```bash
+python3 -m unittest tests.test_claim_validation_pack -v
+```
+
 ## Questions we want answered
 
-1. What part of the kernel still looks strict by form but weak by substance?
-2. Where would you expect false accept or false reject to still leak through?
-3. Which runtime artifact is still too self-issued or too hard to trust?
-4. Which part of the alpha lane still feels like operator ceremony instead of workflow?
-5. If you were going to cut scope harder before broader alpha, what would you freeze or remove?
+1. Which step in the everyday lane feels least worth its weight?
+2. Which runtime artifact still feels self-issued or too hard to trust?
+3. Where does the shell still ask for confidence the current proof does not earn?
+4. In restore, re-entry, or handoff, what concrete value does `Synrail` create over a simpler substitute?
+5. If that value is still weak, what would you freeze or remove before broader alpha?

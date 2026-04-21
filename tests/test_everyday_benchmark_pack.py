@@ -50,13 +50,24 @@ class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
         self.assertEqual(4, cost_record["verdict_counts"]["BASELINE_GOOD_ENOUGH"])
         self.assertEqual(0, cost_record["verdict_counts"]["UNCLEAR"])
         self.assertEqual(1, cost_record["aggregate_deltas"]["avg_operator_minutes_added"])
+        self.assertEqual(0, cost_record["aggregate_deltas"]["avg_checks_per_accepted_closure_added"])
         self.assertEqual(1, cost_record["aggregate_deltas"]["avg_mandatory_mental_steps_added"])
         self.assertEqual(0, cost_record["aggregate_deltas"]["avg_required_visible_surfaces_added"])
-        self.assertEqual(1, cost_record["aggregate_deltas"]["avg_skippable_visible_surfaces_added"])
+        self.assertEqual(0, cost_record["aggregate_deltas"]["avg_skippable_visible_surfaces_added"])
+        self.assertEqual(1, cost_record["aggregate_deltas"]["avg_operator_visible_actions_added"])
+        self.assertEqual(0, cost_record["aggregate_deltas"]["avg_got_lost_moments_added"])
+        self.assertEqual(2, cost_record["aggregate_deltas"]["avg_kernel_control_mass_added"])
+        self.assertEqual(1, cost_record["aggregate_deltas"]["avg_behavioral_control_tax_added"])
         self.assertEqual(29, cost_record["aggregate_deltas"]["avg_artifact_completeness_percent_gain"])
         self.assertEqual(2, cost_record["aggregate_deltas"]["avg_fixed_control_mass_added"])
+        self.assertEqual(3, cost_record["aggregate_deltas"]["avg_total_control_burden_added"])
         self.assertEqual("EVERYDAY_LOCAL_003", cost_record["reading"]["clearest_overhead_path"])
+        self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_operator_visible_actions_added"]["scenario_id"])
+        self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_got_lost_moments_added"]["scenario_id"])
+        self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_kernel_control_mass_added"]["scenario_id"])
+        self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_behavioral_control_tax_added"]["scenario_id"])
         self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_fixed_control_mass_added"]["scenario_id"])
+        self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_total_control_burden_added"]["scenario_id"])
         self.assertEqual("EVERYDAY_LOCAL_005", cost_record["reading"]["strongest_justified_path"])
 
     def test_pack_contains_one_repeatable_low_drag_winner(self) -> None:
@@ -65,7 +76,7 @@ class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
         near_zero_drag = [
             record for record in records
             if record["economics_summary"]["operator_minutes_added"] <= 1
-            and record["economics_summary"]["fixed_control_mass_added"] <= 1
+            and record["economics_summary"]["total_control_burden_added"] <= 1
         ]
 
         self.assertEqual(1, len(near_zero_drag))

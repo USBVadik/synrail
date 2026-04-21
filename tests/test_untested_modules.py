@@ -344,6 +344,23 @@ class TestBuildArtifactQualityHints(unittest.TestCase):
         self.assertEqual(1, len(supporting))
         self.assertIn("readback", supporting[0]["mapped_inputs"])
 
+    def test_missing_readback_with_weak_final_result_also_produces_final_result_hint(self) -> None:
+        state = _handoff_state(
+            state_name="PROOF_BUNDLE_PARTIAL",
+            proof_status="PARTIAL",
+            closure_reason="MISSING_PROOF_SECTIONS",
+        )
+        state["proof_bundle"]["missing_sections"] = ["readback"]
+        state["proof_bundle"]["final_result"] = {"semantically_sufficient": False}
+        state["proof_bundle"]["verification_corroboration"] = {"semantically_sufficient": False}
+        hints = build_artifact_quality_hints(state)
+        final_result = [h for h in hints if h["artifact_id"] == "final_result_artifact"]
+        supporting = [h for h in hints if h["artifact_id"] == "supporting_proof_artifacts"]
+        self.assertEqual(1, len(final_result))
+        self.assertEqual(1, len(supporting))
+        self.assertIn("final_result_status_record", final_result[0]["still_stale_parts"])
+        self.assertIn("diff_provenance_record", final_result[0]["still_stale_parts"])
+
     def test_recovery_pending_produces_recovery_hint(self) -> None:
         state = _handoff_state(
             state_name="RECOVERY_PENDING",
@@ -429,6 +446,30 @@ class TestBuildRepairPolicy(unittest.TestCase):
         self.assertEqual("repair_final_result_artifact", policy["next_step_id"])
         self.assertEqual("READY_NOW", policy["ordered_steps"][0]["status"])
         self.assertEqual(["final_result"], policy["ordered_steps"][0]["required_inputs"])
+
+    def test_partial_proof_with_supporting_artifacts_still_promotes_final_result_repair(self) -> None:
+        resumability = {
+            "status": "REPAIRABLE",
+            "recommended_repair_order": ["complete_missing_proof_sections", "rebuild_proof_bundle", "rerun_closure"],
+            "active_pressures": ["PARTIAL_PROOF"],
+        }
+        hints = [
+            {
+                "artifact_id": "final_result_artifact",
+                "repair_step": "repair_final_result_artifact",
+                "mapped_inputs": ["final_result"],
+            },
+            {
+                "artifact_id": "supporting_proof_artifacts",
+                "repair_step": "complete_missing_proof_sections",
+                "mapped_inputs": ["readback", "scenario_proof"],
+            },
+        ]
+        policy = build_repair_policy(resumability, hints)
+        self.assertEqual("repair_final_result_artifact", policy["next_step_id"])
+        self.assertEqual("repair_final_result_artifact", policy["ready_now_step_ids"][0])
+        self.assertEqual(["final_result"], policy["ordered_steps"][0]["required_inputs"])
+        self.assertEqual("complete_missing_proof_sections", policy["ordered_steps"][1]["step_id"])
 
 
 class TestBuildRequiredInputIds(unittest.TestCase):
@@ -1089,6 +1130,7 @@ class TestThinOutputBuildRecord(unittest.TestCase):
             doctor=None,
             checkpoint=None,
             recovery=None,
+            refresh=None,
         )
         self.assertIn(
             "diff_provenance: prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record",
@@ -1102,6 +1144,54 @@ class TestThinOutputBuildRecord(unittest.TestCase):
             "scenario_proof: record a scenario-proof with a labeled Command and Observed or Result line, plus explicit pass/fail \u2014 do not just restate the task",
             record["thin_section_guidance"],
         )
+
+    def test_refresh_change_impact_narrows_doctor_guidance(self) -> None:
+        state = _handoff_state(state_name="DOCTOR_BLOCKED", doctor_status="FAIL", proof_status="COMPLETE", closure_reason="DOCTOR_NOT_GREEN")
+        report = {"reason": "DOCTOR_NOT_GREEN", "result": "NON_GREEN", "next_safe_step": "repair readiness"}
+        refresh = {
+            "run_id": "R1",
+            "invalidations": ["closure_invalidated_by_doctor"],
+            "dominant_invalidation": "closure_invalidated_by_doctor",
+            "next_safe_step": "run doctor and clear blocking failure classes",
+        }
+        record = build_thin_output_record(
+            state=state,
+            report=report,
+            mode="default",
+            repair_packet=None,
+            doctor={"blocking_failure_classes": ["helper-integrity unknown"]},
+            checkpoint=None,
+            recovery=None,
+            refresh=refresh,
+        )
+        self.assertEqual("A refresh invalidated closure because readiness became stale.", record["summary"])
+        self.assertEqual("Repair only readiness, then rerun synrail check.", record["what_to_do_next"])
+        self.assertEqual("Repair only readiness, then rerun synrail check.", record["action_now"])
+        self.assertEqual("refresh change impact: closure invalidated by doctor", record["change_impact_focus"])
+        self.assertEqual("applicable invalidations: closure invalidated by doctor", record["change_impact_scope"])
+        self.assertEqual("run doctor and clear blocking failure classes", record["next_step"])
+
+    def test_refresh_change_impact_appears_in_dev_technical_lines(self) -> None:
+        state = _handoff_state(state_name="PROOF_BUNDLE_STRUCTURALLY_COMPLETE", doctor_status="PASS", proof_status="STRUCTURALLY_COMPLETE", closure_reason="SEMANTIC_PROOF_INSUFFICIENT")
+        report = {"reason": "SEMANTIC_PROOF_INSUFFICIENT", "result": "NON_GREEN", "next_safe_step": "strengthen the semantic proof evidence before trusting closure"}
+        refresh = {
+            "run_id": "R1",
+            "invalidations": ["closure_invalidated_by_semantic_bundle", "closure_invalidated_by_recovery"],
+            "dominant_invalidation": "closure_invalidated_by_semantic_bundle",
+            "next_safe_step": "strengthen the semantic proof evidence before trusting closure",
+        }
+        record = build_thin_output_record(
+            state=state,
+            report=report,
+            mode="dev",
+            repair_packet=None,
+            doctor=None,
+            checkpoint=None,
+            recovery=None,
+            refresh=refresh,
+        )
+        self.assertIn("dominant_invalidation=closure_invalidated_by_semantic_bundle", record["technical_lines"])
+        self.assertIn("invalidations=closure_invalidated_by_semantic_bundle,closure_invalidated_by_recovery", record["technical_lines"])
 
 
 class TestCheckpointRestoreAvailable(unittest.TestCase):

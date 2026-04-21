@@ -147,8 +147,9 @@ It can perform:
 4. spine orchestration
 5. bundle evaluation
 6. closure evaluation
-7. thin output rendering
-8. compact bounded repair summary when non-green
+7. refresh invalidation and recovery reconciliation when refresh input is present
+8. thin output rendering, including stale-obligation guidance when refresh invalidation matches the active run
+9. compact bounded repair summary when non-green
 
 Main outputs under the artifact root typically include:
 
@@ -157,6 +158,7 @@ Main outputs under the artifact root typically include:
 - `doctor.json`
 - `bundle.json`
 - `closure.json`
+- `refresh.json`
 - `thin_output.json`
 - `prompt.json` when repair-step materializes a bounded instruction
 - `repair_packet.json`
@@ -335,12 +337,13 @@ File:
 - `tests/test_alpha_test_pack_smoke.py`
 - `tests/test_claim_validation_pack.py`
 
-Covers current outside-facing first-run contour plus one legacy helper surface:
+Covers the current outside-facing first-run contour plus bounded helper and review surfaces:
 
-- `init`
+- `start`
 - `check`
 - `repair-step`
 - `telemetry export`
+- `bug-packet`
 
 The companion claim-validation pack now also checks that:
 

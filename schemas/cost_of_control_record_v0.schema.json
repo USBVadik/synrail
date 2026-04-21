@@ -59,13 +59,19 @@
         "avg_repair_cycles_added",
         "avg_invalidation_count_added",
         "avg_closure_latency_minutes_added",
+        "avg_checks_per_accepted_closure_added",
         "avg_false_green_exposure_reduced",
         "avg_artifact_completeness_percent_gain",
         "avg_mandatory_mental_steps_added",
         "avg_trust_bearing_artifacts_added",
         "avg_required_visible_surfaces_added",
         "avg_skippable_visible_surfaces_added",
-        "avg_fixed_control_mass_added"
+        "avg_operator_visible_actions_added",
+        "avg_got_lost_moments_added",
+        "avg_kernel_control_mass_added",
+        "avg_behavioral_control_tax_added",
+        "avg_fixed_control_mass_added",
+        "avg_total_control_burden_added"
       ],
       "properties": {
         "avg_operator_minutes_added": {"type": "integer"},
@@ -73,13 +79,19 @@
         "avg_repair_cycles_added": {"type": "integer"},
         "avg_invalidation_count_added": {"type": "integer"},
         "avg_closure_latency_minutes_added": {"type": "integer"},
+        "avg_checks_per_accepted_closure_added": {"type": "integer"},
         "avg_false_green_exposure_reduced": {"type": "integer"},
         "avg_artifact_completeness_percent_gain": {"type": "integer"},
         "avg_mandatory_mental_steps_added": {"type": "integer"},
         "avg_trust_bearing_artifacts_added": {"type": "integer"},
         "avg_required_visible_surfaces_added": {"type": "integer"},
         "avg_skippable_visible_surfaces_added": {"type": "integer"},
-        "avg_fixed_control_mass_added": {"type": "integer"}
+        "avg_operator_visible_actions_added": {"type": "integer"},
+        "avg_got_lost_moments_added": {"type": "integer"},
+        "avg_kernel_control_mass_added": {"type": "integer"},
+        "avg_behavioral_control_tax_added": {"type": "integer"},
+        "avg_fixed_control_mass_added": {"type": "integer"},
+        "avg_total_control_burden_added": {"type": "integer"}
       }
     },
     "hotspots": {
@@ -88,9 +100,15 @@
       "required": [
         "highest_operator_minutes_added",
         "highest_closure_latency_minutes_added",
+        "highest_checks_per_accepted_closure_added",
         "highest_false_green_exposure_reduced",
         "highest_artifact_completeness_percent_gain",
-        "highest_fixed_control_mass_added"
+        "highest_operator_visible_actions_added",
+        "highest_got_lost_moments_added",
+        "highest_kernel_control_mass_added",
+        "highest_behavioral_control_tax_added",
+        "highest_fixed_control_mass_added",
+        "highest_total_control_burden_added"
       ],
       "properties": {
         "highest_operator_minutes_added": {
@@ -104,6 +122,16 @@
           }
         },
         "highest_closure_latency_minutes_added": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scenario_id", "path", "value"],
+          "properties": {
+            "scenario_id": {"type": "string"},
+            "path": {"type": "string"},
+            "value": {"type": "integer"}
+          }
+        },
+        "highest_checks_per_accepted_closure_added": {
           "type": "object",
           "additionalProperties": false,
           "required": ["scenario_id", "path", "value"],
@@ -133,7 +161,57 @@
             "value": {"type": "integer"}
           }
         },
+        "highest_operator_visible_actions_added": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scenario_id", "path", "value"],
+          "properties": {
+            "scenario_id": {"type": "string"},
+            "path": {"type": "string"},
+            "value": {"type": "integer"}
+          }
+        },
+        "highest_got_lost_moments_added": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scenario_id", "path", "value"],
+          "properties": {
+            "scenario_id": {"type": "string"},
+            "path": {"type": "string"},
+            "value": {"type": "integer"}
+          }
+        },
+        "highest_kernel_control_mass_added": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scenario_id", "path", "value"],
+          "properties": {
+            "scenario_id": {"type": "string"},
+            "path": {"type": "string"},
+            "value": {"type": "integer"}
+          }
+        },
+        "highest_behavioral_control_tax_added": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scenario_id", "path", "value"],
+          "properties": {
+            "scenario_id": {"type": "string"},
+            "path": {"type": "string"},
+            "value": {"type": "integer"}
+          }
+        },
         "highest_fixed_control_mass_added": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scenario_id", "path", "value"],
+          "properties": {
+            "scenario_id": {"type": "string"},
+            "path": {"type": "string"},
+            "value": {"type": "integer"}
+          }
+        },
+        "highest_total_control_burden_added": {
           "type": "object",
           "additionalProperties": false,
           "required": ["scenario_id", "path", "value"],

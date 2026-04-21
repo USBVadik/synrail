@@ -952,6 +952,10 @@ def apply_bundle(state: dict, bundle: dict) -> tuple[int, dict, dict | None]:
     state["proof_bundle"]["semantic_status"] = bundle.get("semantic_status", "")
     state["proof_bundle"]["semantically_insufficient_sections"] = list(bundle.get("semantically_insufficient_sections", []))
     state["proof_bundle"]["semantic_next_safe_step"] = bundle.get("semantic_next_safe_step", "")
+    state["proof_bundle"]["final_result"] = dict(bundle.get("final_result", {}))
+    state["proof_bundle"]["verification_corroboration"] = dict(bundle.get("verification_corroboration", {}))
+    state["proof_bundle"]["artifact_identity"] = dict(bundle.get("artifact_identity", {}))
+    state["proof_bundle"]["cleanup_status"] = dict(bundle.get("cleanup_status", {}))
 
     if bundle.get("status") == "COMPLETE":
         return transition(state, "PROOF_BUNDLE_COMPLETE")
@@ -1085,7 +1089,10 @@ def apply_closure(state: dict, verdict: dict) -> tuple[int, dict, dict | None]:
         return 0, state, None
 
     if verdict["blocking_reason"] == "MISSING_PROOF_SECTIONS":
-        state["state"] = "PROOF_BUNDLE_PARTIAL"
+        if state["proof_bundle"].get("semantic_status") == "INSUFFICIENT" or state["proof_bundle"].get("semantically_insufficient_sections"):
+            state["state"] = "PROOF_BUNDLE_STRUCTURALLY_COMPLETE"
+        else:
+            state["state"] = "PROOF_BUNDLE_PARTIAL"
         return 0, state, None
 
     if state["proof_bundle"]["status"] == "COMPLETE":

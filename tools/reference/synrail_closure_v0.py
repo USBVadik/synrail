@@ -172,6 +172,10 @@ def apply_verdict_to_state(state: dict, bundle: dict, verdict: dict) -> dict:
     state["proof_bundle"]["missing_sections"] = list(bundle.get("missing_sections", []))
     state["proof_bundle"]["semantically_insufficient_sections"] = list(bundle.get("semantically_insufficient_sections", []))
     state["proof_bundle"]["semantic_next_safe_step"] = bundle.get("semantic_next_safe_step", "")
+    state["proof_bundle"]["final_result"] = dict(bundle.get("final_result", {}))
+    state["proof_bundle"]["verification_corroboration"] = dict(bundle.get("verification_corroboration", {}))
+    state["proof_bundle"]["artifact_identity"] = dict(bundle.get("artifact_identity", {}))
+    state["proof_bundle"]["cleanup_status"] = dict(bundle.get("cleanup_status", {}))
     state["closure"]["status"] = verdict["closure_status"]
     state["closure"]["blocking_reason"] = verdict["blocking_reason"]
     state["closure"]["next_allowed_transition"] = verdict["next_allowed_transition"]

@@ -857,8 +857,10 @@ def cleanup_fallback_from_doctor(doctor_record: dict | None) -> dict:
     if not isinstance(doctor_record, dict):
         return {}
     final_verdict = non_empty_string(doctor_record.get("final_verdict", ""))
-    gates = doctor_record.get("gates", {})
-    clean_surface_gate = gates.get("clean_execution_surface", {}) if isinstance(gates, dict) else {}
+    gate_map = doctor_record.get("gates", {})
+    if not isinstance(gate_map, dict) or not gate_map:
+        gate_map = doctor_record.get("gate_results", {})
+    clean_surface_gate = gate_map.get("clean_execution_surface", {}) if isinstance(gate_map, dict) else {}
     clean_surface_note = non_empty_string(clean_surface_gate.get("note", ""))
     if not final_verdict.startswith("ACCEPTABLE_"):
         return {}

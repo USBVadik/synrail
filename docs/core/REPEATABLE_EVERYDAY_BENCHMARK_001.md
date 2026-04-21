@@ -38,7 +38,8 @@ The current aggregate reading is:
 The shortest honest reading is:
 
 - the cheapened contour is materially lighter than before
-- on-demand fallback materialization trims one manual intervention from the ambiguous copy-fix contour
+- checks per accepted closure are now tracked machine-readably without adding a new runtime input surface
+- the default non-green path now keeps `repair-step` off the everyday default contour unless a standalone bounded prompt is actually needed
 - one repeatable low-drag winner now exists
 - the remaining everyday paths now read as baseline-sufficient rather than unresolved
 - but the everyday class is still not won overall
@@ -48,11 +49,16 @@ The shortest honest reading is:
 Across the current five-scenario pack, `Synrail` currently adds on average:
 
 - `1` operator minute
+- `0` checks per accepted closure
 - `1` mandatory mental step
 - `1` trust-bearing artifact
 - `0` required visible surfaces
-- `1` skippable visible surface
+- `0` skippable visible surfaces
+- `1` operator-visible action
+- `0` got-lost moments
 - `2` fixed control-mass units
+- `1` behavioral control-tax unit
+- `3` total control-burden units
 
 It currently gains on average:
 
@@ -72,8 +78,8 @@ This pack turns the next roadmap question into something falsifiable:
 
 The right next moves should now improve one of these:
 
-1. reduce fixed control mass on the `BASELINE_GOOD_ENOUGH` everyday paths
-2. turn one `UNCLEAR` path into a repeatable near-zero-drag everyday contour
+1. reduce fixed control mass or behavioral control tax on the `BASELINE_GOOD_ENOUGH` everyday paths
+2. turn one baseline-sufficient path into a repeatable near-zero-drag everyday contour
 3. keep runtime-backed trust carrying acceptance without reintroducing optional prose by habit
 
 If a change does not improve one of those, it is probably not the best next step for this benchmark class.

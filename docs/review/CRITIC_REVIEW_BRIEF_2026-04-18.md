@@ -119,18 +119,17 @@ At the user level the intended path is intentionally small:
 1. `synrail`
 2. `synrail start "Describe the bounded change"`
 3. do the work
-4. fill in the starter proof files in `.synrail/`
+4. strengthen `.synrail/final_result.json` first
 5. `synrail check`
-6. if blocked: `synrail repair-step`
-7. fix only the named gap
-8. `synrail retry` or `synrail check`
+6. if blocked: fix only the named gap from `synrail check` and rerun `synrail check`
+7. use `synrail repair-step` only when a standalone bounded repair prompt is actually helpful
+8. use `synrail retry` only when the current contour explicitly calls for it
 9. stop only at accepted closure
 
 Starter proof files currently are:
 
 - `.synrail/final_result.json`
-- `.synrail/readback.txt`
-- `.synrail/scenario_proof.txt`
+- `.synrail/readback.txt` and `.synrail/scenario_proof.txt` only when a later `synrail check` explicitly names one as needed fallback
 
 The UX philosophy is:
 
@@ -385,26 +384,26 @@ Continuation is also treated as first-class, because a large class of agent fail
 
 If a reviewer wants the fastest code-first path, I would recommend this order:
 
-1. `/Users/usbdick/Documents/New project/synrail/alpha.py`
-2. `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_cli_v0.py`
-3. `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_bootstrap_v0.py`
-4. `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_bundle_v0.py`
-5. `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_closure_v0.py`
-6. `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_refresh_v0.py`
-7. `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_repair_packet_v0.py`
-8. `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_repair_handoff_v0.py`
-9. `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_repair_prompt_bridge_v0.py`
-10. `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_thin_output_v0.py`
-11. `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_checkpoint_v0.py`
-12. `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_doctor_v1.py`
+1. `../../alpha.py`
+2. `../../tools/reference/synrail_cli_v0.py`
+3. `../../tools/reference/synrail_bootstrap_v0.py`
+4. `../../tools/reference/synrail_bundle_v0.py`
+5. `../../tools/reference/synrail_closure_v0.py`
+6. `../../tools/reference/synrail_refresh_v0.py`
+7. `../../tools/reference/synrail_repair_packet_v0.py`
+8. `../../tools/reference/synrail_repair_handoff_v0.py`
+9. `../../tools/reference/synrail_repair_prompt_bridge_v0.py`
+10. `../../tools/reference/synrail_thin_output_v0.py`
+11. `../../tools/reference/synrail_checkpoint_v0.py`
+12. `../../tools/reference/synrail_doctor_v1.py`
 
 Then read tests that express current expectations:
 
-- `/Users/usbdick/Documents/New project/synrail/tests/test_controlled_start_smoke.py`
-- `/Users/usbdick/Documents/New project/synrail/tests/test_truth_regressions.py`
-- `/Users/usbdick/Documents/New project/synrail/tests/test_prompt_chain.py`
-- `/Users/usbdick/Documents/New project/synrail/tests/test_gate_units.py`
-- `/Users/usbdick/Documents/New project/synrail/tests/test_agent_adoption.py`
+- `../../tests/test_controlled_start_smoke.py`
+- `../../tests/test_truth_regressions.py`
+- `../../tests/test_prompt_chain.py`
+- `../../tests/test_gate_units.py`
+- `../../tests/test_agent_adoption.py`
 
 ## What has been pressure-tested recently
 
@@ -544,10 +543,11 @@ python3 tools/reference/synrail_install_v0.py --venv .venv
 source .venv/bin/activate
 synrail
 synrail start "Add one bounded local change."
-# fill in .synrail/final_result.json, .synrail/readback.txt, .synrail/scenario_proof.txt
+# strengthen .synrail/final_result.json first; keep fallback proof files untouched unless check explicitly names one
 synrail check
-synrail repair-step
-synrail retry
+# if blocked, fix only the named gap and rerun synrail check
+# optional standalone bounded prompt:
+# synrail repair-step
 ```
 
 If they want local agents to discover the path natively:
@@ -561,20 +561,20 @@ python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd
 If a critic only has 20-30 minutes, I would suggest:
 
 1. Read:
-- `/Users/usbdick/Documents/New project/synrail/README.md`
-- `/Users/usbdick/Documents/New project/synrail/docs/core/FIRST_RUN_GUIDE.md`
-- `/Users/usbdick/Documents/New project/synrail/docs/boundary/CORE_SCOPE_001.md`
-- `/Users/usbdick/Documents/New project/synrail/docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
+- `../../README.md`
+- `../../docs/core/FIRST_RUN_GUIDE.md`
+- `../../docs/boundary/CORE_SCOPE_001.md`
+- `../../docs/core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
 
 2. Inspect code:
-- `/Users/usbdick/Documents/New project/synrail/alpha.py`
-- `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_cli_v0.py`
-- `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_bundle_v0.py`
-- `/Users/usbdick/Documents/New project/synrail/tools/reference/synrail_repair_prompt_bridge_v0.py`
+- `../../alpha.py`
+- `../../tools/reference/synrail_cli_v0.py`
+- `../../tools/reference/synrail_bundle_v0.py`
+- `../../tools/reference/synrail_repair_prompt_bridge_v0.py`
 
 3. Inspect tests:
-- `/Users/usbdick/Documents/New project/synrail/tests/test_truth_regressions.py`
-- `/Users/usbdick/Documents/New project/synrail/tests/test_controlled_start_smoke.py`
+- `../../tests/test_truth_regressions.py`
+- `../../tests/test_controlled_start_smoke.py`
 
 That is enough to form a legitimate first-pass opinion.
 

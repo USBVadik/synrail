@@ -64,11 +64,12 @@ Current support boundary:
 Current contour:
 
 1. `synrail start`
-2. agent edits only the starter proof artifacts requested for the run
+2. strengthen `final_result.json` first and keep `readback.txt` plus `scenario_proof.txt` fallback-only unless `synrail check` later names one
 3. `synrail check`
-4. if non-green: `synrail repair-step`
-5. if restore point exists: `synrail restore`
-6. if needed: `synrail telemetry export`
+4. if non-green: fix only the named gap and rerun `synrail check`; when refresh invalidation is known, the default summary now points only at the stale obligation class
+5. if a standalone bounded repair prompt helps: `synrail repair-step`
+6. if restore point exists and returning is safer: `synrail restore`
+7. if needed: `synrail telemetry export` or `synrail bug-packet`
 
 ## Slide 7 — Core architecture
 
@@ -92,6 +93,8 @@ We now have:
 - truth-critical regression suite
 - tester-pack smoke
 - canonical external tester-pack fixture
+- claim-validation pack for second-operator followability and evidence ownership discipline
+- refresh-driven stale-obligation guidance in thin output
 
 ## Slide 9 — Why this could matter
 

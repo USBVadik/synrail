@@ -3,37 +3,37 @@
   "scenario_count": 6,
   "source_records": [
     {
-      "path": "fixtures/executable_loop_run_001/comparison_economics.json",
+      "path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_run_001/comparison_economics.json",
       "scenario_id": "SCENARIO_STRONG_001",
       "scenario_class": "expensive_wrong_closure",
       "verdict": "SYNRAIL_BETTER"
     },
     {
-      "path": "fixtures/executable_loop_run_002/comparison_economics.json",
+      "path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_run_002/comparison_economics.json",
       "scenario_id": "SCENARIO_WEAK_001",
       "scenario_class": "low_risk_honesty_restoration",
       "verdict": "BASELINE_GOOD_ENOUGH"
     },
     {
-      "path": "fixtures/executable_loop_run_003/comparison_economics.json",
+      "path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_run_003/comparison_economics.json",
       "scenario_id": "SCENARIO_HYBRID_001",
       "scenario_class": "medium_risk_ambiguous_closure",
       "verdict": "UNCLEAR"
     },
     {
-      "path": "fixtures/executable_loop_compound_run_001/comparison_economics.json",
+      "path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_compound_run_001/comparison_economics.json",
       "scenario_id": "SCENARIO_COMPOUND_001",
       "scenario_class": "compound_proof_sensitive_repair",
       "verdict": "SYNRAIL_BETTER"
     },
     {
-      "path": "fixtures/executable_loop_hybrid_pressure_run_002/comparison_economics.json",
+      "path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_hybrid_pressure_run_002/comparison_economics.json",
       "scenario_id": "SCENARIO_HYBRID_002",
       "scenario_class": "medium_risk_ambiguous_closure",
       "verdict": "SYNRAIL_BETTER"
     },
     {
-      "path": "fixtures/executable_loop_hybrid_pressure_run_003/comparison_economics.json",
+      "path": "/Users/usbdick/Documents/New project/synrail/fixtures/executable_loop_hybrid_pressure_run_003/comparison_economics.json",
       "scenario_id": "SCENARIO_HYBRID_003",
       "scenario_class": "medium_risk_ambiguous_closure",
       "verdict": "BASELINE_GOOD_ENOUGH"
@@ -50,12 +50,17 @@
     "avg_repair_cycles_added": 1,
     "avg_invalidation_count_added": 1,
     "avg_closure_latency_minutes_added": 21,
+    "avg_checks_per_accepted_closure_added": 0,
     "avg_false_green_exposure_reduced": 1,
     "avg_artifact_completeness_percent_gain": 39,
     "avg_mandatory_mental_steps_added": 0,
     "avg_trust_bearing_artifacts_added": 0,
     "avg_required_visible_surfaces_added": 0,
     "avg_skippable_visible_surfaces_added": 0,
+    "avg_operator_visible_actions_added": 0,
+    "avg_got_lost_moments_added": 0,
+    "avg_kernel_control_mass_added": 0,
+    "avg_behavioral_control_tax_added": 0,
     "avg_fixed_control_mass_added": 0
   },
   "hotspots": {
@@ -69,6 +74,11 @@
       "path": "full_governed_path",
       "value": 39
     },
+    "highest_checks_per_accepted_closure_added": {
+      "scenario_id": "SCENARIO_STRONG_001",
+      "path": "full_governed_path",
+      "value": 0
+    },
     "highest_false_green_exposure_reduced": {
       "scenario_id": "SCENARIO_COMPOUND_001",
       "path": "full_governed_path",
@@ -78,6 +88,26 @@
       "scenario_id": "SCENARIO_COMPOUND_001",
       "path": "full_governed_path",
       "value": 70
+    },
+    "highest_operator_visible_actions_added": {
+      "scenario_id": "SCENARIO_STRONG_001",
+      "path": "full_governed_path",
+      "value": 0
+    },
+    "highest_got_lost_moments_added": {
+      "scenario_id": "SCENARIO_STRONG_001",
+      "path": "full_governed_path",
+      "value": 0
+    },
+    "highest_kernel_control_mass_added": {
+      "scenario_id": "SCENARIO_STRONG_001",
+      "path": "full_governed_path",
+      "value": 0
+    },
+    "highest_behavioral_control_tax_added": {
+      "scenario_id": "SCENARIO_STRONG_001",
+      "path": "full_governed_path",
+      "value": 0
     },
     "highest_fixed_control_mass_added": {
       "scenario_id": "SCENARIO_STRONG_001",

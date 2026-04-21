@@ -285,6 +285,14 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertIn("synrail final-result-template", record["prompt"])
         self.assertIn("synrail explain-proof", record["prompt"])
         self.assertIn("verification_command", record["prompt"])
+        self.assertIn(
+            "Do not touch fallback proof surfaces like /tmp/synrail/readback.txt or /tmp/synrail/scenario_proof.txt unless Synrail explicitly targets them.",
+            record["prompt"],
+        )
+        self.assertIn(
+            "Do not add cleanup_status unless Synrail explicitly names cleanup_status as the blocker for this step.",
+            record["prompt"],
+        )
 
     def test_artifact_identity_subsurface_includes_checklist(self) -> None:
         packet = _minimal_packet(
@@ -393,6 +401,35 @@ class TestBuildFollowup(unittest.TestCase):
         record = build_followup(repair_packet=packet, prompt_bridge=bridge)
         self.assertEqual("FOLLOWUP_SCOPE_DRIFT", record["verdict"])
         self.assertIn("forbidden_scope_guardrail", record["missing_markers"])
+
+    def test_missing_final_result_first_guardrails_drift(self) -> None:
+        packet = _minimal_packet(
+            current_step_id="repair_final_result_artifact",
+            reason="INVALID_PROOF_BUNDLE",
+            subsurface_ids=["final_result_payload"],
+            stale_artifact_ids=["final_result_artifact"],
+        )
+        bridge = self._aligned_prompt_bridge(packet)
+        bridge["prompt"] = bridge["prompt"].replace(
+            "Do not touch fallback proof surfaces like /tmp/synrail/readback.txt or /tmp/synrail/scenario_proof.txt unless Synrail explicitly targets them.",
+            "",
+        )
+        bridge["prompt"] = bridge["prompt"].replace(
+            "Do not add cleanup_status unless Synrail explicitly names cleanup_status as the blocker for this step.",
+            "",
+        )
+        bridge["must_pass"] = [
+            item
+            for item in bridge["must_pass"]
+            if "Do not touch fallback proof surfaces like" not in item
+            and "Do not add cleanup_status unless Synrail explicitly names cleanup_status as the blocker for this step." not in item
+        ]
+        record = build_followup(repair_packet=packet, prompt_bridge=bridge)
+        self.assertEqual("FOLLOWUP_SCOPE_DRIFT", record["verdict"])
+        self.assertIn("final_result_first_fallback_guardrail", record["missing_markers"])
+        self.assertIn("prompt_mentions_final_result_first_fallback_guardrail", record["missing_markers"])
+        self.assertIn("cleanup_status_guardrail", record["missing_markers"])
+        self.assertIn("prompt_mentions_cleanup_status_guardrail", record["missing_markers"])
 
     def test_with_thin_output_next_step(self) -> None:
         packet = _minimal_packet(next_safe_step="repair readiness")

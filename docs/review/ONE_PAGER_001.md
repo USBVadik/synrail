@@ -50,12 +50,12 @@ Current support boundary:
 Current alpha lane:
 
 1. `synrail start`
-2. agent edits only the starter proof artifacts requested for the run
+2. strengthen `.synrail/final_result.json` first and keep `.synrail/readback.txt` plus `.synrail/scenario_proof.txt` fallback-only unless `synrail check` later names one
 3. `synrail check`
-4. if non-green: `synrail repair-step`
-5. if repairable: `synrail retry`
+4. if non-green: fix only the named gap and rerun `synrail check`; when refresh invalidation is known, the default summary now points only at the stale obligation class
+5. if a standalone bounded repair prompt helps: `synrail repair-step`
 6. if safer to return: `synrail restore`
-7. if feedback is needed: `synrail telemetry export`
+7. if feedback is needed: `synrail telemetry export` or `synrail bug-packet`
 
 ## Why it could matter
 
@@ -73,7 +73,7 @@ Current alpha lane:
 - measured doctor coverage gate
 - executable continuation arbiter
 - truth-critical regression suite
-- one cheap first-run alpha pack
+- one cheap first-run alpha pack plus claim-validation pack for second-operator followability and evidence ownership discipline
 
 ## Current honest weaknesses
 

@@ -81,8 +81,9 @@ On a fresh controlled start, `Synrail` can still give bounded value immediately:
 
 ```bash
 synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
-# synrail start already creates starter proof files under the artifact root; edit them in place, then:
+# synrail start already creates .synrail/final_result.json on the default path; strengthen it first, then:
 synrail check --artifact-root "$ARTIFACT_ROOT"
+# optional standalone bounded prompt after a non-green check:
 synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 ```
 
@@ -98,8 +99,9 @@ On the current canonical first-run pack contour in [`fixtures/alpha_test_pack_ru
 
 - `start` opens with one explicit `Do this now` instruction on the starter proof files
 - `check` blocks the plain-text false-success contour as `PROOF_INVALID`
-- `check` now leads with one explicit bounded action instead of only a diagnosis
-- `repair-step` produces one bounded next-agent instruction without asking the operator to reconstruct packet internals by hand
+- `check` now leads with one explicit bounded action and repair target instead of only a diagnosis
+- the default non-green path now stays on `synrail check` for the first bounded fix
+- `repair-step`, when requested, produces one bounded next-agent instruction without asking the operator to reconstruct packet internals by hand
 - `operator render` keeps that same `Do this now` instruction readable for a second operator
 - `telemetry export` now rides the same contour without leaking tmp or author-local paths
 

@@ -267,6 +267,28 @@ def scenario_proof_repair_checklist(*, current_step_subsurface_id: str, current_
     ]
 
 
+FINAL_RESULT_FIRST_SUBSURFACES = {
+    "final_result_payload",
+    "final_result_status_record",
+    "scope_alignment_record",
+    "presentation_alignment_record",
+    "diff_provenance_record",
+    "artifact_identity_record",
+    "cleanup_status_record",
+}
+
+
+def final_result_first_guardrails(*, current_step_subsurface_id: str, proof_paths: dict[str, str]) -> list[str]:
+    if current_step_subsurface_id not in FINAL_RESULT_FIRST_SUBSURFACES:
+        return []
+    lines = [
+        f"Do not touch fallback proof surfaces like {proof_paths['readback']} or {proof_paths['scenario_proof']} unless Synrail explicitly targets them.",
+    ]
+    if current_step_subsurface_id != "cleanup_status_record":
+        lines.append("Do not add cleanup_status unless Synrail explicitly names cleanup_status as the blocker for this step.")
+    return lines
+
+
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
 
@@ -341,6 +363,11 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         current_step_subsurface_id=current_step_subsurface_id,
         current_step_target_path=current_step_target_path,
     )
+    proof_paths = proof_target_paths(repair_packet)
+    final_result_guardrails = final_result_first_guardrails(
+        current_step_subsurface_id=current_step_subsurface_id,
+        proof_paths=proof_paths,
+    )
     allowed_scope = [current_step_subsurface_id] if current_step_subsurface_id else (stale_subsurfaces or ["current_repair_step_only"])
     allowed_scope_labels = [human_scope_label(scope_id, repair_packet=repair_packet) for scope_id in allowed_scope]
     required_input_labels = [human_required_input(input_id) for input_id in required_inputs]
@@ -372,6 +399,7 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
     ]
     for input_id in required_inputs:
         must_pass.append(f"Provide required input: {human_required_input(input_id)}")
+    must_pass.extend(final_result_guardrails)
     if next_safe_step_label:
         must_pass.append(f"Keep the next safe step aligned with: {next_safe_step_label}")
     if current_step_target_path:
@@ -402,6 +430,7 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
             if current_step_target_path
             else "Edit in place: keep the repair inside the current bounded proof surface."
         ),
+        *final_result_guardrails,
         "Do not touch unrelated files, state transitions, or acceptance logic.",
         "Return only the bounded repair needed for this current step and keep this same repair path intact.",
     ]

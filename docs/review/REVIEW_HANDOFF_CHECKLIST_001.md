@@ -10,11 +10,13 @@ If you need copy-paste outreach text, use:
 
 1. the full repository snapshot
 2. `docs/review/EXTERNAL_CRITIQUE_PACK_001.md`
-3. `docs/core/ALPHA_LANE_001.md`
-4. `docs/core/ALPHA_TEST_PACK_001.md`
-5. `tests/test_truth_regressions.py`
-6. `tests/test_alpha_test_pack_smoke.py`
-7. the relevant fixtures
+3. `docs/review/CRITIC_REVIEW_BRIEF_2026-04-19.md`
+4. `docs/core/ALPHA_LANE_001.md`
+5. `docs/core/ALPHA_TEST_PACK_001.md`
+6. `tests/test_truth_regressions.py`
+7. `tests/test_alpha_test_pack_smoke.py`
+8. `tests/test_claim_validation_pack.py`
+9. the relevant fixtures
 
 ## Suggested message
 
@@ -22,11 +24,10 @@ Please review this as a narrow proof-first control product, not as a general AI 
 
 I want blunt criticism on:
 
-- truth rigor
-- hidden self-validation
-- workflow usefulness
-- unnecessary ceremony
-- whether the wedge is strong enough to justify expansion
+- where the everyday lane still feels heavier than the loss it prevents
+- which proof artifact or shell claim still feels self-issued
+- whether restore, re-entry, or handoff value is strong enough to justify the control mass
+- what they would cut first if that value is still too weak
 
 ## Commands to include
 
