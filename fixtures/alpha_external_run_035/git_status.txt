@@ -1,0 +1,8 @@
+ M AGENTS.md
+ M CLAUDE.md
+ M GEMINI.md
+ M tools/reference/synrail_install_v0.py
+?? .venv/
+?? AGENTS.md.synrail.bak.20260421T182842Z
+?? CLAUDE.md.synrail.bak.20260421T182842Z
+?? GEMINI.md.synrail.bak.20260421T182842Z

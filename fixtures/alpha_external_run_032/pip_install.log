@@ -1,0 +1,7 @@
+Synrail alpha install complete.
+Virtualenv: .venv
+Repo path linked via: /root/alpha_external_run_032/workspace/.venv/lib/python3.12/site-packages/synrail_local_repo.pth
+Command: .venv/bin/synrail
+Quick status: run `.venv/bin/synrail` inside your project.
+Start a run: `.venv/bin/synrail start "Describe the bounded local change."`
+If you already have `synrail` on PATH, you can use `synrail` instead.

@@ -72,6 +72,10 @@ The purpose of this file is simple:
 | [029](../../fixtures/alpha_external_run_029/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_STARTER_PROSE_LEFT_UNTOUCHED | mixed | yes | medium | 0.3 | 1.2 | +0.9 | 0 | 1 | +1 |
 | [030](../../fixtures/alpha_external_run_030/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_ENTRYPOINT_ARCHAEOLOGY_REMOVED_BUT_REGRESSED_CHEAPNESS | mixed | yes | medium | 0.3 | 1.2 | +0.9 | 0 | 2 | +2 |
 | [031](../../fixtures/alpha_external_run_031/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_SECOND_CHECK_REMOVED_BUT_PROSE_STILL_AUTHORED | mixed | yes | medium | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
+| [032](../../fixtures/alpha_external_run_032/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 1.1 | +0.8 | 0 | 1 | +1 |
+| [033](../../fixtures/alpha_external_run_033/REPORT.md) | Claude Code | trivial / additive_change | GOVERNED_FINISH_BLOCKED_BY_PERMISSION_GATE | harness | no | low | 0.3 | 1.4 | +1.1 | 0 | 0 | 0 |
+| [034](../../fixtures/alpha_external_run_034/REPORT.md) | Claude Code | trivial / additive_change / trace_probe | HARNESS_PERMISSION_DENIAL_CONFIRMED | harness | no | low | 0.3 | 0.6 | +0.3 | 0 | 0 | 0 |
+| [035](../../fixtures/alpha_external_run_035/REPORT.md) | Claude Code | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 1.3 | +1.0 | 0 | 1 | +1 |
 
 ## Per-Run Records
 
@@ -947,6 +951,90 @@ The purpose of this file is simple:
   - the entrypoint improvement from `030` remains in place, so the lane no longer burns time on either `setup.py` archaeology or the old `explain-proof -> doctor -> check` detour
   - the remaining trivial-lane tax is now narrower still: Gemini still re-authors `cleanup_status`, `readback.txt`, and `scenario_proof.txt` even though trust is already carried by the runtime-backed `final_result`
 
+### Run 032
+
+- Report: [fixtures/alpha_external_run_032/REPORT.md](../../fixtures/alpha_external_run_032/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `none`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `1.1`
+- Delta time: `+0.8`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live trivial retest on the current branch that shows the cheapened proof behavior carrying over to a different tiny task shape inside `tools/reference`: `final_result.json` is sufficient, `cleanup_status` comes from doctor fallback, and the optional prose surfaces stay absent
+  - the accepted closure was real; the later `DOCTOR_BLOCKED` state was produced by a post-run operator `synrail check` on the already dirty workspace and should not be counted against the live run itself
+  - so the strongest signal here is behavioral: the agent no longer needed to author `readback.txt`, `scenario_proof.txt`, or manual cleanup truth to get a valid accepted closure on this contour
+
+### Run 033
+
+- Report: [fixtures/alpha_external_run_033/REPORT.md](../../fixtures/alpha_external_run_033/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `harness`
+- Reuse tomorrow: `no`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `1.4`
+- Delta time: `+1.1`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live Claude retest on the current cheapened branch against the same tiny `tools/reference` docstring contour that Gemini `032` accepted on the same host
+  - Claude made the correct code edit and verified it locally, so the coding part of the lane still works
+  - but the governed loop never started: no `.synrail` directory or closure artifacts appeared, and the current Hetzner root invocation shape blocked the local `synrail` wrapper behind Claude's own permission gate
+
+### Run 034
+
+- Report: [fixtures/alpha_external_run_034/REPORT.md](../../fixtures/alpha_external_run_034/REPORT.md)
+- Task class: `trivial / additive_change / trace_probe`
+- Failure owner: `harness`
+- Reuse tomorrow: `no`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.6`
+- Delta time: `+0.3`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this diagnostic rerun preserved Claude's tool trace in `stream-json` form instead of only the short final summary
+  - it captured the blocker precisely: permission denials on both `/root/alpha_external_run_034/workspace/.venv/bin/synrail 2>&1 | head -40` and plain `/root/alpha_external_run_034/workspace/.venv/bin/synrail`
+  - that confirms the Claude failure here is a harness/permission-mode seam on this host, not a false `Accepted` and not a product-side regression in the cheapened proof path
+
+### Run 035
+
+- Report: [fixtures/alpha_external_run_035/REPORT.md](../../fixtures/alpha_external_run_035/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `none`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `1.3`
+- Delta time: `+1.0`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live Claude retest on the same tiny contour that becomes harness-valid after pre-approving the checkout-local `synrail` wrapper path
+  - once that wrapper seam is removed, Claude follows the intended cheapened loop cleanly: dashboard -> start -> bounded edit -> `final_result` update -> `synrail check` -> accepted closure
+  - the resulting accepted path matches the strongest current cheapened contour properties from Gemini `032`: `PROVEN` final result, accepted closure, and both optional prose surfaces still absent
+
 ## Current Read
 
 If we force the current ledger into one brutally practical sentence:
@@ -955,7 +1043,7 @@ If we force the current ledger into one brutally practical sentence:
 - looks credible on bounded accepted closure
 - looks materially stronger than before on proof hardening for bounded bug-fix runs
 - still looks too heavy on trivial tasks, even though the newer compressed-loop tranche improved the path from run 009 to run 015
-- and now looks materially better on both Claude and Gemini trivial lanes than it did earlier, including an unattended Gemini success path, even though the simpler baseline is still cheaper and one older Gemini harness shape is still known-bad
+- and now looks materially better on both Claude and Gemini trivial lanes than it did earlier, including a current-branch Gemini success path (`032`) and a current-branch Claude success path once the wrapper approval seam is removed (`035`), even though the simpler baseline is still cheaper and one older Gemini harness shape is still known-bad
 - and now also has one real unattended Gemini run where the new trust-bearing `PROVEN` status gate succeeds end to end instead of relying on a decorative `SUCCESS` label
 - and now also shows a sharper split in the newer evidence-first cheapening story: `023` and `024` still filled both prose proof surfaces after failing to complete a strong enough structured `diff_provenance`, while `025` finally materializes the stronger direct-observation contour with inferred method and runtime verification but still keeps the prose surfaces around
 - and now also shows that the cheaper evidence-first contour can fully materialize on a real Gemini run: `027` keeps the prose surfaces present but semantically waived, so the trust decision now lives in runtime-backed proof rather than in those extra artifacts
@@ -965,6 +1053,7 @@ If we force the current ledger into one brutally practical sentence:
 - and now has a materially stronger restore story: `014d` fixed the false-success lie, and `014e` validates real recovery on the no-commit git contour via `file_copy`
 - orientation on governed roots is better than before; Claude now shows a literal `synrail`-first entry, while Gemini has narrowed the loop materially in `019c` but still does not converge on that same small shape
 - the Claude-first handoff lane is still harness-limited under the current root server setup, so new handoff strength is still coming mostly from Gemini-side evidence
+- and the newest Claude Hetzner sequence now makes the split more precise: the default root-host Claude invocation is still harness-limited at the local wrapper boundary (`033`/`034`), but once that wrapper path is pre-approved (`035`), Claude also reaches governed accepted closure on the same cheapened trivial contour
 
 ## Next Runs
 

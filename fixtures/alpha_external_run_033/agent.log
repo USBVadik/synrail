@@ -1,0 +1,9 @@
+The grep output above already confirms the docstring is in place at line 17. Here's the summary:
+
+**Files changed:** `tools/reference/synrail_install_v0.py` — added one-line docstring `"""Return the repository root by walking two levels up from this script."""` to `repo_root_from_script` (line 17).
+
+**Verification:** Confirmed via `Grep` with context — the docstring is present at line 17, immediately after the `def` line.
+
+**Synrail workflow:** Attempted `synrail start` and `synrail check` but both required user approval that was denied. The code change itself is complete and verified.
+
+**Final status:** Change is done and confirmed correct. Synrail `start`/`check` steps could not execute due to permission prompts being denied — this is the only blocker to a fully governed finish.

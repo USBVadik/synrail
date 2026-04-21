@@ -1,0 +1,80 @@
+{
+  "schema_version": "run_state_v0",
+  "run_id": "ALPHA_RUN_20260421T182909205632Z_88a54c",
+  "task_class": "bounded_change",
+  "state": "CLOSURE_ACCEPTED",
+  "target_surface": {
+    "status": "ATTESTED",
+    "identity": "autodetected_python_worktree",
+    "baseline_relation": "autodetected_python_baseline"
+  },
+  "doctor": {
+    "status": "PASS",
+    "blocking_failure_classes": []
+  },
+  "integrity": {
+    "status": "PASS",
+    "exact_task_identity_ok": true,
+    "bootstrap_provenance_ok": true,
+    "bootstrap_provenance_reason": "CONTROLLED_BOOTSTRAP_CONFIRMED"
+  },
+  "execution": {
+    "status": "COMPLETED",
+    "artifact_bundle_present": true
+  },
+  "proof_bundle": {
+    "status": "COMPLETE",
+    "missing_sections": [],
+    "structural_status": "COMPLETE",
+    "semantic_status": "SUFFICIENT",
+    "semantically_insufficient_sections": [],
+    "semantic_next_safe_step": "",
+    "final_result": {
+      "present": true,
+      "parseable": true,
+      "status": "PROVEN",
+      "normalized_status": "PROVEN",
+      "expected_status": "PROVEN",
+      "semantically_sufficient": true,
+      "request_id": "ALPHA_RUN_20260421T182909205632Z_88a54c",
+      "change_disposition": "modified"
+    },
+    "verification_corroboration": {
+      "semantically_sufficient": true,
+      "has_structured_runtime_verification": true,
+      "has_patch_runtime_verification": true,
+      "runtime_verification_sufficient": true,
+      "scenario_has_explicit_command": false,
+      "scenario_has_explicit_observation": false
+    },
+    "artifact_identity": {
+      "baseline_identity": "autodetected_python_baseline",
+      "execution_surface_identity": "autodetected_python_worktree",
+      "prompt_identity": "Add one-line docstring to repo_root_from_script in tools/reference/synrail_install_v0.py",
+      "task_identity": "Add one-line docstring to repo_root_from_script in tools/reference/synrail_install_v0.py",
+      "from_final_result": true,
+      "semantically_sufficient": true
+    },
+    "cleanup_status": {
+      "present": true,
+      "success": true,
+      "from_doctor": true,
+      "content_semantically_sufficient": true,
+      "waived_by_runtime_corroboration": true,
+      "structurally_complete": true,
+      "semantically_sufficient": true
+    }
+  },
+  "closure": {
+    "status": "ACCEPTED",
+    "blocking_reason": "",
+    "next_allowed_transition": "NONE",
+    "narrow_next_safe_step": "NONE",
+    "missing_sections": []
+  },
+  "recovery": {
+    "status": "NOT_REQUIRED",
+    "reverification_complete": false
+  },
+  "next_safe_step": "NONE"
+}
