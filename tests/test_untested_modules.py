@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import argparse
 import copy
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -73,6 +75,11 @@ from synrail_thin_output_v0 import (
     resume_available,
     human_reason,
 )
+
+# --- operator imports ---
+from synrail_operator_brief_v0 import build_record as build_operator_brief_record
+from synrail_operator_brief_chain_v0 import build_record as build_operator_brief_chain_record
+from synrail_operator_render_v0 import render_brief, render_chain
 
 # --- spine imports (for default_state helper) ---
 from synrail_spine_v0 import default_state
@@ -1192,6 +1199,279 @@ class TestThinOutputBuildRecord(unittest.TestCase):
         )
         self.assertIn("dominant_invalidation=closure_invalidated_by_semantic_bundle", record["technical_lines"])
         self.assertIn("invalidations=closure_invalidated_by_semantic_bundle,closure_invalidated_by_recovery", record["technical_lines"])
+
+    def test_refresh_change_impact_narrows_to_exact_stale_proof_surface(self) -> None:
+        state = _handoff_state(
+            state_name="PROOF_BUNDLE_STRUCTURALLY_COMPLETE",
+            doctor_status="PASS",
+            proof_status="STRUCTURALLY_COMPLETE",
+            closure_reason="SEMANTIC_PROOF_INSUFFICIENT",
+        )
+        report = {
+            "reason": "SEMANTIC_PROOF_INSUFFICIENT",
+            "result": "NON_GREEN",
+            "next_safe_step": "strengthen the semantic proof evidence before trusting closure",
+        }
+        state["proof_bundle"]["final_result"] = {"semantically_sufficient": True}
+        state["proof_bundle"]["verification_corroboration"] = {"semantically_sufficient": True}
+        state["proof_bundle"]["artifact_identity"] = {"semantically_sufficient": True}
+        state["proof_bundle"]["scenario_proof"] = {"semantically_sufficient": False}
+        state["proof_bundle"]["diff_provenance"] = {"semantically_sufficient": False}
+        refresh = {
+            "run_id": "R1",
+            "invalidations": ["closure_invalidated_by_semantic_bundle", "closure_invalidated_by_recovery"],
+            "dominant_invalidation": "closure_invalidated_by_semantic_bundle",
+            "next_safe_step": "strengthen the semantic proof evidence before trusting closure",
+        }
+        repair_packet = {
+            "continuation_core": {
+                "current_step_id": "repair_proof_bundle",
+                "current_step_subsurface_id": "scenario_proof_record",
+                "current_step_target_path": ".synrail/scenario_proof.txt",
+                "next_step_subsurface_ids": ["scenario_proof_record", "diff_provenance_record"],
+            }
+        }
+        record = build_thin_output_record(
+            state=state,
+            report=report,
+            mode="default",
+            repair_packet=repair_packet,
+            doctor=None,
+            checkpoint=None,
+            recovery=None,
+            refresh=refresh,
+        )
+        self.assertEqual(
+            "Repair only this stale proof surface before trusting closure again: record scenario proof in .synrail/scenario_proof.txt.",
+            record["diagnosis"],
+        )
+        self.assertEqual(
+            "Record scenario proof in .synrail/scenario_proof.txt. Leave every other proof surface unchanged. Then rerun synrail check.",
+            record["what_to_do_next"],
+        )
+        self.assertEqual(
+            "Record scenario proof in .synrail/scenario_proof.txt. Leave every other proof surface unchanged. Then rerun synrail check.",
+            record["action_now"],
+        )
+        self.assertEqual(
+            "refresh change impact: closure invalidated by semantic bundle; repair target: record scenario proof in .synrail/scenario_proof.txt",
+            record["change_impact_focus"],
+        )
+        self.assertEqual(
+            "applicable invalidations: scenario proof record, diff provenance record; reusable proof surfaces: final result, verification corroboration, artifact identity",
+            record["change_impact_scope"],
+        )
+        self.assertEqual("strengthen the semantic proof evidence before trusting closure", record["next_step"])
+
+    def test_refresh_change_impact_narrows_invalid_bundle_to_exact_final_result_target(self) -> None:
+        state = _handoff_state(
+            state_name="PROOF_BUNDLE_INVALID",
+            doctor_status="PASS",
+            proof_status="INVALID",
+            closure_reason="INVALID_PROOF_BUNDLE",
+        )
+        report = {
+            "reason": "INVALID_PROOF_BUNDLE",
+            "result": "NON_GREEN",
+            "next_safe_step": "repair the final-result proof artifact before trusting closure",
+        }
+        state["proof_bundle"]["missing_sections"] = []
+        state["proof_bundle"]["semantically_insufficient_sections"] = []
+        state["proof_bundle"]["final_result"] = {"semantically_sufficient": False}
+        state["proof_bundle"]["verification_corroboration"] = {"semantically_sufficient": True}
+        state["proof_bundle"]["artifact_identity"] = {"semantically_sufficient": True}
+        refresh = {
+            "run_id": "R1",
+            "invalidations": ["closure_invalidated_by_invalid_bundle"],
+            "dominant_invalidation": "closure_invalidated_by_invalid_bundle",
+            "next_safe_step": "repair the final-result proof artifact before trusting closure",
+        }
+        repair_packet = {
+            "continuation_core": {
+                "current_step_id": "repair_final_result_artifact",
+                "current_step_subsurface_id": "final_result_payload",
+                "current_step_target_path": ".synrail/final_result.json",
+            }
+        }
+        record = build_thin_output_record(
+            state=state,
+            report=report,
+            mode="default",
+            repair_packet=repair_packet,
+            doctor=None,
+            checkpoint=None,
+            recovery=None,
+            refresh=refresh,
+        )
+        self.assertEqual(
+            "A refresh invalidated closure because the final-result proof artifact became stale.",
+            record["summary"],
+        )
+        self.assertEqual(
+            "Repair only this stale proof surface before trusting closure again: update the result payload in .synrail/final_result.json.",
+            record["diagnosis"],
+        )
+        self.assertEqual(
+            "Update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged. Then rerun synrail check.",
+            record["what_to_do_next"],
+        )
+        self.assertEqual(
+            "Update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged. Then rerun synrail check.",
+            record["action_now"],
+        )
+        self.assertEqual(
+            "refresh change impact: closure invalidated by invalid bundle; repair target: update the result payload in .synrail/final_result.json",
+            record["change_impact_focus"],
+        )
+        self.assertEqual(
+            "applicable invalidations: final result payload; reusable proof surfaces: verification corroboration, artifact identity",
+            record["change_impact_scope"],
+        )
+        self.assertEqual("repair the final-result proof artifact before trusting closure", record["next_step"])
+
+    def test_refresh_change_impact_narrows_partial_bundle_to_single_missing_section(self) -> None:
+        state = _handoff_state(
+            state_name="PROOF_BUNDLE_PARTIAL",
+            doctor_status="PASS",
+            proof_status="PARTIAL",
+            closure_reason="MISSING_PROOF_SECTIONS",
+        )
+        report = {
+            "reason": "MISSING_PROOF_SECTIONS",
+            "result": "NON_GREEN",
+            "next_safe_step": "complete the missing proof sections before trusting closure",
+        }
+        state["proof_bundle"]["missing_sections"] = ["readback"]
+        state["proof_bundle"]["semantically_insufficient_sections"] = []
+        state["proof_bundle"]["final_result"] = {"semantically_sufficient": True}
+        state["proof_bundle"]["verification_corroboration"] = {"semantically_sufficient": True}
+        state["proof_bundle"]["artifact_identity"] = {"semantically_sufficient": True}
+        state["proof_bundle"]["readback"] = {"semantically_sufficient": False}
+        refresh = {
+            "run_id": "R1",
+            "invalidations": ["closure_invalidated_by_partial_bundle"],
+            "dominant_invalidation": "closure_invalidated_by_partial_bundle",
+            "next_safe_step": "complete the missing proof sections before trusting closure",
+        }
+        repair_packet = {
+            "continuation_core": {
+                "current_step_id": "complete_missing_proof_sections",
+                "current_step_subsurface_id": "readback_record",
+                "current_step_target_path": ".synrail/readback.txt",
+                "next_step_subsurface_ids": ["readback_record"],
+            }
+        }
+        record = build_thin_output_record(
+            state=state,
+            report=report,
+            mode="default",
+            repair_packet=repair_packet,
+            doctor=None,
+            checkpoint=None,
+            recovery=None,
+            refresh=refresh,
+        )
+        self.assertEqual(
+            "A refresh invalidated closure because required proof sections became stale.",
+            record["summary"],
+        )
+        self.assertEqual(
+            "Repair only this stale proof surface before trusting closure again: record readback in .synrail/readback.txt.",
+            record["diagnosis"],
+        )
+        self.assertEqual(
+            "Record readback in .synrail/readback.txt. Leave every other proof surface unchanged. Then rerun synrail check.",
+            record["what_to_do_next"],
+        )
+        self.assertEqual(
+            "Record readback in .synrail/readback.txt. Leave every other proof surface unchanged. Then rerun synrail check.",
+            record["action_now"],
+        )
+        self.assertEqual(
+            "refresh change impact: closure invalidated by partial bundle; repair target: record readback in .synrail/readback.txt",
+            record["change_impact_focus"],
+        )
+        self.assertEqual(
+            "applicable invalidations: readback record; reusable proof surfaces: final result, verification corroboration, artifact identity",
+            record["change_impact_scope"],
+        )
+        self.assertEqual("complete the missing proof sections before trusting closure", record["next_step"])
+
+
+class TestOperatorBriefAndRender(unittest.TestCase):
+    """operator brief and render surface reusable proof sections."""
+
+    def test_surfaces_reusable_proof_surfaces(self) -> None:
+        state = _handoff_state(
+            state_name="PROOF_BUNDLE_STRUCTURALLY_COMPLETE",
+            doctor_status="PASS",
+            proof_status="STRUCTURALLY_COMPLETE",
+            closure_reason="SEMANTIC_PROOF_INSUFFICIENT",
+        )
+        report = {
+            "result": "NON_GREEN",
+            "stopping_stage": "closure",
+            "reason": "SEMANTIC_PROOF_INSUFFICIENT",
+            "next_safe_step": "strengthen the semantic proof evidence before trusting closure",
+        }
+        packet = {
+            "resumability": {"status": "REPAIRABLE", "family": "REPAIRABLE_PROOF"},
+            "repair_termination": {"status": "CONTINUE", "reason": "", "attempt_count": 0},
+            "repair_policy": {"next_step_id": "repair_proof_bundle", "ready_now_step_ids": ["repair_proof_bundle"]},
+            "repair_history": {"history_chain_length": 1, "completed_step_ids": []},
+            "continuation_core": {
+                "next_safe_step": "strengthen the semantic proof evidence before trusting closure",
+                "operator_focus": "repair only the stale proof surfaces",
+                "current_step_id": "repair_proof_bundle",
+                "current_step_subsurface_id": "scenario_proof_record",
+                "current_step_target_path": ".synrail/scenario_proof.txt",
+                "next_step_required_inputs": ["refresh_reverification_complete"],
+                "next_step_subsurface_ids": ["scenario_proof_record", "diff_provenance_record"],
+            },
+            "artifact_quality_summary": {
+                "stale_artifact_ids": ["supporting_proof_artifacts"],
+                "stale_subsurface_ids": ["scenario_proof_record", "diff_provenance_record"],
+            },
+            "repair_handoff": {
+                "state": {
+                    "proof_bundle": {
+                        "missing_sections": ["scenario_proof", "diff_provenance"],
+                        "semantically_insufficient_sections": ["scenario_proof", "diff_provenance"],
+                        "final_result": {"semantically_sufficient": True},
+                        "verification_corroboration": {"semantically_sufficient": True},
+                        "artifact_identity": {"semantically_sufficient": True},
+                        "scenario_proof": {"semantically_sufficient": False},
+                        "diff_provenance": {"semantically_sufficient": False},
+                    }
+                }
+            },
+        }
+        brief = build_operator_brief_record(
+            state=state,
+            report=report,
+            packet=packet,
+            doctor=None,
+            state_file=".synrail/state.json",
+            repair_packet_file=".synrail/repair_packet.json",
+        )
+        self.assertEqual(
+            ["final result", "verification corroboration", "artifact identity"],
+            brief["reusable_proof_surfaces"],
+        )
+        rendered = render_brief(brief)
+        self.assertIn("## Reusable proof surfaces", rendered)
+        self.assertIn("- `final result`", rendered)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            brief_path = Path(tmpdir) / "stage0_operator_brief.json"
+            brief_path.write_text(json.dumps(brief, indent=2, ensure_ascii=True) + "\n")
+            chain = build_operator_brief_chain_record([brief_path])
+        self.assertEqual(
+            ["final result", "verification corroboration", "artifact identity"],
+            chain["stage_summaries"][0]["reusable_proof_surfaces"],
+        )
+        chain_render = render_chain(chain)
+        self.assertIn("- reusable proof surfaces:", chain_render)
+        self.assertIn("- `verification corroboration`", chain_render)
 
 
 class TestCheckpointRestoreAvailable(unittest.TestCase):

@@ -241,6 +241,10 @@ class ControlledStartSmokeTests(unittest.TestCase):
                 "Treat readback.txt and scenario_proof.txt as fallback-only surfaces",
                 final_result["_synrail"]["starter_guidance"]["explanatory_surface_hint"],
             )
+            self.assertIn(
+                "unless Synrail explicitly targets one as blocker-specific fallback evidence",
+                final_result["_synrail"]["starter_guidance"]["explanatory_surface_hint"],
+            )
 
     def test_check_after_plain_init_requires_controlled_start(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_bootstrap_block_") as tmpdir:
@@ -444,8 +448,10 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn(state["run_id"], template.stdout)
             self.assertIn("Changed surface:", template.stdout)
             self.assertIn("Observed:", template.stdout)
+            self.assertIn("record only the concrete property needed for the blocker Synrail explicitly targeted", template.stdout)
             self.assertIn("Fallback-only note", template.stdout)
-            self.assertIn("leave this readback untouched unless synrail check explicitly asks for more", template.stdout)
+            self.assertIn("leave this readback untouched unless Synrail explicitly targets this file", template.stdout)
+            self.assertIn("keep it minimal and concrete; do not add extra narrative beyond the named blocker", template.stdout)
             self.assertIn("Runtime hint:", template.stdout)
 
     def test_scenario_proof_template_uses_current_run_context(self) -> None:
@@ -467,8 +473,10 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn(state["run_id"], template.stdout)
             self.assertIn("Scenario:", template.stdout)
             self.assertIn("Observed:", template.stdout)
+            self.assertIn("paste only the concrete output, rendered fragment, or behavior needed to unblock it", template.stdout)
             self.assertIn("Fallback-only note", template.stdout)
-            self.assertIn("leave this scenario proof untouched unless synrail check explicitly asks for more", template.stdout)
+            self.assertIn("leave this scenario proof untouched unless Synrail explicitly targets this file", template.stdout)
+            self.assertIn("keep it minimal and concrete; do not add extra narrative beyond the named blocker", template.stdout)
             self.assertIn("Status: PASSED", template.stdout)
 
     def test_runtime_helper_offers_small_ui_paths(self) -> None:
@@ -622,7 +630,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
                             "section": "readback",
                             "evaluated": True,
                             "semantically_sufficient": False,
-                            "why": "readback evidence does not yet name the changed surface with an observed readback",
+                            "why": "readback evidence does not yet name the changed surface with a concrete observed property",
                             "recommended_action": "record substantive readback from the changed sections on the attested surface",
                         }
                     ],
@@ -636,8 +644,10 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(0, explain.returncode, explain.stdout + explain.stderr)
             self.assertIn("readback", explain.stdout)
             self.assertIn("readback target: .synrail/readback.txt", explain.stdout)
+            self.assertIn("readback evidence does not yet name the changed surface with a concrete observed property", explain.stdout)
             self.assertIn("synrail readback-template", explain.stdout)
             self.assertIn("synrail runtime-helper", explain.stdout)
+            self.assertNotIn("observed readback", explain.stdout)
 
     def test_explain_proof_surfaces_scope_alignment_fix(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_explain_scope_alignment_") as tmpdir:
@@ -705,6 +715,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(0, explain.returncode, explain.stdout + explain.stderr)
             self.assertIn("scenario_proof", explain.stdout)
             self.assertIn("scenario_proof target: .synrail/scenario_proof.txt", explain.stdout)
+            self.assertIn("scenario-proof evidence does not yet record a concrete scenario context and outcome", explain.stdout)
             self.assertIn("synrail scenario-proof-template", explain.stdout)
 
     def test_explain_proof_surfaces_verification_corroboration_fix(self) -> None:

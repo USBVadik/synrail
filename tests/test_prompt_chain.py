@@ -48,6 +48,7 @@ def _minimal_packet(
     required_inputs: list[str] | None = None,
     subsurface_ids: list[str] | None = None,
     stale_artifact_ids: list[str] | None = None,
+    proof_bundle: dict | None = None,
 ) -> dict:
     return {
         "schema_version": "repair_packet_v0",
@@ -64,6 +65,11 @@ def _minimal_packet(
             "ready_for_resume": False,
         },
         "repair_history": {"current_step_id": current_step_id},
+        "repair_handoff": {
+            "state": {
+                "proof_bundle": proof_bundle or {}
+            }
+        },
         "runtime_truth": {
             "report_reason": reason,
             "next_safe_step": next_safe_step,
@@ -307,6 +313,29 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertIn("artifact_identity.baseline_identity", record["prompt"])
         self.assertIn("low-level bundle-check reproducible", record["prompt"])
 
+    def test_cleanup_status_subsurface_keeps_final_result_first_without_readding_cleanup_guardrail(self) -> None:
+        packet = _minimal_packet(
+            current_step_id="repair_final_result_artifact",
+            reason="INVALID_PROOF_BUNDLE",
+            subsurface_ids=["cleanup_status_record"],
+            stale_artifact_ids=["final_result_artifact"],
+        )
+        record = build_prompt_bridge(repair_packet=packet)
+        self.assertEqual("cleanup_status_record", record["current_step_subsurface_id"])
+        self.assertIn("Checklist for /tmp/synrail/final_result.json:", record["prompt"])
+        self.assertIn(
+            "Do not touch fallback proof surfaces like /tmp/synrail/readback.txt or /tmp/synrail/scenario_proof.txt unless Synrail explicitly targets them.",
+            record["prompt"],
+        )
+        self.assertNotIn(
+            "Do not add cleanup_status unless Synrail explicitly names cleanup_status as the blocker for this step.",
+            record["prompt"],
+        )
+        self.assertIn(
+            "Only fill cleanup_status when Synrail explicitly targets cleanup_status as the blocker for this step",
+            record["prompt"],
+        )
+
     def test_scope_alignment_subsurface_includes_checklist(self) -> None:
         packet = _minimal_packet(
             current_step_id="repair_final_result_artifact",
@@ -343,10 +372,13 @@ class TestBuildPromptBridge(unittest.TestCase):
         record = build_prompt_bridge(repair_packet=packet)
         self.assertEqual("scenario_proof_record", record["current_step_subsurface_id"])
         self.assertIn("Checklist for /tmp/synrail/scenario_proof.txt:", record["prompt"])
+        self.assertIn("Synrail explicitly targeted scenario_proof.txt for this step", record["prompt"])
         self.assertIn("Command:", record["prompt"])
         self.assertIn("Observed:", record["prompt"])
         self.assertIn("Status: PASSED", record["prompt"])
         self.assertIn("Do not restate the task description", record["prompt"])
+        self.assertIn("Keep the scenario proof minimal and concrete", record["prompt"])
+        self.assertNotIn("short and explanatory", record["prompt"])
 
     def test_readback_subsurface_includes_checklist(self) -> None:
         packet = _minimal_packet(
@@ -358,14 +390,43 @@ class TestBuildPromptBridge(unittest.TestCase):
         record = build_prompt_bridge(repair_packet=packet)
         self.assertEqual("readback_record", record["current_step_subsurface_id"])
         self.assertIn("Checklist for /tmp/synrail/readback.txt:", record["prompt"])
+        self.assertIn("Synrail explicitly targeted readback.txt for this step", record["prompt"])
         self.assertIn("Changed surface:", record["prompt"])
         self.assertIn("Do not paraphrase", record["prompt"])
+        self.assertIn("Keep the readback minimal and concrete", record["prompt"])
+        self.assertNotIn("short and explanatory", record["prompt"])
 
     def test_no_subsurface_uses_step_scope(self) -> None:
         packet = _minimal_packet()
         record = build_prompt_bridge(repair_packet=packet)
         # No subsurface → falls back to stale_subsurfaces or "current_repair_step_only"
         self.assertGreater(len(record["allowed_scope"]), 0)
+
+    def test_prompt_bridge_surfaces_reusable_proof_surfaces(self) -> None:
+        packet = _minimal_packet(
+            current_step_id="repair_final_result_artifact",
+            reason="SEMANTIC_PROOF_INSUFFICIENT",
+            subsurface_ids=["scenario_proof_record", "diff_provenance_record"],
+            stale_artifact_ids=["final_result_artifact", "supporting_proof_artifacts"],
+            proof_bundle={
+                "missing_sections": ["scenario_proof", "diff_provenance"],
+                "semantically_insufficient_sections": ["scenario_proof", "diff_provenance"],
+                "final_result": {"semantically_sufficient": True},
+                "verification_corroboration": {"semantically_sufficient": True},
+                "artifact_identity": {"semantically_sufficient": True},
+                "scenario_proof": {"semantically_sufficient": False},
+                "diff_provenance": {"semantically_sufficient": False},
+            },
+        )
+        record = build_prompt_bridge(repair_packet=packet)
+        self.assertEqual(
+            ["final result", "verification corroboration", "artifact identity"],
+            record["reusable_proof_surfaces"],
+        )
+        self.assertIn(
+            "Reusable proof surfaces: final result, verification corroboration, artifact identity",
+            record["prompt"],
+        )
 
 
 # ============================================================================
@@ -438,6 +499,18 @@ class TestBuildFollowup(unittest.TestCase):
         record = build_followup(repair_packet=packet, prompt_bridge=bridge, thin_output=thin)
         # thin_output next_step should be mentioned in the prompt
         self.assertEqual("FOLLOWUP_SCOPE_PRESERVED", record["verdict"])
+
+    def test_cleanup_status_target_requires_only_fallback_guardrail(self) -> None:
+        packet = _minimal_packet(
+            current_step_id="repair_final_result_artifact",
+            reason="INVALID_PROOF_BUNDLE",
+            subsurface_ids=["cleanup_status_record"],
+            stale_artifact_ids=["final_result_artifact"],
+        )
+        bridge = self._aligned_prompt_bridge(packet)
+        record = build_followup(repair_packet=packet, prompt_bridge=bridge)
+        self.assertEqual("FOLLOWUP_SCOPE_PRESERVED", record["verdict"])
+        self.assertEqual([], record["missing_markers"])
 
 
 # ============================================================================

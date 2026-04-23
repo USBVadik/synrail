@@ -22,6 +22,10 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
 class ClaimValidationPackTests(unittest.TestCase):
     def test_alpha_pack_second_operator_contour_is_followable_without_author_intuition(self) -> None:
         lane = REPO_ROOT / "fixtures" / "alpha_test_pack_run_004" / "lane"
@@ -178,6 +182,31 @@ class ClaimValidationPackTests(unittest.TestCase):
             second_operator["expected_next_safe_step"],
             session_export["report_summary"]["next_safe_step"],
         )
+
+    def test_external_send_docs_are_bound_to_one_selected_snapshot(self) -> None:
+        send = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_ALPHA_SEND_001.md")
+        checklist = load_text(REPO_ROOT / "docs" / "review" / "REVIEW_HANDOFF_CHECKLIST_001.md")
+        critique_pack = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_CRITIQUE_PACK_001.md")
+        critic_brief = load_text(REPO_ROOT / "docs" / "review" / "CRITIC_REVIEW_BRIEF_2026-04-19.md")
+        full_review = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_FULL_REVIEW_2026-04-21.md")
+
+        self.assertIn("exact repository snapshot at the explicitly selected target commit", send)
+        self.assertIn("drifting local working tree", send)
+        self.assertIn("exact repository snapshot selected for review", checklist)
+        self.assertIn("drifting local working tree", checklist)
+        self.assertIn("exact selected repository snapshot at the commit you want reviewed", critique_pack)
+        self.assertIn("drifting local working tree", critique_pack)
+        self.assertIn("Reviewed snapshot: exact selected repository snapshot prepared for critic handoff", critic_brief)
+        self.assertIn("drifting local working tree", critic_brief)
+        self.assertIn("Reviewed snapshot: exact selected repository snapshot prepared for critic handoff", full_review)
+        self.assertIn("drifting local working tree", full_review)
+
+    def test_external_critique_pack_preserves_current_economics_truth_boundary(self) -> None:
+        critique_pack = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_CRITIQUE_PACK_001.md")
+
+        self.assertIn("`BASELINE_GOOD_ENOUGH`", critique_pack)
+        self.assertIn("`FOCUSED_CLASS_BEHAVIOR_NOT_YET_CHEAP_BY_DEFAULT`", critique_pack)
+        self.assertIn("behavior cheapness is not fully independent", critique_pack)
 
 
 if __name__ == "__main__":

@@ -41,6 +41,27 @@ def display_cli_path(value: str) -> str:
         return value
 
 
+def humanize_token(value: str) -> str:
+    return value.replace("_", " ").strip()
+
+
+def reusable_proof_surfaces(packet: dict) -> list[str]:
+    proof_bundle = (packet.get("repair_handoff", {}) or {}).get("state", {}).get("proof_bundle", {})
+    stale_sections = set(proof_bundle.get("missing_sections", [])) | set(proof_bundle.get("semantically_insufficient_sections", []))
+    reusable: list[str] = []
+    for section, details in proof_bundle.items():
+        if section in {"status", "structural_status", "semantic_status", "missing_sections", "semantically_insufficient_sections", "semantic_next_safe_step"}:
+            continue
+        if section in stale_sections or not isinstance(details, dict):
+            continue
+        if not (details.get("semantically_sufficient", False) or details.get("structurally_complete", False)):
+            continue
+        label = humanize_token(section)
+        if label and label not in reusable:
+            reusable.append(label)
+    return reusable
+
+
 def determine_primary_action(packet: dict, report: dict) -> tuple[str, str]:
     resumability = packet.get("resumability", {})
     termination = packet.get("repair_termination", {})
@@ -99,6 +120,7 @@ def build_record(*, state: dict, report: dict, packet: dict, doctor: dict | None
     repair_history = packet.get("repair_history", {})
     termination = packet.get("repair_termination", {})
     primary_action, why_action = determine_primary_action(packet, report)
+    reusable_scope_labels = reusable_proof_surfaces(packet)
 
     return {
         "schema_version": "operator_brief_record_v0",
@@ -138,6 +160,7 @@ def build_record(*, state: dict, report: dict, packet: dict, doctor: dict | None
         "completed_step_ids": list(repair_history.get("completed_step_ids", [])),
         "stale_artifact_ids": list(packet.get("artifact_quality_summary", {}).get("stale_artifact_ids", [])),
         "stale_subsurface_ids": list(packet.get("artifact_quality_summary", {}).get("stale_subsurface_ids", [])),
+        "reusable_proof_surfaces": reusable_scope_labels,
         "entry_artifacts": ["state_file", "repair_packet"],
         "suggested_cli": suggested_cli(primary_action, state_file, repair_packet_file),
     }

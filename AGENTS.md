@@ -17,8 +17,8 @@ synrail start "Describe the bounded local change."
 ```
 
 2. Keep the change local and bounded to the stated task.
-3. Edit the starter proof files under `.synrail/` in place as the work becomes real.
-4. Run the local commands needed to verify the change honestly.
+3. Run the local commands needed to verify the change honestly, then edit `.synrail/final_result.json` in place as the work becomes real. Only materialize `readback.txt` or `scenario_proof.txt` if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.
+4. Keep proof explicit in the cheapest honest order: make `final_result.json` carry trust-bearing status plus patch or structured diff provenance first.
 
 ## Before You Claim Success
 
@@ -59,11 +59,21 @@ If the user asks what this project is, where work stopped, or what the current s
 - Do not turn project recall into repo archaeology.
 - Do not create helper scripts or make edits for an orientation-only question.
 
+## Start
+
 If Synrail shows that no controlled run is active, start one:
 
 ```bash
 synrail start "Describe the bounded local change."
 ```
+
+## Work
+
+- Keep edits bounded and local to this repo.
+- Run the local verification commands needed for the task before updating `.synrail/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.
+- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.
+
+## Finish
 
 Before claiming success, run:
 
@@ -71,7 +81,7 @@ Before claiming success, run:
 synrail check
 ```
 
-If non-green, run `synrail repair-step` and repair only the named gap before re-checking.
+If non-green, fix only what check tells you to fix, then rerun `synrail check`.
 
 Do not bypass Synrail and do not claim success without real local verification.
 - Keep repo instructions portable: prefer `synrail` in commands and committed docs.

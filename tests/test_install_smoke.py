@@ -112,6 +112,7 @@ class InstallSmokeTests(unittest.TestCase):
             venv_dir = root / "venv"
             project_root = root / "project"
             project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
             (project_root / "GEMINI.md").write_text("# Existing Gemini Context\n\nKeep this repo focused.\n")
 
             result = subprocess.run(
@@ -136,6 +137,9 @@ class InstallSmokeTests(unittest.TestCase):
             self.assertIn("Command:", result.stdout)
             self.assertIn('Start a run: `', result.stdout)
             self.assertIn(' start "Describe the bounded local change."`', result.stdout)
+            self.assertIn("Repo-native status: `python3 alpha.py`", result.stdout)
+            self.assertIn('Repo-native start: `python3 alpha.py start "Describe the bounded local change."`', result.stdout)
+            self.assertIn("Repo-native check: `python3 alpha.py check`", result.stdout)
             self.assertTrue((project_root / "AGENTS.md").exists())
             self.assertTrue((project_root / "CLAUDE.md").exists())
             gemini = (project_root / "GEMINI.md").read_text()
@@ -149,6 +153,21 @@ class InstallSmokeTests(unittest.TestCase):
             self.assertIn("Use Synrail as the default local control path", claude)
             self.assertIn("cheapest honest order", claude)
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", claude)
+
+    def test_first_run_docs_keep_final_result_as_default_proof_target(self) -> None:
+        first_run_guide = (REPO_ROOT / "docs" / "core" / "FIRST_RUN_GUIDE.md").read_text()
+        reference_readme = (REPO_ROOT / "tools" / "reference" / "README.md").read_text()
+
+        self.assertIn("On the normal happy path, treat it as the only proof surface you need to touch.", first_run_guide)
+        self.assertIn("leave `readback.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
+        self.assertIn("leave `scenario_proof.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
+        self.assertIn("Only if `check` later targets a fallback prose surface, use:", first_run_guide)
+        self.assertIn('python3 alpha.py start "Describe the bounded local change."', first_run_guide)
+        self.assertIn("python3 alpha.py check", first_run_guide)
+
+        self.assertIn("strengthen final_result.json first", reference_readme)
+        self.assertIn("leave readback/scenario_proof untouched unless synrail check later names them", reference_readme)
+        self.assertIn("focus on `final_result.json`: status, changed files, and diff/provenance first", reference_readme)
 
 
 if __name__ == "__main__":

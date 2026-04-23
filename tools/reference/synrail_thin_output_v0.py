@@ -133,12 +133,111 @@ REFRESH_CHANGE_IMPACT = {
     },
 }
 
+PROOF_RELATED_INVALIDATIONS = {
+    "closure_invalidated_by_invalid_bundle",
+    "closure_invalidated_by_semantic_bundle",
+    "closure_invalidated_by_partial_bundle",
+}
 
-def change_impact_guidance(refresh: dict | None, *, state: dict) -> dict[str, str]:
+
+def selective_refresh_repair_action(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    matched = matching_refresh(refresh, state=state) or {}
+    if matched.get("dominant_invalidation", "") not in PROOF_RELATED_INVALIDATIONS:
+        return ""
+    return current_repair_action_instruction(repair_packet)
+
+
+def selective_refresh_scope_label(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    matched = matching_refresh(refresh, state=state) or {}
+    if matched.get("dominant_invalidation", "") not in PROOF_RELATED_INVALIDATIONS:
+        return ""
+    packet = repair_packet or {}
+    continuation = packet.get("continuation_core", {})
+    stale_subsurface_ids = list(continuation.get("next_step_subsurface_ids", [])) or list(
+        packet.get("artifact_quality_summary", {}).get("stale_subsurface_ids", [])
+    )
+    if not stale_subsurface_ids:
+        current_step_subsurface_id = continuation.get("current_step_subsurface_id", "")
+        if current_step_subsurface_id:
+            stale_subsurface_ids = [current_step_subsurface_id]
+    labels: list[str] = []
+    for subsurface_id in stale_subsurface_ids:
+        label = humanize_token(subsurface_id)
+        if label and label not in labels:
+            labels.append(label)
+    return ", ".join(labels)
+
+
+def selective_refresh_reuse_label(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    matched = matching_refresh(refresh, state=state) or {}
+    if matched.get("dominant_invalidation", "") not in PROOF_RELATED_INVALIDATIONS:
+        return ""
+    proof_bundle = state.get("proof_bundle", {})
+    stale_sections = set(proof_bundle.get("missing_sections", [])) | set(proof_bundle.get("semantically_insufficient_sections", []))
+    reusable: list[str] = []
+    for section, details in proof_bundle.items():
+        if section in {"status", "structural_status", "semantic_status", "missing_sections", "semantically_insufficient_sections", "semantic_next_safe_step"}:
+            continue
+        if section in stale_sections or not isinstance(details, dict):
+            continue
+        if not (details.get("semantically_sufficient", False) or details.get("structurally_complete", False)):
+            continue
+        label = humanize_token(section)
+        if label and label not in reusable:
+            reusable.append(label)
+    return ", ".join(reusable)
+
+def refresh_reuse_line(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    reusable = selective_refresh_reuse_label(refresh, state=state, repair_packet=repair_packet)
+    if not reusable:
+        return ""
+    return f"reusable proof surfaces: {reusable}"
+
+
+def refresh_scope_summary(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    scope = refresh_scope_line(refresh, state=state, repair_packet=repair_packet)
+    reuse = refresh_reuse_line(refresh, state=state, repair_packet=repair_packet)
+    if scope and reuse:
+        return f"{scope}; {reuse}"
+    return scope or reuse
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def change_impact_guidance(refresh: dict | None, *, state: dict, repair_packet: dict | None = None) -> dict[str, str]:
     matched = matching_refresh(refresh, state=state)
     if not matched:
         return {}
-    return REFRESH_CHANGE_IMPACT.get(matched.get("dominant_invalidation", ""), {})
+    guidance = dict(REFRESH_CHANGE_IMPACT.get(matched.get("dominant_invalidation", ""), {}))
+    if not guidance:
+        return {}
+    repair_action = selective_refresh_repair_action(refresh, state=state, repair_packet=repair_packet)
+    repair_focus = current_repair_focus_summary(repair_packet)
+    if repair_action:
+        guidance["action"] = f"{repair_action} Then rerun synrail check."
+        if repair_focus:
+            guidance["diagnosis"] = f"Repair only this stale proof surface before trusting closure again: {repair_focus}."
+    return guidance
 
 
 def classify_outcome(*, state: dict, report: dict, repair_packet: dict | None, doctor: dict | None) -> str:
@@ -308,22 +407,22 @@ def technical_lines(*, state: dict, report: dict, repair_packet: dict | None, ch
     ]
 
 
-def maybe_override_summary(summary: str, diagnosis: str, *, refresh: dict | None, state: dict) -> tuple[str, str]:
-    guidance = change_impact_guidance(refresh, state=state)
+def maybe_override_summary(summary: str, diagnosis: str, *, refresh: dict | None, state: dict, repair_packet: dict | None) -> tuple[str, str]:
+    guidance = change_impact_guidance(refresh, state=state, repair_packet=repair_packet)
     if not guidance:
         return summary, diagnosis
     return guidance.get("summary", summary), guidance.get("diagnosis", diagnosis)
 
 
-def maybe_override_next_step(what_to_do_next: str, *, refresh: dict | None, state: dict) -> str:
-    guidance = change_impact_guidance(refresh, state=state)
+def maybe_override_next_step(what_to_do_next: str, *, refresh: dict | None, state: dict, repair_packet: dict | None) -> str:
+    guidance = change_impact_guidance(refresh, state=state, repair_packet=repair_packet)
     if not guidance:
         return what_to_do_next
     return guidance.get("action", what_to_do_next)
 
 
-def maybe_override_action_now(action_now: str, *, refresh: dict | None, state: dict, next_command: str) -> str:
-    guidance = change_impact_guidance(refresh, state=state)
+def maybe_override_action_now(action_now: str, *, refresh: dict | None, state: dict, next_command: str, repair_packet: dict | None) -> str:
+    guidance = change_impact_guidance(refresh, state=state, repair_packet=repair_packet)
     if not guidance:
         return action_now
     if next_command in {"", "synrail check"}:
@@ -344,21 +443,27 @@ def invalidation_scope_text(refresh: dict | None, *, state: dict) -> str:
     return ", ".join(humanize_token(value) for value in invalidations)
 
 
-def invalidation_focus_line(refresh: dict | None, *, state: dict) -> str:
-    guidance = change_impact_guidance(refresh, state=state)
+def invalidation_focus_line(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    guidance = change_impact_guidance(refresh, state=state, repair_packet=repair_packet)
     if not guidance:
         return ""
     return guidance.get("action", "")
 
 
-def refresh_focus_line(refresh: dict | None, *, state: dict) -> str:
+def refresh_focus_line(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
     dominant = dominant_invalidation_text(refresh, state=state)
     if not dominant:
         return ""
+    repair_focus = current_repair_focus_summary(repair_packet)
+    if repair_focus and selective_refresh_repair_action(refresh, state=state, repair_packet=repair_packet):
+        return f"refresh change impact: {dominant}; repair target: {repair_focus}"
     return f"refresh change impact: {dominant}"
 
 
-def refresh_scope_line(refresh: dict | None, *, state: dict) -> str:
+def refresh_scope_line(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    selective_scope = selective_refresh_scope_label(refresh, state=state, repair_packet=repair_packet)
+    if selective_scope:
+        return f"applicable invalidations: {selective_scope}"
     scope = invalidation_scope_text(refresh, state=state)
     if not scope:
         return ""
@@ -366,9 +471,9 @@ def refresh_scope_line(refresh: dict | None, *, state: dict) -> str:
 
 
 def refresh_focus_summary(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
-    refresh_focus = refresh_focus_line(refresh, state=state)
+    refresh_focus = refresh_focus_line(refresh, state=state, repair_packet=repair_packet)
     repair_focus = current_repair_focus_summary(repair_packet)
-    if refresh_focus and repair_focus:
+    if refresh_focus and repair_focus and "repair target:" not in refresh_focus:
         return f"{refresh_focus}; repair target: {repair_focus}"
     if refresh_focus:
         return refresh_focus
@@ -376,7 +481,7 @@ def refresh_focus_summary(refresh: dict | None, *, state: dict, repair_packet: d
 
 
 def refresh_current_step_action(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
-    refresh_action = invalidation_focus_line(refresh, state=state)
+    refresh_action = invalidation_focus_line(refresh, state=state, repair_packet=repair_packet)
     repair_action = current_repair_action_instruction(repair_packet)
     if refresh_action:
         return refresh_action
@@ -540,7 +645,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         repair_packet=repair_packet,
         doctor=doctor,
     )
-    summary, diagnosis = maybe_override_summary(summary, diagnosis, refresh=refresh, state=state)
+    summary, diagnosis = maybe_override_summary(summary, diagnosis, refresh=refresh, state=state, repair_packet=repair_packet)
     suggested_command = {
         "ACCEPTED": "no next command required",
         "NON_RESUMABLE": "synrail restore or start a new run",
@@ -600,7 +705,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         repair_packet=repair_packet,
         doctor=doctor,
     )
-    what_to_do_next = maybe_override_next_step(what_to_do_next, refresh=refresh, state=state)
+    what_to_do_next = maybe_override_next_step(what_to_do_next, refresh=refresh, state=state, repair_packet=repair_packet)
     action_now = maybe_override_action_now(
         action_now_text(
             next_command=next_command,
@@ -611,6 +716,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         refresh=refresh,
         state=state,
         next_command=next_command,
+        repair_packet=repair_packet,
     )
     focused_summary = refresh_focus_summary(refresh, state=state, repair_packet=repair_packet)
     current_step_action = refresh_current_step_action(refresh, state=state, repair_packet=repair_packet)
@@ -622,8 +728,8 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
     if outcome_class == "ACCEPTED":
         next_step = "No repair step is required."
     fields = {
-        "change_impact_focus": refresh_focus_line(refresh, state=state),
-        "change_impact_scope": refresh_scope_line(refresh, state=state),
+        "change_impact_focus": refresh_focus_line(refresh, state=state, repair_packet=repair_packet),
+        "change_impact_scope": refresh_scope_summary(refresh, state=state, repair_packet=repair_packet),
     }
     return {
         "schema_version": "thin_output_record_v0",

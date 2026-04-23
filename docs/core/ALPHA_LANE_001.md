@@ -65,7 +65,8 @@ This is the currently verified restore-capable alpha lane:
 synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Preserve one verified fallback before a bounded change."
 # once this root reflects one verified working state:
 synrail save --artifact-root "$ARTIFACT_ROOT"
-# synrail start already creates starter proof files under $ARTIFACT_ROOT; edit them in place, then:
+# synrail start already creates final_result.json under $ARTIFACT_ROOT; verify locally, strengthen it first,
+# and leave fallback prose surfaces untouched unless synrail check later names them, then:
 synrail check --artifact-root "$ARTIFACT_ROOT"
 # after applying only that bounded repair:
 synrail retry --artifact-root "$ARTIFACT_ROOT"
@@ -97,7 +98,7 @@ On the current onboarding smoke in [`fixtures/alpha_onboarding_run_007/`](../../
 
 On the current canonical first-run pack contour in [`fixtures/alpha_test_pack_run_004/`](../../fixtures/alpha_test_pack_run_004/):
 
-- `start` opens with one explicit `Do this now` instruction on the starter proof files
+- `start` opens with one explicit `Do this now` instruction to verify locally and strengthen `final_result.json` first
 - `check` blocks the plain-text false-success contour as `PROOF_INVALID`
 - `check` now leads with one explicit bounded action and repair target instead of only a diagnosis
 - the default non-green path now stays on `synrail check` for the first bounded fix

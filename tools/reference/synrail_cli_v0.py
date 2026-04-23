@@ -273,6 +273,13 @@ def preferred_synrail_fallback_command() -> str | None:
     return shlex.quote(str(argv0.resolve()))
 
 
+def preferred_repo_native_alpha_command(*, project_root: Path) -> str | None:
+    alpha_entry = project_root / "alpha.py"
+    if not alpha_entry.exists():
+        return None
+    return "python3 alpha.py"
+
+
 def policy_command_examples_for_binary(*, artifact_root: str, command: str) -> dict[str, str]:
     quoted_root = shlex.quote(artifact_root)
     if artifact_root == DEFAULT_ALPHA_ARTIFACT_ROOT:
@@ -301,16 +308,26 @@ def policy_workspace_note_lines(*, workspace_isolation_note: str, prefer_runtime
     return lines
 
 
-def policy_portability_note_lines(*, fallback_command: str | None) -> list[str]:
+def policy_portability_note_lines(
+    *,
+    fallback_command: str | None,
+    repo_native_alpha_command: str | None,
+) -> list[str]:
     lines = [
         "- Keep repo instructions portable: prefer `synrail` in commands and committed docs.",
     ]
     lines.extend(
         [
             "- If `synrail` from PATH is unavailable in this checkout, try a local wrapper like `./.venv/bin/synrail` before assuming the control tool is missing.",
-            "- If this repo exposes a local alpha entrypoint at `alpha.py`, use `python3 alpha.py` as the next checkout-local fallback instead of reverse-engineering the entrypoint from setup metadata.",
         ]
     )
+    if repo_native_alpha_command:
+        lines.extend(
+            [
+                f"- If this repo exposes a local alpha entrypoint at `alpha.py`, prefer `{repo_native_alpha_command}` as the repo-local fallback instead of reverse-engineering the entrypoint from setup metadata.",
+                f"- If a checkout-local wrapper path itself triggers an agent approval or permission wall, switch immediately to the exact repo-local commands below before concluding Synrail cannot run on this host.",
+            ]
+        )
     if fallback_command:
         lines.append(
             f"- If this machine cannot resolve the right Synrail binary from PATH, use `{fallback_command}` as the local fallback for this checkout."
@@ -323,6 +340,7 @@ def render_agent_policy_markdown(
     artifact_root: str,
     command: str = "synrail",
     fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
 ) -> str:
@@ -332,8 +350,16 @@ def render_agent_policy_markdown(
         prefer_runtime_helper=prefer_runtime_helper,
         command=command,
     )
-    portability_lines = policy_portability_note_lines(fallback_command=fallback_command)
+    portability_lines = policy_portability_note_lines(
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+    )
     orientation_lines = policy_orientation_lines(commands["status"])
+    repo_native_commands = (
+        policy_command_examples_for_binary(artifact_root=artifact_root, command=repo_native_alpha_command)
+        if repo_native_alpha_command
+        else None
+    )
     lines = [
         "# Agent Workflow",
         "",
@@ -348,6 +374,23 @@ def render_agent_policy_markdown(
         "",
     ]
     lines.extend(orientation_lines)
+    if repo_native_commands:
+        lines.extend(
+            [
+                "## Repo-Local Fallback",
+                "",
+                "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
+                "",
+                "```bash",
+                repo_native_commands["status"],
+                repo_native_commands["start"],
+                repo_native_commands["check"],
+                "```",
+                "",
+                "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
+                "",
+            ]
+        )
     lines.extend([
         "## Before You Edit",
         "",
@@ -357,8 +400,8 @@ def render_agent_policy_markdown(
         "```",
         "",
         "2. Keep the change local and bounded to the stated task.",
-        f"3. Run the local commands needed to verify the change honestly, then edit `{artifact_root}/final_result.json` in place as the work becomes real. Only materialize readback or scenario proof if Synrail later names them.",
-        "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless synrail check later names them or final_result cannot yet carry strong structured verification.",
+        f"3. Run the local commands needed to verify the change honestly, then edit `{artifact_root}/final_result.json` in place as the work becomes real. Only materialize readback or scenario proof if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+        "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
         "",
         "## Before You Claim Success",
         "",
@@ -392,6 +435,7 @@ def render_gemini_policy_markdown(
     artifact_root: str,
     command: str = "synrail",
     fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
 ) -> str:
@@ -401,9 +445,17 @@ def render_gemini_policy_markdown(
         prefer_runtime_helper=prefer_runtime_helper,
         command=command,
     )
-    portability_lines = policy_portability_note_lines(fallback_command=fallback_command)
+    portability_lines = policy_portability_note_lines(
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+    )
     orientation_lines = policy_orientation_lines(commands["status"])
     gemini_orientation_lines = policy_gemini_orientation_lines()
+    repo_native_commands = (
+        policy_command_examples_for_binary(artifact_root=artifact_root, command=repo_native_alpha_command)
+        if repo_native_alpha_command
+        else None
+    )
     lines = [
         "# Gemini Workflow",
         "",
@@ -422,6 +474,23 @@ def render_gemini_policy_markdown(
     ]
     lines.extend(orientation_lines)
     lines.extend(gemini_orientation_lines)
+    if repo_native_commands:
+        lines.extend(
+            [
+                "## Repo-Local Fallback",
+                "",
+                "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
+                "",
+                "```bash",
+                repo_native_commands["status"],
+                repo_native_commands["start"],
+                repo_native_commands["check"],
+                "```",
+                "",
+                "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
+                "",
+            ]
+        )
     lines.extend([
         "## Start",
         "",
@@ -434,8 +503,8 @@ def render_gemini_policy_markdown(
         "## Work",
         "",
         f"- Keep edits bounded and local to this repo.",
-        f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly asks for them.",
-        "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless synrail check later names them or final_result cannot yet carry strong structured verification.",
+        f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+        "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
         "",
         "## Finish",
         "",
@@ -460,6 +529,7 @@ def render_claude_policy_markdown(
     artifact_root: str,
     command: str = "synrail",
     fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
 ) -> str:
@@ -469,8 +539,16 @@ def render_claude_policy_markdown(
         prefer_runtime_helper=prefer_runtime_helper,
         command=command,
     )
-    portability_lines = policy_portability_note_lines(fallback_command=fallback_command)
+    portability_lines = policy_portability_note_lines(
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+    )
     orientation_lines = policy_orientation_lines(commands["status"])
+    repo_native_commands = (
+        policy_command_examples_for_binary(artifact_root=artifact_root, command=repo_native_alpha_command)
+        if repo_native_alpha_command
+        else None
+    )
     lines = [
         "# Claude Workflow",
         "",
@@ -488,6 +566,23 @@ def render_claude_policy_markdown(
         "",
     ]
     lines.extend(orientation_lines)
+    if repo_native_commands:
+        lines.extend(
+            [
+                "## Repo-Local Fallback",
+                "",
+                "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
+                "",
+                "```bash",
+                repo_native_commands["status"],
+                repo_native_commands["start"],
+                repo_native_commands["check"],
+                "```",
+                "",
+                "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
+                "",
+            ]
+        )
     lines.extend([
         "## Start",
         "",
@@ -500,8 +595,8 @@ def render_claude_policy_markdown(
         "## Work",
         "",
         f"- Keep edits bounded and local to this repo.",
-        f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly asks for them.",
-        "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless synrail check later names them or final_result cannot yet carry strong structured verification.",
+        f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+        "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
         "",
         "## Finish",
         "",
@@ -528,6 +623,7 @@ def render_agent_policy_block(
     artifact_root: str,
     command: str = "synrail",
     fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
 ) -> str:
@@ -537,8 +633,16 @@ def render_agent_policy_block(
         prefer_runtime_helper=prefer_runtime_helper,
         command=command,
     )
-    portability_lines = policy_portability_note_lines(fallback_command=fallback_command)
+    portability_lines = policy_portability_note_lines(
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+    )
     orientation_lines = policy_orientation_lines(commands["status"])
+    repo_native_commands = (
+        policy_command_examples_for_binary(artifact_root=artifact_root, command=repo_native_alpha_command)
+        if repo_native_alpha_command
+        else None
+    )
     lines = [
         f"## {title}",
         "",
@@ -552,6 +656,23 @@ def render_agent_policy_block(
         "",
     ]
     lines.extend(orientation_lines)
+    if repo_native_commands:
+        lines.extend(
+            [
+                "## Repo-Local Fallback",
+                "",
+                "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
+                "",
+                "```bash",
+                repo_native_commands["status"],
+                repo_native_commands["start"],
+                repo_native_commands["check"],
+                "```",
+                "",
+                "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
+                "",
+            ]
+        )
     lines.extend([
         "## Start",
         "",
@@ -564,8 +685,8 @@ def render_agent_policy_block(
         "## Work",
         "",
         f"- Keep edits bounded and local to this repo.",
-        f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly asks for them.",
-        "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless synrail check later names them or final_result cannot yet carry strong structured verification.",
+        f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+        "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
         "",
         "## Finish",
         "",
@@ -679,6 +800,7 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
     )
     command = preferred_synrail_command()
     fallback_command = preferred_synrail_fallback_command()
+    repo_native_alpha_command = preferred_repo_native_alpha_command(project_root=project_root)
     git_context = workspace_git_context(project_root)
     workspace_isolation_note = git_context.get("workspace_isolation_note", "")
     prefer_runtime_helper = project_prefers_runtime_evidence(project_root)
@@ -690,6 +812,7 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
@@ -697,6 +820,7 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
@@ -704,6 +828,7 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
@@ -713,6 +838,7 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
@@ -722,6 +848,7 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
@@ -731,6 +858,7 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
@@ -1864,11 +1992,12 @@ def scenario_proof_template_text(*, root: Path | None) -> str:
     lines = [
         f"### SCENARIO PROOF: {title}",
         f"Run id: {run_id}",
-        "Scenario: describe the exact runtime context on the attested target surface",
-        "Command: paste the local command, request, or test that verified the change",
-        "Observed: paste the concrete output, rendered fragment, or behavior that was seen",
+        "Scenario: name only the exact runtime context needed for the blocker Synrail explicitly targeted",
+        "Command: paste only the local command, request, or test that verified this named blocker",
+        "Observed: paste only the concrete output, rendered fragment, or behavior needed to unblock it",
     ]
-    lines.append("Fallback-only note: if final_result.json already carries explicit structured verification, leave this scenario proof untouched unless synrail check explicitly asks for more.")
+    lines.append("Fallback-only note: if final_result.json already carries explicit structured verification, leave this scenario proof untouched unless Synrail explicitly targets this file.")
+    lines.append("When Synrail does explicitly target this file, keep it minimal and concrete; do not add extra narrative beyond the named blocker.")
     if profile.get("prefers_runtime_evidence", False):
         lines.append("Runtime hint: prefer a local request, rendered response, or observed runtime output over a source-only grep when possible; run `synrail runtime-helper` for a small curl or template-render path before browser automation")
     lines.extend(["Status: PASSED", ""])
@@ -1893,9 +2022,10 @@ def readback_template_text(*, root: Path | None) -> str:
         f"### READBACK: {title}",
         f"Run id: {state.get('run_id', 'RUN_ID_FOR_THIS_CONTROLLED_RUN')}",
         f"Changed surface: {changed_surface}",
-        "Observed: briefly describe what this changed surface now contains, returns, or renders",
+        "Observed: record only the concrete property needed for the blocker Synrail explicitly targeted",
     ]
-    lines.append("Fallback-only note: if final_result.json already carries explicit structured verification, leave this readback untouched unless synrail check explicitly asks for more.")
+    lines.append("Fallback-only note: if final_result.json already carries explicit structured verification, leave this readback untouched unless Synrail explicitly targets this file.")
+    lines.append("When Synrail does explicitly target this file, keep it minimal and concrete; do not add extra narrative beyond the named blocker.")
     if profile.get("prefers_runtime_evidence", False):
         lines.append("Runtime hint: for UI, route, or rendered output changes, prefer a local response or rendered fragment over source-only grep when possible; run `synrail runtime-helper` for a small curl or template-render path before browser automation")
     lines.append("")

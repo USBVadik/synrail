@@ -1,9 +1,10 @@
 # Synrail Critic Review Brief
 
-Status date: 2026-04-21
+Status date: 2026-04-22
 Repo: `synrail`
-Reviewed snapshot: current shipped branch truth prepared for critic handoff
+Reviewed snapshot: exact selected repository snapshot prepared for critic handoff
 Verification note: rerun the listed local verification commands on the exact snapshot you send
+This brief should travel with the exact snapshot it describes, not with a drifting local working tree.
 
 ## Why this document exists
 
@@ -55,7 +56,7 @@ At the user level the intended local contour is now:
 1. `synrail`
 2. `synrail start "Describe the bounded change"`
 3. do the work
-4. strengthen `.synrail/final_result.json` first and keep `readback.txt` plus `scenario_proof.txt` fallback-only unless `synrail check` explicitly names one
+4. strengthen `.synrail/final_result.json` first, keep `readback.txt` plus `scenario_proof.txt` fallback-only unless `synrail check` explicitly names one, and leave `cleanup_status` absent unless Synrail explicitly asks for cleanup attestation
 5. `synrail check`
 6. if blocked: fix only the named gap from `synrail check`; when refresh invalidation is known, the default summary now points only at the stale obligation class
 7. use `synrail repair-step` only when a standalone bounded repair prompt is actually helpful
@@ -66,7 +67,9 @@ Important change from earlier branches:
 
 - `start` now materializes only `.synrail/final_result.json` by default
 - `readback.txt` and `scenario_proof.txt` are now fallback-only surfaces
-- if a later `synrail check` explicitly needs one of them, `Synrail` can prepare that fallback on demand
+- `cleanup_status` now stays off the cheap happy path unless Synrail explicitly asks for cleanup attestation
+- normal `synrail check` can satisfy `cleanup_status` from doctor-ready workspace truth without manual `final_result.json` repair
+- if a later `synrail check` explicitly needs one fallback proof surface, `Synrail` can prepare that fallback on demand
 - the default non-green path now lets `synrail check` carry the first bounded fix instead of making `repair-step` the next everyday hop
 - when refresh invalidation matches the active run, the default summary now points only at the stale obligation class instead of broadly restating the whole non-green contour
 
@@ -82,18 +85,31 @@ On the measured lanes, optional prose surfaces can now stay absent when trust is
 
 This matters because `Synrail` is now less dependent on the agent writing extra narrative artifacts just to satisfy the kernel.
 
-### 2. There is now one repeatable everyday winner
+### 2. There are now two repeatable everyday winners inside one narrow focused family
 
 The current repeatable everyday benchmark pack is still baseline-favorable overall, but it no longer reads as “all overhead, no concrete win”.
 
 Current pack truth:
 
-- `1` scenario: `SYNRAIL_BETTER`
+- `2` scenarios: `SYNRAIL_BETTER`
 - `4` scenarios: `BASELINE_GOOD_ENOUGH`
 - `0` scenarios: `UNCLEAR`
 
+The stronger narrow reading is inside the current focus family:
+
+- focus family: `small_template_text_fix`
+- focused family record count: `2`
+- focused verdict: `SYNRAIL_BETTER`
+- focused stability: `LOW_VARIANCE_REPEATABLE`
+- focused cheap-enough status: `FOCUSED_CLASS_CHEAP_ENOUGH`
+- focused behavior-cheapness status on the canonical pack: `FOCUSED_CLASS_BEHAVIOR_CHEAP_BY_DEFAULT`
+- focused behavior-cheapness status under same-family pressure can fall to `FOCUSED_CLASS_BEHAVIOR_NOT_YET_CHEAP_BY_DEFAULT` while kernel cheapness still reads `FOCUSED_CLASS_KERNEL_CHEAP_ENOUGH`
+
 This is not a broad economics victory.
-It is one repeatable low-drag win inside a still-baseline-favorable class.
+It is a narrow, repeatable low-drag family inside a still-baseline-favorable class.
+
+The pack now also separates `fixed_control_mass` from `behavioral_control_tax`, which makes the remaining drag easier to attack honestly instead of blaming all cost on the kernel.
+The newer same-family pressure slice makes that split more useful by showing behavior drift can reappear without collapsing the kernel-cheap reading.
 
 That is a useful and honest intermediate result.
 
@@ -184,7 +200,7 @@ That means critics are still right to ask whether the control burden is worth it
 
 Current status is:
 
-- one low-drag winner exists
+- two low-drag winners exist inside one narrow focused family
 - the class still does not beat baseline overall
 
 ### 2. Proof independence is still measured-lane truth, not broad truth
@@ -247,8 +263,8 @@ If I had to name the three strongest current negatives:
 If I were trying to falsify the project honestly, I would attack these points in this order:
 
 1. **Everyday economics**
-   - Is one benchmark-pack winner just a local exception?
-   - Does the system still feel visibly heavier than baseline on ordinary bounded tasks?
+   - Is the two-task focused-family win just a local exception?
+   - Does the system still feel visibly heavier than baseline on ordinary bounded tasks outside that narrow family?
 
 2. **Proof independence**
    - Can you still get acceptance through structured self-description on a contour the current tests did not anticipate?

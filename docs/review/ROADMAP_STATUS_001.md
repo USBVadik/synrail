@@ -53,12 +53,22 @@ Completed as shipped tranches on the current branch:
    - only `final_result.json` is materialized by default on `start`
    - fallback proof surfaces stay unmaterialized until explicitly needed
    - first-loop shell guidance now keeps `final_result` as the only default proof target
+   - agent-facing repo guidance now also tells operators to verify locally, strengthen `final_result.json` first, leave `readback.txt` and `scenario_proof.txt` untouched unless later named, and keep `cleanup_status` absent unless Synrail explicitly asks for cleanup attestation
+   - first-run docs and the reference README now keep `final_result.json` as the only default proof target and only surface `readback-template` or `scenario-proof-template` after `check` explicitly targets a fallback prose surface
+   - explicitly targeted `readback.txt` and `scenario_proof.txt` repair checklists now ask for the minimal concrete observation or verification needed for the named blocker instead of inviting extra explanatory prose
+   - explicitly targeted `readback-template` and `scenario-proof-template` starter text now also asks for minimal concrete blocker-specific evidence instead of generic descriptive prose
+   - runtime bundle why-text for readback and scenario proof now describes those fallback surfaces as blocker-specific fallback evidence instead of explanatory prose when runtime corroboration is still too weak to waive them
+   - bootstrap starter guidance now tells operators that fallback prose surfaces stay untouched unless Synrail explicitly targets one as blocker-specific fallback evidence
    - partial-proof continuation now keeps `repair-step` on `final_result.json` first whenever final-result truth is still stale, before Synrail materializes or targets fallback proof surfaces
 2. repeatable everyday economics benchmark
    - one repeatable everyday benchmark pack now exists
-   - it currently shows one repeatable low-drag winner, four baseline-good-enough paths, and zero unclear paths
+   - it currently shows two repeatable low-drag winners, four baseline-good-enough paths, and zero unclear paths
+   - the current focus family is `small_template_text_fix`, which now has two justified low-drag paths and reads as a low-variance repeatable family even though the broader repeatable-everyday verdict is still baseline-favorable overall
+   - that focused family still reads as both `FOCUSED_CLASS_CHEAP_ENOUGH` and `FOCUSED_CLASS_BEHAVIOR_CHEAP_BY_DEFAULT` on the current canonical pack
    - the class verdict is still baseline-favorable overall
    - the harness and pack now also split the everyday economics lane into machine-readable `fixed_control_mass` vs `behavioral_control_tax`, while keeping `total_control_burden`, `checks_per_accepted_closure`, `operator_visible_actions`, and `got_lost_moments` visible as supporting deltas
+   - a same-family behavior-independence pressure slice now shows the focused class can remain `SYNRAIL_BETTER` and `FOCUSED_CLASS_KERNEL_CHEAP_ENOUGH` while behavior cheapness drops to `FOCUSED_CLASS_BEHAVIOR_NOT_YET_CHEAP_BY_DEFAULT` when an extra skippable surface reappears
+   - this means the focused win is now more honest: the canonical wedge is behavior-cheap by default, but that behavior cheapness is not yet fully independent under same-family pressure
 3. proof independence stress
    - labeled-but-thin scenario prose no longer carries verification corroboration on strict proof-sensitive lanes
    - thin command confirmations like `Output: ok`, `grep confirms ...`, or exit-code-only observations are now blocked on those lanes

@@ -61,7 +61,8 @@ The current verified restore-capable alpha lane is:
 synrail
 synrail start "Preserve one verified fallback before a bounded change."
 synrail save
-# make the bounded change, then update only the proof surfaces that reflect what you actually changed and verified
+# make the bounded change, run local verification, then strengthen final_result.json first
+# leave readback/scenario_proof untouched unless synrail check later names them
 synrail check
 # if non-green, fix only what check names, then rerun synrail check
 synrail restore --preview
@@ -74,12 +75,13 @@ The current fresh first-run contour is smaller:
 ```bash
 synrail
 synrail start "Reject a plain-text final result and keep the repair bounded."
-# make the bounded change, then update only the proof surfaces that reflect what you actually changed and verified
+# make the bounded change, run local verification, then strengthen final_result.json first
+# leave readback/scenario_proof untouched unless synrail check later names them
 synrail check
 # if non-green, fix what check says, then rerun synrail check
 ```
 
-In that normal `synrail check` path, the operator should focus on changed files, diff/provenance, readback, and labeled verification evidence. Run identity and doctor-ready cleanup truth can now be carried from the current controlled context instead of being recopied by hand into `final_result.json` on every small task.
+In that normal `synrail check` path, the operator should focus on `final_result.json`: status, changed files, and diff/provenance first. Run identity and doctor-ready cleanup truth can now be carried from the current controlled context instead of being recopied by hand into `final_result.json` on every small task. Only reach for `readback.txt` or `scenario_proof.txt` after `check` explicitly targets them.
 
 This shell is intentionally thin:
 

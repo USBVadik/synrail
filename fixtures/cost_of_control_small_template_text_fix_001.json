@@ -1,47 +1,23 @@
 {
   "schema_version": "cost_of_control_record_v0",
-  "scenario_count": 6,
+  "scenario_count": 2,
   "source_records": [
     {
-      "path": "fixtures/repeatable_everyday_benchmark_pack_001.json#EVERYDAY_LOCAL_001",
-      "scenario_id": "EVERYDAY_LOCAL_001",
-      "scenario_class": "repeatable_everyday_local",
-      "verdict": "BASELINE_GOOD_ENOUGH"
-    },
-    {
-      "path": "fixtures/repeatable_everyday_benchmark_pack_001.json#EVERYDAY_LOCAL_002",
-      "scenario_id": "EVERYDAY_LOCAL_002",
-      "scenario_class": "repeatable_everyday_local",
-      "verdict": "BASELINE_GOOD_ENOUGH"
-    },
-    {
-      "path": "fixtures/repeatable_everyday_benchmark_pack_001.json#EVERYDAY_LOCAL_003",
-      "scenario_id": "EVERYDAY_LOCAL_003",
-      "scenario_class": "repeatable_everyday_local",
-      "verdict": "BASELINE_GOOD_ENOUGH"
-    },
-    {
-      "path": "fixtures/repeatable_everyday_benchmark_pack_001.json#EVERYDAY_LOCAL_004",
-      "scenario_id": "EVERYDAY_LOCAL_004",
-      "scenario_class": "repeatable_everyday_local",
-      "verdict": "BASELINE_GOOD_ENOUGH"
-    },
-    {
-      "path": "fixtures/repeatable_everyday_benchmark_pack_001.json#EVERYDAY_LOCAL_005",
+      "path": "fixtures/small_template_text_fix_benchmark_pack_001.json#EVERYDAY_LOCAL_005",
       "scenario_id": "EVERYDAY_LOCAL_005",
-      "scenario_class": "repeatable_everyday_local",
+      "scenario_class": "small_template_text_fix_repeatable",
       "verdict": "SYNRAIL_BETTER"
     },
     {
-      "path": "fixtures/repeatable_everyday_benchmark_pack_001.json#EVERYDAY_LOCAL_006",
+      "path": "fixtures/small_template_text_fix_benchmark_pack_001.json#EVERYDAY_LOCAL_006",
       "scenario_id": "EVERYDAY_LOCAL_006",
-      "scenario_class": "repeatable_everyday_local",
+      "scenario_class": "small_template_text_fix_repeatable",
       "verdict": "SYNRAIL_BETTER"
     }
   ],
   "verdict_counts": {
     "SYNRAIL_BETTER": 2,
-    "BASELINE_GOOD_ENOUGH": 4,
+    "BASELINE_GOOD_ENOUGH": 0,
     "UNCLEAR": 0
   },
   "aggregate_deltas": {
@@ -51,32 +27,32 @@
     "avg_invalidation_count_added": 0,
     "avg_closure_latency_minutes_added": 1,
     "avg_checks_per_accepted_closure_added": 0,
-    "avg_false_green_exposure_reduced": 0,
-    "avg_artifact_completeness_percent_gain": 29,
+    "avg_false_green_exposure_reduced": 1,
+    "avg_artifact_completeness_percent_gain": 32,
     "avg_mandatory_mental_steps_added": 1,
-    "avg_trust_bearing_artifacts_added": 1,
+    "avg_trust_bearing_artifacts_added": 0,
     "avg_required_visible_surfaces_added": 0,
     "avg_skippable_visible_surfaces_added": 0,
-    "avg_operator_visible_actions_added": 1,
+    "avg_operator_visible_actions_added": 0,
     "avg_got_lost_moments_added": 0,
-    "avg_kernel_control_mass_added": 2,
-    "avg_behavioral_control_tax_added": 1,
-    "avg_fixed_control_mass_added": 2,
-    "avg_total_control_burden_added": 3
+    "avg_kernel_control_mass_added": 1,
+    "avg_behavioral_control_tax_added": 0,
+    "avg_fixed_control_mass_added": 1,
+    "avg_total_control_burden_added": 1
   },
   "hotspots": {
     "highest_operator_minutes_added": {
-      "scenario_id": "EVERYDAY_LOCAL_003",
+      "scenario_id": "EVERYDAY_LOCAL_005",
       "path": "governed_final_result_first",
-      "value": 2
+      "value": 1
     },
     "highest_closure_latency_minutes_added": {
-      "scenario_id": "EVERYDAY_LOCAL_003",
+      "scenario_id": "EVERYDAY_LOCAL_005",
       "path": "governed_final_result_first",
-      "value": 2
+      "value": 1
     },
     "highest_checks_per_accepted_closure_added": {
-      "scenario_id": "EVERYDAY_LOCAL_001",
+      "scenario_id": "EVERYDAY_LOCAL_005",
       "path": "governed_final_result_first",
       "value": 0
     },
@@ -86,39 +62,39 @@
       "value": 1
     },
     "highest_artifact_completeness_percent_gain": {
-      "scenario_id": "EVERYDAY_LOCAL_002",
+      "scenario_id": "EVERYDAY_LOCAL_005",
       "path": "governed_final_result_first",
       "value": 35
     },
     "highest_operator_visible_actions_added": {
-      "scenario_id": "EVERYDAY_LOCAL_004",
+      "scenario_id": "EVERYDAY_LOCAL_005",
       "path": "governed_final_result_first",
-      "value": 2
+      "value": 0
     },
     "highest_got_lost_moments_added": {
-      "scenario_id": "EVERYDAY_LOCAL_004",
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "path": "governed_final_result_first",
+      "value": 0
+    },
+    "highest_kernel_control_mass_added": {
+      "scenario_id": "EVERYDAY_LOCAL_005",
       "path": "governed_final_result_first",
       "value": 1
     },
-    "highest_kernel_control_mass_added": {
-      "scenario_id": "EVERYDAY_LOCAL_004",
-      "path": "governed_final_result_first",
-      "value": 3
-    },
     "highest_behavioral_control_tax_added": {
-      "scenario_id": "EVERYDAY_LOCAL_004",
+      "scenario_id": "EVERYDAY_LOCAL_005",
       "path": "governed_final_result_first",
-      "value": 3
+      "value": 0
     },
     "highest_fixed_control_mass_added": {
-      "scenario_id": "EVERYDAY_LOCAL_004",
+      "scenario_id": "EVERYDAY_LOCAL_005",
       "path": "governed_final_result_first",
-      "value": 3
+      "value": 1
     },
     "highest_total_control_burden_added": {
-      "scenario_id": "EVERYDAY_LOCAL_004",
+      "scenario_id": "EVERYDAY_LOCAL_005",
       "path": "governed_final_result_first",
-      "value": 6
+      "value": 1
     }
   },
   "path_buckets": {
@@ -126,22 +102,17 @@
       "EVERYDAY_LOCAL_005",
       "EVERYDAY_LOCAL_006"
     ],
-    "baseline_sufficient_paths": [
-      "EVERYDAY_LOCAL_001",
-      "EVERYDAY_LOCAL_002",
-      "EVERYDAY_LOCAL_003",
-      "EVERYDAY_LOCAL_004"
-    ],
+    "baseline_sufficient_paths": [],
     "under_proven_paths": []
   },
   "reading": {
     "strongest_justified_path": "EVERYDAY_LOCAL_005",
-    "clearest_overhead_path": "EVERYDAY_LOCAL_003",
-    "everyday_status": "BASELINE_GOOD_ENOUGH",
+    "clearest_overhead_path": "",
+    "everyday_status": "UNKNOWN",
     "hybrid_status": "UNKNOWN",
     "compound_status": "UNKNOWN",
-    "primary_scenario_class": "repeatable_everyday_local",
-    "primary_scenario_class_status": "BASELINE_GOOD_ENOUGH",
+    "primary_scenario_class": "small_template_text_fix_repeatable",
+    "primary_scenario_class_status": "SYNRAIL_BETTER",
     "focus_task_class": "small_template_text_fix",
     "focus_task_class_record_count": 2,
     "focus_task_class_verdict": "SYNRAIL_BETTER",

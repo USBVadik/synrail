@@ -8,7 +8,7 @@ If you need copy-paste outreach text, use:
 
 ## Send these things
 
-1. the full repository snapshot
+1. the exact repository snapshot selected for review
 2. `docs/review/EXTERNAL_CRITIQUE_PACK_001.md`
 3. `docs/review/CRITIC_REVIEW_BRIEF_2026-04-19.md`
 4. `docs/core/ALPHA_LANE_001.md`
@@ -17,6 +17,8 @@ If you need copy-paste outreach text, use:
 7. `tests/test_alpha_test_pack_smoke.py`
 8. `tests/test_claim_validation_pack.py`
 9. the relevant fixtures
+
+Use one explicitly selected snapshot for docs, tests, fixtures, and message. Do not assemble the packet from a drifting local working tree.
 
 ## Suggested message
 
@@ -51,6 +53,7 @@ Do not send the pack out yet if any of these are false:
 5. default shell wording stays honest about bounded doctor coverage, current proof rules, and unresolved continuation boundaries
 6. telemetry export or bug-packet actually reduce feedback effort for an outside tester
 7. second-operator handoff does not require us to explain internal grammar out loud
+8. the docs, tests, fixtures, and message all match the exact selected snapshot rather than a drifting local working tree
 
 ## What not to promise
 

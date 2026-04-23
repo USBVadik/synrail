@@ -1,9 +1,11 @@
 # Synrail External Full Review
 
-Status date: 2026-04-21
+Status date: 2026-04-22
 Repo: `synrail`
 Review type: current local-roadmap closure audit prepared for external critics
+Reviewed snapshot: exact selected repository snapshot prepared for critic handoff
 Verification note: rerun the listed commands on the exact snapshot you send
+This review should travel with the exact snapshot it describes, not with a drifting local working tree.
 
 ## Why this file exists
 
@@ -63,20 +65,22 @@ The intended local contour on the current branch is now:
 1. `synrail`
 2. `synrail start "Describe the bounded change"`
 3. do the work
-4. strengthen `.synrail/final_result.json` first
-5. leave `readback.txt` and `scenario_proof.txt` untouched unless `synrail check` explicitly names one
-6. `synrail check`
-7. if blocked: fix only the named gap from `synrail check`
-8. use `synrail repair-step` only if a standalone bounded repair prompt is actually useful
-9. use `synrail restore` only when the contour explicitly calls for it
-10. stop only at accepted closure
+4. strengthen `.synrail/final_result.json` first, leave `readback.txt` and `scenario_proof.txt` untouched unless `synrail check` explicitly names one, and leave `cleanup_status` absent unless Synrail explicitly asks for cleanup attestation
+5. `synrail check`
+6. if blocked: fix only the named gap from `synrail check`; when refresh invalidation matches the active run, the default summary now points only at the stale obligation class
+7. use `synrail repair-step` only if a standalone bounded repair prompt is actually useful
+8. use `synrail restore` only when the contour explicitly calls for it
+9. stop only at accepted closure
 
 Important current properties:
 
 - `start` materializes only `.synrail/final_result.json` by default
 - fallback prose surfaces stay hidden by default
+- `cleanup_status` now stays off the cheap happy path unless Synrail explicitly asks for cleanup attestation
+- normal `synrail check` can satisfy `cleanup_status` from doctor-ready workspace truth without manual `final_result.json` repair
 - `check` is the default non-green path
 - `repair-step` is now a helper surface, not the default next hop
+- when refresh invalidation matches the active run, the default summary now points only at the stale obligation class instead of broadly restating the whole non-green contour
 - wrapper-aware hints now keep install and shell instructions honest when `synrail` is not on `PATH`
 
 ## What the last local roadmap actually shipped
@@ -246,16 +250,27 @@ It now has a clearer earned wedge:
 
 The strongest of these is still handoff / continuation honesty.
 
-#### 2. One repeatable everyday winner now exists
+#### 2. Two repeatable everyday winners now exist inside one narrow focused family
 
 The current repeatable everyday benchmark pack reads:
 
-- `1` scenario: `SYNRAIL_BETTER`
+- `2` scenarios: `SYNRAIL_BETTER`
 - `4` scenarios: `BASELINE_GOOD_ENOUGH`
 - `0` scenarios: `UNCLEAR`
 
+The stronger narrow reading is inside the current focus family:
+
+- focus family: `small_template_text_fix`
+- focused family record count: `2`
+- focused verdict: `SYNRAIL_BETTER`
+- focused stability: `LOW_VARIANCE_REPEATABLE`
+- focused cheap-enough status: `FOCUSED_CLASS_CHEAP_ENOUGH`
+- focused behavior-cheapness status on the canonical pack: `FOCUSED_CLASS_BEHAVIOR_CHEAP_BY_DEFAULT`
+- focused behavior-cheapness status under same-family pressure can fall to `FOCUSED_CLASS_BEHAVIOR_NOT_YET_CHEAP_BY_DEFAULT` while kernel cheapness still reads `FOCUSED_CLASS_KERNEL_CHEAP_ENOUGH`
+
 That is not a broad economics win.
-It is a useful intermediate result because the pack no longer reads as "all burden, zero real justification."
+It is a useful intermediate result because the pack now contains one narrow repeatable low-drag family instead of reading as "all burden, zero real justification."
+The newer same-family pressure slice also makes the economics split more honest by showing behavior drift can reappear without collapsing the kernel-cheap reading.
 
 #### 3. The project is more disciplined about not growing machinery
 
@@ -284,7 +299,7 @@ The honest class verdict remains:
 That means a critic is still right to ask:
 
 - is the control burden worth it on bounded everyday work?
-- is the current one-scenario win a wedge or still mostly a curiosity?
+- is the current two-task focused-family win a wedge or still mostly a curiosity?
 
 #### 2. Proof independence is still measured-lane truth
 
@@ -314,7 +329,7 @@ That is why fresh external pressure remains important.
 
 ## Current benchmark reading
 
-Across the current five-scenario repeatable everyday pack, `Synrail` currently adds on average:
+Across the current six-scenario repeatable everyday pack, `Synrail` currently adds on average:
 
 - `1` operator minute
 - `0` checks per accepted closure
@@ -335,7 +350,9 @@ It currently gains on average:
 The right reading is:
 
 - the cheapened contour is materially lighter than before
-- one repeatable low-drag winner exists
+- two repeatable low-drag winners exist inside one narrow focused family
+- the canonical focused family reads as cheap enough and behavior-cheap by default
+- same-family pressure now shows behavior cheapness can still break independently while kernel cheapness remains intact
 - the class is still baseline-favorable overall
 
 This pack should be treated as a bounded internal benchmark, not as broad external economic proof.
@@ -423,10 +440,9 @@ These are the most defensible current positives:
 
 The current roadmap status still says the next high-value moves are:
 
-1. refresh critic-facing review docs on the current shipped truth
-2. hand the branch to critics before broadening product story
-3. collect one fresh live external signal on the cheapened and evidence-gated branch
-4. only after that decide whether to package broader or harden further
+1. hand the branch to critics before broadening product story
+2. collect one fresh live external signal on the cheapened and evidence-gated branch
+3. only after that decide whether to package broader or harden further
 
 This is the right sequencing.
 
@@ -463,7 +479,7 @@ If a critic wants to go deeper after reading this file, the best next files are:
 The old question "is there any real product here?" is now much closer to settled.
 The better current question is:
 
-- can this kernel become cheap enough, trust-bearing enough, and behavior-independent enough to win not only on handoff / continuation honesty, but also on at least one boring everyday class without feeling like a heavy control stack?
+- can this kernel become cheap enough, trust-bearing enough, and behavior-independent enough to win not only on handoff / continuation honesty, but also beyond the current narrow `small_template_text_fix` family without feeling like a heavy control stack?
 
 That question is still open.
 But the project now looks substantive enough that a strong critic can answer it against a real system rather than a vague concept.

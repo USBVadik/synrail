@@ -24,14 +24,22 @@ Weaker targets:
 
 Minimum package:
 
-1. repository snapshot at the target commit
+1. the exact repository snapshot at the explicitly selected target commit
 2. [EXTERNAL_CRITIQUE_PACK_001.md](./EXTERNAL_CRITIQUE_PACK_001.md)
 3. [CRITIC_REVIEW_BRIEF_2026-04-19.md](./CRITIC_REVIEW_BRIEF_2026-04-19.md)
-4. [ALPHA_TEST_PACK_001.md](../core/ALPHA_TEST_PACK_001.md)
-5. [PRODUCT_MEMO_001.md](./PRODUCT_MEMO_001.md)
-6. [KNOWN_WEAKNESSES_001.md](./KNOWN_WEAKNESSES_001.md)
-7. curated external fixture:
+4. [EXTERNAL_FULL_REVIEW_2026-04-21.md](./EXTERNAL_FULL_REVIEW_2026-04-21.md)
+5. [ALPHA_TEST_PACK_001.md](../core/ALPHA_TEST_PACK_001.md)
+6. [PRODUCT_MEMO_001.md](./PRODUCT_MEMO_001.md)
+7. [KNOWN_WEAKNESSES_001.md](./KNOWN_WEAKNESSES_001.md)
+8. focused economics test:
+   - `tests/test_everyday_benchmark_pack.py`
+9. curated external fixture:
    - `fixtures/alpha_test_pack_run_004/`
+10. focused economics fixtures:
+   - `fixtures/repeatable_everyday_benchmark_pack_001.json`
+   - `fixtures/cost_of_control_everyday_001.json`
+
+Cut the external handoff from that exact snapshot. Do not assemble the send from a drifting local working tree.
 
 If the reviewer wants deeper technical context, also include:
 

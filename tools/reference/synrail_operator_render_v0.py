@@ -68,6 +68,10 @@ def render_brief(payload: dict) -> str:
 
 {render_list(list(payload.get("next_step_subsurface_ids", [])))}
 
+## Reusable proof surfaces
+
+{render_list(list(payload.get("reusable_proof_surfaces", [])))}
+
 ## Termination
 
 - status: `{payload["termination_status"]}`
@@ -100,6 +104,8 @@ def render_chain(payload: dict) -> str:
                     f"- edit target: {render_optional(stage.get('current_step_target_path', ''))}",
                     "- required inputs:",
                     render_list(list(stage.get("next_step_required_inputs", []))),
+                    "- reusable proof surfaces:",
+                    render_list(list(stage.get("reusable_proof_surfaces", []))),
                     f"- termination reason: `{stage['termination_reason'] or 'NONE'}`",
                 ]
             )

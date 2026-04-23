@@ -25,14 +25,15 @@ def load_pack() -> dict:
 
 
 class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
-    def test_pack_has_five_repeatable_everyday_tasks(self) -> None:
+    def test_pack_has_six_repeatable_everyday_tasks(self) -> None:
         pack = load_pack()
 
         self.assertEqual("REPEATABLE_EVERYDAY_BENCHMARK_PACK_001", pack["pack_id"])
         self.assertEqual("repeatable_everyday_local", pack["scenario_class"])
-        self.assertEqual(5, len(pack["tasks"]))
+        self.assertEqual("small_template_text_fix", pack["focus_task_class"])
+        self.assertEqual(6, len(pack["tasks"]))
         self.assertEqual(
-            {"EVERYDAY_LOCAL_001", "EVERYDAY_LOCAL_002", "EVERYDAY_LOCAL_003", "EVERYDAY_LOCAL_004", "EVERYDAY_LOCAL_005"},
+            {"EVERYDAY_LOCAL_001", "EVERYDAY_LOCAL_002", "EVERYDAY_LOCAL_003", "EVERYDAY_LOCAL_004", "EVERYDAY_LOCAL_005", "EVERYDAY_LOCAL_006"},
             {task["scenario_id"] for task in pack["tasks"]},
         )
 
@@ -44,9 +45,9 @@ class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
             source_paths=[f"pack:{task['scenario_id']}" for task in pack["tasks"]],
         )
 
-        self.assertEqual(5, cost_record["scenario_count"])
+        self.assertEqual(6, cost_record["scenario_count"])
         self.assertEqual("BASELINE_GOOD_ENOUGH", cost_record["reading"]["everyday_status"])
-        self.assertEqual(1, cost_record["verdict_counts"]["SYNRAIL_BETTER"])
+        self.assertEqual(2, cost_record["verdict_counts"]["SYNRAIL_BETTER"])
         self.assertEqual(4, cost_record["verdict_counts"]["BASELINE_GOOD_ENOUGH"])
         self.assertEqual(0, cost_record["verdict_counts"]["UNCLEAR"])
         self.assertEqual(1, cost_record["aggregate_deltas"]["avg_operator_minutes_added"])
@@ -69,8 +70,36 @@ class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
         self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_fixed_control_mass_added"]["scenario_id"])
         self.assertEqual("EVERYDAY_LOCAL_004", cost_record["hotspots"]["highest_total_control_burden_added"]["scenario_id"])
         self.assertEqual("EVERYDAY_LOCAL_005", cost_record["reading"]["strongest_justified_path"])
+        self.assertEqual("repeatable_everyday_local", cost_record["reading"]["primary_scenario_class"])
+        self.assertEqual("BASELINE_GOOD_ENOUGH", cost_record["reading"]["primary_scenario_class_status"])
+        self.assertEqual("small_template_text_fix", cost_record["reading"]["focus_task_class"])
+        self.assertEqual(2, cost_record["reading"]["focus_task_class_record_count"])
+        self.assertEqual("SYNRAIL_BETTER", cost_record["reading"]["focus_task_class_verdict"])
+        self.assertEqual("LOW_VARIANCE_REPEATABLE", cost_record["reading"]["focus_task_class_stability"])
+        self.assertEqual(1, cost_record["reading"]["focus_task_class_median_operator_minutes_added"])
+        self.assertEqual(1, cost_record["reading"]["focus_task_class_median_closure_latency_minutes_added"])
+        self.assertEqual(0, cost_record["reading"]["focus_task_class_median_checks_per_accepted_closure_added"])
+        self.assertEqual(0, cost_record["reading"]["focus_task_class_median_operator_visible_actions_added"])
+        self.assertEqual(0, cost_record["reading"]["focus_task_class_median_got_lost_moments_added"])
+        self.assertEqual(1, cost_record["reading"]["focus_task_class_median_fixed_control_mass_added"])
+        self.assertEqual(0, cost_record["reading"]["focus_task_class_median_behavioral_control_tax_added"])
+        self.assertEqual(1, cost_record["reading"]["focus_task_class_median_total_control_burden_added"])
+        self.assertEqual(0, cost_record["reading"]["focus_task_class_spread_operator_minutes_added"])
+        self.assertEqual(0, cost_record["reading"]["focus_task_class_spread_closure_latency_minutes_added"])
+        self.assertEqual(0, cost_record["reading"]["focus_task_class_spread_checks_per_accepted_closure_added"])
+        self.assertEqual(0, cost_record["reading"]["focus_task_class_spread_operator_visible_actions_added"])
+        self.assertEqual(0, cost_record["reading"]["focus_task_class_spread_got_lost_moments_added"])
+        self.assertEqual(0, cost_record["reading"]["focus_task_class_spread_fixed_control_mass_added"])
+        self.assertEqual(0, cost_record["reading"]["focus_task_class_spread_behavioral_control_tax_added"])
+        self.assertEqual(0, cost_record["reading"]["focus_task_class_spread_total_control_burden_added"])
+        self.assertEqual("FOCUSED_CLASS_CHEAP_ENOUGH", cost_record["reading"]["focus_task_class_priority_one_status"])
+        self.assertEqual("", cost_record["reading"]["focus_task_class_priority_one_barrier"])
+        self.assertEqual("FOCUSED_CLASS_KERNEL_CHEAP_ENOUGH", cost_record["reading"]["focus_task_class_kernel_cheapness_status"])
+        self.assertEqual("", cost_record["reading"]["focus_task_class_kernel_cheapness_barrier"])
+        self.assertEqual("FOCUSED_CLASS_BEHAVIOR_CHEAP_BY_DEFAULT", cost_record["reading"]["focus_task_class_behavior_cheapness_status"])
+        self.assertEqual("", cost_record["reading"]["focus_task_class_behavior_cheapness_barrier"])
 
-    def test_pack_contains_one_repeatable_low_drag_winner(self) -> None:
+    def test_pack_contains_two_repeatable_low_drag_winners(self) -> None:
         pack = load_pack()
         records = [build_record(task["baseline"], task["synrail"]) for task in pack["tasks"]]
         near_zero_drag = [
@@ -79,9 +108,9 @@ class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
             and record["economics_summary"]["total_control_burden_added"] <= 1
         ]
 
-        self.assertEqual(1, len(near_zero_drag))
-        self.assertEqual("EVERYDAY_LOCAL_005", near_zero_drag[0]["scenario_id"])
-        self.assertEqual("SYNRAIL_BETTER", near_zero_drag[0]["verdict"])
+        self.assertEqual(2, len(near_zero_drag))
+        self.assertEqual({"EVERYDAY_LOCAL_005", "EVERYDAY_LOCAL_006"}, {record["scenario_id"] for record in near_zero_drag})
+        self.assertEqual({"SYNRAIL_BETTER"}, {record["verdict"] for record in near_zero_drag})
 
     def test_pack_has_no_remaining_unclear_paths(self) -> None:
         pack = load_pack()

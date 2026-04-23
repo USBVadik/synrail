@@ -28,11 +28,13 @@ The current product form is one narrow controlled-start alpha lane over that ker
 
 Give them:
 
-1. the repository snapshot at the commit you want reviewed
+1. the exact selected repository snapshot at the commit you want reviewed
 2. this review pack under `docs/review/`
 3. the current alpha lane docs under `docs/core/`
 4. the full source tree
 5. the fixtures and tests
+
+Use one explicitly selected snapshot for docs, tests, fixtures, and message. Do not assemble the review packet from a drifting local working tree.
 
 If you want a send-ready reviewer message and exact handoff packet, use:
 
@@ -81,6 +83,10 @@ Deep technical review path:
 - regression tests for truth-critical failures
 - a compact external tester pack plus claim-validation pack
 - refresh-driven stale-obligation guidance in the default non-green shell
+- one repeatable everyday benchmark pack whose broader class is still baseline-favorable overall
+- one narrow focused `small_template_text_fix` family with two repeatable low-drag winners and a machine-readable split where the canonical pack reads `FOCUSED_CLASS_CHEAP_ENOUGH` plus `FOCUSED_CLASS_BEHAVIOR_CHEAP_BY_DEFAULT`, but same-family pressure can still keep kernel cheapness while dropping behavior cheapness to `FOCUSED_CLASS_BEHAVIOR_NOT_YET_CHEAP_BY_DEFAULT`
+
+Read that as one narrow focused win, not as a class victory: the broader everyday lane is still `BASELINE_GOOD_ENOUGH`, and same-family pressure already shows behavior cheapness is not fully independent.
 
 But it is still intentionally narrow:
 
@@ -96,7 +102,7 @@ We do not want polite feedback.
 
 We want pressure on:
 
-1. whether the everyday lane beats simpler substitutes or just adds control mass
+1. whether the broader everyday lane beats simpler substitutes, or whether the current `small_template_text_fix` win is still too narrow to justify the control mass
 2. which proof surface still feels self-issued or too author-shaped to trust
 3. whether restore, re-entry, or handoff value is concrete enough to justify the ceremony
 4. what you would cut first if that value is still too weak
@@ -111,6 +117,9 @@ Start here for live runnable and fixture-backed review:
 - [../../tests/test_truth_regressions.py](../../tests/test_truth_regressions.py)
 - [../../tests/test_alpha_test_pack_smoke.py](../../tests/test_alpha_test_pack_smoke.py)
 - [../../tests/test_claim_validation_pack.py](../../tests/test_claim_validation_pack.py)
+- [../../tests/test_everyday_benchmark_pack.py](../../tests/test_everyday_benchmark_pack.py)
+- `fixtures/repeatable_everyday_benchmark_pack_001.json`
+- `fixtures/cost_of_control_everyday_001.json`
 
 ## Recommended review commands
 

@@ -47,6 +47,7 @@ class AgentAdoptionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="synrail_agent_adoption_") as tmpdir:
             project_root = Path(tmpdir) / "project"
             project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
 
             result = self.run_alpha(
                 "install-agent-files",
@@ -67,9 +68,16 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("synrail", agents)
             self.assertIn('synrail start "Describe the bounded local change."', agents)
             self.assertIn("synrail check", agents)
+            self.assertIn("cleanup_status` absent unless Synrail later asks for cleanup attestation", agents)
+            self.assertIn("Only materialize readback or scenario proof if Synrail explicitly targets them", agents)
             self.assertIn("Do not skip Synrail", agents)
             self.assertIn("./.venv/bin/synrail", agents)
             self.assertIn("python3 alpha.py", agents)
+            self.assertIn("approval or permission wall", agents)
+            self.assertIn("Repo-Local Fallback", agents)
+            self.assertIn('python3 alpha.py start "Describe the bounded local change."', agents)
+            self.assertIn("python3 alpha.py check", agents)
+            self.assertIn("Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.", agents)
             self.assertNotIn('ARTIFACT_ROOT="$(pwd)/.synrail"', agents)
             self.assertIn("run `synrail` in this repo", result.stdout)
 
@@ -83,9 +91,12 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("fix only what check tells you to fix", gemini)
             self.assertIn("cheapest honest order", gemini)
             self.assertIn("fallback-only surfaces", gemini)
-            self.assertIn("do not touch them unless synrail check later names them", gemini)
+            self.assertIn("do not touch them unless Synrail explicitly targets them", gemini)
             self.assertIn("./.venv/bin/synrail", gemini)
             self.assertIn("python3 alpha.py", gemini)
+            self.assertIn("approval or permission wall", gemini)
+            self.assertIn("Repo-Local Fallback", gemini)
+            self.assertIn("python3 alpha.py check", gemini)
 
             self.assertIn("Use Synrail as the default local control path", claude)
             self.assertIn("For every new user task, run Synrail first", claude)
@@ -95,9 +106,12 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("fix only what check tells you to fix", claude)
             self.assertIn("cheapest honest order", claude)
             self.assertIn("fallback-only surfaces", claude)
-            self.assertIn("do not touch them unless synrail check later names them", claude)
+            self.assertIn("do not touch them unless Synrail explicitly targets them", claude)
             self.assertIn("./.venv/bin/synrail", claude)
             self.assertIn("python3 alpha.py", claude)
+            self.assertIn("approval or permission wall", claude)
+            self.assertIn("Repo-Local Fallback", claude)
+            self.assertIn("python3 alpha.py check", claude)
 
     def test_prefers_repo_portable_command_when_path_points_elsewhere(self) -> None:
         with mock.patch("synrail_cli_v0.sys.argv", ["/opt/synrail/.venv/bin/synrail"]), mock.patch(
@@ -174,6 +188,7 @@ class AgentAdoptionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="synrail_agent_adoption_force_") as tmpdir:
             project_root = Path(tmpdir) / "project"
             project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
 
             first = self.run_alpha(
                 "install-agent-files",
@@ -211,10 +226,12 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", gemini)
             self.assertIn("Do not turn project recall into repo archaeology.", gemini)
             self.assertIn("Keep repo instructions portable: prefer `synrail`", gemini)
+            self.assertIn("approval or permission wall", gemini)
             self.assertIn("# Existing Claude Context", claude)
             self.assertIn("<!-- SYNRAIL_CLAUDE_START -->", claude)
             self.assertIn("Use Synrail as the default local control path", claude)
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", claude)
+            self.assertIn("approval or permission wall", claude)
 
             forced = self.run_alpha(
                 "install-agent-files",

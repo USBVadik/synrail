@@ -48,12 +48,13 @@ Priority 2 — Behavioral cheapening, а не просто kernel cheapening
 
 Что из этого следует
 
-Нужно отдельно мерить:
+Нужно и дальше отдельно мерить:
 
 kernel cheapness
 behavior cheapness
 
 И уменьшать разрыв между ними.
+Это уже не абстракция: same-family pressure уже показывает, что behavior cheapness может ломаться отдельно, даже когда kernel cheapness остаётся cheap enough.
 
 Конкретное решение
 

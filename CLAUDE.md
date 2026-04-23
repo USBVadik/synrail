@@ -23,8 +23,8 @@ synrail start "Describe the bounded local change."
 ## Work
 
 - Keep edits bounded and local to this repo.
-- Update the starter proof files in `.synrail/` as the change becomes real.
-- Run the local verification commands needed for the task.
+- Run the local verification commands needed for the task before updating `.synrail/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.
+- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.
 
 ## Finish
 
@@ -57,16 +57,7 @@ If the user asks what this project is, where work stopped, or what the current s
 - Do not turn project recall into repo archaeology.
 - Do not create helper scripts or make edits for an orientation-only question.
 
-## Agent Execution Rules
-
-- **Simplicity First** — Prefer the smallest change that solves the actual problem. Do not add layers, abstractions, or fallback behavior unless runtime truth requires them.
-- **Surgical Changes** — Keep changes tightly bounded to the task. Avoid opportunistic refactors, broad renames, or unrelated cleanup.
-- **Goal-Driven Execution** — Before non-trivial work, state the concrete verification target in one sentence.
-- **Assume Only When Cheap** — If ambiguity would materially change the implementation, ask. Otherwise state the assumption briefly and proceed.
-- **Read Real Files First** — Do not guess file names, tests, classes, commands, or symbols.
-- **No Blind Retry Loops** — After one or two failed retries, switch to root-cause investigation.
-- **Verification Over Motion** — Prefer runtime-backed or test-backed verification over prose confidence.
-- **Update Roadmap With Reality** — If shipped capability, benchmark posture, or roadmap truth changes, update the relevant roadmap or review markdown in the same change.
+## Start
 
 If Synrail shows that no controlled run is active, start one:
 
@@ -74,13 +65,21 @@ If Synrail shows that no controlled run is active, start one:
 synrail start "Describe the bounded local change."
 ```
 
+## Work
+
+- Keep edits bounded and local to this repo.
+- Run the local verification commands needed for the task before updating `.synrail/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.
+- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.
+
+## Finish
+
 Before claiming success, run:
 
 ```bash
 synrail check
 ```
 
-If non-green, run `synrail repair-step` and repair only the named gap before re-checking.
+If non-green, fix only what check tells you to fix, then rerun `synrail check`.
 
 Do not bypass Synrail and do not claim success without real local verification.
 - Keep repo instructions portable: prefer `synrail` in commands and committed docs.

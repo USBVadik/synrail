@@ -154,6 +154,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Agent files installed into: {rel_project}")
     print(f"Quick status: run `{rel_synrail}` inside your project.")
     print(f'Start a run: `{rel_synrail} start "Describe the bounded local change."`')
+    if project_root is not None and (project_root / "alpha.py").exists():
+        print("If a local agent host blocks the checkout-local wrapper, use the repo-local fallback instead.")
+        print("Repo-native status: `python3 alpha.py`")
+        print('Repo-native start: `python3 alpha.py start "Describe the bounded local change."`')
+        print("Repo-native check: `python3 alpha.py check`")
     print("If you already have `synrail` on PATH, you can use `synrail` instead.")
     return 0
 

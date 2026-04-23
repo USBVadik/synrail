@@ -109,6 +109,23 @@ def human_required_input(input_id: str) -> str:
     return labels.get(input_id, humanize_token(input_id))
 
 
+def reusable_proof_surfaces(repair_packet: dict) -> list[str]:
+    proof_bundle = (repair_packet.get("repair_handoff", {}) or {}).get("state", {}).get("proof_bundle", {})
+    stale_sections = set(proof_bundle.get("missing_sections", [])) | set(proof_bundle.get("semantically_insufficient_sections", []))
+    reusable: list[str] = []
+    for section, details in proof_bundle.items():
+        if section in {"status", "structural_status", "semantic_status", "missing_sections", "semantically_insufficient_sections", "semantic_next_safe_step"}:
+            continue
+        if section in stale_sections or not isinstance(details, dict):
+            continue
+        if not (details.get("semantically_sufficient", False) or details.get("structurally_complete", False)):
+            continue
+        label = humanize_token(section)
+        if label and label not in reusable:
+            reusable.append(label)
+    return reusable
+
+
 def focused_step_details(repair_packet: dict, current_step_id: str, stale_subsurfaces: list[str]) -> tuple[str, str, str]:
     proof_paths = proof_target_paths(repair_packet)
     focused = focused_repair_surface(
@@ -241,12 +258,13 @@ def readback_repair_checklist(*, current_step_subsurface_id: str, current_step_t
         return []
     return [
         f"Checklist for {current_step_target_path}:",
+        "- Synrail explicitly targeted readback.txt for this step, so record only the concrete observed property needed to unblock this named gap",
         "- Changed surface: name the actual changed file path explicitly (e.g. src/app.js, not 'the file')",
         "- Observed: describe a concrete property from the changed surface — a function name, class name, line content, or rendered element",
         "- Do not paraphrase or restate the task description — prove you read the actual changed code or output",
         "- At least 2 lines with at least one concrete identifier (file path, function/class name, line number, or code token)",
         "- For UI or rendered changes, prefer local runtime evidence (curl, test output) over source-only grep when possible",
-        "- If final_result.json already carries structured diff_provenance with verification_command plus verification_result, keep readback short and explanatory, or leave it untouched until Synrail explicitly asks for it",
+        "- Keep the readback minimal and concrete; do not add extra narrative beyond the exact observed surface needed for this blocker",
     ]
 
 
@@ -257,13 +275,14 @@ def scenario_proof_repair_checklist(*, current_step_subsurface_id: str, current_
         return []
     return [
         f"Checklist for {current_step_target_path}:",
+        "- Synrail explicitly targeted scenario_proof.txt for this step, so record only the concrete verification needed to unblock this named gap",
         "- Scenario: name the exact runtime context (file path, URL, command)",
         "- Command: include the actual command, request, or test that was run (e.g. 'python -m pytest tests/test_x.py', 'curl localhost:3000/api')",
         "- Observed: include concrete output — a status code, a rendered fragment, a returned value, not just 'it works'",
         "- Status: PASSED when the expected outcome was observed; otherwise use FAILED or BLOCKED truthfully",
         "- At least 3 lines with at least one concrete identifier or command",
         "- Do not restate the task description — prove the verification actually happened",
-        "- If final_result.json already carries structured diff_provenance with verification_command plus verification_result, keep scenario proof short and explanatory, or leave it untouched until Synrail explicitly asks for it",
+        "- Keep the scenario proof minimal and concrete; do not add extra narrative beyond the exact verification needed for this blocker",
     ]
 
 
@@ -370,6 +389,7 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
     )
     allowed_scope = [current_step_subsurface_id] if current_step_subsurface_id else (stale_subsurfaces or ["current_repair_step_only"])
     allowed_scope_labels = [human_scope_label(scope_id, repair_packet=repair_packet) for scope_id in allowed_scope]
+    reusable_scope_labels = reusable_proof_surfaces(repair_packet)
     required_input_labels = [human_required_input(input_id) for input_id in required_inputs]
     forbidden_scope = [
         "Do not broaden scope beyond the current repair step.",
@@ -422,6 +442,7 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         ),
         f"Stale artifacts: {', '.join(stale_artifacts) if stale_artifacts else 'none'}",
         f"Stale subsurfaces: {', '.join(stale_subsurfaces) if stale_subsurfaces else 'none'}",
+        f"Reusable proof surfaces: {', '.join(reusable_scope_labels) if reusable_scope_labels else 'none'}",
         f"Allowed scope: {', '.join(allowed_scope_labels) if allowed_scope_labels else 'only the current bounded repair step'}",
         f"Required inputs: {', '.join(required_input_labels) if required_input_labels else 'none'}",
         f"What must be true after repair: {next_safe_step_label or 'follow the next safe step from the repair packet'}",
@@ -462,6 +483,7 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         "failure_label": failure_label,
         "stale_artifact_ids": stale_artifacts,
         "stale_subsurface_ids": stale_subsurfaces,
+        "reusable_proof_surfaces": reusable_scope_labels,
         "allowed_scope": allowed_scope,
         "allowed_scope_labels": allowed_scope_labels,
         "required_inputs": required_inputs,

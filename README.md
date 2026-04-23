@@ -13,9 +13,10 @@ Claims are not accepted reality without proof.
 # Install into a local venv (writes CLAUDE.md / GEMINI.md / AGENTS.md for agent discovery)
 python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd)"
 
-# Workflow: start → edit proof files → check → fix → check again
+# Workflow: start → verify locally → strengthen final_result.json first → check → fix → check again
 synrail start "Describe the bounded local change."
-# edit the starter proof files under .synrail/, then:
+# run local verification, strengthen .synrail/final_result.json first,
+# leave readback/scenario_proof untouched unless synrail check names them, then:
 synrail check
 # if non-green, fix what check says, then rerun synrail check
 ```

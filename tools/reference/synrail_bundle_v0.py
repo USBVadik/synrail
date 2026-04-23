@@ -512,6 +512,258 @@ _VACUOUS_OBSERVATION_PHRASES = [
     "done successfully",
 ]
 
+_DIRECT_OBSERVATION_ANCHORS = (
+    " contains ",
+    " returns ",
+    " imports ",
+    " reads ",
+    " shows ",
+    " line ",
+    " lines ",
+    " function ",
+    " class ",
+    " appears ",
+)
+
+_THIN_SELF_DESCRIPTION_ANCHORS = (
+    " contains ",
+)
+
+_THIN_LOCATION_CLAIM_MARKERS = (
+    " is ",
+    " are ",
+    " under ",
+    " below ",
+    " above ",
+    " inside ",
+    " within ",
+    " near ",
+)
+
+_UNANCHORED_SEMANTIC_CLAIM_MARKERS = (
+    " before ",
+    " after ",
+    " unless ",
+    " when ",
+    " while ",
+    " applies ",
+    " apply ",
+    " enforces ",
+    " enforce ",
+    " routes ",
+    " route ",
+    " dispatches ",
+    " dispatch ",
+    " clamps ",
+    " clamp ",
+    " evaluates ",
+    " evaluate ",
+)
+
+
+def _observation_line_is_unanchored_semantic_claim(line: str) -> bool:
+    lowered = line.lower()
+    for label in _OBSERVATION_LABELS:
+        pos = lowered.find(label)
+        if pos == -1:
+            continue
+        after = line[pos + len(label):].lstrip(":- \t")
+        if not after:
+            return False
+        lowered_after = after.lower()
+        has_line_number = any(ch.isdigit() for ch in lowered_after) and contains_any_keyword(lowered_after, ["line", ":"])
+        has_quoted = "'" in after or '"' in after or "`" in after
+        has_command_output_token = any(tok in after for tok in ["=>", "->", ">>>", "...", "\\n"])
+        has_code_token = "(" in after or ")" in after
+        if has_line_number or has_quoted or has_command_output_token or has_code_token:
+            return False
+        padded = f" {lowered_after} "
+        if any(marker in padded for marker in _DIRECT_OBSERVATION_ANCHORS):
+            return False
+        return any(marker in padded for marker in _UNANCHORED_SEMANTIC_CLAIM_MARKERS)
+    return False
+
+
+def _observation_line_is_structured_but_thin_self_description(line: str, task_identity: str) -> bool:
+    if not task_identity:
+        return False
+    lowered = line.lower()
+    for label in _OBSERVATION_LABELS:
+        pos = lowered.find(label)
+        if pos == -1:
+            continue
+        after = line[pos + len(label):].lstrip(":- \t")
+        if not after:
+            return False
+        lowered_after = after.lower()
+        has_line_number = any(ch.isdigit() for ch in lowered_after) and contains_any_keyword(lowered_after, ["line", ":"])
+        has_quoted = "'" in after or '"' in after or "`" in after
+        has_command_output_token = any(tok in after for tok in ["=>", "->", ">>>", "...", "\\n"])
+        has_code_token = "(" in after or ")" in after
+        has_numeric = any(ch.isdigit() for ch in after)
+        if has_line_number or has_quoted or has_command_output_token or has_code_token or has_numeric:
+            return False
+        padded = f" {lowered_after} "
+        if not any(marker in padded for marker in _THIN_SELF_DESCRIPTION_ANCHORS):
+            return False
+        return _is_parroting_task(after, task_identity)
+    return False
+
+
+def _observation_line_is_thin_line_or_location_claim(line: str, labels: tuple[str, ...]) -> bool:
+    lowered = line.lower()
+
+    def tail_has_literal_evidence(text: str) -> bool:
+        stripped_tail = text.strip()
+        if not stripped_tail:
+            return False
+        return (
+            "'" in stripped_tail
+            or '"' in stripped_tail
+            or "`" in stripped_tail
+            or any(tok in stripped_tail for tok in ["=>", "->", ">>>", "...", "\\n", "(", ")", "<", ">", "{", "}", "[", "]", "="])
+        )
+
+    for label in labels:
+        pos = lowered.find(label)
+        if pos == -1:
+            continue
+        after = line[pos + len(label):].lstrip(":- \t")
+        if not after:
+            return False
+        lowered_after = after.lower()
+        has_quoted = "'" in after or '"' in after or "`" in after
+        has_command_output_token = any(tok in after for tok in ["=>", "->", ">>>", "...", "\\n"])
+        has_code_token = any(tok in after for tok in ["(", ")", "<", ">", "{", "}", "[", "]", "="])
+        if has_quoted or has_command_output_token or has_code_token:
+            return False
+        stripped = after.strip()
+        if ":" in stripped:
+            prefix, suffix = stripped.split(":", 1)
+            if prefix.strip().isdigit() and suffix.strip():
+                return False
+
+        prefix = ""
+        suffix = ""
+        if lowered_after.startswith("line "):
+            suffix = lowered_after[len("line "):]
+        else:
+            location_token = next((token for token in (" at line ", " on line ", " line ") if token in lowered_after), None)
+            if location_token is None:
+                return False
+            prefix, suffix = lowered_after.split(location_token, 1)
+
+        digit_prefix = ""
+        for char in suffix:
+            if char.isdigit():
+                digit_prefix += char
+                continue
+            break
+        if not digit_prefix:
+            return False
+
+        remainder = suffix[len(digit_prefix):].lstrip()
+        if remainder.startswith(":") and remainder[1:].strip():
+            colon_tail = remainder[1:].lstrip()
+            if tail_has_literal_evidence(colon_tail):
+                return False
+            remainder = colon_tail
+
+        padded_prefix = f" {prefix.strip()} "
+        padded_remainder = f" {remainder.strip()} "
+
+        line_numbered_reporting_verbs = (
+            "show", "shows", "showed", "showing",
+            "say", "says", "said", "saying",
+            "mention", "mentions", "mentioned", "mentioning",
+            "indicate", "indicates", "indicated", "indicating",
+            "confirm", "confirms", "confirmed", "confirming",
+            "note", "notes", "noted", "noting",
+            "report", "reports", "reported", "reporting",
+            "record", "records", "recorded", "recording",
+            "document", "documents", "documented", "documenting",
+            "describe", "describes", "described", "describing",
+            "reflect", "reflects", "reflected", "reflecting",
+            "capture", "captures", "captured", "capturing",
+            "list", "lists", "listed", "listing",
+            "present", "presents", "presented", "presenting",
+            "carry", "carries", "carried", "carrying",
+            "mark", "marks", "marked", "marking",
+            "preserve", "preserves", "preserved", "preserving",
+            "maintain", "maintains", "maintained", "maintaining",
+            "keep", "keeps", "kept", "keeping",
+            "set", "sets", "setting",
+            "include", "includes", "included", "including",
+            "display", "displays", "displayed", "displaying",
+            "render", "renders", "rendered", "rendering",
+            "hold", "holds", "holding",
+            "store", "stores", "stored", "storing",
+            "move", "moves", "moved", "moving",
+            "place", "places", "placed", "placing",
+            "put", "puts", "putting",
+            "leave", "leaves", "leaving",
+            "state", "states", "stated", "stating",
+            "spell", "spells", "spelled", "spelling",
+            "feature", "features", "featured", "featuring",
+            "offer", "offers", "offered", "offering",
+            "deliver", "delivers", "delivered", "delivering",
+            "serve", "serves", "served", "serving",
+            "surface", "surfaces", "surfaced", "surfacing",
+            "expose", "exposes", "exposed", "exposing",
+            "host", "hosts", "hosted", "hosting",
+            "announce", "announces", "announced", "announcing",
+            "signal", "signals", "signaled", "signaling",
+            "convey", "conveys", "conveyed", "conveying",
+            "relay", "relays", "relayed", "relaying",
+            "reveal", "reveals", "revealed", "revealing",
+            "highlight", "highlights", "highlighted", "highlighting",
+            "spotlight", "spotlights", "spotlighted", "spotlighting",
+            "showcase", "showcases", "showcased", "showcasing",
+            "underline", "underlines", "underlined", "underlining",
+            "read", "reads", "reading",
+            "contain", "contains", "contained", "containing",
+            "return", "returns", "returned", "returning",
+            "import", "imports", "imported", "importing",
+        )
+        reporting_tail = next(
+            (remainder[len(f"{verb} "):].lstrip() for verb in line_numbered_reporting_verbs if remainder.startswith(f"{verb} ")),
+            "",
+        )
+        has_reporting_paraphrase = bool(reporting_tail) and not tail_has_literal_evidence(reporting_tail)
+
+        line_numbered_paraphrase_verbs = (
+            "add", "adds", "added", "adding",
+            "update", "updates", "updated", "updating",
+            "change", "changes", "changed", "changing",
+            "fix", "fixes", "fixed", "fixing",
+            "remove", "removes", "removed", "removing",
+            "replace", "replaces", "replaced", "replacing",
+            "modify", "modifies", "modified", "modifying",
+        )
+        has_action_paraphrase = any(
+            remainder.startswith(f"{verb} ") or f" {verb} " in padded_remainder
+            for verb in line_numbered_paraphrase_verbs
+        )
+        return (
+            any(marker in padded_prefix for marker in _THIN_LOCATION_CLAIM_MARKERS)
+            or any(marker in padded_remainder for marker in _THIN_LOCATION_CLAIM_MARKERS)
+            or any(marker in padded_prefix for marker in _UNANCHORED_SEMANTIC_CLAIM_MARKERS)
+            or any(marker in padded_remainder for marker in _UNANCHORED_SEMANTIC_CLAIM_MARKERS)
+            or has_reporting_paraphrase
+            or has_action_paraphrase
+        )
+    return False
+
+
+def proof_sensitive_unseen_guard_enabled(task_class: str) -> bool:
+    normalized = (task_class or "").strip().lower().replace("-", "_")
+    return normalized in {
+        "proof_sensitive_style_tweak",
+        "proof_sensitive_copy_update",
+        "proof_sensitive_router_adjustment",
+        "proof_sensitive_billing_adjustment",
+    }
+
 
 def _strip_subject_prefix(text: str) -> str:
     """Strip common subject prefixes so action-verb detection works on passive/first-person forms.
@@ -591,8 +843,18 @@ def _scenario_observation_lacks_evidence(line: str) -> bool:
                 return True
             if after in {"ok", "okay", "pass", "passed", "success", "succeeded", "true"}:
                 return True
+            has_line_number = any(ch.isdigit() for ch in after) and contains_any_keyword(after, ["line", ":"])
+            has_quoted = "'" in after or '"' in after or "`" in after
+            has_command_output_token = any(tok in after for tok in ["=>", "->", ">>>", "...", "\\n"])
+            has_code_token = "(" in after or ")" in after
+            if has_line_number or has_quoted or has_command_output_token or has_code_token:
+                return False
             # Prose assertions about what "is in" or "was found" are not command output
             if contains_any_keyword(after, ["is in ", "is present", "is there", "exists", "was found", "found in ", "found at ", "confirm", "confirmed"]):
+                return True
+            if " contains " in f" {after} ":
+                return True
+            if any(marker in f" {after} " for marker in _UNANCHORED_SEMANTIC_CLAIM_MARKERS):
                 return True
             has_action = any(f" {verb} " in f" {after} " or after.startswith(verb) for verb in _ACTION_VERBS)
             if has_action:
@@ -610,6 +872,10 @@ def _scenario_observation_lacks_evidence(line: str) -> bool:
         if has_evidence:
             return False
         if contains_any_keyword(after, ["confirm", "confirmed", "exit code", "return code", "status code"]):
+            return True
+        if " contains " in f" {after} ":
+            return True
+        if any(marker in f" {after} " for marker in _UNANCHORED_SEMANTIC_CLAIM_MARKERS):
             return True
         # If action verbs present without evidence → restatement
         has_action = any(f" {verb} " in f" {after} " or after.startswith(verb) for verb in _ACTION_VERBS)
@@ -721,7 +987,14 @@ def readback_is_semantically_sufficient(
         if contains_any_keyword(line, _OBSERVATION_LABELS)
     ]
     if strict_observation_guard_enabled(task_class) and observation_label_lines and all(
-        _readback_line_is_action_narrative(line) or _observation_line_is_vacuous(line)
+        _readback_line_is_action_narrative(line)
+        or _observation_line_is_vacuous(line)
+        or _observation_line_is_unanchored_semantic_claim(line)
+        or _observation_line_is_structured_but_thin_self_description(line, task_identity)
+        or (
+            proof_sensitive_unseen_guard_enabled(task_class)
+            and _observation_line_is_thin_line_or_location_claim(line, tuple(_OBSERVATION_LABELS))
+        )
         for line in observation_label_lines
     ):
         return False
@@ -775,6 +1048,10 @@ def scenario_is_semantically_sufficient(
         _readback_line_is_action_narrative(line)
         or _observation_line_is_vacuous(line)
         or _scenario_observation_lacks_evidence(line)
+        or (
+            proof_sensitive_unseen_guard_enabled(task_class)
+            and _observation_line_is_thin_line_or_location_claim(line, tuple(_SCENARIO_OBSERVED_LABELS))
+        )
         for line in scenario_obs_lines
     ):
         return False
@@ -1399,10 +1676,10 @@ def build_bundle(args: argparse.Namespace) -> dict:
                 (
                     "readback evidence names the changed surface and records an observed property of it"
                     if readback_semantically_sufficient
-                    else "structured runtime corroboration already closes the trust decision, so readback stays explanatory instead of blocking acceptance on this run"
+                    else "structured runtime corroboration already closes the trust decision, so readback stays fallback-only instead of blocking acceptance on this run"
                 )
                 if readback_requirement_semantically_sufficient
-                else "readback evidence does not yet name the changed surface with an observed readback, and the bundle still needs that explanatory surface because runtime corroboration is not yet strong enough to waive it"
+                else "readback evidence does not yet name the changed surface with a concrete observed property, and the bundle still needs that blocker-specific fallback evidence because runtime corroboration is not yet strong enough to waive it"
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["readback"],
         ),
@@ -1414,10 +1691,10 @@ def build_bundle(args: argparse.Namespace) -> dict:
                 (
                     "scenario-proof evidence records a concrete scenario context and outcome"
                     if scenario_semantically_sufficient
-                    else "structured runtime corroboration already closes the trust decision, so scenario proof stays explanatory instead of blocking acceptance on this run"
+                    else "structured runtime corroboration already closes the trust decision, so scenario proof stays fallback-only instead of blocking acceptance on this run"
                 )
                 if scenario_requirement_semantically_sufficient
-                else "scenario-proof evidence does not yet record a concrete scenario context and outcome, and the bundle still needs that explanatory verification surface because runtime corroboration is not yet strong enough to waive it"
+                else "scenario-proof evidence does not yet record a concrete scenario context and outcome, and the bundle still needs that blocker-specific fallback verification because runtime corroboration is not yet strong enough to waive it"
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["scenario_proof"],
         ),

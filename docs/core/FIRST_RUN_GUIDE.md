@@ -24,6 +24,20 @@ If `synrail` is not on your `PATH` after install, use the local wrapper from thi
 ./.venv/bin/synrail
 ```
 
+If a local agent host blocks that checkout-local wrapper behind a permission or approval wall, try the repo-local fallback instead:
+
+```bash
+python3 alpha.py
+```
+
+For a full repo-native first loop, use the exact fallback commands instead of probing wrapper paths:
+
+```bash
+python3 alpha.py
+python3 alpha.py start "Describe the bounded local change."
+python3 alpha.py check
+```
+
 The rest of this guide still uses `synrail` for brevity.
 
 ## Quick Status
@@ -50,20 +64,25 @@ This creates `.synrail/` and opens one governed run for this bounded change.
 
 ### 2. Do the bounded work and keep proof honest
 
-Make the requested change. Then make `final_result.json` strong first. Only expand the other proof surfaces if `synrail check` later asks for them, or if `final_result.json` still cannot carry strong structured verification by itself:
+Make the requested change. Run local verification. Then strengthen `final_result.json` first. On the normal happy path, treat it as the only proof surface you need to touch. Only expand fallback proof surfaces later if `synrail check` names them, or if `final_result.json` still cannot carry strong structured verification by itself:
 
-- `final_result.json` for the changed files and diff/provenance record
-- `readback.txt` for a brief observed readback of the changed surface; when `final_result.json` already carries strong structured verification, treat `readback.txt` as explanatory, or leave it in starter form until `synrail check` explicitly names it
-- `scenario_proof.txt` for labeled verification evidence such as `Command:` plus `Observed:` or `Result:`; when `final_result.json` already carries strong structured verification, treat `scenario_proof.txt` as explanatory, or leave it in starter form until `synrail check` explicitly names it
+- `final_result.json` for the trust-bearing status, changed files, and diff/provenance record
+- `readback.txt` is fallback-only; if `final_result.json` already carries strong structured verification, leave `readback.txt` untouched unless `synrail check` explicitly names it
+- `scenario_proof.txt` is fallback-only; if `final_result.json` already carries strong structured verification, leave `scenario_proof.txt` untouched unless `synrail check` explicitly names it
 
 In `final_result.json`, use a trust-bearing status: `PROVEN` for an evidenced bounded edit, or `ALREADY_SATISFIED` only for a truthful no-op attestation where the requested state was already present before any edit.
 
 In the normal `synrail check` path, you usually do not need to hand-copy run identity fields or a cleanup summary into `final_result.json` when the current controlled run context and doctor-ready workspace already provide that truth. Focus first on the status, changed files, and diff/provenance. Only spend extra steps on `readback.txt` or `scenario_proof.txt` if `check` still names them after `final_result.json` is already strong.
 
-If you need help with the expected shape, use:
+If you need help with the default proof shape, use:
 
 ```bash
 synrail final-result-template
+```
+
+Only if `check` later targets a fallback prose surface, use:
+
+```bash
 synrail readback-template
 synrail scenario-proof-template
 ```
