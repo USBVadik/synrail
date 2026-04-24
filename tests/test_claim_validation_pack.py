@@ -201,6 +201,15 @@ class ClaimValidationPackTests(unittest.TestCase):
         self.assertIn("Reviewed snapshot: exact selected repository snapshot prepared for critic handoff", full_review)
         self.assertIn("drifting local working tree", full_review)
 
+    def test_review_docs_point_to_focused_pressure_artifacts(self) -> None:
+        critique_pack = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_CRITIQUE_PACK_001.md")
+        full_review = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_FULL_REVIEW_2026-04-21.md")
+        final_audit = load_text(REPO_ROOT / "docs" / "review" / "FINAL_AUDIT_2026-04-22.md")
+
+        for text in (critique_pack, full_review, final_audit):
+            self.assertIn("small_template_text_fix_behavior_pressure_pack_001.json", text)
+            self.assertIn("cost_of_control_small_template_text_fix_behavior_pressure_001.json", text)
+
     def test_external_critique_pack_preserves_current_economics_truth_boundary(self) -> None:
         critique_pack = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_CRITIQUE_PACK_001.md")
 

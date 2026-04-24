@@ -300,6 +300,217 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("FAIL", record["gate_results"]["baseline_identity"]["status"])
         self.assertIn("does not match", record["gate_results"]["baseline_identity"]["note"])
 
+    def test_doctor_records_override_gates_when_bypass_flags_are_used(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_override_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.changed_file = ["tools/reference/synrail_bundle_v0.py"]
+            args.allowed_scope_path = ["tools/reference"]
+            args.helper_ok = True
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+
+            record = build_doctor_record(args)
+
+        self.assertIn("clean_execution_surface", record["override_gates"])
+        self.assertIn("artifact_viability", record["override_gates"])
+        self.assertIn("helper_integrity", record["override_gates"])
+        self.assertIn("credential_surface", record["override_gates"])
+        self.assertIn("prompt_task_identity", record["override_gates"])
+        self.assertTrue(record["gate_results"]["clean_execution_surface"]["override"])
+        self.assertEqual(
+            "operator bypass via --clean-surface",
+            record["gate_results"]["clean_execution_surface"]["override_reason"],
+        )
+
+    def test_doctor_records_no_override_gates_when_no_bypass_flags_are_used(self) -> None:
+        corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+        corpus["cases"] = [
+            case
+            for case in corpus["cases"]
+            if case.get("fail_mode_id") != "helper_entrypoint_missing"
+        ]
+
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_no_override_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.clean_surface = False
+            args.artifact_viable = False
+            record = build_doctor_record(args)
+
+        self.assertEqual([], record["override_gates"])
+        self.assertFalse(record["gate_results"]["clean_execution_surface"]["override"])
+        self.assertEqual("", record["gate_results"]["clean_execution_surface"]["override_reason"])
+
+    def test_bundle_recheck_matches_allowed_command(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_match_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                    "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
+                    "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
+                    "verification_command": "grep -n 'VERIFICATION_RECHECK_ALLOWED_BINARIES' tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "38:VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            bundle = build_bundle(bundle_args(final_result=final_result))
+            verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertTrue(bundle["verification_recheck"]["executed"])
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertTrue(bundle["verification_recheck"]["matched"])
+        self.assertEqual("", bundle["verification_recheck"]["skip_reason"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
+    def test_bundle_recheck_blocks_closure_on_mismatch(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_mismatch_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                    "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
+                    "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
+                    "verification_command": "grep -n 'VERIFICATION_RECHECK_ALLOWED_BINARIES' tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "999:missing expected line",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            bundle = build_bundle(bundle_args(final_result=final_result))
+            verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertTrue(bundle["verification_recheck"]["executed"])
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertFalse(bundle["verification_recheck"]["matched"])
+        self.assertEqual("VERIFICATION_RECHECK_FAILED", verdict["blocking_reason"])
+        self.assertEqual("PROOF_BUNDLE_REPAIR", verdict["next_allowed_transition"])
+
+    def test_bundle_recheck_skips_command_outside_allowlist(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_skip_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            final_result.write_text(json.dumps({
+                "status": "PROVEN",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                    "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
+                    "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
+                    "verification_command": "sed -n 1p tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "#!/usr/bin/env python3",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            bundle = build_bundle(bundle_args(final_result=final_result))
+
+        self.assertFalse(bundle["verification_recheck"]["executed"])
+        self.assertFalse(bundle["verification_recheck"]["command_allowed"])
+        self.assertFalse(bundle["verification_recheck"]["matched"])
+        self.assertEqual("command_not_in_allowlist", bundle["verification_recheck"]["skip_reason"])
+
+    def test_bundle_recheck_marks_timeout(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_timeout_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            final_result.write_text(json.dumps({
+                "status": "PROVEN",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                    "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
+                    "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
+                    "verification_command": "python3 -c \"import time; time.sleep(11)\"",
+                    "verification_result": "done",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            bundle = build_bundle(bundle_args(final_result=final_result))
+
+        self.assertTrue(bundle["verification_recheck"]["executed"])
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertFalse(bundle["verification_recheck"]["matched"])
+        self.assertEqual("timeout", bundle["verification_recheck"]["skip_reason"])
+
     def test_closure_blocks_on_semantically_thin_proof(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_semantic_thin.json"))
         bundle = build_bundle(
@@ -1011,11 +1222,15 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertTrue(bundle["verification_corroboration"]["runtime_verification_sufficient"])
         self.assertTrue(bundle["readback"]["content_semantically_sufficient"])
         # Scenario prose is now correctly recognized as thin (no command-output evidence in
-        # Observed: line), but waiver still closes trust through runtime corroboration.
+        # Observed: line), but waiver no longer closes trust if the allowed verification recheck fails.
         self.assertFalse(bundle["scenario_proof"]["content_semantically_sufficient"])
         self.assertTrue(bundle["readback"]["waived_by_runtime_corroboration"])
         self.assertTrue(bundle["scenario_proof"]["waived_by_runtime_corroboration"])
-        self.assertEqual("ACCEPTED", verdict["closure_status"])
+        self.assertTrue(bundle["verification_recheck"]["executed"])
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertFalse(bundle["verification_recheck"]["matched"])
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("VERIFICATION_RECHECK_FAILED", verdict["blocking_reason"])
 
     def test_missing_method_is_inferred_for_strong_direct_observation_record(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
@@ -1520,6 +1735,15 @@ class TestAntiNarrativeGuards(unittest.TestCase):
             "add cinematic zoom trigger to the router handler",
         ))
 
+    def test_readback_rejects_padded_parroting_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: core/router.py\n"
+            "Observed: core router module contains cinematic zoom trigger handler animation effects ancillary validation context review metadata operator trace stability notes.\n",
+            ["core/router.py"],
+            task_identity="implement the cinematic zoom trigger handler for the core router module with animation effects",
+        ))
+
     def test_concrete_identifier_detects_file_path(self) -> None:
         from synrail_bundle_v0 import _has_concrete_identifier
         self.assertTrue(_has_concrete_identifier("Changed file: src/components/App.tsx"))
@@ -1585,12 +1809,69 @@ class TestHostileProofIndependence(unittest.TestCase):
             self.FILES, task_identity=self.TASK,
         ))
 
+    def test_readback_rejects_verified_functioning_properly_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Readback: src/app.py\n"
+            "Verified: functioning properly.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_confirmed_operational_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Confirmed: operational.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_processes_correctly_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: it processes correctly in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_numeric_thin_path_self_description_without_literal_evidence(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: src/app.py contains the logging import at line 2.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_numeric_thin_line_self_description_without_literal_evidence(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: line 2 contains the logging import in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
     def test_readback_accepts_concrete_observation(self) -> None:
         from synrail_bundle_v0 import readback_is_semantically_sufficient
         self.assertTrue(readback_is_semantically_sufficient(
             'Changed surface: src/app.py\n'
             'Observed: line 2 now reads "import logging" immediately after the existing os import.',
             self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_accepts_numeric_contains_claim_with_literal_evidence(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertTrue(readback_is_semantically_sufficient(
+            'Changed surface: src/app.py\n'
+            'Observed: src/app.py line 2 contains "import logging".',
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_accepts_already_satisfied_contains_line_reference(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertTrue(readback_is_semantically_sufficient(
+            'Changed surface: warroom/templates/index.html\n'
+            'Observed: the template already contains the Local signals only subtitle directly under the Watchlist heading at line 24.',
+            ["warroom/templates/index.html"],
+            task_identity="Add Local signals only subtitle under Watchlist heading and do not change anything else",
         ))
 
     def test_readback_accepts_evidence_with_harmless_generic_tail(self) -> None:
@@ -1622,6 +1903,14 @@ class TestHostileProofIndependence(unittest.TestCase):
         self.assertEqual("STRICT_RUNTIME_EVIDENCE", observation_guard_profile("bounded_change"))
         self.assertEqual("STRICT_RUNTIME_EVIDENCE", observation_guard_profile("proof_sensitive_fix"))
         self.assertEqual("BASELINE_OBSERVATION", observation_guard_profile("orientation_probe"))
+
+    def test_broad_observation_guard_would_fire_for_unmeasured_task_class(self) -> None:
+        from synrail_bundle_v0 import broad_observation_guard_would_fire, strict_observation_guard_enabled
+        self.assertFalse(strict_observation_guard_enabled("feature_work"))
+        self.assertTrue(broad_observation_guard_would_fire(
+            "feature_work",
+            "Observed: added logging import to src/app.py.",
+        ))
 
     def test_readback_hostile_guard_is_scoped_not_global(self) -> None:
         from synrail_bundle_v0 import readback_is_semantically_sufficient
@@ -1684,6 +1973,63 @@ class TestHostileProofIndependence(unittest.TestCase):
             "Status: PASSED",
             task_identity=self.TASK,
         ))
+
+    def test_bundle_records_shadow_observation_guard_results_without_blocking_unmeasured_task_class(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_shadow_observation_guard_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+
+            final_result.write_text(json.dumps({
+                "request_id": "RUN_SHADOW_GUARD_001",
+                "status": "PROVEN",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                    "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
+                    "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
+                    "verification_command": "grep -n 'VERIFICATION_RECHECK_ALLOWED_BINARIES' tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "39:VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text(
+                "Changed surface: tools/reference/synrail_bundle_v0.py\n"
+                "Observed: added VERIFICATION_RECHECK_ALLOWED_BINARIES to tools/reference/synrail_bundle_v0.py.\n"
+            )
+            scenario.write_text(
+                "Scenario: verify verification recheck allowlist\n"
+                "Command: grep -n 'VERIFICATION_RECHECK_ALLOWED_BINARIES' tools/reference/synrail_bundle_v0.py\n"
+                "Observed: added VERIFICATION_RECHECK_ALLOWED_BINARIES to tools/reference/synrail_bundle_v0.py.\n"
+                "Status: PASSED\n"
+            )
+
+            args = bundle_args(final_result=final_result)
+            args.task_class = "feature_work"
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            bundle = build_bundle(args)
+
+        self.assertEqual("COMPLETE", bundle["status"])
+        self.assertTrue(bundle["readback"]["semantically_sufficient"])
+        self.assertTrue(bundle["scenario_proof"]["semantically_sufficient"])
+        self.assertEqual(
+            {"would_block": True, "lines_flagged": 2},
+            bundle["shadow_observation_guard_results"],
+        )
 
     def test_scenario_rejects_command_confirms_without_literal_output(self) -> None:
         from synrail_bundle_v0 import scenario_is_semantically_sufficient

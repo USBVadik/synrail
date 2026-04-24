@@ -83,9 +83,11 @@ These are the strongest current positive claims.
 
 On the measured lanes, optional prose surfaces can now stay absent when trust is already carried by strong `final_result` structure plus runtime-backed verification.
 
+The bundle now also re-executes allowlisted verification commands, and closure rejects executed mismatches with `VERIFICATION_RECHECK_FAILED` instead of trusting the recorded command/result pair alone.
+
 This matters because `Synrail` is now less dependent on the agent writing extra narrative artifacts just to satisfy the kernel.
 
-### 2. There are now two repeatable everyday winners inside one narrow focused family
+### 2. There are now two repeatable everyday winners, and one narrow focused family now has five justified low-drag paths
 
 The current repeatable everyday benchmark pack is still baseline-favorable overall, but it no longer reads as “all overhead, no concrete win”.
 
@@ -98,7 +100,7 @@ Current pack truth:
 The stronger narrow reading is inside the current focus family:
 
 - focus family: `small_template_text_fix`
-- focused family record count: `2`
+- focused family record count: `5`
 - focused verdict: `SYNRAIL_BETTER`
 - focused stability: `LOW_VARIANCE_REPEATABLE`
 - focused cheap-enough status: `FOCUSED_CLASS_CHEAP_ENOUGH`
@@ -122,11 +124,13 @@ The strict proof-sensitive lanes now block several kinds of structured self-desc
 - thin command-confirmation prose
 - placeholder output like `Output: ok`
 - exit-code-only observations
+- numeric thin line/path self-description without literal evidence
 
 At the same time:
 
 - concrete terse evidence still passes
 - runtime-backed verification remains the primary trust path
+- wider observation-only pressure is now recorded through `shadow_observation_guard_results` even when it is not yet a blocker for the active task class
 - unknown task classes do not inherit the strict hostile policy automatically
 
 This is a real step toward proof that carries trust independently of authored prose.
@@ -200,7 +204,7 @@ That means critics are still right to ask whether the control burden is worth it
 
 Current status is:
 
-- two low-drag winners exist inside one narrow focused family
+- the broader pack has two repeatable low-drag winners, while the focused family now has five justified low-drag paths
 - the class still does not beat baseline overall
 
 ### 2. Proof independence is still measured-lane truth, not broad truth
@@ -263,7 +267,7 @@ If I had to name the three strongest current negatives:
 If I were trying to falsify the project honestly, I would attack these points in this order:
 
 1. **Everyday economics**
-   - Is the two-task focused-family win just a local exception?
+   - Is the current five-record focused-family win just a local exception?
    - Does the system still feel visibly heavier than baseline on ordinary bounded tasks outside that narrow family?
 
 2. **Proof independence**

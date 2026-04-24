@@ -63,7 +63,7 @@ Completed as shipped tranches on the current branch:
 2. repeatable everyday economics benchmark
    - one repeatable everyday benchmark pack now exists
    - it currently shows two repeatable low-drag winners, four baseline-good-enough paths, and zero unclear paths
-   - the current focus family is `small_template_text_fix`, which now has two justified low-drag paths and reads as a low-variance repeatable family even though the broader repeatable-everyday verdict is still baseline-favorable overall
+   - the current focus family is `small_template_text_fix`, which now has five justified low-drag paths and reads as a low-variance repeatable family even though the broader repeatable-everyday verdict is still baseline-favorable overall
    - that focused family still reads as both `FOCUSED_CLASS_CHEAP_ENOUGH` and `FOCUSED_CLASS_BEHAVIOR_CHEAP_BY_DEFAULT` on the current canonical pack
    - the class verdict is still baseline-favorable overall
    - the harness and pack now also split the everyday economics lane into machine-readable `fixed_control_mass` vs `behavioral_control_tax`, while keeping `total_control_burden`, `checks_per_accepted_closure`, `operator_visible_actions`, and `got_lost_moments` visible as supporting deltas
@@ -118,7 +118,7 @@ Partially built because:
 - some substitute and economics pressure slices exist
 - the active baseline economics harness now also tracks fixed control mass through mental steps, trust-bearing artifacts, and required visible surfaces
 - one repeatable everyday benchmark pack now exists for the cheapened local contour
-- that pack currently reads as baseline-favorable overall, with one repeatable low-drag winner but no broad everyday win yet
+- that pack currently reads as baseline-favorable overall, with two repeatable low-drag winners but no broad everyday win yet
 - this is still not a broad external benchmark program
 
 ### Restore maturity
@@ -158,7 +158,7 @@ These are the major honest risks still worth external pressure.
 1. semantic proof may still be too thin in domain-specific cases, and the newer scoped heuristics still need fresh unseen validation
 2. measured doctor coverage is real but still corpus-bounded
 3. the continuation arbiter covers important surfaces, but still not every imaginable ambiguity
-4. the cheapened everyday contour still wins only one repeatable benchmark path and remains baseline-favorable overall as a class
+4. the cheapened everyday contour still wins only two repeatable benchmark paths and remains baseline-favorable overall as a class
 5. restore and continuation ergonomics may still look heavier than a critic is willing to tolerate
 6. the current evidence base is stronger and better gated than before, but it is still partly self-curated and still needs fresh outside pressure
 

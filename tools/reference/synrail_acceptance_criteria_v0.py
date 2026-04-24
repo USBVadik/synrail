@@ -12,8 +12,10 @@ from pathlib import Path
 
 try:
     from .synrail_bundle_v0 import REQUIRED_SECTION_NAMES
+    from .synrail_io_v0 import load_json, save_json
 except ImportError:
     from synrail_bundle_v0 import REQUIRED_SECTION_NAMES
+    from synrail_io_v0 import load_json, save_json
 
 
 REQUIRED_GATE_IDS = [
@@ -33,14 +35,6 @@ ACCEPTANCE_RULES = [
     "The proof bundle must be complete and reviewable.",
     "If recovery is pending, reverification must finish before acceptance.",
 ]
-
-
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
-
-
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
 def short_fingerprint(*parts: str) -> str:

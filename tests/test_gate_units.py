@@ -8,6 +8,7 @@ import json
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOLS_ROOT = REPO_ROOT / "tools" / "reference"
@@ -345,6 +346,20 @@ class TestApplyDoctor(unittest.TestCase):
         self.assertEqual("DOCTOR_BLOCKED", new_state["state"])
         self.assertEqual("DOCTOR_NOT_GREEN", new_state["closure"]["blocking_reason"])
 
+    def test_acceptable_verdict_preserves_override_gates(self) -> None:
+        state = default_state("R1", "t")
+        state["target_surface"]["status"] = "ATTESTED"
+        state["state"] = "TARGET_SURFACE_ATTESTED"
+        record = {
+            "final_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+            "blocking_failure_classes": [],
+            "override_gates": ["clean_execution_surface", "artifact_viability"],
+        }
+        code, new_state, report = apply_doctor(state, record)
+        self.assertEqual(0, code)
+        self.assertEqual(["clean_execution_surface", "artifact_viability"], new_state["doctor"]["override_gates"])
+        self.assertEqual([], new_state["closure"]["warnings"])
+
 
 # ---------------------------------------------------------------------------
 # apply_bundle tests
@@ -401,6 +416,17 @@ class TestApplyBundle(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertFalse(new_state["proof_bundle"]["final_result"]["semantically_sufficient"])
         self.assertFalse(new_state["proof_bundle"]["verification_corroboration"]["semantically_sufficient"])
+
+    def test_complete_bundle_records_artifact_integrity_warning(self) -> None:
+        state = self._exec_state()
+        bundle = {
+            "status": "COMPLETE",
+            "final_result": {"present": True},
+            "artifact_integrity_warning": True,
+        }
+        code, new_state, report = apply_bundle(state, bundle)
+        self.assertEqual(0, code)
+        self.assertTrue(new_state["proof_bundle"]["artifact_integrity_warning"])
 
 
 # ---------------------------------------------------------------------------
@@ -468,6 +494,39 @@ class TestBuildVerdict(unittest.TestCase):
         state["execution"]["status"] = "NOT_RUN"
         verdict = build_verdict(state, self._complete_bundle())
         self.assertEqual("EXECUTION_NOT_COMPLETED", verdict["blocking_reason"])
+
+    def test_blocks_on_failed_verification_recheck(self) -> None:
+        bundle = self._complete_bundle() | {
+            "verification_recheck": {"executed": True, "matched": False}
+        }
+        verdict = build_verdict(self._full_state(), bundle)
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("VERIFICATION_RECHECK_FAILED", verdict["blocking_reason"])
+        self.assertEqual("PROOF_BUNDLE_REPAIR", verdict["next_allowed_transition"])
+
+    def test_skips_non_executed_verification_recheck(self) -> None:
+        bundle = self._complete_bundle() | {
+            "verification_recheck": {"executed": False, "matched": False, "skip_reason": "command_not_in_allowlist"}
+        }
+        verdict = build_verdict(self._full_state(), bundle)
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+        self.assertEqual("", verdict["blocking_reason"])
+
+    def test_accepts_with_doctor_override_warning(self) -> None:
+        state = self._full_state()
+        state["doctor"]["override_gates"] = ["clean_execution_surface", "artifact_viability"]
+        verdict = build_verdict(state, self._complete_bundle())
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+        self.assertIn(
+            "doctor_override_present: clean_execution_surface, artifact_viability",
+            verdict["closure_warnings"],
+        )
+
+    def test_accepts_with_artifact_integrity_warning(self) -> None:
+        bundle = self._complete_bundle() | {"artifact_integrity_warning": True}
+        verdict = build_verdict(self._full_state(), bundle)
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+        self.assertIn("artifact_modified_outside_workflow", verdict["closure_warnings"])
 
 
 # ---------------------------------------------------------------------------
@@ -1272,6 +1331,53 @@ class TestRestoreHonestyWithoutGit(unittest.TestCase):
             # Verify files recovered
             self.assertEqual('print("hello")', target.read_text().strip())
             self.assertEqual("original data", (project / "subdir" / "data.txt").read_text().strip())
+
+    def test_file_copy_restore_rolls_back_workspace_on_swap_failure(self) -> None:
+        import argparse
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, restore_record
+        from synrail_spine_v0 import default_state as make_state
+
+        state = make_state("run1", "bounded_change")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            target = project / "hello.py"
+            target.write_text('print("hello")\n')
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+            args = argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=str(project),
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            )
+            record = create_record(args)
+            target.write_text("BROKEN\n")
+
+            with mock.patch("synrail_checkpoint_v0.os.replace") as replace_mock:
+                real_replace = __import__("os").replace
+                call_count = {"value": 0}
+
+                def side_effect(src: str, dst: str) -> None:
+                    call_count["value"] += 1
+                    if call_count["value"] == 2:
+                        raise OSError("simulated swap failure")
+                    real_replace(src, dst)
+
+                replace_mock.side_effect = side_effect
+                restored = restore_record(record, project / ".synrail")
+
+            self.assertEqual("BLOCKED", restored["result"])
+            self.assertEqual("RESTORE_FAILED", restored["restore"]["status"])
+            self.assertEqual("BROKEN", target.read_text().strip())
 
     def test_no_commit_git_file_copy_restore_round_trip(self) -> None:
         """Git workspace without commits still restores honestly via file-copy fallback."""

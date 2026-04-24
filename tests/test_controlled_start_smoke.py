@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -175,8 +176,46 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("Restore preview: Ready", preview.stdout)
             self.assertIn("Workspace restore mode: File-copy workspace snapshot", preview.stdout)
             self.assertIn("Caution: this restore will modify project workspace files", preview.stdout)
-            self.assertIn("Next command: synrail restore", preview.stdout)
+            self.assertIn("Next command: synrail restore --confirm", preview.stdout)
             self.assertTrue((artifact_root / "checkpoint_restore_preview.json").exists())
+
+    def test_restore_requires_confirm_for_destructive_workspace_restore(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_restore_confirm_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "hello.py").write_text('print("hello")\n')
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                "--task-identity",
+                "Require explicit confirm before destructive restore.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            save = self.run_alpha(
+                "save",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                cwd=project_root,
+            )
+            self.assertEqual(0, save.returncode, save.stdout + save.stderr)
+
+            restore = self.run_alpha(
+                "restore",
+                "--artifact-root",
+                ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(2, restore.returncode, restore.stdout + restore.stderr)
+            self.assertIn("without explicit confirmation", restore.stdout)
+            self.assertIn("Next command: synrail restore --confirm", restore.stdout)
 
     def test_start_creates_bootstrap_and_proof_request(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_controlled_start_") as tmpdir:
@@ -211,12 +250,20 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertFalse((artifact_root / "readback.txt").exists())
             self.assertFalse((artifact_root / "scenario_proof.txt").exists())
 
+            state = load_json(artifact_root / "state.json")
             bootstrap = load_json(artifact_root / "bootstrap.json")
             validation = load_json(artifact_root / "bootstrap_validation.json")
             proof_request = load_json(artifact_root / "proof_request.json")
             final_result = load_json(artifact_root / "final_result.json")
 
             self.assertTrue(bootstrap["controlled_mode"])
+            self.assertTrue(state["start_timestamp_utc"])
+            self.assertEqual("", state["closure_timestamp_utc"])
+            self.assertEqual(0, state["check_count"])
+            self.assertEqual(
+                hashlib.sha256((artifact_root / "final_result.json").read_bytes()).hexdigest(),
+                state["last_known_final_result_hash"],
+            )
             self.assertEqual("VALID", validation["status"])
             self.assertEqual("edit_in_place", proof_request["starter_mode"])
             self.assertEqual(".synrail/final_result.json", proof_request["preferred_artifacts"]["final_result"])
@@ -1090,11 +1137,15 @@ class ControlledStartSmokeTests(unittest.TestCase):
 
             bundle = load_json(artifact_root / "bundle.json")
             thin_output = load_json(artifact_root / "thin_output.json")
+            accepted_state = load_json(artifact_root / "state.json")
             self.assertTrue(bundle["cleanup_status"]["from_doctor"])
             self.assertTrue(bundle["cleanup_status"]["waived_by_runtime_corroboration"])
             self.assertNotIn("cleanup_status", bundle["missing_sections"])
             self.assertEqual("COMPLETE", bundle["status"])
             self.assertEqual("ACCEPTED", thin_output["outcome_class"])
+            self.assertTrue(accepted_state["start_timestamp_utc"])
+            self.assertTrue(accepted_state["closure_timestamp_utc"])
+            self.assertEqual(1, accepted_state["check_count"])
 
 
     def test_start_after_terminal_state_auto_clears_proof(self) -> None:

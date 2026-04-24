@@ -1,34 +1,22 @@
 {
   "schema_version": "cost_of_control_record_v0",
-  "scenario_count": 5,
+  "scenario_count": 3,
   "source_records": [
     {
-      "path": "fixtures/small_template_text_fix_benchmark_pack_001.json#EVERYDAY_LOCAL_005",
+      "path": "fixtures/small_template_text_fix_behavior_pressure_pack_001.json#EVERYDAY_LOCAL_005",
       "scenario_id": "EVERYDAY_LOCAL_005",
       "scenario_class": "small_template_text_fix_repeatable",
       "verdict": "SYNRAIL_BETTER"
     },
     {
-      "path": "fixtures/small_template_text_fix_benchmark_pack_001.json#EVERYDAY_LOCAL_006",
+      "path": "fixtures/small_template_text_fix_behavior_pressure_pack_001.json#EVERYDAY_LOCAL_006",
       "scenario_id": "EVERYDAY_LOCAL_006",
       "scenario_class": "small_template_text_fix_repeatable",
       "verdict": "SYNRAIL_BETTER"
     },
     {
-      "path": "fixtures/small_template_text_fix_benchmark_pack_001.json#EVERYDAY_LOCAL_007",
-      "scenario_id": "EVERYDAY_LOCAL_007",
-      "scenario_class": "small_template_text_fix_repeatable",
-      "verdict": "SYNRAIL_BETTER"
-    },
-    {
-      "path": "fixtures/small_template_text_fix_benchmark_pack_001.json#EVERYDAY_LOCAL_009",
-      "scenario_id": "EVERYDAY_LOCAL_009",
-      "scenario_class": "small_template_text_fix_repeatable",
-      "verdict": "SYNRAIL_BETTER"
-    },
-    {
-      "path": "fixtures/small_template_text_fix_benchmark_pack_001.json#EVERYDAY_LOCAL_010",
-      "scenario_id": "EVERYDAY_LOCAL_010",
+      "path": "fixtures/small_template_text_fix_behavior_pressure_pack_001.json#EVERYDAY_LOCAL_008",
+      "scenario_id": "EVERYDAY_LOCAL_008",
       "scenario_class": "small_template_text_fix_repeatable",
       "verdict": "SYNRAIL_BETTER"
     }
@@ -37,7 +25,7 @@
     "curated_local_estimate"
   ],
   "verdict_counts": {
-    "SYNRAIL_BETTER": 5,
+    "SYNRAIL_BETTER": 3,
     "BASELINE_GOOD_ENOUGH": 0,
     "UNCLEAR": 0
   },
@@ -122,9 +110,7 @@
     "justified_cost_paths": [
       "EVERYDAY_LOCAL_005",
       "EVERYDAY_LOCAL_006",
-      "EVERYDAY_LOCAL_007",
-      "EVERYDAY_LOCAL_009",
-      "EVERYDAY_LOCAL_010"
+      "EVERYDAY_LOCAL_008"
     ],
     "baseline_sufficient_paths": [],
     "under_proven_paths": []
@@ -138,7 +124,7 @@
     "primary_scenario_class": "small_template_text_fix_repeatable",
     "primary_scenario_class_status": "SYNRAIL_BETTER",
     "focus_task_class": "small_template_text_fix",
-    "focus_task_class_record_count": 5,
+    "focus_task_class_record_count": 3,
     "focus_task_class_verdict": "SYNRAIL_BETTER",
     "focus_task_class_stability": "LOW_VARIANCE_REPEATABLE",
     "focus_task_class_median_operator_minutes_added": 1,
@@ -161,7 +147,7 @@
     "focus_task_class_priority_one_barrier": "",
     "focus_task_class_kernel_cheapness_status": "FOCUSED_CLASS_KERNEL_CHEAP_ENOUGH",
     "focus_task_class_kernel_cheapness_barrier": "",
-    "focus_task_class_behavior_cheapness_status": "FOCUSED_CLASS_BEHAVIOR_CHEAP_BY_DEFAULT",
-    "focus_task_class_behavior_cheapness_barrier": ""
+    "focus_task_class_behavior_cheapness_status": "FOCUSED_CLASS_BEHAVIOR_NOT_YET_CHEAP_BY_DEFAULT",
+    "focus_task_class_behavior_cheapness_barrier": "FOCUSED_CLASS_SPREAD_SKIPPABLE_VISIBLE_SURFACES_TOO_HIGH"
   }
 }

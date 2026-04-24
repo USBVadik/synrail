@@ -250,7 +250,7 @@ It now has a clearer earned wedge:
 
 The strongest of these is still handoff / continuation honesty.
 
-#### 2. Two repeatable everyday winners now exist inside one narrow focused family
+#### 2. Two repeatable everyday winners now exist, and one narrow focused family now has five justified low-drag paths
 
 The current repeatable everyday benchmark pack reads:
 
@@ -261,7 +261,7 @@ The current repeatable everyday benchmark pack reads:
 The stronger narrow reading is inside the current focus family:
 
 - focus family: `small_template_text_fix`
-- focused family record count: `2`
+- focused family record count: `5`
 - focused verdict: `SYNRAIL_BETTER`
 - focused stability: `LOW_VARIANCE_REPEATABLE`
 - focused cheap-enough status: `FOCUSED_CLASS_CHEAP_ENOUGH`
@@ -299,7 +299,7 @@ The honest class verdict remains:
 That means a critic is still right to ask:
 
 - is the control burden worth it on bounded everyday work?
-- is the current two-task focused-family win a wedge or still mostly a curiosity?
+- is the current five-record focused-family win a wedge or still mostly a curiosity?
 
 #### 2. Proof independence is still measured-lane truth
 
@@ -350,7 +350,7 @@ It currently gains on average:
 The right reading is:
 
 - the cheapened contour is materially lighter than before
-- two repeatable low-drag winners exist inside one narrow focused family
+- the broader pack has two repeatable low-drag winners, while the focused family now has five justified low-drag paths
 - the canonical focused family reads as cheap enough and behavior-cheap by default
 - same-family pressure now shows behavior cheapness can still break independently while kernel cheapness remains intact
 - the class is still baseline-favorable overall
@@ -471,8 +471,14 @@ If a critic wants to go deeper after reading this file, the best next files are:
 - `tests/test_truth_regressions.py`
 - `tests/test_alpha_test_pack_smoke.py`
 - `tests/test_claim_validation_pack.py`
+- `tests/test_small_template_text_fix_benchmark_pack.py`
+- `tests/test_cost_of_control_v0.py`
 - `fixtures/repeatable_everyday_benchmark_pack_001.json`
 - `fixtures/cost_of_control_everyday_001.json`
+- `fixtures/small_template_text_fix_benchmark_pack_001.json`
+- `fixtures/cost_of_control_small_template_text_fix_001.json`
+- `fixtures/small_template_text_fix_behavior_pressure_pack_001.json`
+- `fixtures/cost_of_control_small_template_text_fix_behavior_pressure_001.json`
 
 ## Final verdict
 

@@ -39,6 +39,9 @@
       "verdict": "SYNRAIL_BETTER"
     }
   ],
+  "provenance_mix": [
+    "curated_local_estimate"
+  ],
   "verdict_counts": {
     "SYNRAIL_BETTER": 2,
     "BASELINE_GOOD_ENOUGH": 4,
@@ -146,14 +149,14 @@
     "focus_task_class_record_count": 2,
     "focus_task_class_verdict": "SYNRAIL_BETTER",
     "focus_task_class_stability": "LOW_VARIANCE_REPEATABLE",
-    "focus_task_class_median_operator_minutes_added": 1,
-    "focus_task_class_median_closure_latency_minutes_added": 1,
-    "focus_task_class_median_checks_per_accepted_closure_added": 0,
-    "focus_task_class_median_operator_visible_actions_added": 0,
-    "focus_task_class_median_got_lost_moments_added": 0,
-    "focus_task_class_median_fixed_control_mass_added": 1,
-    "focus_task_class_median_behavioral_control_tax_added": 0,
-    "focus_task_class_median_total_control_burden_added": 1,
+    "focus_task_class_median_operator_minutes_added": 1.0,
+    "focus_task_class_median_closure_latency_minutes_added": 1.0,
+    "focus_task_class_median_checks_per_accepted_closure_added": 0.0,
+    "focus_task_class_median_operator_visible_actions_added": 0.0,
+    "focus_task_class_median_got_lost_moments_added": 0.0,
+    "focus_task_class_median_fixed_control_mass_added": 1.0,
+    "focus_task_class_median_behavioral_control_tax_added": 0.0,
+    "focus_task_class_median_total_control_burden_added": 1.0,
     "focus_task_class_spread_operator_minutes_added": 0,
     "focus_task_class_spread_closure_latency_minutes_added": 0,
     "focus_task_class_spread_checks_per_accepted_closure_added": 0,

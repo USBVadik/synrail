@@ -42,6 +42,8 @@ def spread_value(records: list[dict], key: str) -> int | float:
 
 
 def hotspot(records: list[dict], key: str) -> dict:
+    if not records:
+        return {}
     winner = max(records, key=lambda record: record["economics_summary"].get(key, 0))
     return {
         "scenario_id": winner["scenario_id"],
@@ -301,6 +303,14 @@ def build_cost_record_from_records(records: list[dict], *, source_paths: list[st
         }
         for path, record in zip(paths, records)
     ]
+    provenance_mix = sorted(
+        {
+            provenance
+            for record in records
+            for provenance in [record.get("baseline_data_provenance", ""), record.get("synrail_data_provenance", "")]
+            if provenance
+        }
+    )
     focus_task_class = focused_task_class(records)
     focus_task_records = focused_task_class_records(records, focus_task_class)
 
@@ -308,6 +318,7 @@ def build_cost_record_from_records(records: list[dict], *, source_paths: list[st
         "schema_version": "cost_of_control_record_v0",
         "scenario_count": len(records),
         "source_records": source_records,
+        "provenance_mix": provenance_mix,
         "verdict_counts": verdict_counts,
         "aggregate_deltas": {
             "avg_operator_minutes_added": average(records, "operator_minutes_added"),

@@ -13,6 +13,7 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
+from typing import Literal
 
 try:
     from .synrail_repair_packet_v0 import build_packet_from_runtime_truth
@@ -61,6 +62,21 @@ except ImportError:
         save_json as save_bootstrap_json,
         validate_bootstrap_record,
         write_proof_starter_files,
+    )
+
+try:
+    from .synrail_commands_v0 import (
+        run_bug_packet_command,
+        run_install_agent_files_command,
+        run_session_export_command,
+        run_telemetry_export_command,
+    )
+except ImportError:
+    from synrail_commands_v0 import (
+        run_bug_packet_command,
+        run_install_agent_files_command,
+        run_session_export_command,
+        run_telemetry_export_command,
     )
 
 
@@ -335,7 +351,8 @@ def policy_portability_note_lines(
     return lines
 
 
-def render_agent_policy_markdown(
+def render_policy_markdown(
+    agent_type: Literal["agents", "gemini", "claude"],
     *,
     artifact_root: str,
     command: str = "synrail",
@@ -360,74 +377,161 @@ def render_agent_policy_markdown(
         if repo_native_alpha_command
         else None
     )
-    lines = [
-        "# Agent Workflow",
-        "",
-        "This repo uses Synrail to keep one bounded local change inside one controlled run.",
-        "",
-        "## First Step On Every New Task",
-        "",
-        "Run Synrail before deciding what to do next. It is a CLI control kernel, not a background daemon.",
-        "```bash",
-        commands["status"],
-        "```",
-        "",
-    ]
-    lines.extend(orientation_lines)
-    if repo_native_commands:
-        lines.extend(
-            [
-                "## Repo-Local Fallback",
-                "",
-                "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
-                "",
-                "```bash",
-                repo_native_commands["status"],
-                repo_native_commands["start"],
-                repo_native_commands["check"],
-                "```",
-                "",
-                "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
-                "",
-            ]
-        )
-    lines.extend([
-        "## Before You Edit",
-        "",
-        "1. If Synrail shows that no controlled run is active, start one before mutating code:",
-        "```bash",
-        commands["start"],
-        "```",
-        "",
-        "2. Keep the change local and bounded to the stated task.",
-        f"3. Run the local commands needed to verify the change honestly, then edit `{artifact_root}/final_result.json` in place as the work becomes real. Only materialize readback or scenario proof if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
-        "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
-        "",
-        "## Before You Claim Success",
-        "",
-        "```bash",
-        commands["check"],
-        "```",
-        "",
-        "If Synrail is non-green, fix only what check tells you to fix, then rerun:",
-        "",
-        "```bash",
-        commands["check"],
-        "```",
-        "",
-        "## Important",
-        "",
-        "- Do not skip Synrail and try to legalize edits afterward.",
-        "- Do not claim success without real local verification.",
-        "- If `synrail` is unavailable from PATH here, try the checkout-local fallbacks first instead of reverse-engineering the entrypoint.",
-        "- Only report the control tool missing after the local checkout fallbacks fail too.",
-        "",
-    ])
+
+    if agent_type == "agents":
+        lines = [
+            "# Agent Workflow",
+            "",
+            "This repo uses Synrail to keep one bounded local change inside one controlled run.",
+            "",
+            "## First Step On Every New Task",
+            "",
+            "Run Synrail before deciding what to do next. It is a CLI control kernel, not a background daemon.",
+            "```bash",
+            commands["status"],
+            "```",
+            "",
+        ]
+        lines.extend(orientation_lines)
+        if repo_native_commands:
+            lines.extend(
+                [
+                    "## Repo-Local Fallback",
+                    "",
+                    "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
+                    "",
+                    "```bash",
+                    repo_native_commands["status"],
+                    repo_native_commands["start"],
+                    repo_native_commands["check"],
+                    "```",
+                    "",
+                    "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
+                    "",
+                ]
+            )
+        lines.extend([
+            "## Before You Edit",
+            "",
+            "1. If Synrail shows that no controlled run is active, start one before mutating code:",
+            "```bash",
+            commands["start"],
+            "```",
+            "",
+            "2. Keep the change local and bounded to the stated task.",
+            f"3. Run the local commands needed to verify the change honestly, then edit `{artifact_root}/final_result.json` in place as the work becomes real. Only materialize readback or scenario proof if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+            "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
+            "",
+            "## Before You Claim Success",
+            "",
+            "```bash",
+            commands["check"],
+            "```",
+            "",
+            "If Synrail is non-green, fix only what check tells you to fix, then rerun:",
+            "",
+            "```bash",
+            commands["check"],
+            "```",
+            "",
+            "## Important",
+            "",
+            "- Do not skip Synrail and try to legalize edits afterward.",
+            "- Do not claim success without real local verification.",
+            "- If `synrail` is unavailable from PATH here, try the checkout-local fallbacks first instead of reverse-engineering the entrypoint.",
+            "- Only report the control tool missing after the local checkout fallbacks fail too.",
+            "",
+        ])
+    else:
+        title = "Gemini" if agent_type == "gemini" else "Claude"
+        lines = [
+            f"# {title} Workflow",
+            "",
+            "Use Synrail as the default local control path for this repo.",
+            "",
+            "## First Command",
+            "",
+            "For every new user task, run Synrail first so you can see the current governed state:",
+            "",
+            "```bash",
+            commands["status"],
+            "```",
+            "",
+            "Synrail is a CLI control kernel, not a background daemon.",
+            "",
+        ]
+        lines.extend(orientation_lines)
+        if agent_type == "gemini":
+            lines.extend(policy_gemini_orientation_lines())
+        if repo_native_commands:
+            lines.extend(
+                [
+                    "## Repo-Local Fallback",
+                    "",
+                    "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
+                    "",
+                    "```bash",
+                    repo_native_commands["status"],
+                    repo_native_commands["start"],
+                    repo_native_commands["check"],
+                    "```",
+                    "",
+                    "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
+                    "",
+                ]
+            )
+        lines.extend([
+            "## Start",
+            "",
+            "If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
+            "",
+            "```bash",
+            commands["start"],
+            "```",
+            "",
+            "## Work",
+            "",
+            f"- Keep edits bounded and local to this repo.",
+            f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+            "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
+            "",
+            "## Finish",
+            "",
+            "```bash",
+            commands["check"],
+            "```",
+            "",
+            f"If non-green, fix only what check tells you to fix, then rerun `{commands['check']}`.",
+            "",
+            "Do not bypass Synrail and do not claim success without real local verification.",
+            "",
+        ])
+
     lines.extend(portability_lines)
     lines.extend(note_lines)
     if portability_lines or note_lines:
         lines.append("")
     return "\n".join(lines)
+
+
+def render_agent_policy_markdown(
+    *,
+    artifact_root: str,
+    command: str = "synrail",
+    fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
+    return render_policy_markdown(
+        "agents",
+        artifact_root=artifact_root,
+        command=command,
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+    )
 
 
 def render_gemini_policy_markdown(
@@ -439,89 +543,15 @@ def render_gemini_policy_markdown(
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
 ) -> str:
-    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
-    note_lines = policy_workspace_note_lines(
-        workspace_isolation_note=workspace_isolation_note,
-        prefer_runtime_helper=prefer_runtime_helper,
+    return render_policy_markdown(
+        "gemini",
+        artifact_root=artifact_root,
         command=command,
-    )
-    portability_lines = policy_portability_note_lines(
         fallback_command=fallback_command,
         repo_native_alpha_command=repo_native_alpha_command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
     )
-    orientation_lines = policy_orientation_lines(commands["status"])
-    gemini_orientation_lines = policy_gemini_orientation_lines()
-    repo_native_commands = (
-        policy_command_examples_for_binary(artifact_root=artifact_root, command=repo_native_alpha_command)
-        if repo_native_alpha_command
-        else None
-    )
-    lines = [
-        "# Gemini Workflow",
-        "",
-        "Use Synrail as the default local control path for this repo.",
-        "",
-        "## First Command",
-        "",
-        "For every new user task, run Synrail first so you can see the current governed state:",
-        "",
-        "```bash",
-        commands["status"],
-        "```",
-        "",
-        "Synrail is a CLI control kernel, not a background daemon.",
-        "",
-    ]
-    lines.extend(orientation_lines)
-    lines.extend(gemini_orientation_lines)
-    if repo_native_commands:
-        lines.extend(
-            [
-                "## Repo-Local Fallback",
-                "",
-                "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
-                "",
-                "```bash",
-                repo_native_commands["status"],
-                repo_native_commands["start"],
-                repo_native_commands["check"],
-                "```",
-                "",
-                "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
-                "",
-            ]
-        )
-    lines.extend([
-        "## Start",
-        "",
-        "If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
-        "",
-        "```bash",
-        commands["start"],
-        "```",
-        "",
-        "## Work",
-        "",
-        f"- Keep edits bounded and local to this repo.",
-        f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
-        "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
-        "",
-        "## Finish",
-        "",
-        "```bash",
-        commands["check"],
-        "```",
-        "",
-        f"If non-green, fix only what check tells you to fix, then rerun `{commands['check']}`.",
-        "",
-        "Do not bypass Synrail and do not claim success without real local verification.",
-        "",
-    ])
-    lines.extend(portability_lines)
-    lines.extend(note_lines)
-    if portability_lines or note_lines:
-        lines.append("")
-    return "\n".join(lines)
 
 
 def render_claude_policy_markdown(
@@ -533,87 +563,15 @@ def render_claude_policy_markdown(
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
 ) -> str:
-    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
-    note_lines = policy_workspace_note_lines(
-        workspace_isolation_note=workspace_isolation_note,
-        prefer_runtime_helper=prefer_runtime_helper,
+    return render_policy_markdown(
+        "claude",
+        artifact_root=artifact_root,
         command=command,
-    )
-    portability_lines = policy_portability_note_lines(
         fallback_command=fallback_command,
         repo_native_alpha_command=repo_native_alpha_command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
     )
-    orientation_lines = policy_orientation_lines(commands["status"])
-    repo_native_commands = (
-        policy_command_examples_for_binary(artifact_root=artifact_root, command=repo_native_alpha_command)
-        if repo_native_alpha_command
-        else None
-    )
-    lines = [
-        "# Claude Workflow",
-        "",
-        "Use Synrail as the default local control path for this repo.",
-        "",
-        "## First Command",
-        "",
-        "For every new user task, run Synrail first so you can see the current governed state:",
-        "",
-        "```bash",
-        commands["status"],
-        "```",
-        "",
-        "Synrail is a CLI control kernel, not a background daemon.",
-        "",
-    ]
-    lines.extend(orientation_lines)
-    if repo_native_commands:
-        lines.extend(
-            [
-                "## Repo-Local Fallback",
-                "",
-                "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
-                "",
-                "```bash",
-                repo_native_commands["status"],
-                repo_native_commands["start"],
-                repo_native_commands["check"],
-                "```",
-                "",
-                "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
-                "",
-            ]
-        )
-    lines.extend([
-        "## Start",
-        "",
-        "If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
-        "",
-        "```bash",
-        commands["start"],
-        "```",
-        "",
-        "## Work",
-        "",
-        f"- Keep edits bounded and local to this repo.",
-        f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
-        "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
-        "",
-        "## Finish",
-        "",
-        "```bash",
-        commands["check"],
-        "```",
-        "",
-        f"If non-green, fix only what check tells you to fix, then rerun `{commands['check']}`.",
-        "",
-        "Do not bypass Synrail and do not claim success without real local verification.",
-        "",
-    ])
-    lines.extend(portability_lines)
-    lines.extend(note_lines)
-    if portability_lines or note_lines:
-        lines.append("")
-    return "\n".join(lines)
 
 
 def render_agent_policy_block(
@@ -793,125 +751,20 @@ def write_agent_policy_file(
 
 
 def cmd_install_agent_files(args: argparse.Namespace) -> int:
-    project_root = Path(args.project_root or ".").resolve()
-    artifact_root = relative_artifact_root_for_project(
-        project_root=project_root,
-        artifact_root=args.artifact_root,
+    return run_install_agent_files_command(
+        args,
+        relative_artifact_root_for_project=relative_artifact_root_for_project,
+        preferred_synrail_command=preferred_synrail_command,
+        preferred_synrail_fallback_command=preferred_synrail_fallback_command,
+        preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
+        workspace_git_context=workspace_git_context,
+        project_prefers_runtime_evidence=project_prefers_runtime_evidence,
+        render_agent_policy_markdown=render_agent_policy_markdown,
+        render_gemini_policy_markdown=render_gemini_policy_markdown,
+        render_claude_policy_markdown=render_claude_policy_markdown,
+        render_agent_policy_block=render_agent_policy_block,
+        write_agent_policy_file=write_agent_policy_file,
     )
-    command = preferred_synrail_command()
-    fallback_command = preferred_synrail_fallback_command()
-    repo_native_alpha_command = preferred_repo_native_alpha_command(project_root=project_root)
-    git_context = workspace_git_context(project_root)
-    workspace_isolation_note = git_context.get("workspace_isolation_note", "")
-    prefer_runtime_helper = project_prefers_runtime_evidence(project_root)
-    agents_path = project_root / "AGENTS.md"
-    gemini_path = project_root / "GEMINI.md"
-    claude_path = project_root / "CLAUDE.md"
-
-    agents_content = render_agent_policy_markdown(
-        artifact_root=artifact_root,
-        command=command,
-        fallback_command=fallback_command,
-        repo_native_alpha_command=repo_native_alpha_command,
-        workspace_isolation_note=workspace_isolation_note,
-        prefer_runtime_helper=prefer_runtime_helper,
-    )
-    gemini_content = render_gemini_policy_markdown(
-        artifact_root=artifact_root,
-        command=command,
-        fallback_command=fallback_command,
-        repo_native_alpha_command=repo_native_alpha_command,
-        workspace_isolation_note=workspace_isolation_note,
-        prefer_runtime_helper=prefer_runtime_helper,
-    )
-    claude_content = render_claude_policy_markdown(
-        artifact_root=artifact_root,
-        command=command,
-        fallback_command=fallback_command,
-        repo_native_alpha_command=repo_native_alpha_command,
-        workspace_isolation_note=workspace_isolation_note,
-        prefer_runtime_helper=prefer_runtime_helper,
-    )
-    agents_block = render_agent_policy_block(
-        title="Synrail Local Workflow",
-        intro="This repo uses Synrail to keep one bounded local change inside one controlled run.",
-        artifact_root=artifact_root,
-        command=command,
-        fallback_command=fallback_command,
-        repo_native_alpha_command=repo_native_alpha_command,
-        workspace_isolation_note=workspace_isolation_note,
-        prefer_runtime_helper=prefer_runtime_helper,
-    )
-    gemini_block = render_agent_policy_block(
-        title="Synrail Local Workflow",
-        intro="Use Synrail as the default local control path for this repo.",
-        artifact_root=artifact_root,
-        command=command,
-        fallback_command=fallback_command,
-        repo_native_alpha_command=repo_native_alpha_command,
-        workspace_isolation_note=workspace_isolation_note,
-        prefer_runtime_helper=prefer_runtime_helper,
-    )
-    claude_block = render_agent_policy_block(
-        title="Synrail Local Workflow",
-        intro="Use Synrail as the default local control path for this repo.",
-        artifact_root=artifact_root,
-        command=command,
-        fallback_command=fallback_command,
-        repo_native_alpha_command=repo_native_alpha_command,
-        workspace_isolation_note=workspace_isolation_note,
-        prefer_runtime_helper=prefer_runtime_helper,
-    )
-
-    agents_written, agents_state, agents_backup = write_agent_policy_file(
-        agents_path,
-        agents_content,
-        managed_block=agents_block,
-        force=args.force,
-    )
-    gemini_written, gemini_state, gemini_backup = write_agent_policy_file(
-        gemini_path,
-        gemini_content,
-        managed_block=gemini_block,
-        force=args.force,
-    )
-    claude_written, claude_state, claude_backup = write_agent_policy_file(
-        claude_path,
-        claude_content,
-        managed_block=claude_block,
-        force=args.force,
-    )
-
-    print("Agent adoption files are ready.")
-    print(f"Project root: {project_root}")
-    print(f"Artifact root hint: {artifact_root}")
-    print(f"Synrail command: {command}")
-    if fallback_command:
-        print(f"Synrail fallback for this machine: {fallback_command}")
-    if workspace_isolation_note:
-        print(f"Workspace note: {workspace_isolation_note}")
-    if prefer_runtime_helper:
-        print(f"Runtime note: use `{command} runtime-helper` for a small curl or template-render verification path.")
-    print(f"AGENTS.md: {agents_state}")
-    print(f"GEMINI.md: {gemini_state}")
-    print(f"CLAUDE.md: {claude_state}")
-    if agents_backup:
-        print(f"AGENTS.md backup: {agents_backup}")
-    if gemini_backup:
-        print(f"GEMINI.md backup: {gemini_backup}")
-    if claude_backup:
-        print(f"CLAUDE.md backup: {claude_backup}")
-    if (
-        agents_state in {"appended", "updated"}
-        or gemini_state in {"appended", "updated"}
-        or claude_state in {"appended", "updated"}
-    ):
-        print("What to do next: run `synrail` in this repo so the dashboard can show the current state, then review and commit the managed Synrail block if the wording fits the repo.")
-    elif agents_written or gemini_written or claude_written:
-        print("What to do next: run `synrail` in this repo. Commit these files if you want local agents to keep discovering Synrail before editing.")
-    else:
-        print("What to do next: run `synrail` in this repo. Keep these files committed so local agents continue discovering the same Synrail entrypoint.")
-    return 0
 
 
 def load_text_if_exists(path: Path) -> str:
@@ -1120,6 +973,25 @@ def preferred_proof_artifact_paths(root: Path) -> dict[str, Path]:
 
 def file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def ensure_run_state_extensions(state: dict) -> dict:
+    state.setdefault("start_timestamp_utc", "")
+    state.setdefault("closure_timestamp_utc", "")
+    state.setdefault("check_count", 0)
+    state.setdefault("last_known_final_result_hash", "")
+    state.setdefault("doctor", {}).setdefault("override_gates", [])
+    state.setdefault("proof_bundle", {}).setdefault("artifact_integrity_warning", False)
+    state.setdefault("closure", {}).setdefault("warnings", [])
+    return state
+
+
+def update_last_known_final_result_hash(state_path: Path, final_result_path: Path | None) -> None:
+    if final_result_path is None or not final_result_path.exists() or not state_path.exists():
+        return
+    state = ensure_run_state_extensions(load_json(state_path))
+    state["last_known_final_result_hash"] = file_sha256(final_result_path)
+    save_json(state_path, state)
 
 
 def untouched_preferred_proof_paths(root: Path | None) -> set[Path]:
@@ -1488,7 +1360,7 @@ def apply_bootstrap_defaults(args: argparse.Namespace, *, root: Path | None) -> 
 
 def write_bootstrap_required_block(*, args: argparse.Namespace, root: Path, validation: dict) -> int:
     state_path = Path(args.state_file)
-    state = load_json(state_path)
+    state = ensure_run_state_extensions(load_json(state_path))
     task_identity = (getattr(args, "task_identity", "") or "").strip() or load_text_if_exists(root / "task_identity.txt")
     prompt_identity = (getattr(args, "prompt_identity", "") or "").strip() or load_text_if_exists(root / "prompt_identity.txt")
     state["integrity"]["status"] = "FAIL"
@@ -1548,7 +1420,7 @@ def write_bootstrap_required_block(*, args: argparse.Namespace, root: Path, vali
 
 def write_remote_unsupported_block(*, args: argparse.Namespace, root: Path) -> int:
     state_path = Path(args.state_file)
-    state = load_json(state_path)
+    state = ensure_run_state_extensions(load_json(state_path))
     state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
     state["closure"]["blocking_reason"] = "REMOTE_TARGET_UNSUPPORTED"
     state["closure"]["next_allowed_transition"] = "LOCAL_TRUSTED_WORKTREE_START"
@@ -2303,7 +2175,7 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
         for note in payload.get("notes", []):
             lines.append("- " + note)
         if payload.get("restore_supported", False) and root:
-            lines.append("Next command: " + shell_command(root, "restore"))
+            lines.append("Next command: " + shell_command(root, "restore") + " --confirm")
         elif payload.get("next_safe_step", ""):
             lines.append("What to do next: " + payload.get("next_safe_step", ""))
     elif action == "restore":
@@ -2338,7 +2210,7 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
         )
         if root:
             lines.append("Preview command: " + shell_command(root, "restore") + " --preview")
-            lines.append("Restore command: " + shell_command(root, "restore"))
+            lines.append("Restore command: " + shell_command(root, "restore") + " --confirm")
     else:
         lines.extend(
             [
@@ -2363,7 +2235,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     summary = build_workspace_status(root, project_root=project_root, state_path=state_path)
     state_path = (state_path or alpha_file(root, "state")).resolve()
     if state_path.exists():
-        state = load_json(state_path)
+        state = ensure_run_state_extensions(load_json(state_path))
         summary.update(
             {
                 "run_id": state.get("run_id", ""),
@@ -2610,6 +2482,10 @@ def cmd_start(args: argparse.Namespace) -> int:
     validation = apply_bootstrap_defaults(args, root=root)
     if validation:
         save_bootstrap_json(alpha_file(root, "bootstrap_validation"), validation)
+    update_last_known_final_result_hash(
+        Path(args.output),
+        preferred_proof_artifact_paths(root)["final_result"],
+    )
     print_start_summary(root=root, state_file=Path(args.output), project_root=project_root)
     return 0
 
@@ -2665,26 +2541,13 @@ def cmd_telemetry_enable(args: argparse.Namespace) -> int:
 
 
 def cmd_telemetry_export(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args)
-    if not root:
-        print(json.dumps({"result": "ERROR", "reason": "ARTIFACT_ROOT_REQUIRED"}, ensure_ascii=True))
-        return 2
-    if not getattr(args, "output", None):
-        args.output = str(default_session_replay_file(root))
-    if not getattr(args, "issue_output", None):
-        args.issue_output = str(default_issue_body_file(root))
-    try:
-        record = export_session_replay(root, Path(args.output), Path(args.issue_output))
-    except ValueError as exc:
-        print("Synrail could not export feedback yet.")
-        print("What happened: telemetry is not enabled for this artifact root.")
-        print("What to do next: rerun synrail start with --telemetry-opt-in or use synrail telemetry enable before exporting feedback.")
-        return 2
-    print("Feedback export ready.")
-    print("What it includes: one session replay and one issue-ready summary.")
-    print(f"Command count captured: {record['command_count']}")
-    print("Use this when you want to send back a non-green run without hand-assembling artifacts.")
-    return 0
+    return run_telemetry_export_command(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        default_session_replay_file=default_session_replay_file,
+        default_issue_body_file=default_issue_body_file,
+        export_session_replay=export_session_replay,
+    )
 
 
 def cmd_bundle_check(args: argparse.Namespace) -> int:
@@ -2702,6 +2565,7 @@ def cmd_bundle_check(args: argparse.Namespace) -> int:
         ("--prompt-identity", args.prompt_identity),
         ("--task-identity", args.task_identity),
         ("--doctor-file", args.doctor_file),
+        ("--last-known-final-result-hash", getattr(args, "last_known_final_result_hash", None)),
     ]
     for flag, value in optional_pairs:
         if value:
@@ -3132,6 +2996,32 @@ def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
                 print("What to do next: create one while the project is in a verified working state.")
                 print("Next command: " + shell_command(root, "save"))
         return 2
+    if not getattr(args, "confirm", False):
+        preview_output = Path(args.output).with_name("checkpoint_restore_preview.json")
+        forwarded = [
+            "preview",
+            "--checkpoint-record-file", args.checkpoint_record_file,
+            "--target-root", args.target_root,
+            "--output", str(preview_output),
+        ]
+        completed = run_python_capture(CHECKPOINT, forwarded)
+        if completed.returncode != 0:
+            if completed.stderr.strip():
+                print(completed.stderr.strip(), file=sys.stderr)
+            if completed.stdout.strip():
+                print(completed.stdout.strip())
+            return completed.returncode
+        preview_payload = load_json(preview_output)
+        if preview_payload.get("workspace_restore_destructive", False):
+            if args.mode == "dev":
+                print(json.dumps({"result": "ERROR", "reason": "RESTORE_CONFIRM_REQUIRED"}, ensure_ascii=True))
+            else:
+                print("Synrail will not run this destructive restore without explicit confirmation.")
+                print("What happened: this restore would modify project workspace files on the saved project root.")
+                print("What to do next: preview the restore carefully, then rerun with --confirm if you want to proceed.")
+                print("Preview command: " + shell_command(root, "restore") + " --preview")
+                print("Next command: " + shell_command(root, "restore") + " --confirm")
+            return 2
     forwarded = [
         "restore",
         "--checkpoint-record-file", args.checkpoint_record_file,
@@ -3320,6 +3210,12 @@ def cmd_check(args: argparse.Namespace) -> int:
     project_root = Path(project_root_text).resolve() if project_root_text else Path.cwd().resolve()
     if root and not getattr(args, "state_file", None):
         args.state_file = str(alpha_file(root, "state"))
+    if root and getattr(args, "state_file", None):
+        state_path = Path(args.state_file)
+        if state_path.exists():
+            state = ensure_run_state_extensions(load_json(state_path))
+            state["check_count"] = int(state.get("check_count", 0)) + 1
+            save_json(state_path, state)
     if root and not getattr(args, "report_file", None):
         args.report_file = str(alpha_file(root, "report"))
     if root and not getattr(args, "output", None):
@@ -3377,7 +3273,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     )
 
     if runtime_requested:
-        state = load_json(Path(args.state_file))
+        state = ensure_run_state_extensions(load_json(Path(args.state_file)))
         # Auto-detect clean_surface: during an active controlled run,
         # the workspace is expected to have uncommitted changes.
         if not getattr(args, "clean_surface", False):
@@ -3441,6 +3337,7 @@ def cmd_check(args: argparse.Namespace) -> int:
             credential_env=list(getattr(args, "credential_env", [])),
             prompt_identity_file=getattr(args, "prompt_identity_file", None),
             target_identity_file=getattr(args, "target_identity_file", None),
+            last_known_final_result_hash=state.get("last_known_final_result_hash", ""),
             _capture_output=(args.mode == "default"),
         )
         orchestrate_code = cmd_orchestrate(orchestrate_args)
@@ -3480,6 +3377,14 @@ def cmd_check(args: argparse.Namespace) -> int:
             else:
                 print("What to do next: provide the missing runtime context or rerun with --mode dev for full technical detail.")
         return 2
+
+    report_path = Path(args.report_file)
+    report_payload = load_json(report_path) if report_path.exists() else {}
+    if root and report_payload.get("result", "") == "OK":
+        update_last_known_final_result_hash(
+            Path(args.state_file),
+            preferred_proof_artifact_paths(root)["final_result"],
+        )
 
     args._suppress_summary = True
     thin_code = cmd_thin_output(args)
@@ -3611,24 +3516,13 @@ def cmd_observability(args: argparse.Namespace) -> int:
 
 
 def cmd_session_export(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args)
-    if root:
-        if not getattr(args, "state_file", None):
-            args.state_file = maybe_existing_alpha_file(root, "state")
-        if not getattr(args, "report_file", None):
-            args.report_file = maybe_existing_alpha_file(root, "report")
-        if not getattr(args, "repair_packet_file", None):
-            args.repair_packet_file = maybe_existing_alpha_file(root, "repair_packet")
-        if not getattr(args, "repair_receipt_file", None):
-            args.repair_receipt_file = maybe_existing_alpha_file(root, "repair_receipt")
-        if not getattr(args, "refresh_file", None):
-            args.refresh_file = maybe_existing_alpha_file(root, "refresh")
-        if not getattr(args, "output", None):
-            args.output = str(alpha_file(root, "session_export"))
-    if not getattr(args, "state_file", None) or not getattr(args, "report_file", None):
-        print(json.dumps({"result": "ERROR", "reason": "STATE_AND_REPORT_REQUIRED"}, ensure_ascii=True))
-        return 2
-    return cmd_observability(args)
+    return run_session_export_command(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        alpha_file=alpha_file,
+        cmd_observability=cmd_observability,
+    )
 
 
 def cmd_deploy(args: argparse.Namespace) -> int:
@@ -3808,54 +3702,14 @@ def cmd_deploy_check(args: argparse.Namespace) -> int:
 
 
 def cmd_bug_packet(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args)
-    if root:
-        for attr, file_id in [
-            ("state_file", "state"),
-            ("report_file", "report"),
-            ("doctor_file", "doctor"),
-            ("acceptance_validation_file", "acceptance_validation"),
-            ("repair_packet_file", "repair_packet"),
-            ("observability_file", "observability"),
-            ("thin_output_file", "thin_output"),
-        ]:
-            if not getattr(args, attr, None):
-                value = maybe_existing_alpha_file(root, file_id)
-                if value:
-                    setattr(args, attr, value)
-        if not getattr(args, "observability_file", None):
-            session_export = maybe_existing_alpha_file(root, "session_export")
-            if session_export:
-                args.observability_file = session_export
-        if not getattr(args, "output", None):
-            args.output = str(alpha_file(root, "bug_packet"))
-        if not getattr(args, "issue_output", None):
-            args.issue_output = str(root / "bug_packet_issue.md")
-    if not getattr(args, "state_file", None) or not getattr(args, "report_file", None):
-        print("Synrail could not build the bug packet yet.")
-        print("What is missing: state and report are both required.")
-        return 2
-    forwarded = [
-        "--state-file", args.state_file,
-        "--report-file", args.report_file,
-        "--output", args.output,
-    ]
-    for flag, value in [
-        ("--doctor-file", args.doctor_file),
-        ("--acceptance-validation-file", args.acceptance_validation_file),
-        ("--repair-packet-file", args.repair_packet_file),
-        ("--observability-file", args.observability_file),
-        ("--thin-output-file", args.thin_output_file),
-        ("--issue-output", args.issue_output),
-    ]:
-        if value:
-            forwarded.extend([flag, value])
-    code = run_python(BUG_PACKET, forwarded)
-    if code == 0:
-        print("Bug packet ready.")
-        print("What it includes: one compact runtime summary and one issue-ready markdown body.")
-        print("Use this only when telemetry export is not enough for the bug report.")
-    return code
+    return run_bug_packet_command(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        alpha_file=alpha_file,
+        run_python=run_python,
+        bug_packet_script=BUG_PACKET,
+    )
 
 
 def cmd_reproducibility(args: argparse.Namespace) -> int:
@@ -4496,6 +4350,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ("--acceptance-validation-output", getattr(args, "acceptance_validation_output", None)),
         ("--project-profile-file", getattr(args, "project_profile_file", None)),
         ("--bootstrap-provenance-reason", getattr(args, "bootstrap_provenance_reason", None)),
+        ("--last-known-final-result-hash", getattr(args, "last_known_final_result_hash", None)),
     ]:
         if value:
             forwarded.extend([flag, value])
@@ -4531,7 +4386,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
         print(json.dumps({"result": "ERROR", "reason": "STATE_FILE_REQUIRED"}, ensure_ascii=True))
         return 2
     state_path = Path(args.state_file)
-    state = load_json(state_path)
+    state = ensure_run_state_extensions(load_json(state_path))
     apply_bootstrap_defaults(args, root=state_path.parent)
     args.resume_from_state = state["state"]
     apply_resume_output_defaults(args, state)
@@ -4660,6 +4515,7 @@ def add_orchestration_args(
     parser.add_argument("--acceptance-criteria-file")
     parser.add_argument("--acceptance-validation-output")
     parser.add_argument("--project-profile-file")
+    parser.add_argument("--last-known-final-result-hash")
 
 
 class _SuppressingHelpFormatter(argparse.HelpFormatter):
@@ -4835,6 +4691,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_bundle.add_argument("--prompt-identity")
     p_bundle.add_argument("--task-identity")
     p_bundle.add_argument("--doctor-file")
+    p_bundle.add_argument("--last-known-final-result-hash")
     p_bundle.set_defaults(func=cmd_bundle_check)
 
     p_apply_bundle = sub.add_parser("apply-bundle", help=argparse.SUPPRESS)
@@ -5011,6 +4868,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_restore.add_argument("--checkpoint-record-file")
     p_checkpoint_restore.add_argument("--target-root")
     p_checkpoint_restore.add_argument("--preview", action="store_true")
+    p_checkpoint_restore.add_argument("--confirm", action="store_true")
     p_checkpoint_restore.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_restore.add_argument("--output")
     p_checkpoint_restore.set_defaults(func=cmd_restore_checkpoint)
@@ -5051,6 +4909,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_nested_restore.add_argument("--checkpoint-record-file")
     p_checkpoint_nested_restore.add_argument("--target-root")
     p_checkpoint_nested_restore.add_argument("--preview", action="store_true")
+    p_checkpoint_nested_restore.add_argument("--confirm", action="store_true")
     p_checkpoint_nested_restore.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_nested_restore.add_argument("--output")
     p_checkpoint_nested_restore.set_defaults(func=cmd_restore_checkpoint)
@@ -5061,6 +4920,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_restore.add_argument("--checkpoint-record-file")
     p_restore.add_argument("--target-root")
     p_restore.add_argument("--preview", action="store_true")
+    p_restore.add_argument("--confirm", action="store_true")
     p_restore.add_argument("--mode", default="default", choices=["default", "dev"])
     p_restore.add_argument("--output")
     p_restore.set_defaults(func=cmd_restore)

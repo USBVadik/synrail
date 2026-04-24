@@ -179,6 +179,18 @@
     },
     "semantic_next_safe_step": {
       "type": "string"
+    },
+    "shadow_observation_guard_results": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["would_block", "lines_flagged"],
+      "properties": {
+        "would_block": {"type": "boolean"},
+        "lines_flagged": {"type": "integer", "minimum": 0}
+      }
+    },
+    "artifact_integrity_warning": {
+      "type": "boolean"
     }
   }
 }

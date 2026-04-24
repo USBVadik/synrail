@@ -5,6 +5,7 @@
   "scenario_class": "low_risk_honesty_restoration",
   "task_class": "honesty_restoration_guard",
   "path_id": "full_governed_path",
+  "data_provenance": "curated_local_estimate",
   "closure_result": "CLAIMED_NOT_ACCEPTED",
   "blocker_to_closure_cycles": 3,
   "false_success_risk": "LOW",

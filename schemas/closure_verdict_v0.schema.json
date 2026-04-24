@@ -12,7 +12,8 @@
     "blocking_reason",
     "next_allowed_transition",
     "narrow_next_safe_step",
-    "missing_sections"
+    "missing_sections",
+    "closure_warnings"
   ],
   "properties": {
     "schema_version": {
@@ -58,6 +59,12 @@
       }
     },
     "semantically_insufficient_sections": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "closure_warnings": {
       "type": "array",
       "items": {
         "type": "string"

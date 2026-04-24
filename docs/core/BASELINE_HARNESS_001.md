@@ -62,6 +62,9 @@ The current harness compares:
 
 The active economics harness now also records:
 
+Current comparison inputs in this repo are marked as `curated_local_estimate`.
+They are not empirical measurements.
+
 - scenario class
 - path identity
 - operator minutes

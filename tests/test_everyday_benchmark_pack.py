@@ -46,6 +46,7 @@ class RepeatableEverydayBenchmarkPackTests(unittest.TestCase):
         )
 
         self.assertEqual(6, cost_record["scenario_count"])
+        self.assertEqual(["curated_local_estimate"], cost_record["provenance_mix"])
         self.assertEqual("BASELINE_GOOD_ENOUGH", cost_record["reading"]["everyday_status"])
         self.assertEqual(2, cost_record["verdict_counts"]["SYNRAIL_BETTER"])
         self.assertEqual(4, cost_record["verdict_counts"]["BASELINE_GOOD_ENOUGH"])

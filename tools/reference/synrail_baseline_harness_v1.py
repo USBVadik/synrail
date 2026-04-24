@@ -216,6 +216,8 @@ def build_record(baseline: dict, synrail: dict) -> dict:
         "task_class": baseline["task_class"],
         "baseline_path": baseline["path_id"],
         "synrail_path": synrail["path_id"],
+        "baseline_data_provenance": baseline["data_provenance"],
+        "synrail_data_provenance": synrail["data_provenance"],
         "baseline": baseline,
         "synrail": synrail,
         "economics_summary": economics,

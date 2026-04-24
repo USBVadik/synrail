@@ -216,6 +216,9 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             operator_chain_render_text = (artifact_root / "operator_chain_render.md").read_text()
 
             self.assertEqual("PROOF_INVALID", session_replay["latest_result"])
+            self.assertTrue(session_replay["start_timestamp_utc"])
+            self.assertEqual("", session_replay["closure_timestamp_utc"])
+            self.assertEqual(1, session_replay["check_count"])
             self.assertIn("repair the final result artifact", session_replay["next_safe_step"])
             self.assertEqual("final_result_payload", session_replay["continuation_summary"]["current_step_subsurface_id"])
             self.assertEqual(".synrail/final_result.json", session_replay["continuation_summary"]["current_step_target_path"])

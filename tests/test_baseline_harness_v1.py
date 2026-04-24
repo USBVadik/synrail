@@ -30,6 +30,7 @@ def comparison_input(*, system: str, path_id: str, **overrides: int | str) -> di
         "scenario_class": "repeatable_everyday_local",
         "task_class": "bounded_copy_update",
         "path_id": path_id,
+        "data_provenance": "curated_local_estimate",
         "closure_result": "ACCEPTED",
         "blocker_to_closure_cycles": 0,
         "false_success_risk": "LOW",

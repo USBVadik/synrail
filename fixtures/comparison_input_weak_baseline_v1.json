@@ -5,6 +5,7 @@
   "scenario_class": "low_risk_honesty_restoration",
   "task_class": "honesty_restoration_guard",
   "path_id": "lightweight_operator_loop",
+  "data_provenance": "curated_local_estimate",
   "closure_result": "ACCEPTED",
   "blocker_to_closure_cycles": 1,
   "false_success_risk": "LOW",

@@ -70,6 +70,8 @@ The critic-facing docs already point to the focused benchmark tranche, including
 - `tests/test_small_template_text_fix_benchmark_pack.py`
 - `fixtures/small_template_text_fix_benchmark_pack_001.json`
 - `fixtures/cost_of_control_small_template_text_fix_001.json`
+- `fixtures/small_template_text_fix_behavior_pressure_pack_001.json`
+- `fixtures/cost_of_control_small_template_text_fix_behavior_pressure_001.json`
 - `docs/review/Priority.md`
 
 In the current local snapshot, these files are present alongside the critic-facing references.

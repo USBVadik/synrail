@@ -82,6 +82,7 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         "acceptance_criteria_revision_id": criteria_validation.get("criteria_revision_id", ""),
         "acceptance_criteria_status": criteria_validation.get("status", ""),
         "acceptance_criteria_reason": criteria_validation.get("reason", ""),
+        "closure_warnings": [],
     }
 
     if run_id_mismatch:
@@ -113,6 +114,12 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         verdict["next_allowed_transition"] = "DOCTOR_READINESS"
         verdict["narrow_next_safe_step"] = "run doctor and clear blocking failure classes"
         return verdict
+
+    doctor_overrides = list(state["doctor"].get("override_gates", []))
+    if doctor_overrides:
+        verdict["closure_warnings"].append(
+            f"doctor_override_present: {', '.join(doctor_overrides)}"
+        )
 
     if not state["integrity"].get("bootstrap_provenance_ok", False):
         verdict["blocking_reason"] = "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED"
@@ -150,11 +157,22 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         verdict["narrow_next_safe_step"] = first_missing_step(missing_sections)
         return verdict
 
+    recheck = bundle.get("verification_recheck", {})
+    if recheck.get("executed") and not recheck.get("matched"):
+        verdict["closure_status"] = "REJECTED"
+        verdict["blocking_reason"] = "VERIFICATION_RECHECK_FAILED"
+        verdict["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
+        verdict["narrow_next_safe_step"] = "re-run the verification and update diff_provenance"
+        return verdict
+
     if state["recovery"]["status"] == "PENDING" and not state["recovery"]["reverification_complete"]:
         verdict["blocking_reason"] = "RECOVERY_REVERIFICATION_INCOMPLETE"
         verdict["next_allowed_transition"] = "RECOVERY_REVERIFICATION"
         verdict["narrow_next_safe_step"] = "run reverification against the attested target surface"
         return verdict
+
+    if bundle.get("artifact_integrity_warning", False):
+        verdict["closure_warnings"].append("artifact_modified_outside_workflow")
 
     verdict["closure_status"] = "ACCEPTED"
     verdict["blocking_reason"] = ""
@@ -174,13 +192,16 @@ def apply_verdict_to_state(state: dict, bundle: dict, verdict: dict) -> dict:
     state["proof_bundle"]["semantic_next_safe_step"] = bundle.get("semantic_next_safe_step", "")
     state["proof_bundle"]["final_result"] = dict(bundle.get("final_result", {}))
     state["proof_bundle"]["verification_corroboration"] = dict(bundle.get("verification_corroboration", {}))
+    state["proof_bundle"]["verification_recheck"] = dict(bundle.get("verification_recheck", {}))
     state["proof_bundle"]["artifact_identity"] = dict(bundle.get("artifact_identity", {}))
     state["proof_bundle"]["cleanup_status"] = dict(bundle.get("cleanup_status", {}))
+    state["proof_bundle"]["artifact_integrity_warning"] = bool(bundle.get("artifact_integrity_warning", False))
     state["closure"]["status"] = verdict["closure_status"]
     state["closure"]["blocking_reason"] = verdict["blocking_reason"]
     state["closure"]["next_allowed_transition"] = verdict["next_allowed_transition"]
     state["closure"]["narrow_next_safe_step"] = verdict["narrow_next_safe_step"]
     state["closure"]["missing_sections"] = list(verdict["missing_sections"])
+    state["closure"]["warnings"] = list(verdict.get("closure_warnings", []))
     state["next_safe_step"] = verdict["narrow_next_safe_step"]
 
     if verdict["closure_status"] == "ACCEPTED":

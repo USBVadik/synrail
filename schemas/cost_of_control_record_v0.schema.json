@@ -8,6 +8,7 @@
     "schema_version",
     "scenario_count",
     "source_records",
+    "provenance_mix",
     "verdict_counts",
     "aggregate_deltas",
     "hotspots",
@@ -38,6 +39,13 @@
             "enum": ["SYNRAIL_BETTER", "BASELINE_GOOD_ENOUGH", "UNCLEAR"]
           }
         }
+      }
+    },
+    "provenance_mix": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["curated_local_estimate", "pressure_synthetic", "external_empirical"]
       }
     },
     "verdict_counts": {

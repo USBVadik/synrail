@@ -203,27 +203,6 @@ def refresh_scope_summary(refresh: dict | None, *, state: dict, repair_packet: d
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def change_impact_guidance(refresh: dict | None, *, state: dict, repair_packet: dict | None = None) -> dict[str, str]:
     matched = matching_refresh(refresh, state=state)
     if not matched:

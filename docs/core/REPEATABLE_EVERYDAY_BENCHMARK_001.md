@@ -19,7 +19,7 @@ The initial pack lives at:
 
 The pack is intentionally small and repeatable:
 
-- `5` local-only trivial or additive tasks
+- `6` local-only trivial or additive tasks
 - same scenario class: `repeatable_everyday_local`
 - same comparison shape: one baseline path vs one cheapened `Synrail` path
 - one machine-readable economics reading
@@ -29,9 +29,12 @@ It is an internal executable benchmark class.
 
 ## Current measured reading
 
+The current benchmark inputs in this pack are marked as `curated_local_estimate`.
+They are curated local estimates, not empirical external measurements.
+
 The current aggregate reading is:
 
-- `1` scenario: `SYNRAIL_BETTER`
+- `2` scenarios: `SYNRAIL_BETTER`
 - `4` scenarios: `BASELINE_GOOD_ENOUGH`
 - `0` scenarios: `UNCLEAR`
 
@@ -40,13 +43,13 @@ The shortest honest reading is:
 - the cheapened contour is materially lighter than before
 - checks per accepted closure are now tracked machine-readably without adding a new runtime input surface
 - the default non-green path now keeps `repair-step` off the everyday default contour unless a standalone bounded prompt is actually needed
-- one repeatable low-drag winner now exists
+- two repeatable low-drag winners now exist
 - the remaining everyday paths now read as baseline-sufficient rather than unresolved
 - but the everyday class is still not won overall
 
 ## Current economics summary
 
-Across the current five-scenario pack, `Synrail` currently adds on average:
+Across the current six-scenario pack, `Synrail` currently adds on average:
 
 - `1` operator minute
 - `0` checks per accepted closure

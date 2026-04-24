@@ -11,6 +11,8 @@
     "task_class",
     "baseline_path",
     "synrail_path",
+    "baseline_data_provenance",
+    "synrail_data_provenance",
     "baseline",
     "synrail",
     "economics_summary",
@@ -37,6 +39,14 @@
     },
     "synrail_path": {
       "type": "string"
+    },
+    "baseline_data_provenance": {
+      "type": "string",
+      "enum": ["curated_local_estimate", "pressure_synthetic", "external_empirical"]
+    },
+    "synrail_data_provenance": {
+      "type": "string",
+      "enum": ["curated_local_estimate", "pressure_synthetic", "external_empirical"]
     },
     "baseline": {
       "type": "object"

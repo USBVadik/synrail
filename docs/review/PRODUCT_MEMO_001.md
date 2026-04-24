@@ -51,11 +51,12 @@ At the current alpha level, `Synrail` provides one narrow workflow:
 2. auto-detect a minimal project profile and prepare `.synrail/final_result.json` as the default proof surface
 3. keep `readback.txt` and `scenario_proof.txt` fallback-only unless a later `synrail check` explicitly names one
 4. run doctor and execution checks
-5. evaluate the resulting proof bundle and closure reading
-6. if refresh invalidation is known, narrow the default non-green summary to the stale obligation class
-7. if non-green, let `synrail check` carry the first bounded fix, with `repair-step` remaining optional
-8. if a trusted fallback exists, restore it explicitly
-9. if the run fails in an interesting way, export one compact telemetry and bug packet
+5. evaluate the resulting proof bundle, including allowlisted verification recheck and shadow observation guard recording
+6. if an executed verification recheck disagrees, close as rejected and point to one bounded repair step
+7. if refresh invalidation is known, narrow the default non-green summary to the stale obligation class
+8. if non-green, let `synrail check` carry the first bounded fix, with `repair-step` remaining optional
+9. if a trusted fallback exists, restore it explicitly
+10. if the run fails in an interesting way, export one compact telemetry and bug packet
 
 ## Core user value
 
@@ -129,11 +130,14 @@ Current restore-capable lane:
 What is already real:
 
 - proof/closure separation
+- allowlisted verification recheck with explicit rejection on executed mismatch
 - default mode output layer
 - bounded next-agent prompt generation
 - explicit acceptance criteria
 - measured doctor coverage gate
 - executable continuation arbiter
+- shadow observation guard recording for wider observation-only pressure
+- focused readback hardening against numeric thin self-descriptions without literal evidence
 - regression suite on truth-critical failures
 - telemetry and bug-packet export
 

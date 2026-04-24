@@ -5,6 +5,7 @@
   "scenario_class": "compound_proof_sensitive_repair",
   "task_class": "bounded_router_trigger_fix",
   "path_id": "full_governed_path",
+  "data_provenance": "curated_local_estimate",
   "closure_result": "ACCEPTED",
   "blocker_to_closure_cycles": 6,
   "false_success_risk": "LOW",

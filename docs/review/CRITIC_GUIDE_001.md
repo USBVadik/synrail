@@ -37,11 +37,15 @@ Read:
 - `tests/test_truth_regressions.py`
 - `fixtures/semantic_proof_hardening_run_001/`
 - `fixtures/acceptance_independence_run_001/`
+- `tools/reference/synrail_bundle_v0.py`
+- `tools/reference/synrail_closure_v0.py`
 
 Ask:
 
 - where could a weak proof still pass?
 - where could a legitimate contour still be blocked?
+- where can numeric line/location claims still sound evidentiary without literal evidence?
+- where do allowlisted verification recheck and `shadow_observation_guard_results` still leave too much trust self-issued?
 
 ### 3. Attack doctor honesty
 

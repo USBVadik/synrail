@@ -4,9 +4,17 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import shlex
+import subprocess
 import sys
 from pathlib import Path
+
+try:
+    from .synrail_io_v0 import load_json, load_json_if_valid
+except ImportError:
+    from synrail_io_v0 import load_json, load_json_if_valid
 
 
 REQUIRED_SECTION_NAMES = [
@@ -33,19 +41,109 @@ SEMANTIC_SECTION_STEPS = {
 }
 
 GENERIC_EXECUTION_STATUSES = {"SUCCESS", "COMPLETED", "DONE", "OK", "PASSED"}
+VERIFICATION_RECHECK_ALLOWED_BINARIES = {"grep", "cat", "head", "tail", "git", "python3"}
+VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10
+VERIFICATION_RECHECK_STDOUT_LIMIT = 4096
+VERIFICATION_RECHECK_PYTHON_INLINE_LIMIT = 500
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+def file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def load_json_if_valid(path: Path | None) -> tuple[bool, dict]:
-    if path is None:
-        return False, {}
+def normalize_verification_recheck_text(value: str, *, executable: str) -> str:
+    normalized = value.rstrip("\n")
+    if executable != "grep":
+        return normalized
+    lines: list[str] = []
+    for line in normalized.splitlines():
+        prefix, sep, rest = line.partition(":")
+        lines.append(rest if sep and prefix.isdigit() else line)
+    return "\n".join(lines)
+
+
+def verification_recheck_result(record: object) -> dict:
+    result = {
+        "executed": False,
+        "command_allowed": False,
+        "matched": False,
+        "stdout_snippet": "",
+        "skip_reason": "",
+    }
+    if not isinstance(record, dict):
+        result["skip_reason"] = "verification_missing"
+        return result
+
+    verification_command = non_empty_string(record.get("verification_command", ""))
+    verification_result = non_empty_string(record.get("verification_result", ""))
+    if not (verification_command and verification_result):
+        result["skip_reason"] = "verification_missing"
+        return result
+
     try:
-        return True, load_json(path)
-    except json.JSONDecodeError:
-        return False, {}
+        argv = shlex.split(verification_command)
+    except ValueError:
+        result["skip_reason"] = "command_parse_error"
+        return result
+
+    if not argv:
+        result["skip_reason"] = "command_parse_error"
+        return result
+
+    executable = argv[0]
+    if executable not in VERIFICATION_RECHECK_ALLOWED_BINARIES:
+        result["skip_reason"] = "command_not_in_allowlist"
+        return result
+
+    if executable == "python3":
+        if len(argv) != 3 or argv[1] != "-c":
+            result["skip_reason"] = "command_not_in_allowlist"
+            return result
+        if len(argv[2]) > VERIFICATION_RECHECK_PYTHON_INLINE_LIMIT:
+            result["skip_reason"] = "python_inline_too_long"
+            return result
+
+    result["command_allowed"] = True
+    changed_file = non_empty_string(record.get("changed_file", ""))
+    if changed_file:
+        changed_path = Path(changed_file)
+        if not changed_path.is_absolute():
+            changed_path = PROJECT_ROOT / changed_path
+        if not changed_path.exists():
+            result["skip_reason"] = "changed_file_missing"
+            return result
+
+    result["executed"] = True
+
+    try:
+        completed = subprocess.run(
+            argv,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=PROJECT_ROOT,
+            timeout=VERIFICATION_RECHECK_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout or ""
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode(errors="replace")
+        result["stdout_snippet"] = stdout[:VERIFICATION_RECHECK_STDOUT_LIMIT]
+        result["skip_reason"] = "timeout"
+        return result
+
+    stdout = completed.stdout or ""
+    result["stdout_snippet"] = stdout[:VERIFICATION_RECHECK_STDOUT_LIMIT]
+    normalized_stdout = normalize_verification_recheck_text(stdout, executable=executable)
+    normalized_expected = normalize_verification_recheck_text(verification_result, executable=executable)
+    result["matched"] = (
+        normalized_stdout == normalized_expected
+        or normalized_expected in normalized_stdout
+    )
+    if not result["matched"] and completed.returncode != 0:
+        result["skip_reason"] = f"exit_code_{completed.returncode}"
+    return result
 
 
 def file_present(path_str: str | None) -> tuple[bool, str]:
@@ -426,10 +524,14 @@ def _is_parroting_task(proof_text: str, task_text: str) -> bool:
     filler = {"the", "and", "for", "this", "that", "with", "from", "was", "were", "has", "have", "not", "are", "but"}
     proof_meaningful = proof_words - filler
     task_meaningful = task_words - filler
-    if not proof_meaningful:
+    if not proof_meaningful or not task_meaningful:
         return False
-    overlap = len(proof_meaningful & task_meaningful) / len(proof_meaningful)
-    return overlap > 0.70
+    shared_words = proof_meaningful & task_meaningful
+    overlap = len(shared_words) / len(proof_meaningful)
+    task_coverage = len(shared_words) / len(task_meaningful)
+    if overlap > 0.70:
+        return True
+    return task_coverage > 0.85 and not _has_concrete_identifier(proof_text)
 
 
 def _has_concrete_identifier(value: str) -> bool:
@@ -472,7 +574,7 @@ _ACTION_VERBS = [
     "applied", "integrated", "migrated", "converted", "moved",
 ]
 
-_OBSERVATION_LABELS = ["observed", "confirmed"]
+_OBSERVATION_LABELS = ["observed", "confirmed", "verified"]
 _SCENARIO_COMMAND_LABELS = ["command:", "cmd:"]
 _SCENARIO_OBSERVED_LABELS = ["observed:", "result:", "output:"]
 _STRICT_OBSERVATION_GUARD_TASK_CLASS_KEYWORDS = (
@@ -489,6 +591,8 @@ _VACUOUS_OBSERVATION_PHRASES = [
     "everything looks",
     "works correctly",
     "works as expected",
+    "functioning properly",
+    "processes correctly",
     "is now present",
     "is present",
     "is in place",
@@ -527,6 +631,25 @@ _DIRECT_OBSERVATION_ANCHORS = (
 
 _THIN_SELF_DESCRIPTION_ANCHORS = (
     " contains ",
+)
+
+_NUMERIC_THIN_SELF_DESCRIPTION_CODE_MARKERS = (
+    " import ",
+    " function ",
+    " class ",
+    " handler ",
+    " route ",
+    " router ",
+    " module ",
+    " branch ",
+    " endpoint ",
+    " query ",
+    " schema ",
+    " table ",
+    " column ",
+    " hook ",
+    " config ",
+    " setting ",
 )
 
 _THIN_LOCATION_CLAIM_MARKERS = (
@@ -607,6 +730,31 @@ def _observation_line_is_structured_but_thin_self_description(line: str, task_id
         if not any(marker in padded for marker in _THIN_SELF_DESCRIPTION_ANCHORS):
             return False
         return _is_parroting_task(after, task_identity)
+    return False
+
+
+def _observation_line_is_numeric_thin_self_description(line: str, labels: tuple[str, ...]) -> bool:
+    lowered = line.lower()
+    for label in labels:
+        pos = lowered.find(label)
+        if pos == -1:
+            continue
+        after = line[pos + len(label):].lstrip(":- \t")
+        if not after:
+            return False
+        lowered_after = after.lower()
+        has_numeric = any(ch.isdigit() for ch in after)
+        has_quoted = "'" in after or '"' in after or "`" in after
+        has_command_output_token = any(tok in after for tok in ["=>", "->", ">>>", "...", "\\n"])
+        has_code_token = any(tok in after for tok in ["(", ")", "<", ">", "{", "}", "[", "]", "="])
+        if not has_numeric or has_quoted or has_command_output_token or has_code_token:
+            return False
+        padded = f" {lowered_after} "
+        if " contains " not in padded:
+            return False
+        if not any(marker in padded for marker in _NUMERIC_THIN_SELF_DESCRIPTION_CODE_MARKERS):
+            return False
+        return True
     return False
 
 
@@ -812,6 +960,9 @@ def _observation_line_is_vacuous(line: str) -> bool:
         has_command_output_token = any(tok in after for tok in ["=>", "->", ">>>", "...", "\\n"])
         if has_line_number or has_quoted or has_command_output_token:
             return False
+        normalized_after = after.strip(" .,!?:;\t")
+        if normalized_after in {"operational"}:
+            return True
         # Vacuous if it matches known generic phrases
         for phrase in _VACUOUS_OBSERVATION_PHRASES:
             if phrase in after:
@@ -911,6 +1062,60 @@ def strict_observation_guard_enabled(task_class: str) -> bool:
     return observation_guard_profile(task_class) == "STRICT_RUNTIME_EVIDENCE"
 
 
+def broad_observation_guard_would_fire(task_class: str, line: str, task_identity: str = "") -> bool:
+    if line_starts_with_any_label(line, _SCENARIO_OBSERVED_LABELS):
+        return (
+            _readback_line_is_action_narrative(line)
+            or _observation_line_is_vacuous(line)
+            or _observation_line_is_unanchored_semantic_claim(line)
+            or _scenario_observation_lacks_evidence(line)
+            or _observation_line_is_structured_but_thin_self_description(line, task_identity)
+            or (
+                proof_sensitive_unseen_guard_enabled(task_class)
+                and _observation_line_is_thin_line_or_location_claim(line, tuple(_SCENARIO_OBSERVED_LABELS))
+            )
+        )
+    if contains_any_keyword(line, _OBSERVATION_LABELS):
+        return (
+            _readback_line_is_action_narrative(line)
+            or _observation_line_is_vacuous(line)
+            or _observation_line_is_unanchored_semantic_claim(line)
+            or _observation_line_is_structured_but_thin_self_description(line, task_identity)
+            or _observation_line_is_numeric_thin_self_description(line, tuple(_OBSERVATION_LABELS))
+            or (
+                proof_sensitive_unseen_guard_enabled(task_class)
+                and _observation_line_is_thin_line_or_location_claim(line, tuple(_OBSERVATION_LABELS))
+            )
+        )
+    return False
+
+
+def shadow_observation_guard_results(*, task_class: str, task_identity: str, readback_text: str, scenario_text: str) -> dict:
+    readback_lines = [
+        line for line in non_empty_lines(readback_text)
+        if contains_any_keyword(line, _OBSERVATION_LABELS)
+    ]
+    scenario_lines = [
+        line for line in non_empty_lines(scenario_text)
+        if line_starts_with_any_label(line, _SCENARIO_OBSERVED_LABELS)
+    ]
+    flagged_readback = [
+        line for line in readback_lines
+        if broad_observation_guard_would_fire(task_class, line, task_identity)
+    ]
+    flagged_scenario = [
+        line for line in scenario_lines
+        if broad_observation_guard_would_fire(task_class, line, task_identity)
+    ]
+    return {
+        "would_block": (
+            (bool(readback_lines) and len(flagged_readback) == len(readback_lines))
+            or (bool(scenario_lines) and len(flagged_scenario) == len(scenario_lines))
+        ),
+        "lines_flagged": len(flagged_readback) + len(flagged_scenario),
+    }
+
+
 def _readback_line_is_action_narrative(line: str) -> bool:
     """Return True if a line uses an observation label but contains action verbs.
 
@@ -991,6 +1196,7 @@ def readback_is_semantically_sufficient(
         or _observation_line_is_vacuous(line)
         or _observation_line_is_unanchored_semantic_claim(line)
         or _observation_line_is_structured_but_thin_self_description(line, task_identity)
+        or _observation_line_is_numeric_thin_self_description(line, tuple(_OBSERVATION_LABELS))
         or (
             proof_sensitive_unseen_guard_enabled(task_class)
             and _observation_line_is_thin_line_or_location_claim(line, tuple(_OBSERVATION_LABELS))
@@ -1292,6 +1498,13 @@ def build_bundle(args: argparse.Namespace) -> dict:
         task_identity=scope_task_text,
         task_class=args.task_class,
     )
+    shadow_observation_guard = shadow_observation_guard_results(
+        task_class=args.task_class,
+        task_identity=scope_task_text,
+        readback_text=readback_text,
+        scenario_text=scenario_text,
+    )
+    verification_recheck = verification_recheck_result(diff_provenance_record)
     final_result_status_semantically_sufficient = final_result_status_is_semantically_sufficient(
         status=normalized_status,
         change_disposition=change_disposition,
@@ -1346,6 +1559,12 @@ def build_bundle(args: argparse.Namespace) -> dict:
     )
     cleanup_semantically_sufficient = cleanup_requirement_sufficient
     final_request_id = (final.get("request_id", "") or "").strip()
+    current_final_result_hash = file_sha256(final_path) if final_path and final_path.exists() else ""
+    artifact_integrity_warning = bool(
+        getattr(args, "last_known_final_result_hash", "")
+        and current_final_result_hash
+        and current_final_result_hash != args.last_known_final_result_hash
+    )
 
     bundle = {
         "schema_version": "proof_bundle_v0",
@@ -1396,6 +1615,9 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "scenario_has_explicit_command": scenario_has_explicit_command(scenario_text),
             "scenario_has_explicit_observation": scenario_has_explicit_observation(scenario_text),
         },
+        "shadow_observation_guard_results": shadow_observation_guard,
+        "verification_recheck": verification_recheck,
+        "artifact_integrity_warning": artifact_integrity_warning,
         "readback": {
             "present": readback_present,
             "path": readback_path,
@@ -1762,6 +1984,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--prompt-identity")
     parser.add_argument("--task-identity")
     parser.add_argument("--doctor-file")
+    parser.add_argument("--last-known-final-result-hash")
     parser.add_argument("--output", required=True)
     return parser
 

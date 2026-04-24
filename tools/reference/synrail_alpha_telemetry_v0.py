@@ -12,6 +12,11 @@ import uuid
 from importlib import metadata as importlib_metadata
 from pathlib import Path
 
+try:
+    from .synrail_io_v0 import load_json, save_json_safe
+except ImportError:
+    from synrail_io_v0 import load_json, save_json_safe
+
 CONFIG_BASENAME = "config.json"
 COMMAND_SEQUENCE_BASENAME = "command_sequence.jsonl"
 DEFAULT_SESSION_REPLAY_BASENAME = "session_replay.json"
@@ -22,13 +27,8 @@ def now_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
-
-
 def save_json(path: Path, payload: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+    save_json_safe(path, payload)
 
 
 def save_text(path: Path, text: str) -> None:
@@ -306,6 +306,9 @@ def export_session_replay(root: Path, output: Path, issue_output: Path | None = 
         "platform": config.get("platform", platform_record()),
         "run_id": state.get("run_id", ""),
         "task_class": state.get("task_class", ""),
+        "start_timestamp_utc": state.get("start_timestamp_utc", ""),
+        "closure_timestamp_utc": state.get("closure_timestamp_utc", ""),
+        "check_count": int(state.get("check_count", 0)),
         "latest_state": state.get("state", ""),
         "latest_result": visible_result(report, snapshot.get("thin_output") or {}),
         "latest_reason": report.get("reason", ""),

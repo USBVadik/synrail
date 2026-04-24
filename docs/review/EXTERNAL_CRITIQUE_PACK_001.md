@@ -84,7 +84,7 @@ Deep technical review path:
 - a compact external tester pack plus claim-validation pack
 - refresh-driven stale-obligation guidance in the default non-green shell
 - one repeatable everyday benchmark pack whose broader class is still baseline-favorable overall
-- one narrow focused `small_template_text_fix` family with two repeatable low-drag winners and a machine-readable split where the canonical pack reads `FOCUSED_CLASS_CHEAP_ENOUGH` plus `FOCUSED_CLASS_BEHAVIOR_CHEAP_BY_DEFAULT`, but same-family pressure can still keep kernel cheapness while dropping behavior cheapness to `FOCUSED_CLASS_BEHAVIOR_NOT_YET_CHEAP_BY_DEFAULT`
+- one narrow focused `small_template_text_fix` family with five justified low-drag paths and a machine-readable split where the canonical pack reads `FOCUSED_CLASS_CHEAP_ENOUGH` plus `FOCUSED_CLASS_BEHAVIOR_CHEAP_BY_DEFAULT`, but same-family pressure can still keep kernel cheapness while dropping behavior cheapness to `FOCUSED_CLASS_BEHAVIOR_NOT_YET_CHEAP_BY_DEFAULT`
 
 Read that as one narrow focused win, not as a class victory: the broader everyday lane is still `BASELINE_GOOD_ENOUGH`, and same-family pressure already shows behavior cheapness is not fully independent.
 
@@ -118,8 +118,14 @@ Start here for live runnable and fixture-backed review:
 - [../../tests/test_alpha_test_pack_smoke.py](../../tests/test_alpha_test_pack_smoke.py)
 - [../../tests/test_claim_validation_pack.py](../../tests/test_claim_validation_pack.py)
 - [../../tests/test_everyday_benchmark_pack.py](../../tests/test_everyday_benchmark_pack.py)
+- [../../tests/test_small_template_text_fix_benchmark_pack.py](../../tests/test_small_template_text_fix_benchmark_pack.py)
+- [../../tests/test_cost_of_control_v0.py](../../tests/test_cost_of_control_v0.py)
 - `fixtures/repeatable_everyday_benchmark_pack_001.json`
 - `fixtures/cost_of_control_everyday_001.json`
+- `fixtures/small_template_text_fix_benchmark_pack_001.json`
+- `fixtures/cost_of_control_small_template_text_fix_001.json`
+- `fixtures/small_template_text_fix_behavior_pressure_pack_001.json`
+- `fixtures/cost_of_control_small_template_text_fix_behavior_pressure_001.json`
 
 ## Recommended review commands
 

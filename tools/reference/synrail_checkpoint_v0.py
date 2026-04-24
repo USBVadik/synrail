@@ -267,30 +267,64 @@ def _file_copy_snapshot(project_root: Path, snapshot_dir: Path) -> tuple[bool, s
         return False, str(exc), file_count
 
 
-def _file_copy_restore(snapshot_dir: Path, project_root: Path) -> tuple[bool, str]:
-    """Restore project files from a file-copy snapshot. Returns (success, error_message).
+def _remove_path(path: Path) -> None:
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path)
+        return
+    path.unlink(missing_ok=True)
 
-    Removes existing non-excluded project content first, then copies back.
-    """
+
+def _file_copy_restore(snapshot_dir: Path, project_root: Path) -> tuple[bool, str]:
+    """Restore project files from a file-copy snapshot. Returns (success, error_message)."""
+    temp_root = Path(tempfile.mkdtemp(prefix="synrail_file_copy_restore_", dir=str(project_root.parent)))
+    stage_root = temp_root / "stage"
+    backup_root = temp_root / "backup"
+    moved_stage_names: list[str] = []
     try:
-        # Remove existing project files (except excluded dirs)
-        for item in sorted(project_root.iterdir()):
-            if item.name in _FILE_COPY_EXCLUDE_DIRS:
-                continue
-            if item.is_file():
-                item.unlink()
-            elif item.is_dir():
-                shutil.rmtree(item)
-        # Copy back from snapshot
+        stage_root.mkdir(parents=True, exist_ok=True)
+        backup_root.mkdir(parents=True, exist_ok=True)
+
         for item in sorted(snapshot_dir.iterdir()):
-            dest = project_root / item.name
+            dest = stage_root / item.name
             if item.is_file():
                 shutil.copy2(item, dest)
             elif item.is_dir():
                 shutil.copytree(item, dest)
+
+        snapshot_names = sorted(item.name for item in snapshot_dir.iterdir())
+        staged_names = sorted(item.name for item in stage_root.iterdir())
+        if staged_names != snapshot_names:
+            return False, "staged snapshot validation failed"
+
+        for item in sorted(project_root.iterdir()):
+            if item.name in _FILE_COPY_EXCLUDE_DIRS:
+                continue
+            os.replace(str(item), str(backup_root / item.name))
+
+        for item in sorted(stage_root.iterdir()):
+            dest = project_root / item.name
+            os.replace(str(item), str(dest))
+            moved_stage_names.append(item.name)
+
         return True, ""
     except Exception as exc:
-        return False, str(exc)
+        rollback_failures: list[str] = []
+        try:
+            for name in moved_stage_names:
+                restored_path = project_root / name
+                if restored_path.exists() or restored_path.is_symlink():
+                    _remove_path(restored_path)
+            if backup_root.exists():
+                for item in sorted(backup_root.iterdir()):
+                    os.replace(str(item), str(project_root / item.name))
+        except Exception as rollback_exc:
+            rollback_failures.append(str(rollback_exc))
+        error = str(exc)
+        if rollback_failures:
+            error = error + " | rollback failed: " + "; ".join(rollback_failures)
+        return False, error
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
 
 
 def build_manifest(args: argparse.Namespace, checkpoint_root: Path) -> list[dict]:
@@ -428,9 +462,9 @@ def restore_contract(record: dict) -> dict:
         return contract
     if workspace_type == "file_copy":
         contour = "pre_run_snapshot_file_copy"
-        summary = "Restore will replace non-excluded project files from the saved file-copy snapshot and then rehydrate checkpoint artifacts."
+        summary = "Restore will atomically replace non-excluded project files from the saved file-copy snapshot and then rehydrate checkpoint artifacts."
         notes = [
-            "This restore removes current non-excluded project files before copying the saved snapshot back.",
+            "This restore atomically swaps current non-excluded project files with the saved snapshot and rolls back if the swap fails.",
             ("Saved project root: " + project_root) if project_root else "Saved project root is recorded in the checkpoint.",
         ]
         if workspace_snapshot.get("source_control") == "git" and not workspace_snapshot.get("head_ref"):
@@ -687,6 +721,26 @@ def create_record(args: argparse.Namespace) -> dict:
     return record
 
 
+def normalized_manifest_document(artifact: dict, document: object) -> object:
+    if artifact.get("kind") != "STATE" or not isinstance(document, dict):
+        return document
+    payload = dict(document)
+    doctor = dict(payload.get("doctor", {})) if isinstance(payload.get("doctor", {}), dict) else {}
+    doctor.setdefault("override_gates", [])
+    payload["doctor"] = doctor
+    proof_bundle = dict(payload.get("proof_bundle", {})) if isinstance(payload.get("proof_bundle", {}), dict) else {}
+    proof_bundle.setdefault("artifact_integrity_warning", False)
+    payload["proof_bundle"] = proof_bundle
+    closure = dict(payload.get("closure", {})) if isinstance(payload.get("closure", {}), dict) else {}
+    closure.setdefault("warnings", [])
+    payload["closure"] = closure
+    payload.setdefault("start_timestamp_utc", "")
+    payload.setdefault("closure_timestamp_utc", "")
+    payload.setdefault("check_count", 0)
+    payload.setdefault("last_known_final_result_hash", "")
+    return payload
+
+
 def validate_manifest_artifacts(record: dict, *, root_override: Path | None = None) -> tuple[list[str], list[str]]:
     checkpoint_root = root_override or Path(record["checkpoint_root"])
     schema_errors: list[str] = []
@@ -701,7 +755,7 @@ def validate_manifest_artifacts(record: dict, *, root_override: Path | None = No
         if not schema_path:
             continue
         schema = load_json_document(schema_path)
-        document = load_json_document(artifact_path)
+        document = normalized_manifest_document(artifact, load_json_document(artifact_path))
         for error in validate_document(document, schema):
             schema_errors.append(f"{artifact['artifact_id']}: {error}")
     return missing, schema_errors
@@ -730,7 +784,7 @@ def state_consistency_errors(record: dict, *, root_override: Path | None = None)
     state_entry = entries.get("state")
     if not state_entry:
         return ["state artifact missing from checkpoint manifest"]
-    state = load_json(checkpoint_root / state_entry["path"])
+    state = normalized_manifest_document(state_entry, load_json(checkpoint_root / state_entry["path"]))
     if state.get("run_id") != record.get("run_id"):
         errors.append("state.run_id does not match checkpoint run_id")
     if state.get("task_class") != record.get("task_class"):
@@ -807,7 +861,11 @@ def restore_manifest(record: dict, target_root: Path) -> list[str]:
         source_path = checkpoint_root / artifact["path"]
         target_path = target_root / artifact["path"]
         target_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source_path, target_path)
+        if artifact.get("kind") == "STATE":
+            document = normalized_manifest_document(artifact, load_json_document(source_path))
+            target_path.write_text(json.dumps(document, indent=2, ensure_ascii=True) + "\n")
+        else:
+            shutil.copy2(source_path, target_path)
         restored_ids.append(artifact["artifact_id"])
     return restored_ids
 
