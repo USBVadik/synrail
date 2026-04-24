@@ -132,6 +132,8 @@ class InstallSmokeTests(unittest.TestCase):
 
             self.assertIn("Agent adoption files are ready.", result.stdout)
             self.assertIn("Agent files installed into:", result.stdout)
+            self.assertIn("Git preflight:", result.stdout)
+            self.assertIn("No-git proof path: leave git_diff empty and fill diff_provenance", result.stdout)
             self.assertIn("Quick status: run `", result.stdout)
             self.assertIn("inside your project.", result.stdout)
             self.assertIn("Command:", result.stdout)
@@ -148,10 +150,12 @@ class InstallSmokeTests(unittest.TestCase):
             self.assertIn("<!-- SYNRAIL_GEMINI_START -->", gemini)
             self.assertIn("Use Synrail as the default local control path", gemini)
             self.assertIn("cheapest honest order", gemini)
+            self.assertIn("If `git` is unavailable on this host, do not invent `git_diff`", gemini)
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", gemini)
             self.assertIn("Do not turn project recall into repo archaeology.", gemini)
             self.assertIn("Use Synrail as the default local control path", claude)
             self.assertIn("cheapest honest order", claude)
+            self.assertIn("If `git` is unavailable on this host, do not invent `git_diff`", claude)
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", claude)
 
     def test_first_run_docs_keep_final_result_as_default_proof_target(self) -> None:
@@ -162,6 +166,9 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("leave `readback.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
         self.assertIn("leave `scenario_proof.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
         self.assertIn("Only if `check` later targets a fallback prose surface, use:", first_run_guide)
+        self.assertIn("Git Preflight", first_run_guide)
+        self.assertIn("If `git` is missing, Synrail can still run. Do not invent a `git_diff`.", first_run_guide)
+        self.assertIn("leave `git_diff` empty and fill structured `diff_provenance`", first_run_guide)
         self.assertIn('python3 alpha.py start "Describe the bounded local change."', first_run_guide)
         self.assertIn("python3 alpha.py check", first_run_guide)
 

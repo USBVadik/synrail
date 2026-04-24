@@ -470,6 +470,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn('"change_disposition": "modified"', template.stdout)
             self.assertIn('"git_diff": "diff --git', template.stdout)
             self.assertIn('"diff_provenance": {', template.stdout)
+            self.assertIn("If git is not installed, do not invent git_diff", template.stdout)
             self.assertIn('"artifact_identity": {', template.stdout)
             self.assertIn("ALREADY_SATISFIED", template.stdout)
             self.assertIn("already_satisfied", template.stdout)

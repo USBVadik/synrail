@@ -18,6 +18,24 @@ python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd
 
 This installs the current Synrail CLI into `.venv` and immediately creates missing `AGENTS.md` / `GEMINI.md` / `CLAUDE.md` files in the repo root or appends a managed Synrail block to existing ones. If you later rerun with `--force`, Synrail first writes a timestamped `.synrail.bak.*` backup of the existing policy file before replacing it. It is optional for humans, but useful when you want the local agent workflow to start in controlled mode without adding Synrail instructions to every prompt.
 
+## Git Preflight
+
+Synrail works best when `git` is installed because the cheapest strong proof is a real `git_diff`.
+
+Check once:
+
+```bash
+git --version
+```
+
+If `git` is missing, Synrail can still run. Do not invent a `git_diff`. In `.synrail/final_result.json`, leave `git_diff` empty and fill structured `diff_provenance` instead:
+
+- `changed_file`
+- one exact `added_line`, `removed_line`, or `observed_line`
+- one stable `context_before` or `context_after`
+- `verification_command`
+- `verification_result`
+
 If `synrail` is not on your `PATH` after install, use the local wrapper from this checkout:
 
 ```bash
@@ -71,6 +89,8 @@ Make the requested change. Run local verification. Then strengthen `final_result
 - `scenario_proof.txt` is fallback-only; if `final_result.json` already carries strong structured verification, leave `scenario_proof.txt` untouched unless `synrail check` explicitly names it
 
 In `final_result.json`, use a trust-bearing status: `PROVEN` for an evidenced bounded edit, or `ALREADY_SATISFIED` only for a truthful no-op attestation where the requested state was already present before any edit.
+
+If `git` is unavailable in the project environment, leave `git_diff` empty. Use structured `diff_provenance` with repo-relative paths and exact observed lines instead of trying to simulate a patch.
 
 In the normal `synrail check` path, you usually do not need to hand-copy run identity fields or a cleanup summary into `final_result.json` when the current controlled run context and doctor-ready workspace already provide that truth. Focus first on the status, changed files, and diff/provenance. Only spend extra steps on `readback.txt` or `scenario_proof.txt` if `check` still names them after `final_result.json` is already strong.
 

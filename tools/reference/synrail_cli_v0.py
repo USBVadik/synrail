@@ -368,6 +368,14 @@ def policy_non_accepted_status_lines(check_command: str) -> list[str]:
     ]
 
 
+def policy_no_git_proof_line(artifact_root: str) -> str:
+    return (
+        f"If `git` is unavailable on this host, do not invent `git_diff`; leave it empty in `{artifact_root}/final_result.json` "
+        "and fill structured `diff_provenance` with `changed_file`, one exact changed or observed line, a stable context anchor, "
+        "`verification_command`, and `verification_result`."
+    )
+
+
 def render_policy_markdown(
     agent_type: Literal["agents", "gemini", "claude"],
     *,
@@ -438,6 +446,7 @@ def render_policy_markdown(
             "2. Keep the change local and bounded to the stated task.",
             f"3. Run the local commands needed to verify the change honestly, then edit `{artifact_root}/final_result.json` in place as the work becomes real. Only materialize readback or scenario proof if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
             "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
+            f"5. {policy_no_git_proof_line(artifact_root)}",
             "",
             "## Before You Claim Success",
             "",
@@ -512,6 +521,7 @@ def render_policy_markdown(
             f"- Keep edits bounded and local to this repo.",
             f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
             "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
+            f"- {policy_no_git_proof_line(artifact_root)}",
             "",
             "## Finish",
             "",
@@ -664,6 +674,7 @@ def render_agent_policy_block(
         f"- Keep edits bounded and local to this repo.",
         f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
         "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
+        f"- {policy_no_git_proof_line(artifact_root)}",
         "",
         "## Finish",
         "",
@@ -1785,6 +1796,7 @@ def final_result_template_payload(*, root: Path | None) -> dict:
         "Keep the scope tight: do not smuggle adjacent spacing, class, or layout tweaks into a task that only asked you to add or insert a small surface change.",
         "If the task only asked for a simple subtitle or label, keep the new line visually plain and avoid extra emphasis styling unless the task explicitly asked for it.",
         "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers when you can produce one.",
+        "If git is not installed, do not invent git_diff; leave git_diff empty and use structured diff_provenance instead.",
         "If git_diff is unavailable, keep diff_provenance explicit with method, changed_file, one exact added_line or removed_line, one stable context_before or context_after anchor, and verification command plus result. If method is omitted but the direct-observation record is otherwise complete, Synrail can normalize it to direct_file_observation during a normal check.",
         "For tiny edits, do not leave the exact changed line and its stable neighbor only in readback or scenario_proof; copy those anchors into diff_provenance too.",
         "For an already_satisfied no-op, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.",

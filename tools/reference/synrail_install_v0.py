@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import stat
 import subprocess
 import sys
@@ -94,6 +95,13 @@ def verify_install(synrail_bin: Path) -> None:
     )
 
 
+def git_preflight_line() -> str:
+    git_path = shutil.which("git")
+    if git_path:
+        return f"Git preflight: found at {git_path}"
+    return "Git preflight: not found; Synrail still runs, but use structured diff_provenance instead of inventing git_diff."
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Install the current Synrail alpha lane into a local venv without pip build isolation.")
     parser.add_argument("--venv", default=".venv", help="Virtualenv path to create or reuse. Default: .venv")
@@ -149,6 +157,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Virtualenv: {rel_venv}")
     print(f"Repo path linked via: {pth_file}")
     print(f"Command: {rel_synrail}")
+    print(git_preflight_line())
+    print("No-git proof path: leave git_diff empty and fill diff_provenance with changed_file, exact changed line, context, verification_command, and verification_result.")
     if project_root is not None:
         rel_project = os.path.relpath(project_root, Path.cwd())
         print(f"Agent files installed into: {rel_project}")

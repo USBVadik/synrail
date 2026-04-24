@@ -84,6 +84,7 @@ synrail start "Describe the bounded local change."
 - Keep edits bounded and local to this repo.
 - Run the local verification commands needed for the task before updating `.synrail/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.
 - Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.
+- If `git` is unavailable on this host, do not invent `git_diff`; leave it empty in `.synrail/final_result.json` and fill structured `diff_provenance` with `changed_file`, one exact changed or observed line, a stable context anchor, `verification_command`, and `verification_result`.
 
 ## Finish
 
