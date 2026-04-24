@@ -7,6 +7,8 @@ import copy
 import json
 import sys
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from unittest import mock
 
@@ -1690,12 +1692,99 @@ class TestRestoreWorkspaceFamilies(unittest.TestCase):
             restored = restore_record(record, target_root)
 
             rolled_back_state = json.loads(target_state.read_text())
+            rolled_back_workspace = tracked.read_text().strip()
 
         self.assertEqual("BLOCKED", restored["result"])
         self.assertEqual("RESTORE_FAILED", restored["restore"]["status"])
         self.assertEqual("ROLLED_BACK", restored["rollback"]["status"])
         self.assertTrue(any("stash apply failed" in reason for reason in restored["restore"]["failure_reasons"]))
         self.assertEqual("existing", rolled_back_state["run_id"])
+        self.assertEqual('print("modified before save")', rolled_back_workspace)
+
+
+class TestRestoreSummaryUx(unittest.TestCase):
+    def test_preview_for_artifacts_only_restore_does_not_require_confirm(self) -> None:
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, restore_preview
+        from synrail_cli_v0 import print_checkpoint_summary
+
+        state = ready_state("run1", "bounded_change")
+        state["state"] = "READY"
+        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+
+        with tempfile.TemporaryDirectory(prefix="synrail_restore_preview_summary_") as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+            record = create_record(argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=str(project),
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            ))
+            preview_path = project / ".synrail" / "checkpoint_restore_preview.json"
+            preview_path.write_text(json.dumps(restore_preview(record, project / ".synrail")) + "\n")
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                print_checkpoint_summary(preview_path, action="preview", root=project / ".synrail")
+
+        output = stdout.getvalue()
+        self.assertIn("Workspace restore mode: Checkpoint artifacts only", output)
+        self.assertIn("restore", output)
+        self.assertIn("Next command:", output)
+        self.assertNotIn("--confirm", output)
+
+    def test_save_summary_for_artifacts_only_restore_does_not_require_confirm(self) -> None:
+        import argparse
+        import tempfile
+        from synrail_checkpoint_v0 import create_record, verify_record
+        from synrail_cli_v0 import print_save_summary
+
+        state = ready_state("run1", "bounded_change")
+        state["state"] = "READY"
+        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+
+        with tempfile.TemporaryDirectory(prefix="synrail_restore_save_summary_") as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+            record = create_record(argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=str(project),
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            ))
+            record_path = project / ".synrail" / "checkpoint_record.json"
+            verify_path = project / ".synrail" / "checkpoint_verify.json"
+            record_path.write_text(json.dumps(record) + "\n")
+            verify_path.write_text(json.dumps(verify_record(record)) + "\n")
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                print_save_summary(record_path, verify_path, root=project / ".synrail")
+
+        output = stdout.getvalue()
+        self.assertIn("Preview command:", output)
+        self.assertIn("restore", output)
+        self.assertIn("--preview", output)
+        self.assertIn("Restore command:", output)
+        self.assertNotIn("Restore command: .venv/bin/synrail restore --artifact-root " + str(project / ".synrail") + " --confirm", output)
+        self.assertNotIn("Restore command: synrail restore --confirm", output)
 
 
 class TestCleanSurfaceAutoDetect(unittest.TestCase):

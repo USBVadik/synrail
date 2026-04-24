@@ -528,6 +528,15 @@ def action_now_text(*, next_command: str, outcome_class: str, report: dict, repa
     return ""
 
 
+def final_answer_guard_text(outcome_class: str) -> str:
+    if outcome_class == "ACCEPTED":
+        return ""
+    return (
+        "Final-answer guard: do not report this task as complete, functionally complete, "
+        "100% done, or all requirements met until a later synrail check prints Status: Accepted."
+    )
+
+
 def status_label(outcome_class: str, *, report: dict, repair_packet: dict | None) -> str:
     reason = (
         report.get("reason", "")
@@ -723,6 +732,7 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "what_it_means": diagnosis,
         "what_to_do_next": what_to_do_next,
         "action_now": action_now,
+        "final_answer_guard": final_answer_guard_text(outcome_class),
         "current_step_action_instruction": current_step_action,
         "focused_repair_summary": focused_summary,
         "thin_section_guidance": thin_guidance,

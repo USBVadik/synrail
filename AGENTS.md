@@ -59,6 +59,18 @@ If the user asks what this project is, where work stopped, or what the current s
 - Do not turn project recall into repo archaeology.
 - Do not create helper scripts or make edits for an orientation-only question.
 
+## Repo-Local Fallback
+
+If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:
+
+```bash
+python3 alpha.py
+python3 alpha.py start "Describe the bounded local change."
+python3 alpha.py check
+```
+
+Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.
+
 ## Start
 
 If Synrail shows that no controlled run is active, start one:
@@ -84,7 +96,16 @@ synrail check
 If non-green, fix only what check tells you to fix, then rerun `synrail check`.
 
 Do not bypass Synrail and do not claim success without real local verification.
+
+## Non-Accepted Status Rule
+
+Only `Status: Accepted` means the task may be reported as complete.
+If `synrail check` prints `Proof Invalid`, `Proof Incomplete`, `Proof Too Thin To Trust`, `Workspace Not Ready`, `Workspace Not Trusted`, `Needs Review`, or any other non-green status, do not send a final success/completion answer.
+Do not say the task is functionally complete, 100% done, fully done, or all requirements met while Synrail is non-green.
+Instead report the exact Synrail status, follow only the named next command or repair target, and rerun Synrail until `Status: Accepted` appears.
+
 - Keep repo instructions portable: prefer `synrail` in commands and committed docs.
 - If `synrail` from PATH is unavailable in this checkout, try a local wrapper like `./.venv/bin/synrail` before assuming the control tool is missing.
-- If this repo exposes a local alpha entrypoint at `alpha.py`, use `python3 alpha.py` as the next checkout-local fallback instead of reverse-engineering the entrypoint from setup metadata.
+- If this repo exposes a local alpha entrypoint at `alpha.py`, prefer `python3 alpha.py` as the repo-local fallback instead of reverse-engineering the entrypoint from setup metadata.
+- If a checkout-local wrapper path itself triggers an agent approval or permission wall, switch immediately to the exact repo-local commands below before concluding Synrail cannot run on this host.
 <!-- SYNRAIL_AGENTS_END -->

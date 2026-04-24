@@ -29,6 +29,7 @@ from synrail_repair_prompt_bridge_v0 import (
     next_command,
     checkpoint_note,
 )
+from synrail_repair_focus_v0 import focused_repair_surface
 from synrail_prompt_followup_v0 import build_record as build_followup
 from synrail_prompt_retry_guard_v0 import build_record as build_retry_guard
 
@@ -146,6 +147,11 @@ class TestHumanScopeLabel(unittest.TestCase):
     def test_unknown_scope(self) -> None:
         self.assertEqual("something custom", human_scope_label("something_custom"))
 
+    def test_forward_entrypoint_scope_is_command_not_file(self) -> None:
+        result = human_scope_label("forward_orchestration_entrypoint")
+        self.assertIn("Synrail start command", result)
+        self.assertIn("not a proof file", result)
+
 
 class TestHumanRequiredInput(unittest.TestCase):
     def test_clean_surface(self) -> None:
@@ -189,13 +195,13 @@ class TestNextCommand(unittest.TestCase):
         }
         self.assertEqual("", next_command(packet, "restore_readiness_truth"))
 
-    def test_forward_orchestration_returns_check(self) -> None:
+    def test_forward_orchestration_returns_start(self) -> None:
         packet = {
             "resumability": {"status": "NOT_RESUMABLE"},
             "repair_termination": {"status": "CONTINUE"},
             "resumability_family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
         }
-        self.assertEqual("synrail check", next_command(packet, "continue_forward_orchestration"))
+        self.assertEqual("synrail start", next_command(packet, "continue_forward_orchestration"))
 
 
 class TestCheckpointNote(unittest.TestCase):
@@ -241,6 +247,12 @@ class TestBuildPromptBridge(unittest.TestCase):
         record = build_prompt_bridge(repair_packet=packet)
         self.assertIn("Do not touch unrelated files", record["prompt"])
         self.assertIn("Do not broaden scope", record["forbidden_scope"][0])
+        self.assertTrue(
+            any("final success/completion answer" in item for item in record["forbidden_scope"])
+        )
+        self.assertTrue(any("functionally complete" in item for item in record["forbidden_scope"]))
+        self.assertTrue(any("Status: Accepted" in item for item in record["must_pass"]))
+        self.assertIn("Final-answer guard", record["prompt"])
 
     def test_prompt_mentions_step_label(self) -> None:
         packet = _minimal_packet()
@@ -379,6 +391,52 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertIn("Do not restate the task description", record["prompt"])
         self.assertIn("Keep the scenario proof minimal and concrete", record["prompt"])
         self.assertNotIn("short and explanatory", record["prompt"])
+
+    def test_forward_orchestration_prompt_does_not_invite_final_result_field(self) -> None:
+        packet = _minimal_packet(
+            current_step_id="continue_forward_orchestration",
+            reason="CONTROLLED_BOOTSTRAP_NOT_CONFIRMED",
+            next_safe_step="start the run in controlled mode before trusting any proof or acceptance",
+            resumability_status="NOT_RESUMABLE",
+            subsurface_ids=["forward_orchestration_entrypoint"],
+            stale_artifact_ids=["runtime_entrypoint_state"],
+        )
+        packet["resumability_family"] = "NOT_RESUMABLE_FRESH_ORCHESTRATION"
+
+        record = build_prompt_bridge(repair_packet=packet)
+
+        self.assertEqual("forward_orchestration_entrypoint", record["current_step_subsurface_id"])
+        self.assertEqual("", record["current_step_target_path"])
+        self.assertEqual("synrail start", record["next_command"])
+        self.assertIn("Run synrail start for this task from the project root", record["prompt"])
+        self.assertIn("No proof-file edit is required", record["prompt"])
+        self.assertIn("Do not add forward_orchestration_entrypoint", record["prompt"])
+
+    def test_missing_proof_with_final_result_subsurface_targets_final_result(self) -> None:
+        packet = _minimal_packet(
+            current_step_id="complete_missing_proof_sections",
+            reason="MISSING_PROOF_SECTIONS",
+            next_safe_step="recover diff or provenance evidence from the final result artifact",
+            subsurface_ids=["diff_provenance_record", "cleanup_status_record"],
+            stale_artifact_ids=["proof_bundle"],
+        )
+        record = build_prompt_bridge(repair_packet=packet)
+
+        self.assertEqual("diff_provenance_record", record["current_step_subsurface_id"])
+        self.assertEqual("/tmp/synrail/final_result.json", record["current_step_target_path"])
+        self.assertIn("record diff provenance in /tmp/synrail/final_result.json", record["current_step_focus_summary"])
+        self.assertIn("Checklist for /tmp/synrail/final_result.json:", record["prompt"])
+
+    def test_focus_helper_routes_final_result_subsurface_even_from_missing_sections_step(self) -> None:
+        focus = focused_repair_surface(
+            current_step_id="complete_missing_proof_sections",
+            stale_subsurfaces=["cleanup_status_record"],
+            artifact_root="/tmp/synrail",
+            target_path="/tmp/target",
+        )
+
+        self.assertEqual("cleanup_status_record", focus["current_step_subsurface_id"])
+        self.assertEqual("/tmp/synrail/final_result.json", focus["current_step_target_path"])
 
     def test_readback_subsurface_includes_checklist(self) -> None:
         packet = _minimal_packet(

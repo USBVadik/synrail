@@ -165,7 +165,9 @@ def _git_stash_create(project_root: Path) -> str:
 def _git_restore_snapshot(project_root: Path, *, head_ref: str, stash_ref: str) -> tuple[bool, str]:
     """Restore workspace to the snapshot state. Returns (success, error_message)."""
     try:
-        # First reset to the original HEAD
+        rollback_head_ref = _git_head_ref(project_root)
+        rollback_stash_ref = _git_stash_create(project_root)
+
         reset = subprocess.run(
             ["git", "checkout", head_ref, "--force"],
             cwd=str(project_root),
@@ -175,7 +177,6 @@ def _git_restore_snapshot(project_root: Path, *, head_ref: str, stash_ref: str) 
         )
         if reset.returncode != 0:
             return False, f"git checkout failed: {reset.stderr.strip()}"
-        # Then apply stashed changes if any
         if stash_ref:
             apply = subprocess.run(
                 ["git", "stash", "apply", stash_ref],
@@ -185,7 +186,33 @@ def _git_restore_snapshot(project_root: Path, *, head_ref: str, stash_ref: str) 
                 timeout=30,
             )
             if apply.returncode != 0:
-                return False, f"git stash apply failed: {apply.stderr.strip()}"
+                rollback_failures: list[str] = []
+                if rollback_head_ref:
+                    rollback_reset = subprocess.run(
+                        ["git", "checkout", rollback_head_ref, "--force"],
+                        cwd=str(project_root),
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    if rollback_reset.returncode != 0:
+                        rollback_failures.append(f"git rollback checkout failed: {rollback_reset.stderr.strip()}")
+                else:
+                    rollback_failures.append("git rollback checkout failed: current HEAD is unavailable")
+                if rollback_stash_ref:
+                    rollback_apply = subprocess.run(
+                        ["git", "stash", "apply", rollback_stash_ref],
+                        cwd=str(project_root),
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    if rollback_apply.returncode != 0:
+                        rollback_failures.append(f"git rollback stash apply failed: {rollback_apply.stderr.strip()}")
+                error = f"git stash apply failed: {apply.stderr.strip()}"
+                if rollback_failures:
+                    error += " | rollback restore failed: " + "; ".join(rollback_failures)
+                return False, error
         return True, ""
     except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
         return False, str(exc)

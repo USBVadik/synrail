@@ -93,6 +93,7 @@ def human_scope_label(scope_id: str, *, repair_packet: dict | None = None) -> st
         "readback_record": f"the readback starter file at {proof_paths['readback']}",
         "scenario_proof_record": f"the scenario proof starter file at {proof_paths['scenario_proof']}",
         "target_identity_record": "the task target for this run",
+        "forward_orchestration_entrypoint": "the Synrail start command for this run, not a proof file",
     }
     return labels.get(scope_id, humanize_token(scope_id))
 
@@ -150,6 +151,13 @@ def focused_step_details(repair_packet: dict, current_step_id: str, stale_subsur
             return labels.get(subsurface_id, human_step_label(current_step_id)), subsurface_id, target_path
     if current_step_id == "complete_missing_proof_sections":
         labels = {
+            "diff_provenance_record": f"record diff provenance in {proof_paths['final_result']}",
+            "final_result_status_record": f"set a trust-bearing final_result.status in {proof_paths['final_result']}",
+            "scope_alignment_record": f"remove unrelated adjacent edits in {proof_paths['final_result']}",
+            "presentation_alignment_record": f"remove extra emphasis styling in {proof_paths['final_result']}",
+            "artifact_identity_record": f"record artifact identity in {proof_paths['final_result']}",
+            "cleanup_status_record": f"record cleanup status in {proof_paths['final_result']}",
+            "final_result_payload": f"repair the result payload in {proof_paths['final_result']}",
             "readback_record": f"record readback in {proof_paths['readback']}",
             "scenario_proof_record": f"record scenario proof in {proof_paths['scenario_proof']}",
         }
@@ -157,6 +165,8 @@ def focused_step_details(repair_packet: dict, current_step_id: str, stale_subsur
             return labels.get(subsurface_id, human_step_label(current_step_id)), subsurface_id, target_path
     if current_step_id == "restore_readiness_truth" and subsurface_id:
         return human_step_label(current_step_id), subsurface_id, target_path
+    if current_step_id == "continue_forward_orchestration" and subsurface_id:
+        return "start this task through Synrail", subsurface_id, target_path
     return human_step_label(current_step_id), "", ""
 
 
@@ -356,7 +366,7 @@ def next_command(repair_packet: dict, current_step_id: str) -> str:
         repair_packet.get("resumability_family", "") == "NOT_RESUMABLE_FRESH_ORCHESTRATION"
         or current_step_id == "continue_forward_orchestration"
     ):
-        return "synrail check"
+        return "synrail start"
     return ""
 
 
@@ -395,6 +405,8 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         "Do not broaden scope beyond the current repair step.",
         "Do not modify accepted or terminal-state logic.",
         "Do not claim closure or acceptance unless the repaired run actually reaches it.",
+        "Do not send a final success/completion answer to the user until a later synrail check prints Status: Accepted.",
+        "Do not call the work functionally complete, 100% done, or fully done while Synrail is non-green.",
     ]
     broken_truth = failure_reason(repair_packet)
     failure_label = (
@@ -424,6 +436,7 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         must_pass.append(f"Keep the next safe step aligned with: {next_safe_step_label}")
     if current_step_target_path:
         must_pass.append(f"Edit only this starter file in place: {current_step_target_path}")
+    must_pass.append("Rerun Synrail after this repair and do not report task completion unless the later check prints Status: Accepted.")
     acceptance_criteria = list(must_pass)
     checkpoint_hint = checkpoint_note(checkpoint, repair_packet=repair_packet)
     prompt_lines = [
@@ -449,10 +462,15 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         (
             f"Edit in place: {current_step_target_path}."
             if current_step_target_path
-            else "Edit in place: keep the repair inside the current bounded proof surface."
+            else (
+                "No proof-file edit is required for this step; run the named Synrail command instead."
+                if current_step_id == "continue_forward_orchestration"
+                else "Edit in place: keep the repair inside the current bounded proof surface."
+            )
         ),
         *final_result_guardrails,
         "Do not touch unrelated files, state transitions, or acceptance logic.",
+        "Final-answer guard: do not tell the user this task is complete, 100% done, or functionally complete until a later synrail check prints Status: Accepted.",
         "Return only the bounded repair needed for this current step and keep this same repair path intact.",
     ]
     if checkpoint_hint:

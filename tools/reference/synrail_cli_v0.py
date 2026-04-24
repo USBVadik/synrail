@@ -65,6 +65,11 @@ except ImportError:
     )
 
 try:
+    from .synrail_checkpoint_v0 import restore_contract
+except ImportError:
+    from synrail_checkpoint_v0 import restore_contract
+
+try:
     from .synrail_commands_v0 import (
         run_bug_packet_command,
         run_install_agent_files_command,
@@ -351,6 +356,18 @@ def policy_portability_note_lines(
     return lines
 
 
+def policy_non_accepted_status_lines(check_command: str) -> list[str]:
+    return [
+        "## Non-Accepted Status Rule",
+        "",
+        "Only `Status: Accepted` means the task may be reported as complete.",
+        f"If `{check_command}` prints `Proof Invalid`, `Proof Incomplete`, `Proof Too Thin To Trust`, `Workspace Not Ready`, `Workspace Not Trusted`, `Needs Review`, or any other non-green status, do not send a final success/completion answer.",
+        "Do not say the task is functionally complete, 100% done, fully done, or all requirements met while Synrail is non-green.",
+        "Instead report the exact Synrail status, follow only the named next command or repair target, and rerun Synrail until `Status: Accepted` appears.",
+        "",
+    ]
+
+
 def render_policy_markdown(
     agent_type: Literal["agents", "gemini", "claude"],
     *,
@@ -434,6 +451,7 @@ def render_policy_markdown(
             commands["check"],
             "```",
             "",
+            *policy_non_accepted_status_lines(commands["check"]),
             "## Important",
             "",
             "- Do not skip Synrail and try to legalize edits afterward.",
@@ -505,6 +523,7 @@ def render_policy_markdown(
             "",
             "Do not bypass Synrail and do not claim success without real local verification.",
             "",
+            *policy_non_accepted_status_lines(commands["check"]),
         ])
 
     lines.extend(portability_lines)
@@ -657,6 +676,8 @@ def render_agent_policy_block(
         f"If non-green, fix only what check tells you to fix, then rerun `{commands['check']}`.",
         "",
         "Do not bypass Synrail and do not claim success without real local verification.",
+        "",
+        *policy_non_accepted_status_lines(commands["check"]),
     ])
     lines.extend(portability_lines)
     lines.extend(note_lines)
@@ -1494,6 +1515,9 @@ def print_thin_output_summary(output_file: Path) -> None:
     action_now = payload.get("action_now", "")
     if action_now:
         lines.append(f"Do this now: {action_now}")
+    final_answer_guard = payload.get("final_answer_guard", "")
+    if final_answer_guard:
+        lines.append(final_answer_guard)
     lines.extend([
         f"What happened: {payload.get('what_happened', payload.get('summary', ''))}",
         f"What it means: {payload.get('what_it_means', payload.get('diagnosis', ''))}",
@@ -1554,6 +1578,8 @@ def print_prompt_summary_compact(output_file: Path, *, include_prompt: bool = Fa
     current_step_target_path = payload.get("current_step_target_path", "")
     if current_step_target_path:
         lines.append(f"Edit in place: {current_step_target_path}")
+    elif payload.get("current_step_id", "") == "continue_forward_orchestration":
+        lines.append("No proof-file edit: run synrail start for this task; do not add forward_orchestration_entrypoint to final_result.json.")
     acceptance = payload.get("acceptance_criteria", [])
     if acceptance:
         lines.append("Must pass:")
@@ -2175,7 +2201,10 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
         for note in payload.get("notes", []):
             lines.append("- " + note)
         if payload.get("restore_supported", False) and root:
-            lines.append("Next command: " + shell_command(root, "restore") + " --confirm")
+            restore_command = shell_command(root, "restore")
+            if payload.get("workspace_restore_destructive", False):
+                restore_command += " --confirm"
+            lines.append("Next command: " + restore_command)
         elif payload.get("next_safe_step", ""):
             lines.append("What to do next: " + payload.get("next_safe_step", ""))
     elif action == "restore":
@@ -2210,7 +2239,12 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
         )
         if root:
             lines.append("Preview command: " + shell_command(root, "restore") + " --preview")
-            lines.append("Restore command: " + shell_command(root, "restore") + " --confirm")
+            contract = restore_contract(record)
+            if contract.get("restore_supported", False):
+                restore_command = shell_command(root, "restore")
+                if contract.get("workspace_restore_destructive", False):
+                    restore_command += " --confirm"
+                lines.append("Restore command: " + restore_command)
     else:
         lines.extend(
             [

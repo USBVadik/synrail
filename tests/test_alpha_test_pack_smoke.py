@@ -78,6 +78,10 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
                 "Fix the issue shown below: update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged. Then rerun synrail check.",
                 check.stdout,
             )
+            self.assertIn(
+                "Final-answer guard: do not report this task as complete",
+                check.stdout,
+            )
             self.assertIn("Repair target: update the result payload in .synrail/final_result.json", check.stdout)
 
             thin_output = load_json(artifact_root / "thin_output.json")
@@ -86,6 +90,7 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
                 "Fix the issue shown below: update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged. Then rerun synrail check.",
                 thin_output["action_now"],
             )
+            self.assertIn("do not report this task as complete", thin_output["final_answer_guard"])
             self.assertEqual(
                 "Update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
                 thin_output["current_step_action_instruction"],
@@ -103,6 +108,8 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
                 "Do this now: Update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
                 repair_step.stdout,
             )
+            self.assertIn("final success/completion answer", repair_step.stdout)
+            self.assertIn("functionally complete", repair_step.stdout)
             self.assertNotIn(str(project_root), repair_step.stdout)
 
             prompt = load_json(artifact_root / "prompt.json")
