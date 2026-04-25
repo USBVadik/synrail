@@ -93,6 +93,7 @@
       "enum": [
         "VERIFIED_ACCEPTED_STATE",
         "VERIFIED_WORKING_STATE",
+        "PRE_RUN_SNAPSHOT",
         "NOT_SAFE_POINT"
       ]
     },
@@ -141,6 +142,10 @@
           }
         }
       }
+    },
+    "workspace_snapshot": {
+      "type": "object",
+      "additionalProperties": true
     },
     "verification": {
       "type": "object",

@@ -1,0 +1,12 @@
+diff --git a/tools/reference/synrail_install_v0.py b/tools/reference/synrail_install_v0.py
+index 74ef08c..656d6de 100644
+--- a/tools/reference/synrail_install_v0.py
++++ b/tools/reference/synrail_install_v0.py
+@@ -14,6 +14,7 @@ from pathlib import Path
+ 
+ 
+ def repo_root_from_script() -> Path:
++    """Return the repository root by walking two levels up from this script's location."""
+     return Path(__file__).resolve().parents[2]
+ 
+ 

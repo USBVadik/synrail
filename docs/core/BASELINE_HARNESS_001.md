@@ -62,6 +62,9 @@ The current harness compares:
 
 The active economics harness now also records:
 
+Current comparison inputs in this repo are marked as `curated_local_estimate`.
+They are not empirical measurements.
+
 - scenario class
 - path identity
 - operator minutes
@@ -71,6 +74,12 @@ The active economics harness now also records:
 - closure latency in minutes
 - false-green exposure
 - artifact completeness percent
+- mandatory mental steps
+- operator-visible action count
+- got-lost moment count
+- trust-bearing artifact count
+- visible surface count
+- skippable visible surface count
 
 It also emits one compact economics summary:
 
@@ -79,8 +88,83 @@ It also emits one compact economics summary:
 - added repair cycles
 - added invalidations
 - added closure latency
+- added checks per accepted closure
 - reduced false-green exposure
 - gained artifact completeness
+- added mandatory mental steps
+- added trust-bearing artifacts
+- added required visible surfaces
+- added skippable visible surfaces
+- added operator-visible actions
+- added got-lost moments
+- added fixed control mass
+
+The current compare logic now also recognizes one deliberately narrow case:
+
+- a `low-drag trust win`
+- a `safety-neutral low-drag baseline-sufficient path`
+
+That means `Synrail` can earn `SYNRAIL_BETTER` on an everyday contour when it:
+
+- reduces false-green exposure
+- materially improves proof basis
+- and does so with near-zero added burden
+
+Checks per accepted closure are derived narrowly from the existing runtime-shaped inputs:
+
+- `0` when the path does not reach `ACCEPTED`
+- otherwise `1 + blocker_to_closure_cycles`
+
+The control-burden split now stays explicit:
+
+- fixed control mass:
+  - mandatory mental steps
+  - trust-bearing artifacts
+  - required visible surfaces
+- behavioral control tax:
+  - operator-visible actions
+  - got-lost moments
+- total control burden:
+  - fixed control mass
+  - behavioral control tax
+
+The harness now emits all three readings machine-readably:
+
+- fixed control mass added
+- behavioral control tax added
+- total control burden added
+
+Near-zero burden here is intentionally strict:
+
+- at most `1` added operator minute
+- no added intervention
+- at most `1` added closure-latency minute
+- no added required visible surface
+- no added trust-bearing artifact
+- at most `1` added total-control-burden unit
+
+The baseline-sufficient mirror case is also intentionally narrow:
+
+- no false-green reduction
+- no recovery advantage
+- at most `35` points of artifact-completeness gain
+- at most `1` added operator minute
+- no added intervention
+- at most `1` added closure-latency minute
+- but still at least `1` extra trust-bearing artifact and at least `2` fixed control-mass units
+
+That case means the baseline already looks safe enough, and Synrail's added proof richness
+does not yet earn the extra control burden.
+
+The repo now also has one bounded repeatable everyday benchmark class built on top of the same comparison and cost artifacts:
+
+- `fixtures/repeatable_everyday_benchmark_pack_001.json`
+- `fixtures/cost_of_control_everyday_001.json`
+- `tests/test_everyday_benchmark_pack.py`
+
+That pack is intentionally narrow.
+It exists to pressure-test whether the cheapened contour is becoming everyday-cheap,
+not to widen the harness into a broad benchmark platform.
 
 ## Current limitations
 

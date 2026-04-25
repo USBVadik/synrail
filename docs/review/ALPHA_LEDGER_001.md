@@ -1,0 +1,1069 @@
+# Alpha Ledger 001
+
+This ledger is the compact decision table for external alpha runs.
+
+It complements, not replaces:
+
+- the per-run `REPORT.md`
+- the synthesis document in [ALPHA_EXTERNAL_EVIDENCE_2026-04-18.md](../../docs/review/ALPHA_EXTERNAL_EVIDENCE_2026-04-18.md)
+- the generic review scorecard in [ALPHA_SIGNAL_SCORECARD_001.md](../../docs/review/ALPHA_SIGNAL_SCORECARD_001.md)
+
+The purpose of this file is simple:
+
+- show where `Synrail` already looks materially stronger than baseline
+- show where baseline is still good enough
+- show where `Synrail` is currently losing because of product, harness, or operator-tax issues
+
+## How To Read It
+
+- Baseline fields are still **estimates** unless a real side-by-side baseline replay was run.
+- `Delta time` is `synrail_minutes_actual - baseline_minutes_estimate`.
+  - negative means `Synrail` looked faster
+  - positive means `Synrail` looked slower
+- `Delta loops` is `synrail_check_count - baseline_retry_count_estimate`.
+  - negative means `Synrail` looked lighter on loop count
+  - positive means `Synrail` looked heavier
+- `Delta recovery` is narrative because restore/re-entry value is not reducible to one number yet.
+- Roadmap decisions should be driven only by clean product-owned evidence (`Failure owner: none/product`) or explicitly strong mixed evidence. Harness, operator, and weak mixed runs should stay out of kernel decision-making.
+
+## Summary Table
+
+| Run | Agent | Task class | Final outcome | Failure owner | Reuse tomorrow | Wedge fit | Baseline min est | Synrail min | Delta time | Baseline retries est | Synrail checks | Delta loops |
+| --- | --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| [001](../../fixtures/alpha_external_run_001/REPORT.md) | Claude Code | trivial / additive_change | BLOCKED | harness | no | low | 0.3 | 0.4 | +0.1 | 0 | 0 | 0 |
+| [002](../../fixtures/alpha_external_run_002/REPORT.md) | Gemini CLI | trivial / additive_change | NOT_ACCEPTED | product | no | low | 0.3 | 0.8 | +0.5 | 0 | 4 | +4 |
+| [003](../../fixtures/alpha_external_run_003/REPORT.md) | Claude Code | trivial / additive_change | ACCEPTED | mixed | unclear | low | 0.3 | 0.8 | +0.5 | 0 | 2 | +2 |
+| [004](../../fixtures/alpha_external_run_004/REPORT.md) | Claude Code | bugfix | INVALID | harness | no | medium | n/a | 2.3 | n/a | n/a | 0 | n/a |
+| [005](../../fixtures/alpha_external_run_005/REPORT.md) | Gemini CLI | bugfix / proof_heavy | ACCEPTED | mixed | unclear | high | 1.0 | 1.5 | +0.5 | 1 | 3 | +2 |
+| [006](../../fixtures/alpha_external_run_006/REPORT.md) | Claude Code | bugfix | ACCEPTED | harness | unclear | high | 1.5 | 2.1 | +0.6 | 1 | 1 | 0 |
+| [007](../../fixtures/alpha_external_run_007/REPORT.md) | Codex manual | restore | RESTORE_FAILED | product | no | high | 0.3 | 0.7 | +0.4 | 1 | 1 | 0 |
+| [008](../../fixtures/alpha_external_run_008/REPORT.md) | Gemini CLI | handoff | ACCEPTED | none | yes | high | 2.0 | 1.4 | -0.6 | 3 | 3 | 0 |
+| [009](../../fixtures/alpha_external_run_009/REPORT.md) | Gemini CLI | trivial / additive_change | DOCTOR_BLOCKED | product | no | low | 0.3 | 1.0 | +0.7 | 0 | 4 | +4 |
+| [010](../../fixtures/alpha_external_run_010/REPORT.md) | Gemini CLI | bugfix / proof_heavy | ACCEPTED | none | yes | high | 1.0 | 1.0 | 0.0 | 1 | 2 | +1 |
+| [011](../../fixtures/alpha_external_run_011/REPORT.md) | Codex manual | restore | INVALID_BASELINE | operator | unclear | high | n/a | 0.2 | n/a | n/a | 0 | n/a |
+| [011b](../../fixtures/alpha_external_run_011b/REPORT.md) | Codex manual | restore | RESTORE_REPORTED_BUT_STATE_NOT_RECOVERED | product | no | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
+| [012](../../fixtures/alpha_external_run_012/REPORT.md) | Claude Code + Gemini CLI | handoff | INVALID_HARNESS_APPROVAL_GATE | harness | no | high | n/a | 0.0 | n/a | n/a | 0 | n/a |
+| [012b](../../fixtures/alpha_external_run_012b/REPORT.md) | Claude Code + Gemini CLI | handoff | INVALID_HARNESS_ROOT_BYPASS_BLOCKED | harness | no | high | n/a | 0.0 | n/a | n/a | 0 | n/a |
+| [013](../../fixtures/alpha_external_run_013/REPORT.md) | Gemini CLI | bugfix | ACCEPTED | none | yes | high | 0.8 | 1.0 | +0.2 | 1 | 1 | 0 |
+| [014](../../fixtures/alpha_external_run_014/REPORT.md) | Codex manual | restore | RESTORE_REPORTED_BUT_STATE_NOT_RECOVERED | product | no | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
+| [014b](../../fixtures/alpha_external_run_014b/REPORT.md) | Codex manual | restore | PARTIAL_DIAGNOSTIC_ONLY | operator | unclear | high | n/a | 0.0 | n/a | n/a | 0 | n/a |
+| [014c](../../fixtures/alpha_external_run_014c/REPORT.md) | Codex manual | restore | RESTORE_REPORTED_BUT_WORKSPACE_NOT_RESTORED | product | no | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
+| [014d](../../fixtures/alpha_external_run_014d/REPORT.md) | Codex manual | restore | RESTORE_FAILED_HONESTLY_FOR_UNSUPPORTED_WORKSPACE | product | unclear | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
+| [014e](../../fixtures/alpha_external_run_014e/REPORT.md) | Codex manual | restore | RESTORED | none | yes | high | 0.3 | 0.0 | -0.3 | 0 | 0 | 0 |
+| [015](../../fixtures/alpha_external_run_015/REPORT.md) | Gemini CLI | trivial / additive_change | ACCEPTED | product | no | low | 0.3 | 1.0 | +0.7 | 0 | 2 | +2 |
+| [016](../../fixtures/alpha_external_run_016/REPORT.md) | Gemini CLI | bugfix / proof_heavy | ACCEPTED | mixed | yes | high | 1.0 | 1.2 | +0.2 | 1 | 2 | +1 |
+| [017](../../fixtures/alpha_external_run_017/REPORT.md) | Gemini CLI | bugfix | ACCEPTED | none | yes | high | 0.8 | 1.0 | +0.2 | 1 | 1 | 0 |
+| [018](../../fixtures/alpha_external_run_018/REPORT.md) | Gemini CLI + Gemini CLI | handoff | ACCEPTED | none | yes | high | 2.0 | 1.8 | -0.2 | 3 | 3 | 0 |
+| [019](../../fixtures/alpha_external_run_019/REPORT.md) | Gemini CLI | orientation | ORIENTATION_SUMMARIZED_WITH_OVEREXPLORATION | mixed | unclear | medium | 0.4 | 0.9 | +0.5 | 0 | 0 | 0 |
+| [020](../../fixtures/alpha_external_run_020/REPORT.md) | Claude Code | orientation | ORIENTATION_SUMMARIZED | none | yes | medium | 0.4 | 0.3 | -0.1 | 0 | 0 | 0 |
+| [019b](../../fixtures/alpha_external_run_019b/REPORT.md) | Gemini CLI | orientation | ORIENTATION_SUMMARIZED_WITH_OVEREXPLORATION | mixed | unclear | medium | 0.4 | 0.8 | +0.4 | 0 | 0 | 0 |
+| [020b](../../fixtures/alpha_external_run_020b/REPORT.md) | Claude Code | orientation | ORIENTATION_SUMMARIZED_WITH_SYNRAIL_FIRST | none | yes | medium | 0.4 | 0.3 | -0.1 | 0 | 0 | 0 |
+| [019c](../../fixtures/alpha_external_run_019c/REPORT.md) | Gemini CLI | orientation | ORIENTATION_SUMMARIZED_WITH_REDUCED_EXPLORATION | mixed | unclear | medium | 0.4 | 0.5 | +0.1 | 0 | 0 | 0 |
+| [021b](../../fixtures/alpha_external_run_021b/REPORT.md) | Gemini CLI | trivial / additive_change | INVALID_HARNESS_GEMINI_NONINTERACTIVE_EIO | harness | no | low | n/a | 0.0 | n/a | n/a | 0 | n/a |
+| [021c](../../fixtures/alpha_external_run_021c/REPORT.md) | Claude Code | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 0.7 | +0.4 | 0 | 1 | +1 |
+| [021d](../../fixtures/alpha_external_run_021d/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 2.2 | +1.9 | 0 | 1 | +1 |
+| [021e](../../fixtures/alpha_external_run_021e/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
+| [022](../../fixtures/alpha_external_run_022/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS | none | unclear | low | 0.3 | 0.8 | +0.5 | 0 | 1 | +1 |
+| [023](../../fixtures/alpha_external_run_023/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS_BUT_NO_WAIVER | mixed | unclear | low | 0.3 | 2.8 | +2.5 | 0 | 1 | +1 |
+| [024](../../fixtures/alpha_external_run_024/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_PROVEN_STATUS_BUT_STILL_NO_WAIVER | mixed | unclear | low | 0.3 | 1.0 | +0.7 | 0 | 2 | +2 |
+| [025](../../fixtures/alpha_external_run_025/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_INFERRED_METHOD_AND_RUNTIME_VERIFICATION | mixed | yes | low | 0.3 | 0.4 | +0.1 | 0 | 1 | +1 |
+| [027](../../fixtures/alpha_external_run_027/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_WAIVER_REALIZED | mixed | yes | medium | 0.3 | 0.4 | +0.1 | 0 | 1 | +1 |
+| [028b](../../fixtures/alpha_external_run_028b/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_FINAL_RESULT_FIRST_BUT_PROSE_STILL_AUTHORED | mixed | yes | medium | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
+| [029](../../fixtures/alpha_external_run_029/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_STARTER_PROSE_LEFT_UNTOUCHED | mixed | yes | medium | 0.3 | 1.2 | +0.9 | 0 | 1 | +1 |
+| [030](../../fixtures/alpha_external_run_030/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_ENTRYPOINT_ARCHAEOLOGY_REMOVED_BUT_REGRESSED_CHEAPNESS | mixed | yes | medium | 0.3 | 1.2 | +0.9 | 0 | 2 | +2 |
+| [031](../../fixtures/alpha_external_run_031/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED_WITH_SECOND_CHECK_REMOVED_BUT_PROSE_STILL_AUTHORED | mixed | yes | medium | 0.3 | 0.9 | +0.6 | 0 | 1 | +1 |
+| [032](../../fixtures/alpha_external_run_032/REPORT.md) | Gemini CLI | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 1.1 | +0.8 | 0 | 1 | +1 |
+| [033](../../fixtures/alpha_external_run_033/REPORT.md) | Claude Code | trivial / additive_change | GOVERNED_FINISH_BLOCKED_BY_PERMISSION_GATE | harness | no | low | 0.3 | 1.4 | +1.1 | 0 | 0 | 0 |
+| [034](../../fixtures/alpha_external_run_034/REPORT.md) | Claude Code | trivial / additive_change / trace_probe | HARNESS_PERMISSION_DENIAL_CONFIRMED | harness | no | low | 0.3 | 0.6 | +0.3 | 0 | 0 | 0 |
+| [035](../../fixtures/alpha_external_run_035/REPORT.md) | Claude Code | trivial / additive_change | CLOSURE_ACCEPTED | none | unclear | low | 0.3 | 1.3 | +1.0 | 0 | 1 | +1 |
+
+## Per-Run Records
+
+### Run 001
+
+- Report: [fixtures/alpha_external_run_001/REPORT.md](../../fixtures/alpha_external_run_001/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `harness`
+- Reuse tomorrow: `no`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.4`
+- Delta time: `+0.1`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this run should not count as product weakness or strength
+  - it mainly records that Claude's non-interactive harness can dominate the lane before `Synrail` is even exercised
+
+### Run 002
+
+- Report: [fixtures/alpha_external_run_002/REPORT.md](../../fixtures/alpha_external_run_002/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `product`
+- Reuse tomorrow: `no`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.8`
+- Delta time: `+0.5`
+- Baseline retry count estimate: `0`
+- Synrail check count: `4`
+- Delta loops: `+4`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - strongest current evidence that trivial cheap tasks still pay too much visible control tax
+  - baseline is probably good enough here
+
+### Run 003
+
+- Report: [fixtures/alpha_external_run_003/REPORT.md](../../fixtures/alpha_external_run_003/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `mixed`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.8`
+- Delta time: `+0.5`
+- Baseline retry count estimate: `0`
+- Synrail check count: `2`
+- Delta loops: `+2`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - happy path works
+  - but only after harness help and with visible `check --clean-surface` ceremony
+
+### Run 004
+
+- Report: [fixtures/alpha_external_run_004/REPORT.md](../../fixtures/alpha_external_run_004/REPORT.md)
+- Task class: `bugfix`
+- Failure owner: `harness`
+- Reuse tomorrow: `no`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `n/a`
+- Synrail minutes actual: `2.3`
+- Delta time: `n/a`
+- Baseline retry count estimate: `n/a`
+- Synrail check count: `0`
+- Delta loops: `n/a`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - invalid run
+  - should not be used as evidence for or against product value
+
+### Run 005
+
+- Report: [fixtures/alpha_external_run_005/REPORT.md](../../fixtures/alpha_external_run_005/REPORT.md)
+- Task class: `bugfix / proof_heavy`
+- Failure owner: `mixed`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `high`
+- Baseline minutes estimate: `1.0`
+- Synrail minutes actual: `1.5`
+- Delta time: `+0.5`
+- Baseline retry count estimate: `1`
+- Synrail check count: `3`
+- Delta loops: `+2`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - strong mixed signal
+  - hidden oracle passed, so the fix was real
+  - but proof still allowed narrative-heavy readback and parent git clutter was still visible
+
+### Run 006
+
+- Report: [fixtures/alpha_external_run_006/REPORT.md](../../fixtures/alpha_external_run_006/REPORT.md)
+- Task class: `bugfix`
+- Failure owner: `harness`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `high`
+- Baseline minutes estimate: `1.5`
+- Synrail minutes actual: `2.1`
+- Delta time: `+0.6`
+- Baseline retry count estimate: `1`
+- Synrail check count: `1`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - strongest current evidence that a bounded bug-fix can go through honestly without reproducing a false green
+  - but observability on headless Claude remains weak
+
+### Run 007
+
+- Report: [fixtures/alpha_external_run_007/REPORT.md](../../fixtures/alpha_external_run_007/REPORT.md)
+- Task class: `restore`
+- Failure owner: `product`
+- Reuse tomorrow: `no`
+- Wedge fit: `high`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.7`
+- Delta time: `+0.4`
+- Baseline retry count estimate: `1`
+- Synrail check count: `1`
+- Delta loops: `0`
+- Baseline restore path: `manual rollback of the changed file or direct revert to the known-good surface`
+- Synrail restore path: `save -> confirm-restore -> restore`
+- Delta recovery: `baseline likely succeeds quickly; Synrail failed to recover at all`
+- Why it matters:
+  - strongest negative signal in the current alpha set
+  - restore is part of the intended wedge, so this is a direct strike against baseline advantage
+
+### Run 008
+
+- Report: [fixtures/alpha_external_run_008/REPORT.md](../../fixtures/alpha_external_run_008/REPORT.md)
+- Task class: `handoff`
+- Failure owner: `none`
+- Reuse tomorrow: `yes`
+- Wedge fit: `high`
+- Baseline minutes estimate: `2.0`
+- Synrail minutes actual: `1.4`
+- Delta time: `-0.6`
+- Baseline retry count estimate: `3`
+- Synrail check count: `3`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - strongest current positive signal
+  - second-operator continuation looks materially real
+  - this is the clearest contour where `Synrail` already looks stronger than the simpler baseline
+
+### Run 009
+
+- Report: [fixtures/alpha_external_run_009/REPORT.md](../../fixtures/alpha_external_run_009/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `product`
+- Reuse tomorrow: `no`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `1.0`
+- Delta time: `+0.7`
+- Baseline retry count estimate: `0`
+- Synrail check count: `4`
+- Delta loops: `+4`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - strongest fresh confirmation that trivial tasks are still paying too much visible ceremony tax
+  - the current compressed-loop / clean-surface tranche did not yet remove live Gemini confusion around `repair-step` and `--clean-surface`
+  - `Synrail` stayed honest and blocked weak proof, but the cost on this contour is still materially worse than baseline
+
+### Run 010
+
+- Report: [fixtures/alpha_external_run_010/REPORT.md](../../fixtures/alpha_external_run_010/REPORT.md)
+- Task class: `bugfix / proof_heavy`
+- Failure owner: `none`
+- Reuse tomorrow: `yes`
+- Wedge fit: `high`
+- Baseline minutes estimate: `1.0`
+- Synrail minutes actual: `1.0`
+- Delta time: `0.0`
+- Baseline retry count estimate: `1`
+- Synrail check count: `2`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - strongest fresh signal that proof hardening is moving in the right direction
+  - Gemini's vague first proof did not simply glide through; the run ended accepted only after the readback became concrete and line-level
+  - this does not yet prove full proof independence, but it does show less narrative slack than earlier runs
+
+### Run 011
+
+- Report: [fixtures/alpha_external_run_011/REPORT.md](../../fixtures/alpha_external_run_011/REPORT.md)
+- Task class: `restore`
+- Failure owner: `operator`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `high`
+- Baseline minutes estimate: `n/a`
+- Synrail minutes actual: `0.2`
+- Delta time: `n/a`
+- Baseline retry count estimate: `n/a`
+- Synrail check count: `0`
+- Delta loops: `n/a`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this run is explicitly invalid and should not be used as restore evidence
+  - the probe started from a bad baseline template, so the only honest conclusion is that restore still needs a clean rerun before we compare against run 007
+
+### Run 011b
+
+- Report: [fixtures/alpha_external_run_011b/REPORT.md](../../fixtures/alpha_external_run_011b/REPORT.md)
+- Task class: `restore`
+- Failure owner: `product`
+- Reuse tomorrow: `no`
+- Wedge fit: `high`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.0`
+- Delta time: `-0.3`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `manual revert of the changed file or copy back from the known-good baseline`
+- Synrail restore path: `save (fallback ready) -> confirm-restore -> restore`
+- Delta recovery: `save is now materially better than run 007 because it arms a pre-run fallback, but restore still loses to baseline because the broken file remains broken after Synrail says RESTORED`
+- Why it matters:
+  - this is the first valid restore rerun after the pre-run snapshot tranche
+  - `save` is no longer the main failure; it now arms a pre-run fallback successfully
+  - the remaining restore bug is more precise and more serious: `confirm-restore` says no restore point exists, then `restore` claims success anyway, and the broken state remains broken
+
+### Run 012
+
+- Report: [fixtures/alpha_external_run_012/REPORT.md](../../fixtures/alpha_external_run_012/REPORT.md)
+- Task class: `handoff`
+- Failure owner: `harness`
+- Reuse tomorrow: `no`
+- Wedge fit: `high`
+- Baseline minutes estimate: `n/a`
+- Synrail minutes actual: `0.0`
+- Delta time: `n/a`
+- Baseline retry count estimate: `n/a`
+- Synrail check count: `0`
+- Delta loops: `n/a`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this run should not be counted as handoff product evidence
+  - the root/headless Claude lane blocked shell access before a governed intermediate state even existed
+
+### Run 012b
+
+- Report: [fixtures/alpha_external_run_012b/REPORT.md](../../fixtures/alpha_external_run_012b/REPORT.md)
+- Task class: `handoff`
+- Failure owner: `harness`
+- Reuse tomorrow: `no`
+- Wedge fit: `high`
+- Baseline minutes estimate: `n/a`
+- Synrail minutes actual: `0.0`
+- Delta time: `n/a`
+- Baseline retry count estimate: `n/a`
+- Synrail check count: `0`
+- Delta loops: `n/a`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this rerun shows the remaining Claude lane problem more precisely
+  - under root, the bypass-permissions escape hatch is itself blocked, so the current Claude handoff lane is still harness-limited rather than product-limited
+
+### Run 013
+
+- Report: [fixtures/alpha_external_run_013/REPORT.md](../../fixtures/alpha_external_run_013/REPORT.md)
+- Task class: `bugfix`
+- Failure owner: `none`
+- Reuse tomorrow: `yes`
+- Wedge fit: `high`
+- Baseline minutes estimate: `0.8`
+- Synrail minutes actual: `1.0`
+- Delta time: `+0.2`
+- Baseline retry count estimate: `1`
+- Synrail check count: `1`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is another fresh accepted bugfix signal after the proof-hardening tranche
+  - it strengthens the claim that bounded bugfix closure is credible even when the task is not the same retry-backoff change as run 010
+
+### Run 014
+
+- Report: [fixtures/alpha_external_run_014/REPORT.md](../../fixtures/alpha_external_run_014/REPORT.md)
+- Task class: `restore`
+- Failure owner: `product`
+- Reuse tomorrow: `no`
+- Wedge fit: `high`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.0`
+- Delta time: `-0.3`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `manual revert of the changed file or copy back from the known-good baseline`
+- Synrail restore path: `save (pre-run snapshot armed) -> confirm-restore -> restore`
+- Delta recovery: `baseline still wins because Synrail can arm a snapshot but still cannot actually recover the broken file after restore reports success`
+- Why it matters:
+  - this run confirms that the restore problem is still alive even after the pre-run snapshot tranche
+  - it sharpens the product bug further: `save` is no longer the headline failure, but `restore` still does not restore the broken working state
+  - restore therefore remains the strongest negative signal in the alpha ledger
+
+### Run 014b
+
+- Report: [fixtures/alpha_external_run_014b/REPORT.md](../../fixtures/alpha_external_run_014b/REPORT.md)
+- Task class: `restore`
+- Failure owner: `operator`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `high`
+- Baseline minutes estimate: `n/a`
+- Synrail minutes actual: `0.0`
+- Delta time: `n/a`
+- Baseline retry count estimate: `n/a`
+- Synrail check count: `0`
+- Delta loops: `n/a`
+- Baseline restore path: `n/a`
+- Synrail restore path: `save -> confirm-restore -> restore`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this rerun should not be treated as the final restore verdict because the baseline test command was wrong
+  - it is still useful diagnostically because it showed that `confirm-restore` now passes on the deployed build
+
+### Run 014c
+
+- Report: [fixtures/alpha_external_run_014c/REPORT.md](../../fixtures/alpha_external_run_014c/REPORT.md)
+- Task class: `restore`
+- Failure owner: `product`
+- Reuse tomorrow: `no`
+- Wedge fit: `high`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.0`
+- Delta time: `-0.3`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `manual revert of the changed file or copy back from the known-good baseline`
+- Synrail restore path: `save (pre-run snapshot armed) -> confirm-restore -> restore`
+- Delta recovery: `baseline still wins because Synrail confirms the restore point correctly but still leaves the broken file in place after reporting RESTORED`
+- Why it matters:
+  - this is the authoritative deployed-build restore verdict after the parser/default-path fix
+  - it shows that the problem is no longer checkpoint discovery
+  - the remaining restore bug is now explicit in the trace: `checkpoint_restore.json` records `workspace_restored: false`
+
+### Run 014d
+
+- Report: [fixtures/alpha_external_run_014d/REPORT.md](../../fixtures/alpha_external_run_014d/REPORT.md)
+- Task class: `restore`
+- Failure owner: `product`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `high`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.0`
+- Delta time: `-0.3`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `manual revert of the changed file or copy back from the known-good baseline`
+- Synrail restore path: `save -> confirm-restore -> restore -> honest restore-failed rollback`
+- Delta recovery: `Synrail is now more truthful than 014c because it no longer claims false success, but baseline still wins on actual recovery for no-commit workspaces`
+- Why it matters:
+  - this run validates the latest honesty fix on the deployed build
+  - the workspace is in git but has no commits, so restore correctly records `workspace_snapshot.type = none`
+  - the product no longer lies about restore success, but it still cannot recover the workspace for this contour
+
+### Run 014e
+
+- Report: [fixtures/alpha_external_run_014e/REPORT.md](../../fixtures/alpha_external_run_014e/REPORT.md)
+- Task class: `restore`
+- Failure owner: `none`
+- Reuse tomorrow: `yes`
+- Wedge fit: `high`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.0`
+- Delta time: `-0.3`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `manual revert of the changed file or copy back from the known-good baseline`
+- Synrail restore path: `save (file-copy pre-run snapshot) -> confirm-restore -> restore`
+- Delta recovery: `Synrail now matches or beats baseline on this contour because the broken file is restored automatically and tests return to green`
+- Why it matters:
+  - this is the strongest restore-positive signal in the ledger so far
+  - it validates the `file_copy` fallback on exactly the no-commit git workspace that previously failed in `014d`
+  - restore is no longer just more honest here; it actually works
+
+### Run 015
+
+- Report: [fixtures/alpha_external_run_015/REPORT.md](../../fixtures/alpha_external_run_015/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `product`
+- Reuse tomorrow: `no`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `1.0`
+- Delta time: `+0.7`
+- Baseline retry count estimate: `0`
+- Synrail check count: `2`
+- Delta loops: `+2`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is a useful retest after the command-surface / clean-surface tranche
+  - it shows real progress over run 009: accepted closure, compressed `--help`, and no visible `--clean-surface` dance
+  - but trivial-task overhead is still materially worse than baseline, so the trivial lane is improved but not won
+
+### Run 016
+
+- Report: [fixtures/alpha_external_run_016/REPORT.md](../../fixtures/alpha_external_run_016/REPORT.md)
+- Task class: `bugfix / proof_heavy`
+- Failure owner: `mixed`
+- Reuse tomorrow: `yes`
+- Wedge fit: `high`
+- Baseline minutes estimate: `1.0`
+- Synrail minutes actual: `1.2`
+- Delta time: `+0.2`
+- Baseline retry count estimate: `1`
+- Synrail check count: `2`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is another positive signal for proof hardening, because the final accepted readback was concrete and observational rather than a loose action summary
+  - it stops short of perfectly isolating the action-verb rejection guard, so it should count as partial validation rather than a clean proof of that one heuristic
+  - it also surfaced a smaller reporting seam: accepted closure and `report.json` messaging still looked slightly inconsistent
+
+### Run 017
+
+- Report: [fixtures/alpha_external_run_017/REPORT.md](../../fixtures/alpha_external_run_017/REPORT.md)
+- Task class: `bugfix`
+- Failure owner: `none`
+- Reuse tomorrow: `yes`
+- Wedge fit: `high`
+- Baseline minutes estimate: `0.8`
+- Synrail minutes actual: `1.0`
+- Delta time: `+0.2`
+- Baseline retry count estimate: `1`
+- Synrail check count: `1`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is a fresh independent bounded bugfix signal on a contour that is not just a replay of run 010 or 013
+  - one-check accepted closure keeps strengthening the claim that bounded bugfix work is becoming repeatable on the intended wedge
+
+### Run 018
+
+- Report: [fixtures/alpha_external_run_018/REPORT.md](../../fixtures/alpha_external_run_018/REPORT.md)
+- Task class: `handoff`
+- Failure owner: `none`
+- Reuse tomorrow: `yes`
+- Wedge fit: `high`
+- Baseline minutes estimate: `2.0`
+- Synrail minutes actual: `1.8`
+- Delta time: `-0.2`
+- Baseline retry count estimate: `3`
+- Synrail check count: `3`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is now a second valid handoff success, which is exactly the kind of repetition the wedge needed
+  - first operator left a real semantically insufficient state; second operator inherited that state, repaired the proof, and reached accepted closure
+  - handoff / continuation honesty remains the clearest place where `Synrail` looks materially stronger than the simpler baseline
+
+### Run 019
+
+- Report: [fixtures/alpha_external_run_019/REPORT.md](../../fixtures/alpha_external_run_019/REPORT.md)
+- Task class: `orientation`
+- Failure owner: `mixed`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.4`
+- Synrail minutes actual: `0.9`
+- Delta time: `+0.5`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - Gemini can now recover governed project context without drifting into sibling probe folders
+  - but the orientation lane still over-explores and does not visibly standardize on a literal `synrail` CLI-first entry
+
+### Run 020
+
+- Report: [fixtures/alpha_external_run_020/REPORT.md](../../fixtures/alpha_external_run_020/REPORT.md)
+- Task class: `orientation`
+- Failure owner: `none`
+- Reuse tomorrow: `yes`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.4`
+- Synrail minutes actual: `0.3`
+- Delta time: `-0.1`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - Claude answered accurately and quickly from governed artifacts with no write attempts and no parent-directory drift
+  - but even this stronger run still used direct `.synrail` reads rather than a literal `synrail status` entrypoint
+
+### Run 019b
+
+- Report: [fixtures/alpha_external_run_019b/REPORT.md](../../fixtures/alpha_external_run_019b/REPORT.md)
+- Task class: `orientation`
+- Failure owner: `mixed`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.4`
+- Synrail minutes actual: `0.8`
+- Delta time: `+0.4`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the direct retest after the orientation-guidance wording fix
+  - Gemini now explicitly acknowledges Synrail at the start, but the actual lane is still too wide and exploratory
+  - this means the wording change alone was not enough to produce a reliable minimal orientation contour on Gemini
+
+### Run 020b
+
+- Report: [fixtures/alpha_external_run_020b/REPORT.md](../../fixtures/alpha_external_run_020b/REPORT.md)
+- Task class: `orientation`
+- Failure owner: `none`
+- Reuse tomorrow: `yes`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.4`
+- Synrail minutes actual: `0.3`
+- Delta time: `-0.1`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the clearest validation of the guidance fix so far
+  - Claude literally ran `synrail` first, then answered from governed artifacts in a short read-only flow
+  - orientation is now visibly stronger on the Claude lane than it was in run `020`
+
+### Run 019c
+
+- Report: [fixtures/alpha_external_run_019c/REPORT.md](../../fixtures/alpha_external_run_019c/REPORT.md)
+- Task class: `orientation`
+- Failure owner: `mixed`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.4`
+- Synrail minutes actual: `0.5`
+- Delta time: `+0.1`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the Gemini-only retest after the stronger lane-specific orientation wording
+  - compared with `019b`, the run is materially narrower: no database/schema probing, no sibling-probe archaeology, and the answer stays centered on governed state
+  - but the lane still is not as small as Claude `020b`, and the server artifacts did not persist a normal `end` / `rc` completion trace
+
+### Run 021b
+
+- Report: [fixtures/alpha_external_run_021b/REPORT.md](../../fixtures/alpha_external_run_021b/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `harness`
+- Reuse tomorrow: `no`
+- Wedge fit: `low`
+- Baseline minutes estimate: `n/a`
+- Synrail minutes actual: `0.0`
+- Delta time: `n/a`
+- Baseline retry count estimate: `n/a`
+- Synrail check count: `0`
+- Delta loops: `n/a`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this isolates the current Gemini server failure mode much more precisely than the earlier hanging shell log
+  - the saved `agent.log` shows a concrete harness error: Gemini non-interactive mode crashes with `setRawMode EIO` before any governed Synrail step begins
+  - that means current Gemini trivial-lane retests on this host should be treated as harness-invalid rather than product-negative until the CLI lane is repaired
+
+### Run 021c
+
+- Report: [fixtures/alpha_external_run_021c/REPORT.md](../../fixtures/alpha_external_run_021c/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `none`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.7`
+- Delta time: `+0.4`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live trivial retest after the context-driven cleanup / trivial-burden tranche on the current build `25b9b9b`
+  - Claude reached accepted closure on a single inferred pass with zero repairs and zero rejections, and the proof pack stayed concrete rather than bloated
+  - it improves the trivial picture materially relative to `003` and `015`, but baseline is still cheaper and the evidence is currently stronger on the Claude lane than on Gemini
+
+### Run 021d
+
+- Report: [fixtures/alpha_external_run_021d/REPORT.md](../../fixtures/alpha_external_run_021d/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `none`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `2.2`
+- Delta time: `+1.9`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first valid Gemini trivial retest on the current build after `021b` isolated the broken headless path
+  - Gemini reached accepted closure with one check, zero repairs, and zero rejections, so the cheapened trivial contour is now supported by both Claude and Gemini evidence
+  - it still does not make trivial work a baseline win, because the positive result depended on a live interactive TTY Gemini session and remained much slower than the simpler baseline
+
+### Run 021e
+
+- Report: [fixtures/alpha_external_run_021e/REPORT.md](../../fixtures/alpha_external_run_021e/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `none`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.9`
+- Delta time: `+0.6`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first unattended Gemini trivial success on the current build, using a headless-safe invocation on the same host where `021b` previously failed
+  - Gemini again reached accepted closure with one check, zero repairs, and zero rejections, so the trivial contour no longer depends on a live TTY workaround
+  - it materially improves confidence in the Gemini lane, even though trivial work is still slower than the simpler baseline
+
+### Run 022
+
+- Report: [fixtures/alpha_external_run_022/REPORT.md](../../fixtures/alpha_external_run_022/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `none`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.8`
+- Delta time: `+0.5`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live unattended Gemini retest after the new trust-bearing `final_result.status` gate landed locally
+  - Gemini again reached accepted closure with one check, zero repairs, and zero rejections, so the new status semantics did not break the cheapened trivial contour
+  - the strongest new signal is qualitative: `final_result.json` now carries `status: "PROVEN"` and `bundle.json` records `final_result_status` as semantically sufficient, showing that the new kernel rule already generalizes to a real agent-driven run
+
+### Run 023
+
+- Report: [fixtures/alpha_external_run_023/REPORT.md](../../fixtures/alpha_external_run_023/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `mixed`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `2.8`
+- Delta time: `+2.5`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live unattended trivial retest after both evidence-first cheapening tranches (`readback` and `scenario_proof`) landed
+  - Gemini still reached accepted closure with `status: "PROVEN"` and a richer `diff_provenance` record than `022`, now including `verification_result`
+  - but the intended cheaper contour did not actually trigger on this live run: `diff_provenance.method` was still missing, so structured runtime verification stayed too weak to waive `readback` and `scenario_proof`
+  - the run therefore strengthens the kernel compatibility story while also showing that the real operator-tax win is still not yet materialized on the live Gemini lane
+
+### Run 024
+
+- Report: [fixtures/alpha_external_run_024/REPORT.md](../../fixtures/alpha_external_run_024/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `mixed`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `1.0`
+- Delta time: `+0.7`
+- Baseline retry count estimate: `0`
+- Synrail check count: `2`
+- Delta loops: `+2`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live unattended Gemini retest after the `db192c4` tranche that can infer `diff_provenance.method` from a sufficiently strong direct-observation record
+  - Gemini still reached accepted closure with `status: "PROVEN"`, so the new kernel logic remains compatible with a real unattended contour
+  - but the waiver still did not fire: the live agent authored only `changed_file`, `verification_command`, and `verification_result`, leaving the direct-observation record too thin for `normalized_method` inference
+  - this sharpens the next gap again: the remaining problem is no longer another missing kernel affordance, but the fact that live agent behavior still does not emit a strong enough structured provenance record to cash in the cheaper evidence-first contour
+
+### Run 025
+
+- Report: [fixtures/alpha_external_run_025/REPORT.md](../../fixtures/alpha_external_run_025/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `mixed`
+- Reuse tomorrow: `yes`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.4`
+- Delta time: `+0.1`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live unattended Gemini run where the stronger direct-observation contour actually materializes end to end
+  - `bundle.json` records `normalized_method = "direct_file_observation"`, `method_inferred = true`, and `has_structured_runtime_verification = true` even though `git_diff` is empty
+  - the lane is also materially cheaper than `023/024`: one check, zero repairs, zero rejections, and roughly `0.4` minutes total
+  - the remaining gap is now smaller and more precise: the run still authored `readback.txt` and `scenario_proof.txt`, so it is a strong runtime-verification win but not yet a full prose-waiver win
+
+### Run 027
+
+- Report: [fixtures/alpha_external_run_027/REPORT.md](../../fixtures/alpha_external_run_027/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `mixed`
+- Reuse tomorrow: `yes`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.4`
+- Delta time: `+0.1`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live unattended Gemini run where the waiver contour is semantically realized in the bundle, not just theoretically available
+  - `bundle.json` marks `runtime_verification_sufficient = true`, `readback.waived_by_runtime_corroboration = true`, and `scenario_proof.waived_by_runtime_corroboration = true`
+  - the trust decision is now clearly carried by runtime-backed proof rather than by the prose proof surfaces
+  - the lane stays cheap at about `0.4` minutes and one check, which keeps Synrail very close to baseline cost on this contour even though it is still not yet clearly cheaper
+
+### Run 028b
+
+- Report: [fixtures/alpha_external_run_028b/REPORT.md](../../fixtures/alpha_external_run_028b/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `mixed`
+- Reuse tomorrow: `yes`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.9`
+- Delta time: `+0.6`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this run shows the first live effect of the final-result-first guidance: Gemini strengthens `final_result.json` before touching the prose surfaces
+  - the bundle still lands on the strong cheapened contour with waived runtime-backed proof
+  - but the agent still edits `readback.txt` and `scenario_proof.txt`, so the cheapened semantics have not yet become cheapened agent behavior
+
+### Run 029
+
+- Report: [fixtures/alpha_external_run_029/REPORT.md](../../fixtures/alpha_external_run_029/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `mixed`
+- Reuse tomorrow: `yes`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `1.2`
+- Delta time: `+0.9`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live unattended Gemini run where the agent leaves `readback.txt` and `scenario_proof.txt` in their starter form while still reaching `Accepted`
+  - the cheapened contour is now both semantic and behavioral: `readback/scenario` stay waived in the bundle and untouched in the workspace
+  - the lane is still not faster than baseline, but the extra prose tax is no longer intrinsic to the trust path on this contour
+
+### Run 030
+
+- Report: [fixtures/alpha_external_run_030/REPORT.md](../../fixtures/alpha_external_run_030/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `mixed`
+- Reuse tomorrow: `yes`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `1.2`
+- Delta time: `+0.9`
+- Baseline retry count estimate: `0`
+- Synrail check count: `2`
+- Delta loops: `+2`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this run validates the new checkout-local fallback guidance: Gemini no longer reads `setup.py` or falls back to `python3 alpha.py` to discover how to start Synrail on this host
+  - the accepted trust path stays strong and waived, but the lane does not get cheaper because optional prose authoring returns and a cleanup mini-loop (`check -> explain-proof -> doctor -> check`) burns the saved time
+  - so the next trivial-lane seam is no longer entrypoint discovery; it is cleanup follow-through and behavioral stability around when optional prose should stay untouched
+
+### Run 031
+
+- Report: [fixtures/alpha_external_run_031/REPORT.md](../../fixtures/alpha_external_run_031/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `mixed`
+- Reuse tomorrow: `yes`
+- Wedge fit: `medium`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.9`
+- Delta time: `+0.6`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this run shows that the cleanup-placeholder seam from `030` was real: after removing `cleanup_status` from the controlled starter, Gemini gets back to a one-check accepted lane and drops from `73s` to `55s`
+  - the entrypoint improvement from `030` remains in place, so the lane no longer burns time on either `setup.py` archaeology or the old `explain-proof -> doctor -> check` detour
+  - the remaining trivial-lane tax is now narrower still: Gemini still re-authors `cleanup_status`, `readback.txt`, and `scenario_proof.txt` even though trust is already carried by the runtime-backed `final_result`
+
+### Run 032
+
+- Report: [fixtures/alpha_external_run_032/REPORT.md](../../fixtures/alpha_external_run_032/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `none`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `1.1`
+- Delta time: `+0.8`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live trivial retest on the current branch that shows the cheapened proof behavior carrying over to a different tiny task shape inside `tools/reference`: `final_result.json` is sufficient, `cleanup_status` comes from doctor fallback, and the optional prose surfaces stay absent
+  - the accepted closure was real; the later `DOCTOR_BLOCKED` state was produced by a post-run operator `synrail check` on the already dirty workspace and should not be counted against the live run itself
+  - so the strongest signal here is behavioral: the agent no longer needed to author `readback.txt`, `scenario_proof.txt`, or manual cleanup truth to get a valid accepted closure on this contour
+
+### Run 033
+
+- Report: [fixtures/alpha_external_run_033/REPORT.md](../../fixtures/alpha_external_run_033/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `harness`
+- Reuse tomorrow: `no`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `1.4`
+- Delta time: `+1.1`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live Claude retest on the current cheapened branch against the same tiny `tools/reference` docstring contour that Gemini `032` accepted on the same host
+  - Claude made the correct code edit and verified it locally, so the coding part of the lane still works
+  - but the governed loop never started: no `.synrail` directory or closure artifacts appeared, and the current Hetzner root invocation shape blocked the local `synrail` wrapper behind Claude's own permission gate
+
+### Run 034
+
+- Report: [fixtures/alpha_external_run_034/REPORT.md](../../fixtures/alpha_external_run_034/REPORT.md)
+- Task class: `trivial / additive_change / trace_probe`
+- Failure owner: `harness`
+- Reuse tomorrow: `no`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `0.6`
+- Delta time: `+0.3`
+- Baseline retry count estimate: `0`
+- Synrail check count: `0`
+- Delta loops: `0`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this diagnostic rerun preserved Claude's tool trace in `stream-json` form instead of only the short final summary
+  - it captured the blocker precisely: permission denials on both `/root/alpha_external_run_034/workspace/.venv/bin/synrail 2>&1 | head -40` and plain `/root/alpha_external_run_034/workspace/.venv/bin/synrail`
+  - that confirms the Claude failure here is a harness/permission-mode seam on this host, not a false `Accepted` and not a product-side regression in the cheapened proof path
+
+### Run 035
+
+- Report: [fixtures/alpha_external_run_035/REPORT.md](../../fixtures/alpha_external_run_035/REPORT.md)
+- Task class: `trivial / additive_change`
+- Failure owner: `none`
+- Reuse tomorrow: `unclear`
+- Wedge fit: `low`
+- Baseline minutes estimate: `0.3`
+- Synrail minutes actual: `1.3`
+- Delta time: `+1.0`
+- Baseline retry count estimate: `0`
+- Synrail check count: `1`
+- Delta loops: `+1`
+- Baseline restore path: `n/a`
+- Synrail restore path: `n/a`
+- Delta recovery: `n/a`
+- Why it matters:
+  - this is the first live Claude retest on the same tiny contour that becomes harness-valid after pre-approving the checkout-local `synrail` wrapper path
+  - once that wrapper seam is removed, Claude follows the intended cheapened loop cleanly: dashboard -> start -> bounded edit -> `final_result` update -> `synrail check` -> accepted closure
+  - the resulting accepted path matches the strongest current cheapened contour properties from Gemini `032`: `PROVEN` final result, accepted closure, and both optional prose surfaces still absent
+
+## Current Read
+
+If we force the current ledger into one brutally practical sentence:
+
+- `Synrail` already looks stronger than baseline on `handoff / continuation honesty`
+- looks credible on bounded accepted closure
+- looks materially stronger than before on proof hardening for bounded bug-fix runs
+- still looks too heavy on trivial tasks, even though the newer compressed-loop tranche improved the path from run 009 to run 015
+- and now looks materially better on both Claude and Gemini trivial lanes than it did earlier, including a current-branch Gemini success path (`032`) and a current-branch Claude success path once the wrapper approval seam is removed (`035`), even though the simpler baseline is still cheaper and one older Gemini harness shape is still known-bad
+- and now also has one real unattended Gemini run where the new trust-bearing `PROVEN` status gate succeeds end to end instead of relying on a decorative `SUCCESS` label
+- and now also shows a sharper split in the newer evidence-first cheapening story: `023` and `024` still filled both prose proof surfaces after failing to complete a strong enough structured `diff_provenance`, while `025` finally materializes the stronger direct-observation contour with inferred method and runtime verification but still keeps the prose surfaces around
+- and now also shows that the cheaper evidence-first contour can fully materialize on a real Gemini run: `027` keeps the prose surfaces present but semantically waived, so the trust decision now lives in runtime-backed proof rather than in those extra artifacts
+- and now also shows the next live step beyond that: `028b` reorders the agent toward `final_result.json` first, and `029` finally leaves `readback/scenario` untouched in starter form while the waived runtime-backed contour still reaches `Accepted`
+- and now also sharpens what remains after that: `030` removes the old `setup.py` / `python3 alpha.py` entrypoint archaeology, but the lane still fails to get cheaper because cleanup/doctor churn and optional-prose reauthoring can immediately eat those savings
+- and now also shows the next cut after that: `031` removes the cleanup second-check seam and materially lowers elapsed time, which means the remaining trivial-lane tax is increasingly concentrated in unnecessary manual authorship of optional proof surfaces rather than in kernel blocking logic
+- and now has a materially stronger restore story: `014d` fixed the false-success lie, and `014e` validates real recovery on the no-commit git contour via `file_copy`
+- orientation on governed roots is better than before; Claude now shows a literal `synrail`-first entry, while Gemini has narrowed the loop materially in `019c` but still does not converge on that same small shape
+- the Claude-first handoff lane is still harness-limited under the current root server setup, so new handoff strength is still coming mostly from Gemini-side evidence
+- and the newest Claude Hetzner sequence now makes the split more precise: the default root-host Claude invocation is still harness-limited at the local wrapper boundary (`033`/`034`), but once that wrapper path is pre-approved (`035`), Claude also reaches governed accepted closure on the same cheapened trivial contour
+
+## Next Runs
+
+Append new runs using:
+
+- [ALPHA_RUN_REPORT_TEMPLATE_002.md](../../docs/review/ALPHA_RUN_REPORT_TEMPLATE_002.md)
+
+For each new run:
+
+1. create the run-specific `fixtures/.../REPORT.md`
+2. add one new row to the summary table above
+3. add one new per-run record block below
+4. update the top-level synthesis only when the overall verdict actually changes

@@ -6,6 +6,7 @@ Current support boundary for this pack:
 
 - supported: one local trusted worktree on the same machine where the agent acts
 - not yet supported: remote host / ops / production-target execution as a first-class alpha lane
+- supported integration pattern: deploy and restart scripts can enforce local Synrail authorization before side effects
 
 The goal of this pack is simple:
 
@@ -18,8 +19,13 @@ The goal of this pack is simple:
 Preferred tester install path:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install .
+python3 tools/reference/synrail_install_v0.py --venv .venv
+```
+
+If `synrail` is not on your `PATH` after install, replace `synrail` below with the local wrapper from this checkout:
+
+```bash
+./.venv/bin/synrail
 ```
 
 ## 10-Minute Quickstart
@@ -32,14 +38,13 @@ ARTIFACT_ROOT=".synrail"
 TASK_REQUEST="Reject a plain-text final result and keep the repair bounded."
 
 synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$PROJECT_ROOT" --task-identity "$TASK_REQUEST" --telemetry-opt-in --tester-id your_name
-# synrail start already creates starter proof files under $ARTIFACT_ROOT:
-# - $ARTIFACT_ROOT/final_result.json
-# - $ARTIFACT_ROOT/readback.txt
-# - $ARTIFACT_ROOT/scenario_proof.txt
-# do this now: edit only those starter proof files in place, then run synrail check
+# synrail start already creates $ARTIFACT_ROOT/final_result.json on the default path.
+# readback.txt and scenario_proof.txt stay fallback-only unless a later synrail check explicitly asks for one.
+# do this now: strengthen final_result.json first, then run synrail check
 # or use Wow Scenario A below to see the false-success block
 synrail check --artifact-root "$ARTIFACT_ROOT"
-synrail repair-step --artifact-root "$ARTIFACT_ROOT"
+# optional standalone bounded prompt after a non-green check:
+# synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 synrail telemetry export --artifact-root "$ARTIFACT_ROOT"
 ```
 
@@ -60,7 +65,7 @@ These are the only outer verbs a first tester should care about.
 - `synrail check`
   Why it exists: this is the truth gate that decides accepted, blocked, repairable, or restore-needed.
 - `synrail repair-step`
-  Why it exists: gives one bounded next repair instead of asking the operator to reverse-engineer artifacts.
+  Why it exists: renders the same bounded repair as a standalone prompt when the operator wants that extra surface.
 - `synrail retry`
   Why it exists: reruns only the bounded repair contour, not a broader hopeful loop.
 - `synrail restore`
@@ -91,17 +96,19 @@ Run:
 
 ```bash
 synrail start --artifact-root ".synrail" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
-# synrail already created starter proof files under .synrail/ for the native path
+# synrail already created .synrail/final_result.json on the native default path
 # this scenario intentionally bypasses that path with a plain-text result:
 printf 'Implemented the change and confirmed it locally.\n' > .synrail/final_result.txt
 synrail check --artifact-root ".synrail"
-synrail repair-step --artifact-root ".synrail"
+# optional standalone bounded prompt after the blocked check:
+# synrail repair-step --artifact-root ".synrail"
 ```
 
 Expected shape:
 
 - `check` lands on `PROOF_INVALID`
-- `repair-step` stays bounded to `repair_final_result_artifact`
+- `check` names one bounded fix on the default path
+- `repair-step`, when requested, stays bounded to `repair_final_result_artifact`
 
 Reference:
 
@@ -172,6 +179,8 @@ Please send back:
 
 This pack is successful only if it produces hard external signal, not polite approval.
 
+If you specifically want to review the current deploy-side-effect boundary, use [DEPLOY_GUARD_INTEGRATION_001.md](./DEPLOY_GUARD_INTEGRATION_001.md). Review it as a narrow guard pattern, not as full remote lane support.
+
 ## Current Canonical Pack Run
 
 Current tester-pack smoke on the preferred shell:
@@ -188,3 +197,13 @@ Current tester-pack smoke on the preferred shell:
 - [operator reading](../../fixtures/alpha_test_pack_run_004/lane/operator_reading.json)
 - [session replay](../../fixtures/alpha_test_pack_run_004/lane/telemetry/session_replay.json)
 - [issue body](../../fixtures/alpha_test_pack_run_004/lane/telemetry/github_issue.md)
+
+The current validation reading should now be interpreted as two linked checks, not one:
+
+- the shell pack still has to prove the bounded non-green contour end-to-end
+- the claim-validation pack must also prove that:
+  - a second operator can follow the contour without author intuition
+  - the same remains true on one uglier repeated-doctor contour and one explicit non-resumable contour
+  - the same remains true on one `CONTINUATION_INPUTS_MISSING` contour where retry pressure is already present
+  - harness-owned reports are excluded from kernel roadmap decisions
+  - only explicitly strong mixed reports are allowed to move kernel roadmap decisions with caution

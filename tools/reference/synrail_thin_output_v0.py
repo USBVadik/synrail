@@ -34,7 +34,9 @@ def human_reason(report: dict, repair_packet: dict | None = None) -> str:
         "SEMANTIC_PROOF_INSUFFICIENT": "the proof is present but still too thin to trust",
         "MISSING_PROOF_SECTIONS": "the proof is still missing required sections",
         "ARTIFACT_BUNDLE_MISSING": "the result bundle is missing required proof files",
+        "ARTIFACT_INTEGRITY_FAILED": "the final result artifact drifted outside the controlled workflow",
         "DOCTOR_NOT_GREEN": "the current workspace is not ready yet",
+        "DOCTOR_OVERRIDE_PRESENT": "doctor passed only with override gates, so closure is not trustworthy yet",
         "ACCEPTANCE_CRITERIA_STALE": "the acceptance rules no longer match this project state",
         "ACCEPTANCE_CRITERIA_INVALID": "the acceptance rules could not be trusted",
         "STATE_NOT_RESUMABLE": "this run cannot safely continue from the current state",
@@ -95,6 +97,128 @@ def matching_recovery(recovery: dict | None, *, state: dict) -> dict | None:
     if recovery.get("task_class", "") != state.get("task_class", ""):
         return None
     return recovery
+
+
+def matching_refresh(refresh: dict | None, *, state: dict) -> dict | None:
+    if not refresh:
+        return None
+    if refresh.get("run_id", "") != state.get("run_id", ""):
+        return None
+    return refresh
+
+
+REFRESH_CHANGE_IMPACT = {
+    "closure_invalidated_by_doctor": {
+        "summary": "A refresh invalidated closure because readiness became stale.",
+        "diagnosis": "Repair only readiness before trusting closure again.",
+        "action": "Repair only readiness, then rerun synrail check.",
+    },
+    "closure_invalidated_by_invalid_bundle": {
+        "summary": "A refresh invalidated closure because the final-result proof artifact became stale.",
+        "diagnosis": "Repair only the final-result proof artifact before trusting closure again.",
+        "action": "Repair only the final-result proof artifact, then rerun synrail check.",
+    },
+    "closure_invalidated_by_semantic_bundle": {
+        "summary": "A refresh invalidated closure because semantic proof evidence became stale.",
+        "diagnosis": "Strengthen only the stale semantic proof evidence before trusting closure again.",
+        "action": "Strengthen only the stale semantic proof evidence, then rerun synrail check.",
+    },
+    "closure_invalidated_by_partial_bundle": {
+        "summary": "A refresh invalidated closure because required proof sections became stale.",
+        "diagnosis": "Complete only the stale proof sections before trusting closure again.",
+        "action": "Complete only the stale proof sections, then rerun synrail check.",
+    },
+    "closure_invalidated_by_recovery": {
+        "summary": "A refresh invalidated closure because recovery reverification became stale.",
+        "diagnosis": "Run only recovery reverification before trusting closure again.",
+        "action": "Run only recovery reverification, then rerun synrail check.",
+    },
+}
+
+PROOF_RELATED_INVALIDATIONS = {
+    "closure_invalidated_by_invalid_bundle",
+    "closure_invalidated_by_semantic_bundle",
+    "closure_invalidated_by_partial_bundle",
+}
+
+
+def selective_refresh_repair_action(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    matched = matching_refresh(refresh, state=state) or {}
+    if matched.get("dominant_invalidation", "") not in PROOF_RELATED_INVALIDATIONS:
+        return ""
+    return current_repair_action_instruction(repair_packet)
+
+
+def selective_refresh_scope_label(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    matched = matching_refresh(refresh, state=state) or {}
+    if matched.get("dominant_invalidation", "") not in PROOF_RELATED_INVALIDATIONS:
+        return ""
+    packet = repair_packet or {}
+    continuation = packet.get("continuation_core", {})
+    stale_subsurface_ids = list(continuation.get("next_step_subsurface_ids", [])) or list(
+        packet.get("artifact_quality_summary", {}).get("stale_subsurface_ids", [])
+    )
+    if not stale_subsurface_ids:
+        current_step_subsurface_id = continuation.get("current_step_subsurface_id", "")
+        if current_step_subsurface_id:
+            stale_subsurface_ids = [current_step_subsurface_id]
+    labels: list[str] = []
+    for subsurface_id in stale_subsurface_ids:
+        label = humanize_token(subsurface_id)
+        if label and label not in labels:
+            labels.append(label)
+    return ", ".join(labels)
+
+
+def selective_refresh_reuse_label(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    matched = matching_refresh(refresh, state=state) or {}
+    if matched.get("dominant_invalidation", "") not in PROOF_RELATED_INVALIDATIONS:
+        return ""
+    proof_bundle = state.get("proof_bundle", {})
+    stale_sections = set(proof_bundle.get("missing_sections", [])) | set(proof_bundle.get("semantically_insufficient_sections", []))
+    reusable: list[str] = []
+    for section, details in proof_bundle.items():
+        if section in {"status", "structural_status", "semantic_status", "missing_sections", "semantically_insufficient_sections", "semantic_next_safe_step"}:
+            continue
+        if section in stale_sections or not isinstance(details, dict):
+            continue
+        if not (details.get("semantically_sufficient", False) or details.get("structurally_complete", False)):
+            continue
+        label = humanize_token(section)
+        if label and label not in reusable:
+            reusable.append(label)
+    return ", ".join(reusable)
+
+def refresh_reuse_line(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    reusable = selective_refresh_reuse_label(refresh, state=state, repair_packet=repair_packet)
+    if not reusable:
+        return ""
+    return f"reusable proof surfaces: {reusable}"
+
+
+def refresh_scope_summary(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    scope = refresh_scope_line(refresh, state=state, repair_packet=repair_packet)
+    reuse = refresh_reuse_line(refresh, state=state, repair_packet=repair_packet)
+    if scope and reuse:
+        return f"{scope}; {reuse}"
+    return scope or reuse
+
+
+
+def change_impact_guidance(refresh: dict | None, *, state: dict, repair_packet: dict | None = None) -> dict[str, str]:
+    matched = matching_refresh(refresh, state=state)
+    if not matched:
+        return {}
+    guidance = dict(REFRESH_CHANGE_IMPACT.get(matched.get("dominant_invalidation", ""), {}))
+    if not guidance:
+        return {}
+    repair_action = selective_refresh_repair_action(refresh, state=state, repair_packet=repair_packet)
+    repair_focus = current_repair_focus_summary(repair_packet)
+    if repair_action:
+        guidance["action"] = f"{repair_action} Then rerun synrail check."
+        if repair_focus:
+            guidance["diagnosis"] = f"Repair only this stale proof surface before trusting closure again: {repair_focus}."
+    return guidance
 
 
 def classify_outcome(*, state: dict, report: dict, repair_packet: dict | None, doctor: dict | None) -> str:
@@ -243,9 +367,10 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
     return messages[outcome_class]
 
 
-def technical_lines(*, state: dict, report: dict, repair_packet: dict | None, checkpoint: dict | None) -> list[str]:
+def technical_lines(*, state: dict, report: dict, repair_packet: dict | None, checkpoint: dict | None, refresh: dict | None) -> list[str]:
     packet = repair_packet or {}
     continuation = packet.get("continuation_core", {})
+    matched_refresh = matching_refresh(refresh, state=state) or {}
     return [
         f"state={state.get('state', '')}",
         f"result={report.get('result', '')}",
@@ -253,12 +378,100 @@ def technical_lines(*, state: dict, report: dict, repair_packet: dict | None, ch
         f"reason={report.get('reason', '')}",
         f"closure_status={state.get('closure', {}).get('status', '')}",
         f"proof_bundle_status={state.get('proof_bundle', {}).get('status', '')}",
+        f"dominant_invalidation={matched_refresh.get('dominant_invalidation', '')}",
+        f"invalidations={','.join(matched_refresh.get('invalidations', []))}",
         f"repair_termination_reason={report.get('repair_termination_reason', '') or packet.get('repair_termination', {}).get('reason', '')}",
         f"current_step_id={continuation.get('current_step_id', '') or packet.get('repair_history', {}).get('current_step_id', '')}",
         f"next_safe_step={report.get('next_safe_step', '') or state.get('next_safe_step', '')}",
         f"checkpoint_restore_available={checkpoint_restore_available(checkpoint, state=state)}",
         f"bootstrap_provenance_reason={state.get('integrity', {}).get('bootstrap_provenance_reason', '')}",
     ]
+
+
+def maybe_override_summary(summary: str, diagnosis: str, *, refresh: dict | None, state: dict, repair_packet: dict | None) -> tuple[str, str]:
+    guidance = change_impact_guidance(refresh, state=state, repair_packet=repair_packet)
+    if not guidance:
+        return summary, diagnosis
+    return guidance.get("summary", summary), guidance.get("diagnosis", diagnosis)
+
+
+def maybe_override_next_step(what_to_do_next: str, *, refresh: dict | None, state: dict, repair_packet: dict | None) -> str:
+    guidance = change_impact_guidance(refresh, state=state, repair_packet=repair_packet)
+    if not guidance:
+        return what_to_do_next
+    return guidance.get("action", what_to_do_next)
+
+
+def maybe_override_action_now(action_now: str, *, refresh: dict | None, state: dict, next_command: str, repair_packet: dict | None) -> str:
+    guidance = change_impact_guidance(refresh, state=state, repair_packet=repair_packet)
+    if not guidance:
+        return action_now
+    if next_command in {"", "synrail check"}:
+        return guidance.get("action", action_now)
+    return action_now
+
+
+def dominant_invalidation_text(refresh: dict | None, *, state: dict) -> str:
+    matched_refresh = matching_refresh(refresh, state=state) or {}
+    return humanize_token(matched_refresh.get("dominant_invalidation", ""))
+
+
+def invalidation_scope_text(refresh: dict | None, *, state: dict) -> str:
+    matched_refresh = matching_refresh(refresh, state=state) or {}
+    invalidations = list(matched_refresh.get("invalidations", []))
+    if not invalidations:
+        return ""
+    return ", ".join(humanize_token(value) for value in invalidations)
+
+
+def invalidation_focus_line(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    guidance = change_impact_guidance(refresh, state=state, repair_packet=repair_packet)
+    if not guidance:
+        return ""
+    return guidance.get("action", "")
+
+
+def refresh_focus_line(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    dominant = dominant_invalidation_text(refresh, state=state)
+    if not dominant:
+        return ""
+    repair_focus = current_repair_focus_summary(repair_packet)
+    if repair_focus and selective_refresh_repair_action(refresh, state=state, repair_packet=repair_packet):
+        return f"refresh change impact: {dominant}; repair target: {repair_focus}"
+    return f"refresh change impact: {dominant}"
+
+
+def refresh_scope_line(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    selective_scope = selective_refresh_scope_label(refresh, state=state, repair_packet=repair_packet)
+    if selective_scope:
+        return f"applicable invalidations: {selective_scope}"
+    scope = invalidation_scope_text(refresh, state=state)
+    if not scope:
+        return ""
+    return f"applicable invalidations: {scope}"
+
+
+def refresh_focus_summary(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    refresh_focus = refresh_focus_line(refresh, state=state, repair_packet=repair_packet)
+    repair_focus = current_repair_focus_summary(repair_packet)
+    if refresh_focus and repair_focus and "repair target:" not in refresh_focus:
+        return f"{refresh_focus}; repair target: {repair_focus}"
+    if refresh_focus:
+        return refresh_focus
+    return repair_focus
+
+
+def refresh_current_step_action(refresh: dict | None, *, state: dict, repair_packet: dict | None) -> str:
+    refresh_action = invalidation_focus_line(refresh, state=state, repair_packet=repair_packet)
+    repair_action = current_repair_action_instruction(repair_packet)
+    if refresh_action:
+        return refresh_action
+    return repair_action
+
+
+def refresh_next_safe_step(refresh: dict | None, *, state: dict, report: dict) -> str:
+    matched_refresh = matching_refresh(refresh, state=state) or {}
+    return matched_refresh.get("next_safe_step", "") or report.get("next_safe_step", "") or state.get("next_safe_step", "")
 
 
 def current_repair_focus_summary(repair_packet: dict | None) -> str:
@@ -279,11 +492,31 @@ def current_repair_action_instruction(repair_packet: dict | None) -> str:
     )
 
 
+SEMANTIC_SECTION_HINTS = {
+    "modified_files": "record the actual changed files in the final result artifact",
+    "scope_alignment": "keep the implementation inside the requested additive scope and remove unrelated adjacent rewrites or spacing tweaks",
+    "presentation_alignment": "keep the newly added surface visually plain and remove extra emphasis styling unless the task asked for it",
+    "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record",
+    "verification_corroboration": "tie acceptance to explicit local verification evidence: either structured diff_provenance or a labeled scenario Command plus Observed or Result record, not prose-only proof",
+    "readback": "record a concrete readback naming actual file paths, function names, or line contents from the changed surface — do not paraphrase the task description",
+    "scenario_proof": "record a scenario-proof with a labeled Command and Observed or Result line, plus explicit pass/fail — do not just restate the task",
+    "artifact_identity": "restore baseline, execution surface, prompt, and task identity values for this run",
+    "cleanup_status": "record a successful cleanup status for the execution surface",
+}
+
+
+def thin_section_guidance(state: dict) -> list[str]:
+    guidance: list[str] = []
+    for section in state.get("proof_bundle", {}).get("semantically_insufficient_sections", []):
+        guidance.append(f"{section}: {SEMANTIC_SECTION_HINTS.get(section, humanize_token(section))}")
+    return guidance
+
+
 def action_now_text(*, next_command: str, outcome_class: str, report: dict, repair_packet: dict | None) -> str:
     focused_action = current_repair_action_instruction(repair_packet)
-    if next_command == "synrail repair-step" and focused_action:
-        lowered = focused_action[0].lower() + focused_action[1:]
-        return f"Run synrail repair-step, then {lowered}"
+    if next_command == "synrail check" and focused_action:
+        lowered = focused_action[0].lower() + focused_action[1:].rstrip(".")
+        return f"Fix the issue shown below: {lowered}. Then rerun synrail check."
     if next_command == "synrail refresh-acceptance":
         return "Run synrail refresh-acceptance."
     if next_command == "synrail start":
@@ -295,6 +528,15 @@ def action_now_text(*, next_command: str, outcome_class: str, report: dict, repa
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
         return "Restore a verified fallback or restart from a clearer continuation boundary."
     return ""
+
+
+def final_answer_guard_text(outcome_class: str) -> str:
+    if outcome_class == "ACCEPTED":
+        return ""
+    return (
+        "Final-answer guard: do not report this task as complete, functionally complete, "
+        "100% done, or all requirements met until a later synrail check prints Status: Accepted."
+    )
 
 
 def status_label(outcome_class: str, *, report: dict, repair_packet: dict | None) -> str:
@@ -352,11 +594,11 @@ def human_next_step(
             return "Restore the original task request and intended task target, then run synrail check for the next bounded attempt."
         return "Run the next bounded forward attempt through synrail check."
     if outcome_class == "PROOF_INVALID":
-        return "Replace the broken final result or proof inputs, then ask Synrail for the next bounded repair step."
+        return "Replace the broken final result or proof inputs, then rerun synrail check."
     if outcome_class == "PROOF_THIN":
-        return "Strengthen only the thin proof evidence, then ask Synrail for the next bounded repair step."
+        return "Strengthen only the thin proof sections shown above, then rerun synrail check."
     if outcome_class == "PROOF_PARTIAL":
-        return "Add the missing proof inputs, then ask Synrail for the next bounded repair step."
+        return "Add the missing proof inputs, then rerun synrail check."
     if outcome_class == "REPAIR_STOP":
         return "Stop replaying this contour. Restore a verified restore point or start a new run."
     if outcome_class == "SCOPE_VIOLATION":
@@ -366,11 +608,11 @@ def human_next_step(
     if outcome_class == "DOCTOR_BLOCKED":
         if has_doctor_coverage_block(doctor):
             return "Treat this doctor as bounded for now. Close the agreed missing fail modes before trusting readiness."
-        return "Repair readiness first, then retry only the current bounded step."
+        return "Repair readiness first, then rerun synrail check."
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
         return "Do not assume resume is safe yet. Restore a verified fallback or rerun from a clearer starting point."
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTINUATION_INPUTS_MISSING":
-        return "Finish the current bounded repair from synrail repair-step, then run synrail retry."
+        return "Finish the current bounded repair, then rerun synrail check."
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
         return "Run synrail refresh-acceptance, then rerun synrail check."
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
@@ -380,7 +622,7 @@ def human_next_step(
     return human_safe_step_text(raw_next_step)
 
 
-def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | None = None, doctor: dict | None = None, checkpoint: dict | None = None, recovery: dict | None = None) -> dict:
+def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | None = None, doctor: dict | None = None, checkpoint: dict | None = None, recovery: dict | None = None, refresh: dict | None = None) -> dict:
     restore_available = checkpoint_restore_available(checkpoint, state=state)
     matching = matching_recovery(recovery, state=state)
     outcome_class = classify_outcome(state=state, report=report, repair_packet=repair_packet, doctor=doctor)
@@ -393,16 +635,17 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         repair_packet=repair_packet,
         doctor=doctor,
     )
+    summary, diagnosis = maybe_override_summary(summary, diagnosis, refresh=refresh, state=state, repair_packet=repair_packet)
     suggested_command = {
         "ACCEPTED": "no next command required",
         "NON_RESUMABLE": "synrail restore or start a new run",
         "CLOSURE_REJECTED": "synrail restore or repair and rerun closure",
-        "PROOF_INVALID": "run synrail repair-step, apply only that repair, then synrail retry",
-        "PROOF_THIN": "run synrail repair-step, strengthen only the thin proof evidence, then synrail retry",
-        "PROOF_PARTIAL": "run synrail repair-step, supply only the missing proof inputs, then synrail retry",
+        "PROOF_INVALID": "fix only the invalid proof surface named above, then synrail check",
+        "PROOF_THIN": "strengthen only the thin proof evidence named above, then synrail check",
+        "PROOF_PARTIAL": "supply only the missing proof inputs named above, then synrail check",
         "REPAIR_STOP": "synrail restore or start a new run",
-        "SCOPE_VIOLATION": "repair the workspace or intended task target, then synrail retry",
-        "DOCTOR_BLOCKED": "repair readiness, then synrail retry",
+        "SCOPE_VIOLATION": "repair the workspace or intended task target, then synrail check",
+        "DOCTOR_BLOCKED": "repair readiness, then synrail check",
         "NON_GREEN": "inspect the blocker, then continue the bounded repair step",
     }[outcome_class]
     if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
@@ -410,9 +653,9 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
     if outcome_class == "SCOPE_VIOLATION" and restore_available:
         failure_classes = list((doctor or {}).get("blocking_failure_classes", []))
         if "dirty-surface unsafe" in failure_classes:
-            suggested_command = "synrail restore or move to a clean in-scope surface, then synrail retry"
+            suggested_command = "synrail restore or move to a clean in-scope surface, then synrail check"
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTINUATION_INPUTS_MISSING":
-        suggested_command = "run synrail repair-step, finish only that repair, then synrail retry"
+        suggested_command = "finish only the current bounded repair, then synrail check"
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
         suggested_command = "run synrail refresh-acceptance, then rerun synrail check"
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
@@ -424,22 +667,15 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
         suggested_command = "use synrail restore or rerun from a clearer starting point before trusting continuation"
     next_step = report.get("next_safe_step", "") or state.get("next_safe_step", "")
-    focused_summary = current_repair_focus_summary(repair_packet)
+    thin_guidance = thin_section_guidance(state) if outcome_class == "PROOF_THIN" else []
     if outcome_class == "ACCEPTED":
         next_step = "No repair step is required."
-    what_to_do_next = human_next_step(
-        outcome_class=outcome_class,
-        raw_next_step=next_step,
-        report=report,
-        repair_packet=repair_packet,
-        doctor=doctor,
-    )
     next_command = ""
     restore_command = ""
     if outcome_class in {"PROOF_INVALID", "PROOF_THIN", "PROOF_PARTIAL", "SCOPE_VIOLATION", "DOCTOR_BLOCKED", "NON_GREEN"} and can_resume:
-        next_command = "synrail repair-step"
+        next_command = "synrail check"
     if outcome_class == "NON_RESUMABLE" and non_resumable_forward_boundary(report=report, repair_packet=repair_packet):
-        next_command = "synrail repair-step"
+        next_command = "synrail check"
     if outcome_class == "NON_GREEN" and report.get("reason", "") in {"ACCEPTANCE_CRITERIA_STALE", "ACCEPTANCE_CRITERIA_INVALID"}:
         next_command = "synrail refresh-acceptance"
     if outcome_class == "NON_GREEN" and report.get("reason", "") == "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED":
@@ -452,12 +688,39 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         restore_command = "synrail restore"
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet) and restore_available:
         restore_command = "synrail restore"
-    action_now = action_now_text(
-        next_command=next_command,
+    what_to_do_next = human_next_step(
         outcome_class=outcome_class,
+        raw_next_step=next_step,
         report=report,
         repair_packet=repair_packet,
+        doctor=doctor,
     )
+    what_to_do_next = maybe_override_next_step(what_to_do_next, refresh=refresh, state=state, repair_packet=repair_packet)
+    action_now = maybe_override_action_now(
+        action_now_text(
+            next_command=next_command,
+            outcome_class=outcome_class,
+            report=report,
+            repair_packet=repair_packet,
+        ),
+        refresh=refresh,
+        state=state,
+        next_command=next_command,
+        repair_packet=repair_packet,
+    )
+    focused_summary = refresh_focus_summary(refresh, state=state, repair_packet=repair_packet)
+    current_step_action = refresh_current_step_action(refresh, state=state, repair_packet=repair_packet)
+    if not focused_summary:
+        focused_summary = current_repair_focus_summary(repair_packet)
+    if not current_step_action:
+        current_step_action = current_repair_action_instruction(repair_packet)
+    next_step = refresh_next_safe_step(refresh, state=state, report=report)
+    if outcome_class == "ACCEPTED":
+        next_step = "No repair step is required."
+    fields = {
+        "change_impact_focus": refresh_focus_line(refresh, state=state, repair_packet=repair_packet),
+        "change_impact_scope": refresh_scope_summary(refresh, state=state, repair_packet=repair_packet),
+    }
     return {
         "schema_version": "thin_output_record_v0",
         "mode": mode,
@@ -471,8 +734,10 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "what_it_means": diagnosis,
         "what_to_do_next": what_to_do_next,
         "action_now": action_now,
-        "current_step_action_instruction": current_repair_action_instruction(repair_packet),
+        "final_answer_guard": final_answer_guard_text(outcome_class),
+        "current_step_action_instruction": current_step_action,
         "focused_repair_summary": focused_summary,
+        "thin_section_guidance": thin_guidance,
         "resume_available": can_resume,
         "next_command": next_command,
         "restore_command": restore_command,
@@ -482,7 +747,9 @@ def build_record(*, state: dict, report: dict, mode: str, repair_packet: dict | 
         "recovery_primary_action": matching.get("primary_action", "") if matching else "",
         "recovery_operator_instructions": list(matching.get("operator_instructions", [])) if matching else [],
         "suggested_command": suggested_command,
-        "technical_lines": technical_lines(state=state, report=report, repair_packet=repair_packet, checkpoint=checkpoint) if mode == "dev" else [],
+        "change_impact_focus": fields["change_impact_focus"],
+        "change_impact_scope": fields["change_impact_scope"],
+        "technical_lines": technical_lines(state=state, report=report, repair_packet=repair_packet, checkpoint=checkpoint, refresh=refresh) if mode == "dev" else [],
     }
 
 
@@ -496,6 +763,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--doctor-file")
     parser.add_argument("--checkpoint-record-file")
     parser.add_argument("--consistency-recovery-file")
+    parser.add_argument("--refresh-file")
     return parser
 
 
@@ -510,6 +778,7 @@ def main() -> int:
         doctor=load_json(Path(args.doctor_file)) if args.doctor_file else None,
         checkpoint=load_json(Path(args.checkpoint_record_file)) if args.checkpoint_record_file else None,
         recovery=load_json(Path(args.consistency_recovery_file)) if args.consistency_recovery_file else None,
+        refresh=load_json(Path(args.refresh_file)) if args.refresh_file else None,
     )
     save_json(Path(args.output), record)
     print(json.dumps({"result": "OK", "outcome_class": record["outcome_class"], "restore_available": record["restore_available"]}, ensure_ascii=True))

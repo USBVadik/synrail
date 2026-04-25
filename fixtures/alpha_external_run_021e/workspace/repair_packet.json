@@ -1,0 +1,594 @@
+{
+  "schema_version": "repair_packet_v0",
+  "run_id": "ALPHA_RUN_20260418T190925770719Z_c03bb2",
+  "task_class": "bounded_change",
+  "from_state": "CLOSURE_ACCEPTED",
+  "continuation_entrypoint": "resume",
+  "repair_handoff": {
+    "schema_version": "repair_handoff_v0",
+    "run_id": "ALPHA_RUN_20260418T190925770719Z_c03bb2",
+    "task_class": "bounded_change",
+    "from_state": "CLOSURE_ACCEPTED",
+    "closure_status": "ACCEPTED",
+    "blocking_reason": "",
+    "continuation_allowed": false,
+    "continuation_entrypoint": "",
+    "resumability": {
+      "status": "NOT_RESUMABLE",
+      "family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+      "active_pressures": [
+        "TERMINAL_ACCEPTED",
+        "TERMINAL_STATE"
+      ],
+      "recommended_repair_order": [
+        "start_new_run"
+      ],
+      "requires_new_run": true,
+      "explanation": "the run is already accepted, so continuation should stop and a new run should start instead"
+    },
+    "repair_policy": {
+      "policy_type": "NON_RESUMABLE_NEXT_STEP",
+      "next_step_id": "start_new_run",
+      "ready_now_step_ids": [],
+      "ordered_steps": [
+        {
+          "step_id": "start_new_run",
+          "status": "TERMINAL_NEXT_STEP",
+          "required_inputs": [],
+          "repairs_artifacts": [
+            "terminal_run_state"
+          ],
+          "resolves_pressures": [
+            "TERMINAL_STATE",
+            "TERMINAL_ACCEPTED"
+          ],
+          "why": "terminal state should yield to a new run rather than another resume attempt"
+        }
+      ]
+    },
+    "artifact_quality_hints": [
+      {
+        "artifact_id": "terminal_run_state",
+        "quality": "NON_RESUMABLE",
+        "still_stale_parts": [
+          "accepted_terminal_state"
+        ],
+        "mapped_inputs": [],
+        "repair_step": "start_new_run",
+        "why": "the current run is already accepted and continuation should yield to a new run",
+        "stale_subsurfaces": [
+          {
+            "subsurface_id": "accepted_terminal_state",
+            "status": "NON_RESUMABLE",
+            "mapped_inputs": [],
+            "why": "the accepted closure state is terminal and should not be resumed"
+          }
+        ]
+      }
+    ],
+    "required_inputs": [],
+    "runtime_defaults": {
+      "refresh_event_type": "",
+      "refresh_use_bundle": false,
+      "refresh_use_closure": false
+    },
+    "next_safe_step": "NONE"
+  },
+  "resumability": {
+    "status": "NOT_RESUMABLE",
+    "family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+    "active_pressures": [
+      "TERMINAL_ACCEPTED",
+      "TERMINAL_STATE"
+    ],
+    "recommended_repair_order": [
+      "start_new_run"
+    ],
+    "requires_new_run": true,
+    "explanation": "the run is already accepted, so continuation should stop and a new run should start instead"
+  },
+  "repair_policy": {
+    "policy_type": "NON_RESUMABLE_NEXT_STEP",
+    "next_step_id": "start_new_run",
+    "ready_now_step_ids": [],
+    "ordered_steps": [
+      {
+        "step_id": "start_new_run",
+        "status": "TERMINAL_NEXT_STEP",
+        "required_inputs": [],
+        "repairs_artifacts": [
+          "terminal_run_state"
+        ],
+        "resolves_pressures": [
+          "TERMINAL_STATE",
+          "TERMINAL_ACCEPTED"
+        ],
+        "why": "terminal state should yield to a new run rather than another resume attempt"
+      }
+    ]
+  },
+  "artifact_quality_hints": [
+    {
+      "artifact_id": "terminal_run_state",
+      "quality": "NON_RESUMABLE",
+      "still_stale_parts": [
+        "accepted_terminal_state"
+      ],
+      "mapped_inputs": [],
+      "repair_step": "start_new_run",
+      "why": "the current run is already accepted and continuation should yield to a new run",
+      "stale_subsurfaces": [
+        {
+          "subsurface_id": "accepted_terminal_state",
+          "status": "NON_RESUMABLE",
+          "mapped_inputs": [],
+          "why": "the accepted closure state is terminal and should not be resumed"
+        }
+      ]
+    }
+  ],
+  "artifact_quality_summary": {
+    "artifact_ids": [
+      "terminal_run_state"
+    ],
+    "stale_artifact_ids": [],
+    "non_resumable_artifact_ids": [
+      "terminal_run_state"
+    ],
+    "stale_subsurface_ids": [],
+    "non_resumable_subsurface_ids": [
+      "accepted_terminal_state"
+    ]
+  },
+  "repair_history": {
+    "applied": false,
+    "last_receipt_result": "",
+    "last_completed_step_id": "",
+    "completed_step_ids": [],
+    "current_step_id": "start_new_run",
+    "waiting_step_ids": [],
+    "history_chain_length": 0,
+    "history_chain_results": [],
+    "history_chain_step_ids": []
+  },
+  "repair_history_chain": [],
+  "repair_termination": {
+    "status": "TERMINATE",
+    "reason": "NON_RESUMABLE",
+    "attempt_count": 0,
+    "max_attempts": 3,
+    "no_progress_window": 2,
+    "stalled_step_id": "start_new_run",
+    "next_action": "stop resuming this contour and follow the named non-resumable boundary"
+  },
+  "repair_receipt_context": {
+    "applied": false,
+    "result": "",
+    "completed_step_id": "",
+    "remaining_stale_artifact_ids": [],
+    "remaining_stale_subsurface_ids": [],
+    "remaining_non_resumable_artifact_ids": [],
+    "remaining_non_resumable_subsurface_ids": [],
+    "remaining_stale_hints": [],
+    "remaining_non_resumable_hints": [],
+    "completed_hints": [],
+    "next_step_required_inputs": [],
+    "next_step_hints": [],
+    "history_chain": [],
+    "operator_evidence": {
+      "completed_step_id": "",
+      "completed_artifact_hints": [],
+      "completed_subsurface_ids": [],
+      "next_step_id": "",
+      "next_step_required_inputs": [],
+      "next_step_artifact_hints": [],
+      "next_step_subsurface_ids": [],
+      "operator_focus": ""
+    }
+  },
+  "continuation_plan": {
+    "doctor_required": true,
+    "bundle_required": true,
+    "closure_required": true,
+    "refresh_required": false,
+    "refresh_event_type": "",
+    "refresh_use_bundle": false,
+    "refresh_use_closure": false,
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "resume_context": {
+    "doctor_run_id": "ALPHA_RUN_20260418T190925770719Z_c03bb2",
+    "doctor_level": "CORE_DOCTOR",
+    "target_path": "/root/synrail_021e_checkout/workspace",
+    "target_classification": "trusted_worktree",
+    "baseline_identity": "autodetected_python_baseline",
+    "intended_run_class": "core_probe",
+    "execution_surface_identity": "autodetected_python_worktree"
+  },
+  "repair_inputs": {
+    "prompt_identity": "Add a one-line docstring to the main function in alpha.py",
+    "task_identity": "Add a one-line docstring to the main function in alpha.py",
+    "prompt_identity_ok": true,
+    "target_identity_file": "/root/synrail_021e_checkout/workspace/.synrail/target_identity.txt",
+    "clean_surface": true,
+    "artifact_viable": false,
+    "helper_ok": false,
+    "credentials_ok": false,
+    "artifact_path": "/root/synrail_021e_checkout/workspace/.synrail/final_result.json",
+    "helper_path": "",
+    "credential_env": [],
+    "final_result": "/root/synrail_021e_checkout/workspace/.synrail/final_result.json",
+    "readback": "/root/synrail_021e_checkout/workspace/.synrail/readback.txt",
+    "scenario_proof": "/root/synrail_021e_checkout/workspace/.synrail/scenario_proof.txt",
+    "refresh_recovery_status": "NOT_REQUIRED",
+    "refresh_reverification_complete": false
+  },
+  "selection_context": {
+    "applied": false,
+    "scenario_class": "",
+    "recommended_mode": "",
+    "selected_mode": "",
+    "followed_recommendation": false,
+    "governed_preparation_recommended": false,
+    "selected_with_preparation": false,
+    "heavier_contour_entered": false,
+    "estimated_avoided_operator_minutes": 0,
+    "estimated_avoided_interventions": 0,
+    "estimated_avoided_closure_latency_minutes": 0
+  },
+  "preparation_context": {
+    "applied": true,
+    "ready_for_closure": true,
+    "complete_on_first_bundle_pass": true,
+    "bundle_status": "COMPLETE",
+    "planned_required_sections_count": 7,
+    "planned_required_sections_present_count": 7
+  },
+  "source_of_truth": {
+    "authoritative_entry_artifacts": [
+      "state_file",
+      "repair_packet"
+    ],
+    "precedence_order": [
+      "state_file",
+      "repair_packet",
+      "repair_receipt",
+      "repair_history_chain"
+    ],
+    "artifact_roles": {
+      "state_file": "authoritative current run state",
+      "repair_packet": "authoritative continuation contract, required inputs, and output defaults",
+      "repair_receipt": "authoritative latest repair-step progress only when it matches the same contour",
+      "repair_history_chain": "supporting chronology embedded for replay, not a stronger state source than the packet or state file"
+    },
+    "freshness_rule": "prefer the fresher stricter lower-level artifact when derived continuation surfaces disagree",
+    "contradiction_rule": "state_file anchors current state; repair_packet anchors continuation contract; repair_receipt can refine latest step progress but must not soften stricter state truth",
+    "latest_repair_receipt_available": false,
+    "embedded_history_chain_length": 0,
+    "packet_replay_ready": true,
+    "packet_replay_why": "state_file and repair_packet are enough for packet-first continuation, with any latest repair receipt and history embedded for replay"
+  },
+  "runtime_truth": {
+    "report_result": "OK",
+    "stopping_stage": "accepted",
+    "report_reason": "NONE",
+    "doctor_verdict": "ACCEPTABLE_FOR_CORE_RUN",
+    "bundle_status": "COMPLETE",
+    "closure_status": "ACCEPTED",
+    "refresh_applied": false,
+    "refresh_resulting_closure_status": "",
+    "resulting_state": "CLOSURE_ACCEPTED",
+    "next_safe_step": "NONE",
+    "active_pressures": [
+      "TERMINAL_ACCEPTED",
+      "TERMINAL_STATE"
+    ],
+    "state_snapshot": {
+      "state": "CLOSURE_ACCEPTED",
+      "target_surface_status": "ATTESTED",
+      "doctor_status": "PASS",
+      "doctor_failure_classes": [],
+      "integrity_status": "PASS",
+      "execution_status": "COMPLETED",
+      "proof_bundle_status": "COMPLETE",
+      "proof_missing_sections": [],
+      "closure_status": "ACCEPTED",
+      "closure_blocking_reason": "",
+      "recovery_status": "NOT_REQUIRED",
+      "recovery_reverification_complete": false
+    }
+  },
+  "output_defaults": {
+    "artifact_root": "/root/synrail_021e_checkout/workspace/.synrail",
+    "doctor_output": "/root/synrail_021e_checkout/workspace/.synrail/doctor.json",
+    "bundle_output": "/root/synrail_021e_checkout/workspace/.synrail/bundle.json",
+    "closure_output": "/root/synrail_021e_checkout/workspace/.synrail/closure.json",
+    "refresh_output": "/root/synrail_021e_checkout/workspace/.synrail/refresh.json",
+    "report_output": "/root/synrail_021e_checkout/workspace/.synrail/report.json",
+    "worked_artifact_output": "/root/synrail_021e_checkout/workspace/.synrail/orchestration.json",
+    "run_artifact_output": "/root/synrail_021e_checkout/workspace/.synrail/run.json",
+    "repair_handoff_output": "/root/synrail_021e_checkout/workspace/.synrail/repair_handoff.json",
+    "repair_packet_output": "/root/synrail_021e_checkout/workspace/.synrail/repair_packet.json",
+    "repair_receipt_output": "/root/synrail_021e_checkout/workspace/.synrail/repair_receipt.json",
+    "plan_output": "/root/synrail_021e_checkout/workspace/.synrail/plan.json",
+    "preparation_receipt_output": "/root/synrail_021e_checkout/workspace/.synrail/preparation_receipt.json"
+  },
+  "provided_inputs": [
+    "prompt_identity",
+    "task_identity",
+    "target_identity_file",
+    "clean_surface_confirmation",
+    "artifact_path",
+    "final_result",
+    "readback",
+    "scenario_proof"
+  ],
+  "missing_inputs": [],
+  "ready_for_resume": false,
+  "next_safe_step": "NONE",
+  "continuation_core": {
+    "contract_version": "continuation_core_v0",
+    "entrypoint": "resume",
+    "ready_for_resume": false,
+    "resumability_status": "NOT_RESUMABLE",
+    "resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+    "current_step_id": "start_new_run",
+    "current_step_subsurface_id": "",
+    "current_step_target_path": "",
+    "required_inputs": [],
+    "missing_inputs": [],
+    "next_step_required_inputs": [],
+    "next_step_subsurface_ids": [],
+    "operator_focus": "NONE",
+    "next_safe_step": "NONE",
+    "history_chain_length": 0,
+    "selection_applied": false,
+    "selected_with_preparation": false,
+    "packet_supplies_resume_context": true,
+    "packet_supplies_repair_inputs": true,
+    "packet_supplies_output_defaults": true,
+    "requires_sibling_discovery": false,
+    "authoritative_entry_artifacts": [
+      "state_file",
+      "repair_packet"
+    ],
+    "source_of_truth_precedence": [
+      "state_file",
+      "repair_packet",
+      "repair_receipt",
+      "repair_history_chain"
+    ],
+    "packet_replay_ready": true
+  },
+  "continuation_arbiter": {
+    "schema_version": "continuation_arbiter_record_v0",
+    "run_id": "ALPHA_RUN_20260418T190925770719Z_c03bb2",
+    "task_class": "bounded_change",
+    "entrypoint": "resume",
+    "precedence_order": [
+      "state_file",
+      "repair_packet",
+      "repair_receipt",
+      "repair_history_chain"
+    ],
+    "source_status": {
+      "state_file": {
+        "available": true,
+        "eligible": true,
+        "why": "state file anchors the current run truth"
+      },
+      "repair_packet": {
+        "available": true,
+        "eligible": true,
+        "why": "repair packet anchors the continuation contract"
+      },
+      "repair_receipt": {
+        "available": false,
+        "eligible": false,
+        "why": "repair receipt is not available"
+      },
+      "repair_history_chain": {
+        "available": false,
+        "eligible": false,
+        "why": "repair history chain is not available"
+      }
+    },
+    "ignored_sources": [],
+    "conflict_count": 0,
+    "resolution_status": "RESOLVED",
+    "unresolved_surfaces": [],
+    "decision_trace": [
+      {
+        "surface": "resumability_status",
+        "chosen_source": "repair_packet",
+        "chosen_value": "NOT_RESUMABLE",
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": "NOT_RESUMABLE",
+            "eligible": true
+          },
+          {
+            "source": "repair_receipt",
+            "value": "",
+            "eligible": false
+          }
+        ],
+        "resolution_rule": "repair_packet resumability wins because it is the stricter continuation contract; repair_receipt can only fill a missing packet value",
+        "why": "the repair packet already names resumability for the active contour"
+      },
+      {
+        "surface": "resumability_family",
+        "chosen_source": "repair_packet",
+        "chosen_value": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+            "eligible": true
+          },
+          {
+            "source": "repair_receipt",
+            "value": "",
+            "eligible": false
+          }
+        ],
+        "resolution_rule": "repair_packet resumability family wins; repair_receipt can only fill a missing family label",
+        "why": "the repair packet already names the resumability family"
+      },
+      {
+        "surface": "repair_termination",
+        "chosen_source": "repair_packet",
+        "chosen_value": {
+          "status": "TERMINATE",
+          "reason": "NON_RESUMABLE"
+        },
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": {
+              "status": "TERMINATE",
+              "reason": "NON_RESUMABLE"
+            },
+            "eligible": true
+          },
+          {
+            "source": "repair_receipt",
+            "value": {},
+            "eligible": false
+          }
+        ],
+        "resolution_rule": "repair_packet termination wins; repair_receipt can only surface a missing non-resumable boundary signal",
+        "why": "the repair packet already carries the current termination truth"
+      },
+      {
+        "surface": "current_step_id",
+        "chosen_source": "repair_packet",
+        "chosen_value": "start_new_run",
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": "start_new_run",
+            "eligible": true
+          },
+          {
+            "source": "repair_receipt",
+            "value": "",
+            "eligible": false
+          },
+          {
+            "source": "repair_history_chain",
+            "value": "",
+            "eligible": false
+          }
+        ],
+        "resolution_rule": "repair_packet current step wins; repair_receipt and repair_history_chain only fill the gap when the packet does not name a current step",
+        "why": "the repair packet already names the active continuation step"
+      },
+      {
+        "surface": "next_step_required_inputs",
+        "chosen_source": "UNRESOLVED",
+        "chosen_value": [],
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": [],
+            "eligible": true
+          },
+          {
+            "source": "repair_receipt",
+            "value": [],
+            "eligible": false
+          }
+        ],
+        "resolution_rule": "repair_packet required inputs win; repair_receipt can only fill them when the packet leaves them empty",
+        "why": "no source could name the required continuation inputs"
+      },
+      {
+        "surface": "missing_inputs",
+        "chosen_source": "repair_packet",
+        "chosen_value": [],
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": [],
+            "eligible": true
+          }
+        ],
+        "resolution_rule": "repair_packet missing inputs anchor continuation readiness because state and receipt do not carry a stronger missing-input contract",
+        "why": "the repair packet remains the authoritative source for current missing continuation inputs"
+      },
+      {
+        "surface": "operator_focus",
+        "chosen_source": "repair_packet",
+        "chosen_value": "NONE",
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "repair_packet",
+            "value": "NONE",
+            "eligible": true
+          },
+          {
+            "source": "repair_receipt",
+            "value": "",
+            "eligible": false
+          },
+          {
+            "source": "repair_history_chain",
+            "value": "",
+            "eligible": false
+          }
+        ],
+        "resolution_rule": "repair_receipt can refine operator focus for the same contour and step; otherwise the packet focus remains authoritative",
+        "why": "the repair packet focus remains authoritative because no fresher matching receipt focus is available"
+      },
+      {
+        "surface": "next_safe_step",
+        "chosen_source": "state_file",
+        "chosen_value": "NONE",
+        "conflict": false,
+        "candidates": [
+          {
+            "source": "state_file",
+            "value": "NONE",
+            "eligible": true
+          },
+          {
+            "source": "repair_packet",
+            "value": "NONE",
+            "eligible": true
+          }
+        ],
+        "resolution_rule": "state_file next safe step wins because state anchors the current run truth; the packet mirrors it only when they still agree",
+        "why": "the state file already names the current next safe step"
+      }
+    ],
+    "resolved_decision": {
+      "continuation_status": "TERMINATED",
+      "ready_for_resume": false,
+      "resumability_status": "NOT_RESUMABLE",
+      "resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+      "current_step_id": "start_new_run",
+      "current_step_source": "repair_packet",
+      "next_step_required_inputs": [],
+      "missing_inputs": [],
+      "operator_focus": "NONE",
+      "operator_focus_source": "repair_packet",
+      "next_safe_step": "NONE",
+      "next_safe_step_source": "state_file",
+      "termination_status": "TERMINATE",
+      "termination_reason": "NON_RESUMABLE",
+      "latest_step_result": "",
+      "packet_replay_ready": true
+    },
+    "why": "the continuation conflict set resolves cleanly under explicit precedence"
+  }
+}

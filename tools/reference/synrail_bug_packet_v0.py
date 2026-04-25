@@ -8,9 +8,10 @@ import json
 import sys
 from pathlib import Path
 
-
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+try:
+    from .synrail_io_v0 import load_json, save_json_safe
+except ImportError:
+    from synrail_io_v0 import load_json, save_json_safe
 
 
 def load_json_if_exists(path: Path | None) -> dict | None:
@@ -20,8 +21,7 @@ def load_json_if_exists(path: Path | None) -> dict | None:
 
 
 def save_json(path: Path, payload: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+    save_json_safe(path, payload)
 
 
 def save_text(path: Path, text: str) -> None:

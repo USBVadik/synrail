@@ -1,0 +1,25 @@
+{
+  "request_id": "ALPHA_RUN_20260418T182121308198Z_f37953",
+  "task_class": "bounded_change",
+  "status": "COMPLETE",
+  "change_disposition": "modified",
+  "summary": "Added one-line docstring to main() in alpha.py. No other surfaces changed.",
+  "modified_files": ["alpha.py"],
+  "git_diff": "diff --git a/alpha.py b/alpha.py\nindex bc1381d..b594f48 100644\n--- a/alpha.py\n+++ b/alpha.py\n@@ -3,6 +3,7 @@\n from __future__ import annotations\n \n def main() -> int:\n+    \"\"\"Entry point: delegate to the Synrail CLI main.\"\"\"\n     from tools.reference.synrail_cli_v0 import main as cli_main\n \n     return cli_main()",
+  "diff_provenance": {
+    "changed_file": "alpha.py",
+    "added_line": "    \"\"\"Entry point: delegate to the Synrail CLI main.\"\"\"",
+    "verification_command": "python3 -c \"import ast; tree=ast.parse(open('alpha.py').read()); fn=[n for n in ast.walk(tree) if isinstance(n,ast.FunctionDef) and n.name=='main'][0]; print(ast.get_docstring(fn))\"",
+    "verification_result": "Entry point: delegate to the Synrail CLI main."
+  },
+  "artifact_identity": {
+    "baseline_identity": "",
+    "execution_surface_identity": "",
+    "prompt_identity": "",
+    "task_identity": "Add one-line docstring to main function in alpha.py"
+  },
+  "cleanup_status": {
+    "success": true,
+    "summary": "Only alpha.py was modified; workspace is otherwise clean."
+  }
+}

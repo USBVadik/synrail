@@ -61,8 +61,8 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             self.assertTrue((artifact_root / "proof_request.json").exists())
             self.assertTrue((artifact_root / "target_identity.txt").exists())
             self.assertTrue((artifact_root / "final_result.json").exists())
-            self.assertTrue((artifact_root / "readback.txt").exists())
-            self.assertTrue((artifact_root / "scenario_proof.txt").exists())
+            self.assertFalse((artifact_root / "readback.txt").exists())
+            self.assertFalse((artifact_root / "scenario_proof.txt").exists())
             self.assertTrue((artifact_root / "telemetry" / "config.json").exists())
             self.assertIn("Artifact root: .synrail", start.stdout)
             self.assertNotIn(str(project_root), start.stdout)
@@ -75,7 +75,11 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             self.assertEqual(0, check.returncode, check.stdout + check.stderr)
             self.assertNotIn(str(project_root), check.stdout)
             self.assertIn(
-                "Do this now: Run synrail repair-step, then update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
+                "Fix the issue shown below: update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged. Then rerun synrail check.",
+                check.stdout,
+            )
+            self.assertIn(
+                "Final-answer guard: do not report this task as complete",
                 check.stdout,
             )
             self.assertIn("Repair target: update the result payload in .synrail/final_result.json", check.stdout)
@@ -83,9 +87,10 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             thin_output = load_json(artifact_root / "thin_output.json")
             self.assertEqual("PROOF_INVALID", thin_output["outcome_class"])
             self.assertEqual(
-                "Run synrail repair-step, then update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
+                "Fix the issue shown below: update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged. Then rerun synrail check.",
                 thin_output["action_now"],
             )
+            self.assertIn("do not report this task as complete", thin_output["final_answer_guard"])
             self.assertEqual(
                 "Update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
                 thin_output["current_step_action_instruction"],
@@ -103,6 +108,8 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
                 "Do this now: Update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged.",
                 repair_step.stdout,
             )
+            self.assertIn("final success/completion answer", repair_step.stdout)
+            self.assertIn("functionally complete", repair_step.stdout)
             self.assertNotIn(str(project_root), repair_step.stdout)
 
             prompt = load_json(artifact_root / "prompt.json")
@@ -216,6 +223,9 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             operator_chain_render_text = (artifact_root / "operator_chain_render.md").read_text()
 
             self.assertEqual("PROOF_INVALID", session_replay["latest_result"])
+            self.assertTrue(session_replay["start_timestamp_utc"])
+            self.assertEqual("", session_replay["closure_timestamp_utc"])
+            self.assertEqual(1, session_replay["check_count"])
             self.assertIn("repair the final result artifact", session_replay["next_safe_step"])
             self.assertEqual("final_result_payload", session_replay["continuation_summary"]["current_step_subsurface_id"])
             self.assertEqual(".synrail/final_result.json", session_replay["continuation_summary"]["current_step_target_path"])

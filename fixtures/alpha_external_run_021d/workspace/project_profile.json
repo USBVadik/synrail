@@ -1,0 +1,41 @@
+{
+  "schema_version": "alpha_project_profile_v0",
+  "project_root": "/root/alpha_external_run_021d/workspace",
+  "project_type": "python",
+  "prefers_runtime_evidence": false,
+  "task_class": "bounded_change",
+  "target_path": "/root/alpha_external_run_021d/workspace",
+  "target_classification": "trusted_worktree",
+  "intended_run_class": "core_probe",
+  "baseline_identity": "autodetected_python_baseline",
+  "execution_surface_identity": "autodetected_python_worktree",
+  "artifact_path": "/root/alpha_external_run_021d/workspace/.synrail/final_result.json",
+  "final_result_candidates": [
+    "/root/alpha_external_run_021d/workspace/.synrail/final_result.json",
+    "/root/alpha_external_run_021d/workspace/.synrail/final_result.txt",
+    "/root/alpha_external_run_021d/workspace/.synrail/result.json",
+    "/root/alpha_external_run_021d/workspace/.synrail/result.txt",
+    "/root/alpha_external_run_021d/workspace/final_result.json",
+    "/root/alpha_external_run_021d/workspace/final_result.txt",
+    "/root/alpha_external_run_021d/workspace/result.json",
+    "/root/alpha_external_run_021d/workspace/result.txt"
+  ],
+  "readback_candidates": [
+    "/root/alpha_external_run_021d/workspace/.synrail/readback.json",
+    "/root/alpha_external_run_021d/workspace/.synrail/readback.txt",
+    "/root/alpha_external_run_021d/workspace/readback.json",
+    "/root/alpha_external_run_021d/workspace/readback.txt"
+  ],
+  "scenario_proof_candidates": [
+    "/root/alpha_external_run_021d/workspace/.synrail/scenario_proof.json",
+    "/root/alpha_external_run_021d/workspace/.synrail/scenario_proof.md",
+    "/root/alpha_external_run_021d/workspace/.synrail/scenario_proof.txt",
+    "/root/alpha_external_run_021d/workspace/scenario_proof.json",
+    "/root/alpha_external_run_021d/workspace/scenario_proof.md",
+    "/root/alpha_external_run_021d/workspace/scenario_proof.txt"
+  ],
+  "workspace_git_mode": "workspace_git_root",
+  "workspace_git_root": "/root/alpha_external_run_021d/workspace",
+  "parent_git_root": "",
+  "workspace_isolation_note": ""
+}

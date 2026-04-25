@@ -180,6 +180,9 @@ def make_hint(
 
 def merged_missing_sections(state: dict) -> list[str]:
     missing_sections = list(state.get("proof_bundle", {}).get("missing_sections", []))
+    for section in state.get("proof_bundle", {}).get("semantically_insufficient_sections", []):
+        if section not in missing_sections:
+            missing_sections.append(section)
     for section in state.get("closure", {}).get("missing_sections", []):
         if section not in missing_sections:
             missing_sections.append(section)
@@ -410,7 +413,7 @@ def build_artifact_quality_hints(state: dict) -> list[dict]:
         )
 
     missing_sections = merged_missing_sections(state)
-    final_result_parts = [part for part in ["final_result_payload", "diff_provenance_record", "cleanup_status_record"] if False]
+    final_result_parts = [part for part in ["final_result_payload", "final_result_status_record", "scope_alignment_record", "presentation_alignment_record", "diff_provenance_record", "artifact_identity_record", "cleanup_status_record"] if False]
     final_result_subsurfaces: list[dict] = []
     if "final_result" in missing_sections or state.get("closure", {}).get("blocking_reason") in {"ARTIFACT_BUNDLE_MISSING", "INVALID_PROOF_BUNDLE"}:
         add_unique(final_result_parts, "final_result_payload")
@@ -420,6 +423,16 @@ def build_artifact_quality_hints(state: dict) -> list[dict]:
                 status="STALE",
                 mapped_inputs=["final_result"],
                 why="the final result artifact is missing, empty, or not yet trusted for bundle repair",
+            )
+        )
+    if "final_result_status" in missing_sections:
+        add_unique(final_result_parts, "final_result_status_record")
+        final_result_subsurfaces.append(
+            make_subsurface(
+                "final_result_status_record",
+                status="STALE",
+                mapped_inputs=["final_result"],
+                why="final_result.status still uses a generic execution label or does not match the truthful proof contour for this run",
             )
         )
     if "diff_provenance" in missing_sections:
@@ -432,6 +445,36 @@ def build_artifact_quality_hints(state: dict) -> list[dict]:
                 why="diff provenance still cannot be reconstructed from the current final result artifact",
             )
         )
+    if "scope_alignment" in missing_sections:
+        add_unique(final_result_parts, "scope_alignment_record")
+        final_result_subsurfaces.append(
+            make_subsurface(
+                "scope_alignment_record",
+                status="STALE",
+                mapped_inputs=["final_result"],
+                why="the current proof still includes adjacent edits outside the requested additive scope",
+            )
+        )
+    if "presentation_alignment" in missing_sections:
+        add_unique(final_result_parts, "presentation_alignment_record")
+        final_result_subsurfaces.append(
+            make_subsurface(
+                "presentation_alignment_record",
+                status="STALE",
+                mapped_inputs=["final_result"],
+                why="the current proof adds extra emphasis styling to the new surface even though the task only asked for a plain additive change",
+            )
+        )
+    if "artifact_identity" in missing_sections:
+        add_unique(final_result_parts, "artifact_identity_record")
+        final_result_subsurfaces.append(
+            make_subsurface(
+                "artifact_identity_record",
+                status="STALE",
+                mapped_inputs=["final_result"],
+                why="artifact identity still cannot be reconstructed from the current run context or final result artifact",
+            )
+        )
     if "cleanup_status" in missing_sections:
         add_unique(final_result_parts, "cleanup_status_record")
         final_result_subsurfaces.append(
@@ -442,6 +485,55 @@ def build_artifact_quality_hints(state: dict) -> list[dict]:
                 why="cleanup status still cannot be trusted from the current final result artifact",
             )
         )
+    if (
+        not final_result_parts
+        and "PARTIAL_PROOF" in collect_active_pressures(state)
+        and state.get("proof_bundle", {}).get("missing_sections")
+    ):
+        final_result_status = state.get("proof_bundle", {}).get("final_result", {})
+        verification = state.get("proof_bundle", {}).get("verification_corroboration", {})
+        artifact_identity = state.get("proof_bundle", {}).get("artifact_identity", {})
+        cleanup_status = state.get("proof_bundle", {}).get("cleanup_status", {})
+        if isinstance(final_result_status, dict) and not final_result_status.get("semantically_sufficient", True):
+            add_unique(final_result_parts, "final_result_status_record")
+            final_result_subsurfaces.append(
+                make_subsurface(
+                    "final_result_status_record",
+                    status="STALE",
+                    mapped_inputs=["final_result"],
+                    why="final_result.status is still not trust-bearing even though supporting proof sections are also missing",
+                )
+            )
+        if isinstance(verification, dict) and not verification.get("semantically_sufficient", True):
+            add_unique(final_result_parts, "diff_provenance_record")
+            final_result_subsurfaces.append(
+                make_subsurface(
+                    "diff_provenance_record",
+                    status="STALE",
+                    mapped_inputs=["final_result"],
+                    why="runtime verification in the final result artifact is still too thin to waive fallback proof sections",
+                )
+            )
+        if isinstance(artifact_identity, dict) and not artifact_identity.get("semantically_sufficient", True):
+            add_unique(final_result_parts, "artifact_identity_record")
+            final_result_subsurfaces.append(
+                make_subsurface(
+                    "artifact_identity_record",
+                    status="STALE",
+                    mapped_inputs=["final_result"],
+                    why="artifact identity is still semantically incomplete while the bundle remains partial",
+                )
+            )
+        if isinstance(cleanup_status, dict) and not cleanup_status.get("semantically_sufficient", True):
+            add_unique(final_result_parts, "cleanup_status_record")
+            final_result_subsurfaces.append(
+                make_subsurface(
+                    "cleanup_status_record",
+                    status="STALE",
+                    mapped_inputs=["final_result"],
+                    why="cleanup truth is still semantically incomplete while the bundle remains partial",
+                )
+            )
     if final_result_parts:
         hints.append(
             make_hint(
@@ -638,6 +730,15 @@ def build_repair_policy(resumability: dict, artifact_quality_hints: list[dict]) 
             add_unique(step_inputs, input_id)
 
     ordered_ids = list(resumability["recommended_repair_order"])
+    stale_artifact_ids = {hint["artifact_id"] for hint in artifact_quality_hints}
+    if (
+        ordered_ids
+        and ordered_ids[0] == "complete_missing_proof_sections"
+        and "final_result_artifact" in stale_artifact_ids
+    ):
+        ordered_ids = ["repair_final_result_artifact"] + [
+            step_id for step_id in ordered_ids if step_id != "repair_final_result_artifact"
+        ]
     policy_type = "MULTI_STEP_REPAIR" if resumability["status"] == "REPAIRABLE" else "NON_RESUMABLE_NEXT_STEP"
     for index, step_id in enumerate(ordered_ids):
         if resumability["status"] == "REPAIRABLE":

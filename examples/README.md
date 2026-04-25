@@ -6,6 +6,10 @@ They are here to show how `Synrail` artifacts fit together without importing raw
 
 ## Included examples
 
+- `deploy_guard/`
+  - copyable guard-first deploy and restart patterns
+  - shows how to stop `rsync` / `ssh ... pm2 restart` on stale Synrail authorization
+  - includes `pm2` and `systemd`-shaped examples
 - `sanitized_narrow_incident_flow.md`
   - a compact example of a narrow production incident moving through:
     - bounded hypothesis intake
@@ -124,3 +128,4 @@ Examples in this directory should stay:
 - generic
 - sanitized
 - useful without outside conversation context
+- explicit about current support boundaries

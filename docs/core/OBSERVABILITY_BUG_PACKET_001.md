@@ -53,14 +53,14 @@ It reuses:
 
 Fixture:
 
-- [observability_bug_packet_run_002](/Users/usbdick/Documents/New%20project/synrail/fixtures/observability_bug_packet_run_002)
+- [observability_bug_packet_run_002](../../fixtures/observability_bug_packet_run_002)
 
 Key artifacts:
 
-- [bug_packet.json](/Users/usbdick/Documents/New%20project/synrail/fixtures/observability_bug_packet_run_002/bug_packet.json)
-- [github_issue.md](/Users/usbdick/Documents/New%20project/synrail/fixtures/observability_bug_packet_run_002/github_issue.md)
-- [observability.json](/Users/usbdick/Documents/New%20project/synrail/fixtures/observability_bug_packet_run_002/observability.json)
-- [repair_packet.json](/Users/usbdick/Documents/New%20project/synrail/fixtures/observability_bug_packet_run_002/repair_packet.json)
+- [bug_packet.json](../../fixtures/observability_bug_packet_run_002/bug_packet.json)
+- [github_issue.md](../../fixtures/observability_bug_packet_run_002/github_issue.md)
+- [observability.json](../../fixtures/observability_bug_packet_run_002/observability.json)
+- [repair_packet.json](../../fixtures/observability_bug_packet_run_002/repair_packet.json)
 
 Key results:
 

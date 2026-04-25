@@ -69,9 +69,10 @@ Truth-critical regression suite:
 
 - `tests/test_truth_regressions.py`
 
-Current outside-facing smoke:
+Current outside-facing smoke and claim validation:
 
 - `tests/test_alpha_test_pack_smoke.py`
+- `tests/test_claim_validation_pack.py`
 
 ## Best fixtures to inspect
 
@@ -112,6 +113,12 @@ Current tester-pack smoke:
 
 ```bash
 python3 -m unittest tests.test_alpha_test_pack_smoke -v
+```
+
+Current claim-validation pack:
+
+```bash
+python3 -m unittest tests.test_claim_validation_pack -v
 ```
 
 Validate one exported outward-facing contour:

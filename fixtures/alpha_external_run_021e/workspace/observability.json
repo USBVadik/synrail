@@ -1,0 +1,54 @@
+{
+  "schema_version": "observability_record_v0",
+  "run_id": "ALPHA_RUN_20260418T190925770719Z_c03bb2",
+  "task_class": "bounded_change",
+  "resulting_state": "CLOSURE_ACCEPTED",
+  "report_summary": {
+    "result": "OK",
+    "stopping_stage": "accepted",
+    "reason": "NONE",
+    "next_safe_step": "NONE"
+  },
+  "event_counts": {
+    "transition_count": 0,
+    "repair_attempt_count": 0,
+    "rejection_count": 0
+  },
+  "state_transition_log": [],
+  "repair_attempt_log": [],
+  "rejection_log": [],
+  "sanitized_session_export": {
+    "sensitive_values_redacted": true,
+    "run_id": "ALPHA_RUN_20260418T190925770719Z_c03bb2",
+    "task_class": "bounded_change",
+    "state": "CLOSURE_ACCEPTED",
+    "result": "OK",
+    "reason": "NONE",
+    "next_safe_step": "NONE",
+    "resumability_family": "NOT_RESUMABLE_TERMINAL_ACCEPTED",
+    "repair_current_step_id": "start_new_run",
+    "repair_last_result": "",
+    "entry_artifacts": [
+      "state_file",
+      "repair_packet"
+    ],
+    "source_of_truth_precedence": [
+      "state_file",
+      "repair_packet",
+      "repair_receipt",
+      "repair_history_chain"
+    ],
+    "packet_replay_ready": true,
+    "latest_repair_receipt_available": false,
+    "arbiter_resolution_status": "RESOLVED",
+    "arbiter_conflict_count": 0,
+    "arbiter_current_step_source": "repair_packet",
+    "artifact_files": [
+      "refresh.json",
+      "repair_packet.json",
+      "repair_receipt.json",
+      "report.json",
+      "state.json"
+    ]
+  }
+}

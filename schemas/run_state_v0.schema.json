@@ -16,7 +16,11 @@
     "proof_bundle",
     "closure",
     "recovery",
-    "next_safe_step"
+    "next_safe_step",
+    "start_timestamp_utc",
+    "closure_timestamp_utc",
+    "check_count",
+    "last_known_final_result_hash"
   ],
   "properties": {
     "schema_version": {
@@ -77,7 +81,8 @@
       "additionalProperties": false,
       "required": [
         "status",
-        "blocking_failure_classes"
+        "blocking_failure_classes",
+        "override_gates"
       ],
       "properties": {
         "status": {
@@ -89,6 +94,12 @@
           ]
         },
         "blocking_failure_classes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "override_gates": {
           "type": "array",
           "items": {
             "type": "string"
@@ -184,6 +195,9 @@
         },
         "semantic_next_safe_step": {
           "type": "string"
+        },
+        "artifact_integrity_warning": {
+          "type": "boolean"
         }
       }
     },
@@ -221,6 +235,12 @@
           "items": {
             "type": "string"
           }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -246,6 +266,19 @@
       }
     },
     "next_safe_step": {
+      "type": "string"
+    },
+    "start_timestamp_utc": {
+      "type": "string"
+    },
+    "closure_timestamp_utc": {
+      "type": "string"
+    },
+    "check_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "last_known_final_result_hash": {
       "type": "string"
     }
   }

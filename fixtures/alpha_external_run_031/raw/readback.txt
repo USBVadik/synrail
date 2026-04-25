@@ -1,0 +1,3 @@
+### READBACK: Add a one-line docstring to the main function in alpha.py.
+Changed surface: alpha.py
+Observed: The main function in alpha.py now contains a one-line docstring: """Main entrypoint for the Synrail CLI."""

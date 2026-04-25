@@ -5,6 +5,7 @@
   "scenario_class": "medium_risk_ambiguous_closure",
   "task_class": "medium_risk_ambiguous_fix",
   "path_id": "hybrid_subset",
+  "data_provenance": "curated_local_estimate",
   "closure_result": "CLAIMED_NOT_ACCEPTED",
   "blocker_to_closure_cycles": 3,
   "false_success_risk": "LOW",

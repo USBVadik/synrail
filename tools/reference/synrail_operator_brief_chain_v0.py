@@ -8,13 +8,10 @@ import json
 import sys
 from pathlib import Path
 
-
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
-
-
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
 
 
 def stage_id_for(path: Path, index: int) -> str:
@@ -64,6 +61,7 @@ def build_record(paths: list[Path]) -> dict:
                 "current_step_target_path": brief.get("current_step_target_path", ""),
                 "current_step_action_instruction": brief.get("current_step_action_instruction", ""),
                 "next_step_required_inputs": list(brief["next_step_required_inputs"]),
+                "reusable_proof_surfaces": list(brief.get("reusable_proof_surfaces", [])),
                 "termination_reason": brief["termination_reason"],
             }
         )

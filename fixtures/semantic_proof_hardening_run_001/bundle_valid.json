@@ -8,7 +8,7 @@
   "final_result": {
     "present": true,
     "parseable": true,
-    "status": "success"
+    "status": "PROVEN"
   },
   "modified_files": {
     "present": true,
@@ -23,13 +23,13 @@
   },
   "readback": {
     "present": true,
-    "path": "fixtures/semantic_proof_hardening_run_001/readback.txt",
+    "path": "/Users/usbdick/Documents/New project/synrail/fixtures/semantic_proof_hardening_run_001/readback.txt",
     "non_empty": true,
     "semantically_sufficient": true
   },
   "scenario_proof": {
     "present": true,
-    "path": "fixtures/semantic_proof_hardening_run_001/scenario.txt",
+    "path": "/Users/usbdick/Documents/New project/synrail/fixtures/semantic_proof_hardening_run_001/scenario.txt",
     "non_empty": true,
     "semantically_sufficient": true
   },
@@ -104,21 +104,21 @@
       "section": "diff_provenance",
       "evaluated": true,
       "semantically_sufficient": true,
-      "why": "diff or provenance evidence contains recognizable diff markers",
+      "why": "diff or provenance evidence contains a concrete patch for the named modified files",
       "recommended_action": "capture non-empty diff or provenance evidence for the changed files"
     },
     {
       "section": "readback",
       "evaluated": true,
       "semantically_sufficient": true,
-      "why": "readback evidence is substantive enough to indicate observed change truth",
+      "why": "readback evidence names the changed surface and records an observed property of it",
       "recommended_action": "record substantive readback from the changed sections on the attested surface"
     },
     {
       "section": "scenario_proof",
       "evaluated": true,
       "semantically_sufficient": true,
-      "why": "scenario-proof evidence names a concrete scenario outcome",
+      "why": "scenario-proof evidence records a concrete scenario context and outcome",
       "recommended_action": "record an explicit scenario-proof result for the attested target surface"
     },
     {
@@ -132,7 +132,7 @@
       "section": "cleanup_status",
       "evaluated": true,
       "semantically_sufficient": true,
-      "why": "cleanup status explicitly reports success",
+      "why": "cleanup status reports success with an explicit clean-surface summary",
       "recommended_action": "record a successful cleanup status for the execution surface"
     }
   ]

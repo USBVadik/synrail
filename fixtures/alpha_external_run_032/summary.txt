@@ -1,0 +1,22 @@
+Status: Workspace Not Trusted
+Do this now: Fix the issue shown below: confirm the workspace is clean for this run via --clean-surface on the next retry. Stay inside the current bounded repair step. Then rerun synrail check.
+What happened: Doctor blocked this run because the workspace or intended task target is not trustworthy.
+What it means: Move back to a clean in-scope workspace before continuing this run.
+What to do next: Move back to a clean or clearly verified-safe workspace before continuing.
+Repair target: confirm the workspace is clean for this run via --clean-surface on the next retry
+Next command: synrail check
+
+What to fix:
+Do this now: Confirm the workspace is clean for this run via --clean-surface on the next retry. Stay inside the current bounded repair step.
+What failed: the current workspace is not ready yet
+Repair task: restore a trustworthy workspace
+Allowed scope: the current workspace for this run
+Do not touch: Do not broaden scope beyond the current repair step., Do not modify accepted or terminal-state logic., Do not claim closure or acceptance unless the repaired run actually reaches it.
+Repair target: confirm the workspace is clean for this run via --clean-surface on the next retry
+Must pass:
+- Repair only this task: restore a trustworthy workspace
+- Keep this repair on the same run and task.
+- Do not rewrite previous repair progress.
+- Provide required input: confirmation that the workspace is clean and safe to use (`--clean-surface` on the next retry)
+- Keep the next safe step aligned with: move back to a clean or clearly verified-safe workspace
+After this repair, run: synrail check

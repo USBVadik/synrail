@@ -1,0 +1,5 @@
+### SCENARIO PROOF: Add a one-line docstring to the main function in alpha.py.
+Scenario: Verify the docstring exists in the main function of alpha.py
+Command: grep '"""Entry point for the Synrail CLI."""' alpha.py
+Observed:     """Entry point for the Synrail CLI."""
+Status: PASSED

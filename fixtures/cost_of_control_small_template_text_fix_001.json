@@ -1,0 +1,167 @@
+{
+  "schema_version": "cost_of_control_record_v0",
+  "scenario_count": 5,
+  "source_records": [
+    {
+      "path": "fixtures/small_template_text_fix_benchmark_pack_001.json#EVERYDAY_LOCAL_005",
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "scenario_class": "small_template_text_fix_repeatable",
+      "verdict": "SYNRAIL_BETTER"
+    },
+    {
+      "path": "fixtures/small_template_text_fix_benchmark_pack_001.json#EVERYDAY_LOCAL_006",
+      "scenario_id": "EVERYDAY_LOCAL_006",
+      "scenario_class": "small_template_text_fix_repeatable",
+      "verdict": "SYNRAIL_BETTER"
+    },
+    {
+      "path": "fixtures/small_template_text_fix_benchmark_pack_001.json#EVERYDAY_LOCAL_007",
+      "scenario_id": "EVERYDAY_LOCAL_007",
+      "scenario_class": "small_template_text_fix_repeatable",
+      "verdict": "SYNRAIL_BETTER"
+    },
+    {
+      "path": "fixtures/small_template_text_fix_benchmark_pack_001.json#EVERYDAY_LOCAL_009",
+      "scenario_id": "EVERYDAY_LOCAL_009",
+      "scenario_class": "small_template_text_fix_repeatable",
+      "verdict": "SYNRAIL_BETTER"
+    },
+    {
+      "path": "fixtures/small_template_text_fix_benchmark_pack_001.json#EVERYDAY_LOCAL_010",
+      "scenario_id": "EVERYDAY_LOCAL_010",
+      "scenario_class": "small_template_text_fix_repeatable",
+      "verdict": "SYNRAIL_BETTER"
+    }
+  ],
+  "provenance_mix": [
+    "curated_local_estimate"
+  ],
+  "verdict_counts": {
+    "SYNRAIL_BETTER": 5,
+    "BASELINE_GOOD_ENOUGH": 0,
+    "UNCLEAR": 0
+  },
+  "aggregate_deltas": {
+    "avg_operator_minutes_added": 1,
+    "avg_intervention_count_added": 0,
+    "avg_repair_cycles_added": 0,
+    "avg_invalidation_count_added": 0,
+    "avg_closure_latency_minutes_added": 1,
+    "avg_checks_per_accepted_closure_added": 0,
+    "avg_false_green_exposure_reduced": 1,
+    "avg_artifact_completeness_percent_gain": 32,
+    "avg_mandatory_mental_steps_added": 1,
+    "avg_trust_bearing_artifacts_added": 0,
+    "avg_required_visible_surfaces_added": 0,
+    "avg_skippable_visible_surfaces_added": 0,
+    "avg_operator_visible_actions_added": 0,
+    "avg_got_lost_moments_added": 0,
+    "avg_kernel_control_mass_added": 1,
+    "avg_behavioral_control_tax_added": 0,
+    "avg_fixed_control_mass_added": 1,
+    "avg_total_control_burden_added": 1
+  },
+  "hotspots": {
+    "highest_operator_minutes_added": {
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "path": "governed_final_result_first",
+      "value": 1
+    },
+    "highest_closure_latency_minutes_added": {
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "path": "governed_final_result_first",
+      "value": 1
+    },
+    "highest_checks_per_accepted_closure_added": {
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "path": "governed_final_result_first",
+      "value": 0
+    },
+    "highest_false_green_exposure_reduced": {
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "path": "governed_final_result_first",
+      "value": 1
+    },
+    "highest_artifact_completeness_percent_gain": {
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "path": "governed_final_result_first",
+      "value": 35
+    },
+    "highest_operator_visible_actions_added": {
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "path": "governed_final_result_first",
+      "value": 0
+    },
+    "highest_got_lost_moments_added": {
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "path": "governed_final_result_first",
+      "value": 0
+    },
+    "highest_kernel_control_mass_added": {
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "path": "governed_final_result_first",
+      "value": 1
+    },
+    "highest_behavioral_control_tax_added": {
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "path": "governed_final_result_first",
+      "value": 0
+    },
+    "highest_fixed_control_mass_added": {
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "path": "governed_final_result_first",
+      "value": 1
+    },
+    "highest_total_control_burden_added": {
+      "scenario_id": "EVERYDAY_LOCAL_005",
+      "path": "governed_final_result_first",
+      "value": 1
+    }
+  },
+  "path_buckets": {
+    "justified_cost_paths": [
+      "EVERYDAY_LOCAL_005",
+      "EVERYDAY_LOCAL_006",
+      "EVERYDAY_LOCAL_007",
+      "EVERYDAY_LOCAL_009",
+      "EVERYDAY_LOCAL_010"
+    ],
+    "baseline_sufficient_paths": [],
+    "under_proven_paths": []
+  },
+  "reading": {
+    "strongest_justified_path": "EVERYDAY_LOCAL_005",
+    "clearest_overhead_path": "",
+    "everyday_status": "UNKNOWN",
+    "hybrid_status": "UNKNOWN",
+    "compound_status": "UNKNOWN",
+    "primary_scenario_class": "small_template_text_fix_repeatable",
+    "primary_scenario_class_status": "SYNRAIL_BETTER",
+    "focus_task_class": "small_template_text_fix",
+    "focus_task_class_record_count": 5,
+    "focus_task_class_verdict": "SYNRAIL_BETTER",
+    "focus_task_class_stability": "LOW_VARIANCE_REPEATABLE",
+    "focus_task_class_median_operator_minutes_added": 1,
+    "focus_task_class_median_closure_latency_minutes_added": 1,
+    "focus_task_class_median_checks_per_accepted_closure_added": 0,
+    "focus_task_class_median_operator_visible_actions_added": 0,
+    "focus_task_class_median_got_lost_moments_added": 0,
+    "focus_task_class_median_fixed_control_mass_added": 1,
+    "focus_task_class_median_behavioral_control_tax_added": 0,
+    "focus_task_class_median_total_control_burden_added": 1,
+    "focus_task_class_spread_operator_minutes_added": 0,
+    "focus_task_class_spread_closure_latency_minutes_added": 0,
+    "focus_task_class_spread_checks_per_accepted_closure_added": 0,
+    "focus_task_class_spread_operator_visible_actions_added": 0,
+    "focus_task_class_spread_got_lost_moments_added": 0,
+    "focus_task_class_spread_fixed_control_mass_added": 0,
+    "focus_task_class_spread_behavioral_control_tax_added": 0,
+    "focus_task_class_spread_total_control_burden_added": 0,
+    "focus_task_class_priority_one_status": "FOCUSED_CLASS_CHEAP_ENOUGH",
+    "focus_task_class_priority_one_barrier": "",
+    "focus_task_class_kernel_cheapness_status": "FOCUSED_CLASS_KERNEL_CHEAP_ENOUGH",
+    "focus_task_class_kernel_cheapness_barrier": "",
+    "focus_task_class_behavior_cheapness_status": "FOCUSED_CLASS_BEHAVIOR_CHEAP_BY_DEFAULT",
+    "focus_task_class_behavior_cheapness_barrier": ""
+  }
+}

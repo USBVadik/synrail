@@ -6,6 +6,7 @@ Current support boundary:
 
 - supported: one local trusted worktree on the same machine where the agent acts
 - not yet supported: remote host / ops / production-target execution as a first-class alpha lane
+- supported integration pattern: external deploy or restart scripts may enforce `synrail deploy` plus guard-first side effects after a local accepted run
 
 It is intentionally one contour, not a broad product shell:
 
@@ -34,22 +35,17 @@ synrail telemetry export --artifact-root "$ARTIFACT_ROOT"
 
 That replay stays bounded to command sequence, error class, and next safe step.
 
+If you need a bounded deploy or restart integration after local acceptance, use the pattern in [DEPLOY_GUARD_INTEGRATION_001.md](./DEPLOY_GUARD_INTEGRATION_001.md).
+
 ## Verified Install Path
 
 The currently verified alpha install path is:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install .
+python3 tools/reference/synrail_install_v0.py --venv .venv
 ```
 
-This is now the trusted tester path on the current toolchain.
-
-If you are iterating on Synrail itself rather than just running the alpha lane, editable install is also supported:
-
-```bash
-.venv/bin/python -m pip install -e .
-```
+This is now the trusted tester path on the current toolchain. It links the repo into a local venv without depending on setuptools or network access.
 
 The reference smoke for this document was run through the installed `synrail` console script, not by calling helper files directly.
 
@@ -69,7 +65,8 @@ This is the currently verified restore-capable alpha lane:
 synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Preserve one verified fallback before a bounded change."
 # once this root reflects one verified working state:
 synrail save --artifact-root "$ARTIFACT_ROOT"
-# synrail start already creates starter proof files under $ARTIFACT_ROOT; edit them in place, then:
+# synrail start already creates final_result.json under $ARTIFACT_ROOT; verify locally, strengthen it first,
+# and leave fallback prose surfaces untouched unless synrail check later names them, then:
 synrail check --artifact-root "$ARTIFACT_ROOT"
 # after applying only that bounded repair:
 synrail retry --artifact-root "$ARTIFACT_ROOT"
@@ -85,8 +82,9 @@ On a fresh controlled start, `Synrail` can still give bounded value immediately:
 
 ```bash
 synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
-# synrail start already creates starter proof files under the artifact root; edit them in place, then:
+# synrail start already creates .synrail/final_result.json on the default path; strengthen it first, then:
 synrail check --artifact-root "$ARTIFACT_ROOT"
+# optional standalone bounded prompt after a non-green check:
 synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 ```
 
@@ -100,10 +98,11 @@ On the current onboarding smoke in [`fixtures/alpha_onboarding_run_007/`](../../
 
 On the current canonical first-run pack contour in [`fixtures/alpha_test_pack_run_004/`](../../fixtures/alpha_test_pack_run_004/):
 
-- `start` opens with one explicit `Do this now` instruction on the starter proof files
+- `start` opens with one explicit `Do this now` instruction to verify locally and strengthen `final_result.json` first
 - `check` blocks the plain-text false-success contour as `PROOF_INVALID`
-- `check` now leads with one explicit bounded action instead of only a diagnosis
-- `repair-step` produces one bounded next-agent instruction without asking the operator to reconstruct packet internals by hand
+- `check` now leads with one explicit bounded action and repair target instead of only a diagnosis
+- the default non-green path now stays on `synrail check` for the first bounded fix
+- `repair-step`, when requested, produces one bounded next-agent instruction without asking the operator to reconstruct packet internals by hand
 - `operator render` keeps that same `Do this now` instruction readable for a second operator
 - `telemetry export` now rides the same contour without leaking tmp or author-local paths
 

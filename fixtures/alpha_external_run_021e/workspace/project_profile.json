@@ -1,0 +1,41 @@
+{
+  "schema_version": "alpha_project_profile_v0",
+  "project_root": "/root/synrail_021e_checkout/workspace",
+  "project_type": "python",
+  "prefers_runtime_evidence": false,
+  "task_class": "bounded_change",
+  "target_path": "/root/synrail_021e_checkout/workspace",
+  "target_classification": "trusted_worktree",
+  "intended_run_class": "core_probe",
+  "baseline_identity": "autodetected_python_baseline",
+  "execution_surface_identity": "autodetected_python_worktree",
+  "artifact_path": "/root/synrail_021e_checkout/workspace/.synrail/final_result.json",
+  "final_result_candidates": [
+    "/root/synrail_021e_checkout/workspace/.synrail/final_result.json",
+    "/root/synrail_021e_checkout/workspace/.synrail/final_result.txt",
+    "/root/synrail_021e_checkout/workspace/.synrail/result.json",
+    "/root/synrail_021e_checkout/workspace/.synrail/result.txt",
+    "/root/synrail_021e_checkout/workspace/final_result.json",
+    "/root/synrail_021e_checkout/workspace/final_result.txt",
+    "/root/synrail_021e_checkout/workspace/result.json",
+    "/root/synrail_021e_checkout/workspace/result.txt"
+  ],
+  "readback_candidates": [
+    "/root/synrail_021e_checkout/workspace/.synrail/readback.json",
+    "/root/synrail_021e_checkout/workspace/.synrail/readback.txt",
+    "/root/synrail_021e_checkout/workspace/readback.json",
+    "/root/synrail_021e_checkout/workspace/readback.txt"
+  ],
+  "scenario_proof_candidates": [
+    "/root/synrail_021e_checkout/workspace/.synrail/scenario_proof.json",
+    "/root/synrail_021e_checkout/workspace/.synrail/scenario_proof.md",
+    "/root/synrail_021e_checkout/workspace/.synrail/scenario_proof.txt",
+    "/root/synrail_021e_checkout/workspace/scenario_proof.json",
+    "/root/synrail_021e_checkout/workspace/scenario_proof.md",
+    "/root/synrail_021e_checkout/workspace/scenario_proof.txt"
+  ],
+  "workspace_git_mode": "workspace_git_root",
+  "workspace_git_root": "/root/synrail_021e_checkout/workspace",
+  "parent_git_root": "",
+  "workspace_isolation_note": ""
+}

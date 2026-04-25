@@ -1,0 +1,61 @@
+{
+  "schema_version": "checkpoint_record_v0",
+  "checkpoint_id": "working",
+  "run_id": "ALPHA_RUN_20260418T130455163809Z_910c31",
+  "task_class": "bounded_change",
+  "event_type": "RESTORE_ROLLBACK",
+  "result": "BLOCKED",
+  "checkpoint_root": "/root/alpha_external_run_014d/workspace/.synrail/checkpoints/working",
+  "source_state": "INITIALIZED",
+  "source_closure_status": "OPEN",
+  "source_doctor_status": "UNKNOWN",
+  "source_target_surface_status": "UNKNOWN",
+  "source_integrity_status": "UNKNOWN",
+  "source_resumability_status": "NOT_RESUMABLE",
+  "source_resumability_family": "NOT_RESUMABLE_FRESH_ORCHESTRATION",
+  "safe_point_class": "PRE_RUN_SNAPSHOT",
+  "safe_point_eligible": true,
+  "artifact_manifest": [
+    {
+      "artifact_id": "state",
+      "path": "artifacts/state.json",
+      "required": true,
+      "kind": "STATE"
+    }
+  ],
+  "verification": {
+    "status": "PASSED",
+    "safe_point_eligible": true,
+    "required_artifacts_present": true,
+    "schema_validation_passed": true,
+    "state_consistency_passed": true,
+    "stale_artifacts_detected": [],
+    "failure_reasons": []
+  },
+  "restore": {
+    "status": "RESTORE_FAILED",
+    "target_root": "/root/alpha_external_run_014d/workspace/.synrail",
+    "restore_verification_required": true,
+    "restored_artifact_ids": [
+      "state"
+    ],
+    "failure_reasons": [
+      "workspace restore failed: project is not a git repository or has no commits"
+    ],
+    "workspace_restored": false
+  },
+  "rollback": {
+    "status": "ROLLED_BACK",
+    "trigger": "RESTORE_VERIFICATION_FAILED",
+    "rolled_back_artifact_ids": [
+      "state"
+    ],
+    "failure_reasons": []
+  },
+  "next_safe_step": "inspect restore verification failure before attempting another restore",
+  "workspace_snapshot": {
+    "type": "none",
+    "project_root": "/root/alpha_external_run_014d/workspace",
+    "reason": "project is not a git repository or has no commits"
+  }
+}

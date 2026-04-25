@@ -8,13 +8,24 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
 
-
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+def expected_final_result_guardrails(prompt_bridge: dict) -> list[tuple[str, str]]:
+    current_step_target_path = prompt_bridge.get("current_step_target_path", "")
+    if not current_step_target_path.endswith("final_result.json"):
+        return []
+    markers = [
+        ("final_result_first_fallback_guardrail", "Do not touch fallback proof surfaces like"),
+    ]
+    if prompt_bridge.get("current_step_subsurface_id", "") != "cleanup_status_record":
+        markers.append(
+            ("cleanup_status_guardrail", "Do not add cleanup_status unless Synrail explicitly names cleanup_status as the blocker for this step.")
+        )
+    return markers
 
 
 def build_record(*, repair_packet: dict, prompt_bridge: dict, thin_output: dict | None = None) -> dict:
@@ -42,6 +53,12 @@ def build_record(*, repair_packet: dict, prompt_bridge: dict, thin_output: dict 
         missing_markers.append("prompt_mentions_current_step")
     if "Do not touch unrelated files, state transitions, or acceptance logic." not in prompt_text:
         missing_markers.append("forbidden_scope_guardrail")
+    must_pass = list(prompt_bridge.get("must_pass", []))
+    for marker_id, marker_text in expected_final_result_guardrails(prompt_bridge):
+        if not any(marker_text in item for item in must_pass):
+            missing_markers.append(marker_id)
+        if marker_text not in prompt_text:
+            missing_markers.append(f"prompt_mentions_{marker_id}")
     if thin_output and thin_output.get("next_step", ""):
         next_safe_step_label = prompt_bridge.get("next_safe_step_label", "")
         if thin_output["next_step"] not in prompt_text and next_safe_step_label not in prompt_text:

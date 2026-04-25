@@ -15,18 +15,29 @@ Main file:
 - `alpha.py`
 - `tools/reference/synrail_cli_v0.py`
 
-Current user-facing commands include:
+Current primary user-facing commands include:
 
-- `init`
+- `synrail`
+- `start`
 - `check`
+- `status`
+- `explain-proof`
+- `save`
+- `restore --preview`
+- `restore`
+
+Current helper, compatibility, or advanced surfaces still include:
+
 - `repair-step`
 - `retry`
-- `save`
-- `restore`
 - `confirm-restore`
 - `telemetry export`
 - `bug-packet`
 - `session-export`
+
+The default `synrail --help` keeps helper and dev surfaces out of the first operator view even though those compatibility paths still exist underneath.
+
+Repo-native agent policy files also stay portable-first now: committed workflow examples use `synrail`, while any exact machine-local binary is surfaced only as a fallback note for that checkout.
 
 ### 2. Runtime spine
 
@@ -136,8 +147,9 @@ It can perform:
 4. spine orchestration
 5. bundle evaluation
 6. closure evaluation
-7. thin output rendering
-8. compact bounded repair summary when non-green
+7. refresh invalidation and recovery reconciliation when refresh input is present
+8. thin output rendering, including stale-obligation guidance when refresh invalidation matches the active run
+9. compact bounded repair summary when non-green
 
 Main outputs under the artifact root typically include:
 
@@ -146,6 +158,7 @@ Main outputs under the artifact root typically include:
 - `doctor.json`
 - `bundle.json`
 - `closure.json`
+- `refresh.json`
 - `thin_output.json`
 - `prompt.json` when repair-step materializes a bounded instruction
 - `repair_packet.json`
@@ -155,13 +168,13 @@ Main outputs under the artifact root typically include:
 
 `repair-step` reads the current repair packet and renders a bounded next-agent instruction.
 
-This is not a general orchestration planner.
+This is not a general orchestration planner or the preferred first-run command.
 
 It is a constrained bridge from current non-green truth to one next attempt.
 
 ### Retry
 
-`retry` is the preferred human-facing alias for continuation on a repairable contour.
+`retry` is a compatibility alias for continuation on a repairable contour.
 
 It still goes through the same kernel continuation logic.
 
@@ -169,9 +182,21 @@ It still goes through the same kernel continuation logic.
 
 `save` creates and confirms a restore point.
 
+`restore --preview` shows whether the current restore contour is full, limited, or unsupported before mutating the workspace.
+
 `restore` rehydrates it.
 
 `confirm-restore` explicitly re-checks it.
+
+The current local matrix is intentionally narrow but explicit:
+
+- clean git workspace
+- dirty tracked git workspace
+- dirty untracked git workspace via file-copy fallback
+- mixed tracked + untracked git workspace via file-copy fallback
+- git workspace without a committed HEAD via file-copy fallback
+- non-git file-copy restore
+- unsupported contours that fail early and honestly
 
 ### Telemetry export / bug packet
 
@@ -310,13 +335,30 @@ Covers:
 File:
 
 - `tests/test_alpha_test_pack_smoke.py`
+- `tests/test_claim_validation_pack.py`
 
-Covers current outside-facing first-run contour:
+Covers the current outside-facing first-run contour plus bounded helper and review surfaces:
 
-- `init`
+- `start`
 - `check`
 - `repair-step`
 - `telemetry export`
+- `bug-packet`
+
+The companion claim-validation pack now also checks that:
+
+- the canonical alpha second-operator contour remains followable without author intuition
+- one uglier repeated-doctor continuation contour remains followable even when the loop has already hit its bounded stop condition
+- one non-resumable fresh-orchestration contour remains followable without inviting a false resume path
+- the current evidence-ownership split excludes harness-only runs from kernel roadmap decisions
+- only explicitly strong mixed reports are allowed to count as kernel roadmap evidence with caution
+- roadmap moves should now be gated on the classified evidence set, not justified from a single noisy report in isolation
+
+Fresh unseen validation now also lives beside those pack checks:
+
+- measured strict proof lanes must still accept concrete terse evidence on new task shapes
+- measured strict proof lanes must still reject narrative-only readback and scenario assertions on new task shapes
+- unknown task classes must not inherit strict hostile proof guards automatically
 
 ## Current external review contour
 

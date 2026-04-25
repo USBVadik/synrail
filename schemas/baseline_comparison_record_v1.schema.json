@@ -11,6 +11,8 @@
     "task_class",
     "baseline_path",
     "synrail_path",
+    "baseline_data_provenance",
+    "synrail_data_provenance",
     "baseline",
     "synrail",
     "economics_summary",
@@ -38,6 +40,14 @@
     "synrail_path": {
       "type": "string"
     },
+    "baseline_data_provenance": {
+      "type": "string",
+      "enum": ["curated_local_estimate", "pressure_synthetic", "external_empirical"]
+    },
+    "synrail_data_provenance": {
+      "type": "string",
+      "enum": ["curated_local_estimate", "pressure_synthetic", "external_empirical"]
+    },
     "baseline": {
       "type": "object"
     },
@@ -54,8 +64,19 @@
         "invalidation_count_added",
         "closure_latency_minutes_added",
         "blocker_to_closure_cycles_added",
+        "checks_per_accepted_closure_added",
         "false_green_exposure_reduced",
-        "artifact_completeness_percent_gain"
+        "artifact_completeness_percent_gain",
+        "mandatory_mental_steps_added",
+        "trust_bearing_artifacts_added",
+        "required_visible_surfaces_added",
+        "skippable_visible_surfaces_added",
+        "operator_visible_actions_added",
+        "got_lost_moments_added",
+        "kernel_control_mass_added",
+        "behavioral_control_tax_added",
+        "fixed_control_mass_added",
+        "total_control_burden_added"
       ],
       "properties": {
         "operator_minutes_added": {
@@ -76,10 +97,43 @@
         "blocker_to_closure_cycles_added": {
           "type": "integer"
         },
+        "checks_per_accepted_closure_added": {
+          "type": "integer"
+        },
         "false_green_exposure_reduced": {
           "type": "integer"
         },
         "artifact_completeness_percent_gain": {
+          "type": "integer"
+        },
+        "mandatory_mental_steps_added": {
+          "type": "integer"
+        },
+        "trust_bearing_artifacts_added": {
+          "type": "integer"
+        },
+        "required_visible_surfaces_added": {
+          "type": "integer"
+        },
+        "skippable_visible_surfaces_added": {
+          "type": "integer"
+        },
+        "operator_visible_actions_added": {
+          "type": "integer"
+        },
+        "got_lost_moments_added": {
+          "type": "integer"
+        },
+        "kernel_control_mass_added": {
+          "type": "integer"
+        },
+        "behavioral_control_tax_added": {
+          "type": "integer"
+        },
+        "fixed_control_mass_added": {
+          "type": "integer"
+        },
+        "total_control_burden_added": {
           "type": "integer"
         }
       }

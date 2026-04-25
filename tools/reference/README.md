@@ -12,7 +12,8 @@ For the quickest helper-selection view, start with:
 
 For the current installable alpha path, start with:
 
-- [`docs/core/ALPHA_LANE_001.md`](/Users/usbdick/Documents/New%20project/synrail/docs/core/ALPHA_LANE_001.md)
+- [`docs/core/ALPHA_LANE_001.md`](../../docs/core/ALPHA_LANE_001.md)
+- [`docs/core/DEPLOY_GUARD_INTEGRATION_001.md`](../../docs/core/DEPLOY_GUARD_INTEGRATION_001.md)
 
 ## What these helpers are for
 
@@ -36,56 +37,70 @@ Current alpha support boundary:
 
 - supported: one local trusted worktree on the same machine where the agent acts
 - not yet supported: remote host / ops / production-target execution as a first-class alpha lane
+- supported integration pattern: external deploy and restart scripts can reuse the local deploy guard after an accepted run
 
 The current verified local install path is:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install .
+python3 tools/reference/synrail_install_v0.py --venv .venv
 ```
+
+If you want local coding agents to discover Synrail in the current repo without per-task prompt instructions, bootstrap the repo-native hints in one step:
+
+```bash
+python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd)"
+```
+
+If `AGENTS.md` or `GEMINI.md` already exists, Synrail appends one managed block instead of failing or overwriting the rest of the file. If you explicitly use `--force`, Synrail creates a timestamped `.synrail.bak.*` backup before replacing the file. If Synrail is already installed and on `PATH`, you can still run `synrail install-agent-files --project-root "$(pwd)"` directly. Once installed in a repo, the default first command is just `synrail`, which opens the local dashboard and tells the operator whether a controlled run is already active. Generated agent policy now keeps committed commands repo-portable and only surfaces an exact local binary as a fallback note for that machine when needed.
+
+That same first step applies to project-orientation prompts such as "what is this repo?" or "where did we leave off?": start with `synrail`, stay read-only, and summarize the governed state before broader filesystem archaeology.
 
 The current verified restore-capable alpha lane is:
 
 ```bash
-ARTIFACT_ROOT="$(pwd)/.synrail"
-synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Preserve one verified fallback before a bounded change."
-# once this root reflects one verified working state:
-synrail save --artifact-root "$ARTIFACT_ROOT"
-# synrail start already creates starter proof files under $ARTIFACT_ROOT; edit them in place, then:
-synrail check --artifact-root "$ARTIFACT_ROOT"
-# after applying only that bounded repair:
-synrail retry --artifact-root "$ARTIFACT_ROOT"
-synrail restore --artifact-root "$ARTIFACT_ROOT"
-synrail session-export --artifact-root "$ARTIFACT_ROOT"
+synrail
+synrail start "Preserve one verified fallback before a bounded change."
+synrail save
+# make the bounded change, run local verification, then strengthen final_result.json first
+# leave readback/scenario_proof untouched unless synrail check later names them
+synrail check
+# if non-green, fix only what check names, then rerun synrail check
+synrail restore --preview
+synrail restore
+synrail session-export --artifact-root .synrail
 ```
 
 The current fresh first-run contour is smaller:
 
 ```bash
-ARTIFACT_ROOT="$(pwd)/.synrail"
-synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$(pwd)" --task-identity "Reject a plain-text final result and keep the repair bounded."
-# synrail start already creates starter proof files under $ARTIFACT_ROOT; edit them in place, then:
-synrail check --artifact-root "$ARTIFACT_ROOT"
-synrail repair-step --artifact-root "$ARTIFACT_ROOT"
-synrail bug-packet --artifact-root "$ARTIFACT_ROOT"
+synrail
+synrail start "Reject a plain-text final result and keep the repair bounded."
+# make the bounded change, run local verification, then strengthen final_result.json first
+# leave readback/scenario_proof untouched unless synrail check later names them
+synrail check
+# if non-green, fix what check says, then rerun synrail check
 ```
+
+In that normal `synrail check` path, the operator should focus on `final_result.json`: status, changed files, and diff/provenance first. Run identity and doctor-ready cleanup truth can now be carried from the current controlled context instead of being recopied by hand into `final_result.json` on every small task. Only reach for `readback.txt` or `scenario_proof.txt` after `check` explicitly targets them.
 
 This shell is intentionally thin:
 
+- the default `synrail --help` keeps the primary shell small and leaves helper/dev surfaces out of the first operator view
 - it auto-discovers the standard artifact files under one artifact root
 - it auto-detects one sane project profile for the current project root
 - it defaults the alpha restore-point checkpoint id to `working`
 - it exposes `synrail save` as a thin human-facing action that saves and confirms the default working restore point
 - it exposes `synrail confirm-restore` as the preferred human-facing alias for explicit restore-point confirmation
-- it exposes `synrail repair-step` as the preferred human-facing alias for the existing prompt bridge
-- it exposes `synrail retry` as the preferred human-facing alias for the existing `resume` path
+- it exposes `synrail restore --preview` as the preferred dry-run before a live restore on a workspace
+- it keeps `synrail repair-step` as a helper bridge for bounded prompt materialization, not as the primary first-run loop
+- it keeps `synrail retry` as a compatibility alias for the existing `resume` path, not as the preferred first-run command
 - it exposes `synrail session-export` as the preferred packet-first export for second-operator replay and issue handoff
 - it exposes `synrail bug-packet` as one compact failure export for issue filing and runtime debugging
 - it keeps `synrail continue` as a compatibility alias for the same path
 - it keeps the existing dev/runtime helpers underneath
 - it does not introduce a new runtime semantics branch
 
-The older `--system-site-packages` plus `--no-build-isolation` route still works as a compatibility fallback for restricted environments, but the plain `pip install .` path is now the verified alpha path.
+The older `--system-site-packages` plus `--no-build-isolation` route still works as a compatibility fallback for restricted environments, but the installer script above is now the verified alpha path.
 
 Optional alpha telemetry now sits on the same artifact root:
 
@@ -185,6 +200,46 @@ Does not guarantee:
 - good diagnosis
 - good patches
 - closure on its own
+
+### `synrail_deploy_guard.sh`
+
+Purpose:
+
+- block deploy or restart side effects unless the current accepted run still matches the deploy receipt and target identity
+
+Useful when:
+
+- a shell script wants to run `rsync`, `scp`, `pm2 restart`, or `systemctl restart`
+
+Guarantees:
+
+- refuses side effects on stale run ids
+- refuses side effects after current state regresses
+- refuses side effects on stale or missing target identity
+
+Does not guarantee:
+
+- first-class remote lane support
+- remote proof capture
+- remote restore truth
+
+### `synrail_guarded_side_effect_v0.sh`
+
+Purpose:
+
+- wrap one side effect so the deploy guard is always checked first
+
+Useful when:
+
+- you want one reusable shell-level guard around a deploy or restart command
+
+Guarantees:
+
+- runs the wrapped command only after deploy authorization still holds
+
+Does not guarantee:
+
+- that the wrapped command itself is correct
 
 ### `synrail_spine_v0.py`
 

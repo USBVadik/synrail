@@ -38,38 +38,128 @@ def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
-def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity: str) -> dict[str, str]:
+def project_prefers_runtime_evidence(project_root: Path | None) -> bool:
+    if not project_root:
+        return False
+    root = project_root.resolve()
+    direct_markers = ["templates", "static", "public", "pages"]
+    if any((root / marker).exists() for marker in direct_markers):
+        return True
+    for child in root.iterdir():
+        if child.is_dir() and any((child / marker).exists() for marker in direct_markers):
+            return True
+    return any(root.glob("*.html"))
+
+
+def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity: str, project_root: Path | None = None) -> dict[str, str]:
     final_result = json.dumps(
         {
             "request_id": run_id,
             "task_class": task_class,
             "status": "PENDING_PROOF",
+            "change_disposition": "modified",
             "summary": "Replace this starter payload with the actual bounded result for this run.",
             "modified_files": [],
             "git_diff": "",
-            "cleanup_status": {
-                "success": False,
-                "summary": "Replace this starter payload with the actual cleanup result for this run.",
+            "diff_provenance": {
+                "method": "direct_file_observation",
+                "changed_file": "path/to/changed_file.ext",
+                "added_line": "For a real edit, copy one exact added or changed line from the file here.",
+                "removed_line": "If the edit removed or replaced a line, copy the removed line here.",
+                "observed_line": "For ALREADY_SATISFIED, copy the exact existing line here instead of inventing a patch.",
+                "context_before": "Copy one stable line immediately before the changed or observed line.",
+                "context_after": "Copy one stable line immediately after the changed or observed line.",
+                "verification_command": "grep -n 'needle' path/to/changed_file.ext",
+                "verification_result": "12:stable neighbor line\n13:exact changed or observed line",
+                "provenance_note": "Use this direct observation record when git_diff is unavailable or when you need a truthful already_satisfied attestation.",
+            },
+            "artifact_identity": {
+                "baseline_identity": "",
+                "execution_surface_identity": "",
+                "prompt_identity": "",
+                "task_identity": task_identity.strip(),
             },
             "_synrail": {
                 "starter_surface": True,
                 "edit_in_place": True,
                 "task_identity": task_identity.strip(),
+                "starter_guidance": {
+                    "required_fields": [
+                        "status",
+                        "change_disposition",
+                        "summary",
+                        "modified_files",
+                        "git_diff",
+                        "diff_provenance.method",
+                        "diff_provenance.changed_file",
+                        "diff_provenance.verification_result",
+                        "diff_provenance.verification_command",
+                    ],
+                    "status_hint": "use PROVEN for an evidenced edit, or ALREADY_SATISFIED when the requested state was already present before any edit",
+                    "auto_carried_fields": [
+                        "artifact_identity",
+                        "cleanup_status",
+                    ],
+                    "git_diff_must_include": [
+                        "diff --git",
+                        "---",
+                        "+++",
+                        "@@",
+                        "named changed files",
+                    ],
+                    "cleanup_summary_hint": "workspace clean after updating only path/to/changed_file.ext with no unintended changes",
+                    "helper_commands": [
+                        "synrail final-result-template",
+                    ],
+                    "direct_observation_minimum": [
+                        "diff_provenance.changed_file",
+                        "diff_provenance.added_line or diff_provenance.removed_line",
+                        "diff_provenance.context_before or diff_provenance.context_after",
+                        "diff_provenance.verification_command",
+                        "diff_provenance.verification_result",
+                    ],
+                    "scope_hint": "Keep the implementation inside the requested scope. Do not also tweak adjacent spacing, classes, or layout unless the task explicitly asked for it.",
+                    "presentation_hint": "If the task only asked for a simple added subtitle or label, keep the new line plain unless the task explicitly asked for emphasis.",
+                    "diff_provenance_hint": "if git_diff is unavailable, use diff_provenance with changed_file, one exact added_line or removed_line, one stable context_before or context_after line, verification_command, and verification_result. If the requested state was already present before edits, keep git_diff empty and use observed_line plus provenance_note instead of inventing a patch",
+                    "artifact_identity_hint": "during a normal synrail check, run identity is carried automatically; only fill artifact_identity manually for standalone bundle-check",
+                    "cleanup_hint": "during a normal synrail check, leave cleanup_status absent unless Synrail later asks for explicit cleanup attestation",
+                    "no_op_hint": "If the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and attest the observed line truthfully through diff_provenance.",
+                    "explanatory_surface_hint": "Treat readback.txt and scenario_proof.txt as fallback-only surfaces. If final_result.json already carries a strong direct-observation record, leave both untouched and run synrail check unless Synrail explicitly targets one as blocker-specific fallback evidence.",
+                },
             },
         },
         indent=2,
         ensure_ascii=True,
     ) + "\n"
-    readback = (
-        "Synrail starter surface for readback.\n"
-        "Replace this file with concrete readback from the changed sections on the attested surface.\n"
-        f"Task: {task_identity.strip()}\n"
-    )
-    scenario_proof = (
-        "Synrail starter surface for scenario proof.\n"
-        "Replace this file with the explicit scenario result for this run.\n"
-        f"Task: {task_identity.strip()}\n"
-    )
+    runtime_hint = project_prefers_runtime_evidence(project_root)
+    if runtime_hint:
+        starter_guidance = json.loads(final_result)
+        starter_guidance["_synrail"]["starter_guidance"]["helper_commands"].append("synrail runtime-helper")
+        final_result = json.dumps(starter_guidance, indent=2, ensure_ascii=True) + "\n"
+    readback_lines = [
+        f"### READBACK: {task_identity.strip()}",
+        "Fallback-only note: do not edit this file on the happy path. If final_result.json already carries strong structured verification, leave this file untouched unless Synrail explicitly targets this file for readback.",
+        "Changed surface: path/to/changed_file.ext",
+        "Observed: record only the concrete property needed for the blocker Synrail explicitly targeted",
+    ]
+    if runtime_hint:
+        readback_lines.append(
+            "Runtime hint: for UI, route, or rendered output changes, prefer a local response or rendered fragment over source-only grep when possible; run `synrail runtime-helper` if you want a small curl or template-render path before browser automation"
+        )
+    scenario_lines = [
+        f"### SCENARIO PROOF: {task_identity.strip()}",
+        "Fallback-only note: do not edit this file on the happy path. If final_result.json already carries strong structured verification, leave this file untouched unless Synrail explicitly targets this file for scenario proof.",
+        "Scenario: name only the exact runtime context needed for the blocker Synrail explicitly targeted",
+        "Command: paste only the local command, request, or test that verified this named blocker",
+        "Observed: paste only the concrete output, rendered fragment, or behavior needed to unblock it",
+    ]
+    if runtime_hint:
+        scenario_lines.append(
+            "Runtime hint: prefer a local request, rendered response, or observed runtime output over a source-only grep when possible; run `synrail runtime-helper` if you want a small curl or template-render path before browser automation"
+        )
+    scenario_lines.append("Status: PASSED")
+    readback = "\n".join(readback_lines) + "\n"
+    scenario_proof = "\n".join(scenario_lines) + "\n"
     return {
         "final_result": final_result,
         "readback": readback,
@@ -79,13 +169,7 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
 
 def write_proof_starter_files(*, artifact_root: Path, starter_contents: dict[str, str]) -> None:
     artifact_root.mkdir(parents=True, exist_ok=True)
-    mapping = {
-        "final_result": artifact_root / "final_result.json",
-        "readback": artifact_root / "readback.txt",
-        "scenario_proof": artifact_root / "scenario_proof.txt",
-    }
-    for artifact_id, target in mapping.items():
-        target.write_text(starter_contents[artifact_id])
+    (artifact_root / "final_result.json").write_text(starter_contents["final_result"])
 
 
 def build_bootstrap_record(
@@ -143,6 +227,7 @@ def build_proof_request_record(
         run_id=run_id,
         task_class=task_class,
         task_identity=task_identity,
+        project_root=project_root,
     )
     final_result = artifact_root / "final_result.json"
     readback = artifact_root / "readback.txt"
@@ -152,7 +237,7 @@ def build_proof_request_record(
         "run_id": run_id,
         "task_class": task_class,
         "task_identity": task_identity.strip(),
-        "summary": "Synrail is waiting for proof artifacts from this controlled run.",
+        "summary": "Synrail is waiting for a strong final_result.json plus local verification evidence for this controlled run; the prose surfaces are fallback-only unless later requested.",
         "starter_mode": "edit_in_place",
         "starter_hashes": {
             artifact_id: text_sha256(contents)
@@ -167,12 +252,8 @@ def build_proof_request_record(
             "final_result",
             "modified_files",
             "diff_provenance",
-            "readback",
-            "scenario_proof",
-            "artifact_identity",
-            "cleanup_status",
         ],
-        "next_safe_step": "Edit the starter proof files in place, then run synrail check.",
+        "next_safe_step": "Run local verification, make final_result.json strong first, leave cleanup_status absent unless Synrail later asks for it, keep readback.txt and scenario_proof.txt untouched unless Synrail later names them, then run synrail check.",
     }
 
 

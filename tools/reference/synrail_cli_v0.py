@@ -11,7 +11,9 @@ import shlex
 import shutil
 import subprocess
 import sys
+import uuid
 from pathlib import Path
+from typing import Literal
 
 try:
     from .synrail_repair_packet_v0 import build_packet_from_runtime_truth
@@ -45,6 +47,7 @@ try:
         build_proof_request_record,
         build_proof_starter_contents,
         load_json as load_bootstrap_json,
+        project_prefers_runtime_evidence,
         save_json as save_bootstrap_json,
         validate_bootstrap_record,
         write_proof_starter_files,
@@ -55,9 +58,30 @@ except ImportError:
         build_proof_request_record,
         build_proof_starter_contents,
         load_json as load_bootstrap_json,
+        project_prefers_runtime_evidence,
         save_json as save_bootstrap_json,
         validate_bootstrap_record,
         write_proof_starter_files,
+    )
+
+try:
+    from .synrail_checkpoint_v0 import restore_contract
+except ImportError:
+    from synrail_checkpoint_v0 import restore_contract
+
+try:
+    from .synrail_commands_v0 import (
+        run_bug_packet_command,
+        run_install_agent_files_command,
+        run_session_export_command,
+        run_telemetry_export_command,
+    )
+except ImportError:
+    from synrail_commands_v0 import (
+        run_bug_packet_command,
+        run_install_agent_files_command,
+        run_session_export_command,
+        run_telemetry_export_command,
     )
 
 
@@ -138,6 +162,7 @@ ALPHA_FILE_NAMES = {
     "thin_output": "thin_output.json",
     "prompt": "prompt.json",
     "checkpoint_restore": "checkpoint_restore.json",
+    "checkpoint_restore_preview": "checkpoint_restore_preview.json",
     "deploy_receipt": "deploy_receipt.json",
 }
 CHECKPOINT_RECORD_BASENAME = "checkpoint_record.json"
@@ -169,6 +194,176 @@ def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
+def normalize_repo_relative_path(value: str) -> str:
+    return value.strip().replace("\\", "/").strip("/")
+
+
+def dedupe_preserving_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for value in values:
+        candidate = value.strip()
+        if not candidate or candidate in seen:
+            continue
+        seen.add(candidate)
+        ordered.append(candidate)
+    return ordered
+
+
+def filter_artifact_root_changes(changed_files: list[str], artifact_root: str) -> list[str]:
+    normalized_root = normalize_repo_relative_path(artifact_root)
+
+    filtered: list[str] = []
+    for value in changed_files:
+        normalized = normalize_repo_relative_path(value)
+        top_level = normalized.split("/", 1)[0] if normalized else ""
+        if top_level.startswith(".synrail"):
+            continue
+        if normalized_root and (normalized == normalized_root or normalized.startswith(f"{normalized_root}/")):
+            continue
+        filtered.append(value)
+    return filtered
+
+
+def git_status_changed_paths(target: Path) -> list[str] | None:
+    completed = subprocess.run(
+        ["git", "-C", str(target), "status", "--porcelain", "--untracked-files=all"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return None
+
+    changed_paths: list[str] = []
+    for raw_line in completed.stdout.splitlines():
+        if len(raw_line) < 4:
+            continue
+        candidate = raw_line[3:].strip()
+        if not candidate:
+            continue
+        if " -> " in candidate:
+            candidate = candidate.split(" -> ", 1)[1].strip()
+        changed_paths.append(candidate)
+    return dedupe_preserving_order(changed_paths)
+
+
+def diff_provenance_records_from_final_result(final_result: dict) -> list[dict]:
+    records: list[dict] = []
+    diff_provenance = final_result.get("diff_provenance", {})
+    if isinstance(diff_provenance, dict):
+        records.append(diff_provenance)
+    elif isinstance(diff_provenance, list):
+        records.extend(value for value in diff_provenance if isinstance(value, dict))
+
+    for key in ("diff_provenance_records", "per_file_diff_provenance", "per_file_diff_provenance_records"):
+        value = final_result.get(key, [])
+        if isinstance(value, list):
+            records.extend(item for item in value if isinstance(item, dict))
+    return records
+
+
+def patch_shaped_git_diff_paths(git_diff: object) -> list[str]:
+    if not isinstance(git_diff, str):
+        return []
+
+    diff_text = git_diff.strip()
+    if not diff_text:
+        return []
+    if "diff --git " not in diff_text or "\n--- " not in diff_text or "\n+++ " not in diff_text or "\n@@" not in diff_text:
+        return []
+
+    changed_paths: list[str] = []
+    for raw_line in diff_text.splitlines():
+        if not raw_line.startswith("diff --git "):
+            continue
+        payload = raw_line[len("diff --git ") :].strip()
+        if not payload.startswith("a/") or " b/" not in payload:
+            continue
+        before, after = payload.split(" b/", 1)
+        before_path = normalize_repo_relative_path(before[2:])
+        after_path = normalize_repo_relative_path(after)
+        candidate = after_path or before_path
+        if candidate and candidate != "dev/null":
+            changed_paths.append(candidate)
+    return dedupe_preserving_order(changed_paths)
+
+
+def proof_backed_scope_paths_from_final_result(final_result_path: Path) -> list[str]:
+    if not final_result_path.exists():
+        return []
+    try:
+        final_result = load_json(final_result_path)
+    except (OSError, json.JSONDecodeError):
+        return []
+
+    allowed_scope_paths = list(patch_shaped_git_diff_paths(final_result.get("git_diff", "")))
+    for record in diff_provenance_records_from_final_result(final_result):
+        changed_file = record.get("changed_file", "")
+        if not isinstance(changed_file, str):
+            continue
+        normalized = normalize_repo_relative_path(changed_file)
+        if normalized:
+            allowed_scope_paths.append(normalized)
+    return dedupe_preserving_order(allowed_scope_paths)
+
+
+def observed_changes_within_allowed_scope(changed_files: list[str], allowed_scope_paths: list[str]) -> bool:
+    normalized_allowed = [normalize_repo_relative_path(value) for value in allowed_scope_paths if normalize_repo_relative_path(value)]
+    if not changed_files or not normalized_allowed:
+        return False
+
+    for value in changed_files:
+        normalized = normalize_repo_relative_path(value)
+        if not normalized:
+            continue
+        if any(normalized == allowed or normalized.startswith(f"{allowed}/") for allowed in normalized_allowed):
+            continue
+        return False
+    return True
+
+
+def maybe_apply_observed_git_scope_defaults(args: argparse.Namespace, *, state: dict | None = None) -> None:
+    target_path_text = getattr(args, "target_path", "") or ""
+    final_result_text = getattr(args, "final_result", "") or ""
+    state_file_text = getattr(args, "state_file", "") or ""
+    if not target_path_text or not final_result_text or not state_file_text:
+        return
+
+    target_path = Path(target_path_text)
+    if not (target_path / ".git").exists():
+        return
+
+    if state is None:
+        state_path = Path(state_file_text)
+        if not state_path.exists():
+            return
+        state = ensure_run_state_extensions(load_json(state_path))
+
+    current_state = state.get("state", "")
+    if not current_state or current_state in {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}:
+        return
+
+    changed_files = list(getattr(args, "changed_file", []) or [])
+    allowed_scope_paths = list(getattr(args, "allowed_scope_path", []) or [])
+    if not changed_files:
+        observed_changed = git_status_changed_paths(target_path)
+        if observed_changed:
+            changed_files = filter_artifact_root_changes(
+                observed_changed,
+                getattr(args, "artifact_root", "") or "",
+            )
+    if not allowed_scope_paths:
+        allowed_scope_paths = proof_backed_scope_paths_from_final_result(Path(final_result_text))
+
+    if changed_files:
+        args.changed_file = changed_files
+    if allowed_scope_paths:
+        args.allowed_scope_path = allowed_scope_paths
+    if observed_changes_within_allowed_scope(changed_files, allowed_scope_paths):
+        args.clean_surface = True
+
+
 def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path:
     baseline = load_json(Path(baseline_file))
     synrail = load_json(Path(synrail_file))
@@ -187,8 +382,8 @@ def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path
 
 
 def default_alpha_run_id() -> str:
-    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    return f"ALPHA_RUN_{stamp}"
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    return f"ALPHA_RUN_{stamp}_{uuid.uuid4().hex[:6]}"
 
 
 def project_profile_file(root: Path) -> Path:
@@ -239,10 +434,560 @@ def save_alpha_target_identity_file(root: Path, *, target_identity: str) -> None
         (root / "target_identity.txt").write_text(text + "\n")
 
 
+def relative_artifact_root_for_project(*, project_root: Path, artifact_root: str) -> str:
+    artifact_path = Path(artifact_root)
+    if artifact_path.is_absolute():
+        try:
+            return str(artifact_path.relative_to(project_root))
+        except ValueError:
+            return str(artifact_path)
+    return str(artifact_path)
+
+
+def policy_command_examples(*, artifact_root: str) -> dict[str, str]:
+    return policy_command_examples_for_binary(artifact_root=artifact_root, command="synrail")
+
+
+def preferred_synrail_command() -> str:
+    return "synrail"
+
+
+def preferred_synrail_fallback_command() -> str | None:
+    argv0 = Path(sys.argv[0]).expanduser()
+    if argv0.name != "synrail":
+        sibling = Path(sys.executable).expanduser().with_name("synrail")
+        if sibling.exists():
+            return shlex.quote(str(sibling.resolve()))
+        return None
+    # Keep repo policy portable-first, but surface the exact local binary as an
+    # escape hatch when this machine resolves a different entrypoint.
+    return shlex.quote(str(argv0.resolve()))
+
+
+def preferred_repo_native_alpha_command(*, project_root: Path) -> str | None:
+    alpha_entry = project_root / "alpha.py"
+    if not alpha_entry.exists():
+        return None
+    return "python3 alpha.py"
+
+
+def policy_command_examples_for_binary(*, artifact_root: str, command: str) -> dict[str, str]:
+    quoted_root = shlex.quote(artifact_root)
+    if artifact_root == DEFAULT_ALPHA_ARTIFACT_ROOT:
+        return {
+            "status": command,
+            "start": f'{command} start "Describe the bounded local change."',
+            "check": f"{command} check",
+            "repair": f"{command} repair-step",
+        }
+    return {
+        "status": f"{command} status --artifact-root {quoted_root}",
+        "start": f'{command} start --artifact-root {quoted_root} "Describe the bounded local change."',
+        "check": f"{command} check --artifact-root {quoted_root}",
+        "repair": f"{command} repair-step --artifact-root {quoted_root}",
+    }
+
+
+def policy_workspace_note_lines(*, workspace_isolation_note: str, prefer_runtime_helper: bool, command: str) -> list[str]:
+    lines: list[str] = []
+    if workspace_isolation_note:
+        lines.append(f"- {workspace_isolation_note}")
+    if prefer_runtime_helper:
+        lines.append(
+            f"- For UI or rendered-output tasks, prefer `{command} runtime-helper` and a simple curl or template-render check before browser automation."
+        )
+    return lines
+
+
+def policy_portability_note_lines(
+    *,
+    fallback_command: str | None,
+    repo_native_alpha_command: str | None,
+) -> list[str]:
+    lines = [
+        "- Keep repo instructions portable: prefer `synrail` in commands and committed docs.",
+    ]
+    lines.extend(
+        [
+            "- If `synrail` from PATH is unavailable in this checkout, try a local wrapper like `./.venv/bin/synrail` before assuming the control tool is missing.",
+        ]
+    )
+    if repo_native_alpha_command:
+        lines.extend(
+            [
+                f"- If this repo exposes a local alpha entrypoint at `alpha.py`, prefer `{repo_native_alpha_command}` as the repo-local fallback instead of reverse-engineering the entrypoint from setup metadata.",
+                f"- If a checkout-local wrapper path itself triggers an agent approval or permission wall, switch immediately to the exact repo-local commands below before concluding Synrail cannot run on this host.",
+            ]
+        )
+    if fallback_command:
+        lines.append(
+            f"- If this machine cannot resolve the right Synrail binary from PATH, use `{fallback_command}` as the local fallback for this checkout."
+        )
+    return lines
+
+
+def policy_non_accepted_status_lines(check_command: str) -> list[str]:
+    return [
+        "## Non-Accepted Status Rule",
+        "",
+        "Only `Status: Accepted` means the task may be reported as complete.",
+        f"If `{check_command}` prints `Proof Invalid`, `Proof Incomplete`, `Proof Too Thin To Trust`, `Workspace Not Ready`, `Workspace Not Trusted`, `Needs Review`, or any other non-green status, do not send a final success/completion answer.",
+        "Do not say the task is functionally complete, 100% done, fully done, or all requirements met while Synrail is non-green.",
+        "Instead report the exact Synrail status, follow only the named next command or repair target, and rerun Synrail until `Status: Accepted` appears.",
+        "",
+    ]
+
+
+def policy_no_git_proof_line(artifact_root: str) -> str:
+    return (
+        f"If `git` is unavailable on this host, do not invent `git_diff`; leave it empty in `{artifact_root}/final_result.json` "
+        "and fill structured `diff_provenance` with `changed_file`, one exact changed or observed line, a stable context anchor, "
+        "`verification_command`, and `verification_result`."
+    )
+
+
+def render_policy_markdown(
+    agent_type: Literal["agents", "gemini", "claude"],
+    *,
+    artifact_root: str,
+    command: str = "synrail",
+    fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
+    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
+    note_lines = policy_workspace_note_lines(
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+        command=command,
+    )
+    portability_lines = policy_portability_note_lines(
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+    )
+    orientation_lines = policy_orientation_lines(commands["status"])
+    repo_native_commands = (
+        policy_command_examples_for_binary(artifact_root=artifact_root, command=repo_native_alpha_command)
+        if repo_native_alpha_command
+        else None
+    )
+
+    if agent_type == "agents":
+        lines = [
+            "# Agent Workflow",
+            "",
+            "This repo uses Synrail to keep one bounded local change inside one controlled run.",
+            "",
+            "## First Step On Every New Task",
+            "",
+            "Run Synrail before deciding what to do next. It is a CLI control kernel, not a background daemon.",
+            "```bash",
+            commands["status"],
+            "```",
+            "",
+        ]
+        lines.extend(orientation_lines)
+        if repo_native_commands:
+            lines.extend(
+                [
+                    "## Repo-Local Fallback",
+                    "",
+                    "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
+                    "",
+                    "```bash",
+                    repo_native_commands["status"],
+                    repo_native_commands["start"],
+                    repo_native_commands["check"],
+                    "```",
+                    "",
+                    "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
+                    "",
+                ]
+            )
+        lines.extend([
+            "## Before You Edit",
+            "",
+            "1. If Synrail shows that no controlled run is active, start one before mutating code:",
+            "```bash",
+            commands["start"],
+            "```",
+            "",
+            "2. Keep the change local and bounded to the stated task.",
+            f"3. Run the local commands needed to verify the change honestly, then edit `{artifact_root}/final_result.json` in place as the work becomes real. Only materialize readback or scenario proof if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+            "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
+            f"5. {policy_no_git_proof_line(artifact_root)}",
+            "",
+            "## Before You Claim Success",
+            "",
+            "```bash",
+            commands["check"],
+            "```",
+            "",
+            "If Synrail is non-green, fix only what check tells you to fix, then rerun:",
+            "",
+            "```bash",
+            commands["check"],
+            "```",
+            "",
+            *policy_non_accepted_status_lines(commands["check"]),
+            "## Important",
+            "",
+            "- Do not skip Synrail and try to legalize edits afterward.",
+            "- Do not claim success without real local verification.",
+            "- If `synrail` is unavailable from PATH here, try the checkout-local fallbacks first instead of reverse-engineering the entrypoint.",
+            "- Only report the control tool missing after the local checkout fallbacks fail too.",
+            "",
+        ])
+    else:
+        title = "Gemini" if agent_type == "gemini" else "Claude"
+        lines = [
+            f"# {title} Workflow",
+            "",
+            "Use Synrail as the default local control path for this repo.",
+            "",
+            "## First Command",
+            "",
+            "For every new user task, run Synrail first so you can see the current governed state:",
+            "",
+            "```bash",
+            commands["status"],
+            "```",
+            "",
+            "Synrail is a CLI control kernel, not a background daemon.",
+            "",
+        ]
+        lines.extend(orientation_lines)
+        if agent_type == "gemini":
+            lines.extend(policy_gemini_orientation_lines())
+        if repo_native_commands:
+            lines.extend(
+                [
+                    "## Repo-Local Fallback",
+                    "",
+                    "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
+                    "",
+                    "```bash",
+                    repo_native_commands["status"],
+                    repo_native_commands["start"],
+                    repo_native_commands["check"],
+                    "```",
+                    "",
+                    "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
+                    "",
+                ]
+            )
+        lines.extend([
+            "## Start",
+            "",
+            "If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
+            "",
+            "```bash",
+            commands["start"],
+            "```",
+            "",
+            "## Work",
+            "",
+            f"- Keep edits bounded and local to this repo.",
+            f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+            "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
+            f"- {policy_no_git_proof_line(artifact_root)}",
+            "",
+            "## Finish",
+            "",
+            "```bash",
+            commands["check"],
+            "```",
+            "",
+            f"If non-green, fix only what check tells you to fix, then rerun `{commands['check']}`.",
+            "",
+            "Do not bypass Synrail and do not claim success without real local verification.",
+            "",
+            *policy_non_accepted_status_lines(commands["check"]),
+        ])
+
+    lines.extend(portability_lines)
+    lines.extend(note_lines)
+    if portability_lines or note_lines:
+        lines.append("")
+    return "\n".join(lines)
+
+
+def render_agent_policy_markdown(
+    *,
+    artifact_root: str,
+    command: str = "synrail",
+    fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
+    return render_policy_markdown(
+        "agents",
+        artifact_root=artifact_root,
+        command=command,
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+    )
+
+
+def render_gemini_policy_markdown(
+    *,
+    artifact_root: str,
+    command: str = "synrail",
+    fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
+    return render_policy_markdown(
+        "gemini",
+        artifact_root=artifact_root,
+        command=command,
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+    )
+
+
+def render_claude_policy_markdown(
+    *,
+    artifact_root: str,
+    command: str = "synrail",
+    fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
+    return render_policy_markdown(
+        "claude",
+        artifact_root=artifact_root,
+        command=command,
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+    )
+
+
+def render_agent_policy_block(
+    *,
+    title: str,
+    intro: str,
+    artifact_root: str,
+    command: str = "synrail",
+    fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
+    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
+    note_lines = policy_workspace_note_lines(
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+        command=command,
+    )
+    portability_lines = policy_portability_note_lines(
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+    )
+    orientation_lines = policy_orientation_lines(commands["status"])
+    repo_native_commands = (
+        policy_command_examples_for_binary(artifact_root=artifact_root, command=repo_native_alpha_command)
+        if repo_native_alpha_command
+        else None
+    )
+    lines = [
+        f"## {title}",
+        "",
+        intro,
+        "",
+        "First command for every new task:",
+        "",
+        "```bash",
+        commands["status"],
+        "```",
+        "",
+    ]
+    lines.extend(orientation_lines)
+    if repo_native_commands:
+        lines.extend(
+            [
+                "## Repo-Local Fallback",
+                "",
+                "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
+                "",
+                "```bash",
+                repo_native_commands["status"],
+                repo_native_commands["start"],
+                repo_native_commands["check"],
+                "```",
+                "",
+                "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
+                "",
+            ]
+        )
+    lines.extend([
+        "## Start",
+        "",
+        "If Synrail shows that no controlled run is active, start one:",
+        "",
+        "```bash",
+        commands["start"],
+        "```",
+        "",
+        "## Work",
+        "",
+        f"- Keep edits bounded and local to this repo.",
+        f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+        "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
+        f"- {policy_no_git_proof_line(artifact_root)}",
+        "",
+        "## Finish",
+        "",
+        "Before claiming success, run:",
+        "",
+        "```bash",
+        commands["check"],
+        "```",
+        "",
+        f"If non-green, fix only what check tells you to fix, then rerun `{commands['check']}`.",
+        "",
+        "Do not bypass Synrail and do not claim success without real local verification.",
+        "",
+        *policy_non_accepted_status_lines(commands["check"]),
+    ])
+    lines.extend(portability_lines)
+    lines.extend(note_lines)
+    return "\n".join(lines)
+
+
+def policy_orientation_lines(status_command: str) -> list[str]:
+    return [
+        "## Project Orientation",
+        "",
+        "If the user asks what this project is, where work stopped, or what the current status is, treat that as a Synrail-guided orientation task too.",
+        "",
+        f"- Start with `{status_command}` before broader repo search.",
+        "- Stay inside this project root and prefer read-only inspection first.",
+        "- Summarize the governed state before exploring older files, sibling probes, or unrelated surfaces.",
+        "- Do not turn project recall into repo archaeology.",
+        "- Do not create helper scripts or make edits for an orientation-only question.",
+        "",
+    ]
+
+
+def policy_gemini_orientation_lines() -> list[str]:
+    return [
+        "### Gemini Orientation Rule",
+        "",
+        "- After Synrail shows the current state, answer from the governed state first and stop once you can answer the user's question.",
+        "- Do not inspect database schema, templates, or app internals for a simple orientation prompt unless Synrail state is genuinely insufficient.",
+        "- Do not turn project recall into repo archaeology.",
+        "",
+    ]
+
+
+def managed_policy_markers(path: Path) -> tuple[str, str]:
+    stem = path.stem.upper().replace(".", "_")
+    return (f"<!-- SYNRAIL_{stem}_START -->", f"<!-- SYNRAIL_{stem}_END -->")
+
+
+def wrap_managed_policy_block(path: Path, body: str) -> str:
+    start_marker, end_marker = managed_policy_markers(path)
+    return f"{start_marker}\n{body.rstrip()}\n{end_marker}\n"
+
+
+def upsert_managed_policy_block(current: str, *, path: Path, block: str) -> tuple[str, str]:
+    start_marker, end_marker = managed_policy_markers(path)
+    current_text = current or ""
+    managed_block = wrap_managed_policy_block(path, block)
+    if start_marker in current_text and end_marker in current_text:
+        prefix, rest = current_text.split(start_marker, 1)
+        _, suffix = rest.split(end_marker, 1)
+        updated = prefix.rstrip() + "\n\n" + managed_block + suffix.lstrip("\n")
+        state = "updated"
+    elif current_text.strip():
+        updated = current_text.rstrip() + "\n\n" + managed_block
+        state = "appended"
+    else:
+        updated = managed_block
+        state = "written"
+    if updated == current_text:
+        return current_text, "unchanged"
+    return updated, state
+
+
+def backup_existing_policy_file(path: Path) -> Path:
+    timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    backup_path = path.with_name(f"{path.name}.synrail.bak.{timestamp}")
+    backup_path.write_text(path.read_text())
+    return backup_path
+
+
+def write_agent_policy_file(
+    path: Path,
+    full_content: str,
+    *,
+    managed_block: str,
+    force: bool,
+) -> tuple[bool, str, Path | None]:
+    if path.exists():
+        current = path.read_text()
+        if current == full_content:
+            return False, "unchanged", None
+        if force:
+            backup_path = backup_existing_policy_file(path)
+            path.write_text(full_content)
+            return True, "written", backup_path
+        updated, state = upsert_managed_policy_block(current, path=path, block=managed_block)
+        if state == "unchanged":
+            return False, state, None
+        path.write_text(updated)
+        return True, state, None
+    path.write_text(full_content)
+    return True, "written", None
+
+
+def cmd_install_agent_files(args: argparse.Namespace) -> int:
+    return run_install_agent_files_command(
+        args,
+        relative_artifact_root_for_project=relative_artifact_root_for_project,
+        preferred_synrail_command=preferred_synrail_command,
+        preferred_synrail_fallback_command=preferred_synrail_fallback_command,
+        preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
+        workspace_git_context=workspace_git_context,
+        project_prefers_runtime_evidence=project_prefers_runtime_evidence,
+        render_agent_policy_markdown=render_agent_policy_markdown,
+        render_gemini_policy_markdown=render_gemini_policy_markdown,
+        render_claude_policy_markdown=render_claude_policy_markdown,
+        render_agent_policy_block=render_agent_policy_block,
+        write_agent_policy_file=write_agent_policy_file,
+    )
+
+
 def load_text_if_exists(path: Path) -> str:
     if not path.exists():
         return ""
     return path.read_text().strip()
+
+
+def expected_target_identity_for_root(root: Path) -> str:
+    target_identity = load_text_if_exists(root / "target_identity.txt")
+    if target_identity:
+        return target_identity
+    bootstrap_file = alpha_file(root, "bootstrap")
+    if bootstrap_file.exists():
+        bootstrap = load_bootstrap_json(bootstrap_file)
+        for field in ["target_identity", "execution_surface_identity"]:
+            value = (bootstrap.get(field, "") or "").strip()
+            if value:
+                return value
+    profile = load_project_profile(root) or {}
+    return (profile.get("execution_surface_identity", "") or "").strip()
 
 
 def load_project_profile(root: Path | None) -> dict | None:
@@ -282,12 +1027,50 @@ def candidate_paths(project_root: Path, root: Path, names: list[str]) -> list[st
     return [str(path) for path in ordered]
 
 
+def find_enclosing_git_root(project_root: Path) -> Path | None:
+    resolved = project_root.resolve()
+    for candidate in [resolved, *resolved.parents]:
+        if (candidate / ".git").exists():
+            return candidate
+    return None
+
+
+def workspace_git_context(project_root: Path) -> dict:
+    enclosing_git_root = find_enclosing_git_root(project_root)
+    if enclosing_git_root is None:
+        return {
+            "workspace_git_mode": "no_git",
+            "workspace_git_root": "",
+            "parent_git_root": "",
+            "workspace_isolation_note": "",
+        }
+    if enclosing_git_root == project_root.resolve():
+        return {
+            "workspace_git_mode": "workspace_git_root",
+            "workspace_git_root": str(enclosing_git_root),
+            "parent_git_root": "",
+            "workspace_isolation_note": "",
+        }
+    return {
+        "workspace_git_mode": "nested_parent_git",
+        "workspace_git_root": str(enclosing_git_root),
+        "parent_git_root": str(enclosing_git_root),
+        "workspace_isolation_note": (
+            f"Parent git repo detected above the project root at {enclosing_git_root}. "
+            "Treat only this project root as the execution surface for the run. "
+            "If git status or git diff climbs to the parent repo, do not use that parent output as proof here."
+        ),
+    }
+
+
 def build_project_profile(*, project_root: Path, root: Path, task_class: str) -> dict:
     project_type = detect_project_type(project_root)
+    git_context = workspace_git_context(project_root)
     return {
         "schema_version": "alpha_project_profile_v0",
         "project_root": str(project_root),
         "project_type": project_type,
+        "prefers_runtime_evidence": project_prefers_runtime_evidence(project_root),
         "task_class": task_class,
         "target_path": str(project_root),
         "target_classification": "trusted_worktree",
@@ -298,6 +1081,7 @@ def build_project_profile(*, project_root: Path, root: Path, task_class: str) ->
         "final_result_candidates": candidate_paths(project_root, root, ["final_result.json", "final_result.txt", "result.json", "result.txt"]),
         "readback_candidates": candidate_paths(project_root, root, ["readback.json", "readback.txt"]),
         "scenario_proof_candidates": candidate_paths(project_root, root, ["scenario_proof.json", "scenario_proof.md", "scenario_proof.txt"]),
+        **git_context,
     }
 
 
@@ -333,8 +1117,41 @@ def display_path_from_base(path: Path, *, base: Path) -> str:
     return text or "."
 
 
-def shell_command(root: Path, *parts: str) -> str:
-    return " ".join(shlex.quote(part) for part in ["synrail", *parts, "--artifact-root", display_path(root)])
+def default_workspace_artifact_root(*, project_root: Path | None = None) -> Path:
+    base = (project_root or Path.cwd()).resolve()
+    return (base / DEFAULT_ALPHA_ARTIFACT_ROOT).resolve()
+
+
+def is_default_workspace_artifact_root(root: Path, *, project_root: Path | None = None) -> bool:
+    return root.resolve() == default_workspace_artifact_root(project_root=project_root)
+
+
+def preferred_cli_executable(*, project_root: Path | None = None) -> str:
+    if shutil.which("synrail"):
+        return "synrail"
+    search_roots: list[Path] = []
+    if project_root is not None:
+        search_roots.append(project_root.resolve())
+    cwd = Path.cwd().resolve()
+    if cwd not in search_roots:
+        search_roots.append(cwd)
+    for base in search_roots:
+        candidate = base / ".venv" / "bin" / "synrail"
+        if candidate.exists() and candidate.is_file():
+            return display_path(candidate)
+    return "synrail"
+
+
+def plain_shell_command(*parts: str, project_root: Path | None = None) -> str:
+    command = [preferred_cli_executable(project_root=project_root), *parts]
+    return " ".join(shlex.quote(part) for part in command)
+
+
+def shell_command(root: Path | None, *parts: str, project_root: Path | None = None) -> str:
+    command = [preferred_cli_executable(project_root=project_root), *parts]
+    if root is not None and not is_default_workspace_artifact_root(root, project_root=project_root):
+        command.extend(["--artifact-root", display_path(root)])
+    return " ".join(shlex.quote(part) for part in command)
 
 
 def preferred_proof_paths(root: Path, *, project_root: Path) -> dict[str, str]:
@@ -360,19 +1177,45 @@ def file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def untouched_preferred_proof_paths(root: Path | None) -> set[Path]:
+def ensure_run_state_extensions(state: dict) -> dict:
+    state.setdefault("start_timestamp_utc", "")
+    state.setdefault("closure_timestamp_utc", "")
+    state.setdefault("check_count", 0)
+    state.setdefault("last_known_final_result_hash", "")
+    state.setdefault("doctor", {}).setdefault("override_gates", [])
+    state.setdefault("proof_bundle", {}).setdefault("artifact_integrity_warning", False)
+    state.setdefault("closure", {}).setdefault("warnings", [])
+    return state
+
+
+def update_last_known_final_result_hash(state_path: Path, final_result_path: Path | None) -> None:
+    if final_result_path is None or not final_result_path.exists() or not state_path.exists():
+        return
+    state = ensure_run_state_extensions(load_json(state_path))
+    state["last_known_final_result_hash"] = file_sha256(final_result_path)
+    save_json(state_path, state)
+
+
+def starter_hash_for_artifact(root: Path | None, artifact_id: str) -> str:
     if not root:
-        return set()
+        return ""
     proof_request_file = alpha_file(root, "proof_request")
     if not proof_request_file.exists():
-        return set()
+        return ""
     proof_request = load_bootstrap_json(proof_request_file)
     starter_hashes = proof_request.get("starter_hashes", {})
     if not isinstance(starter_hashes, dict):
+        return ""
+    value = starter_hashes.get(artifact_id, "")
+    return value.strip() if isinstance(value, str) else ""
+
+
+def untouched_preferred_proof_paths(root: Path | None) -> set[Path]:
+    if not root:
         return set()
     untouched: set[Path] = set()
     for artifact_id, path in preferred_proof_artifact_paths(root).items():
-        expected_hash = starter_hashes.get(artifact_id, "")
+        expected_hash = starter_hash_for_artifact(root, artifact_id)
         if expected_hash and path.exists() and path.is_file() and file_sha256(path) == expected_hash:
             untouched.add(path.resolve())
     return untouched
@@ -622,6 +1465,7 @@ def write_controlled_start_artifacts(
         run_id=run_id,
         task_class=task_class,
         task_identity=task_identity,
+        project_root=project_root,
     )
     proof_request = build_proof_request_record(
         run_id=run_id,
@@ -654,6 +1498,8 @@ def write_controlled_start_artifacts(
 
 def resolve_start_identities(args: argparse.Namespace, *, root: Path) -> tuple[str, str]:
     task_identity = (getattr(args, "task_identity", "") or "").strip()
+    if not task_identity:
+        task_identity = (getattr(args, "task_request", "") or "").strip()
     prompt_identity = (getattr(args, "prompt_identity", "") or "").strip()
     if not task_identity:
         task_identity = load_text_if_exists(root / "task_identity.txt")
@@ -723,7 +1569,7 @@ def apply_bootstrap_defaults(args: argparse.Namespace, *, root: Path | None) -> 
 
 def write_bootstrap_required_block(*, args: argparse.Namespace, root: Path, validation: dict) -> int:
     state_path = Path(args.state_file)
-    state = load_json(state_path)
+    state = ensure_run_state_extensions(load_json(state_path))
     task_identity = (getattr(args, "task_identity", "") or "").strip() or load_text_if_exists(root / "task_identity.txt")
     prompt_identity = (getattr(args, "prompt_identity", "") or "").strip() or load_text_if_exists(root / "prompt_identity.txt")
     state["integrity"]["status"] = "FAIL"
@@ -783,7 +1629,7 @@ def write_bootstrap_required_block(*, args: argparse.Namespace, root: Path, vali
 
 def write_remote_unsupported_block(*, args: argparse.Namespace, root: Path) -> int:
     state_path = Path(args.state_file)
-    state = load_json(state_path)
+    state = ensure_run_state_extensions(load_json(state_path))
     state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
     state["closure"]["blocking_reason"] = "REMOTE_TARGET_UNSUPPORTED"
     state["closure"]["next_allowed_transition"] = "LOCAL_TRUSTED_WORKTREE_START"
@@ -857,14 +1703,27 @@ def print_thin_output_summary(output_file: Path) -> None:
     action_now = payload.get("action_now", "")
     if action_now:
         lines.append(f"Do this now: {action_now}")
+    final_answer_guard = payload.get("final_answer_guard", "")
+    if final_answer_guard:
+        lines.append(final_answer_guard)
     lines.extend([
         f"What happened: {payload.get('what_happened', payload.get('summary', ''))}",
         f"What it means: {payload.get('what_it_means', payload.get('diagnosis', ''))}",
         f"What to do next: {payload.get('what_to_do_next', payload.get('next_step', ''))}",
     ])
+    change_impact_focus = payload.get("change_impact_focus", "")
+    if change_impact_focus:
+        lines.append(change_impact_focus[:1].upper() + change_impact_focus[1:])
+    change_impact_scope = payload.get("change_impact_scope", "")
+    if change_impact_scope:
+        lines.append(change_impact_scope[:1].upper() + change_impact_scope[1:])
     focused_repair_summary = payload.get("focused_repair_summary", "")
     if focused_repair_summary:
         lines.append(f"Repair target: {focused_repair_summary}")
+    thin_sections = list(payload.get("thin_section_guidance", []))
+    if thin_sections:
+        lines.append("Thin proof sections:")
+        lines.extend([f"- {item}" for item in thin_sections])
     next_command = payload.get("next_command", "")
     restore_command = payload.get("restore_command", "")
     if next_command:
@@ -891,18 +1750,14 @@ def print_prompt_summary_compact(output_file: Path, *, include_prompt: bool = Fa
     required_input_labels = list(payload.get("required_input_labels", []))
     forbidden_scope = list(payload.get("forbidden_scope", []))
     lines = [
-        "The next bounded repair instruction is ready.",
         (
             f"Do this now: {payload.get('current_step_action_instruction', '')}"
             if payload.get("current_step_action_instruction", "")
-            else "Do this now: keep the repair inside the current bounded repair surface."
+            else "Do this now: fix the issue described above."
         ),
         f"What failed: {payload.get('failure_label', payload.get('failure_reason', ''))}",
-        f"Current repair task: {payload.get('current_step_label', payload.get('current_step_id', ''))}",
-        f"Stale artifacts: {', '.join(stale_artifacts) if stale_artifacts else 'none'}",
-        f"Stale subsurfaces: {', '.join(stale_subsurfaces) if stale_subsurfaces else 'none'}",
+        f"Repair task: {payload.get('current_step_label', payload.get('current_step_id', ''))}",
         f"Allowed scope: {', '.join(allowed_scope_labels) if allowed_scope_labels else (', '.join(allowed_scope) if allowed_scope else 'current repair step only')}",
-        f"Required inputs: {', '.join(required_input_labels) if required_input_labels else 'none'}",
         f"Do not touch: {', '.join(forbidden_scope) if forbidden_scope else 'unrelated files or acceptance logic'}",
     ]
     current_step_focus_summary = payload.get("current_step_focus_summary", "")
@@ -911,6 +1766,8 @@ def print_prompt_summary_compact(output_file: Path, *, include_prompt: bool = Fa
     current_step_target_path = payload.get("current_step_target_path", "")
     if current_step_target_path:
         lines.append(f"Edit in place: {current_step_target_path}")
+    elif payload.get("current_step_id", "") == "continue_forward_orchestration":
+        lines.append("No proof-file edit: run synrail start for this task; do not add forward_orchestration_entrypoint to final_result.json.")
     acceptance = payload.get("acceptance_criteria", [])
     if acceptance:
         lines.append("Must pass:")
@@ -927,17 +1784,19 @@ def print_prompt_summary_compact(output_file: Path, *, include_prompt: bool = Fa
 
 
 def print_init_summary(*, root: Path, state_file: Path) -> None:
-    state = load_json(state_file)
     profile = load_project_profile(root) or {}
     lines = [
         "Synrail setup is ready.",
         f"Artifact root: {display_path(root)}",
         f"Detected project type: {profile.get('project_type', 'generic')}",
         "This setup is not a controlled run yet.",
-        "Next command: " + shell_command(root, "start"),
+        "Quick status: " + shell_command(root, project_root=Path.cwd().resolve()),
+        'Start a controlled run: ' + shell_command(root, "start", "Describe the bounded local change.", project_root=Path.cwd().resolve()),
     ]
-    checkpoint_suggestion = shell_command(root, "save")
-    lines.append(f"Optional safety fallback: {checkpoint_suggestion}")
+    if profile.get("workspace_isolation_note", ""):
+        lines.append("Workspace note: " + profile["workspace_isolation_note"])
+    if profile.get("prefers_runtime_evidence", False):
+        lines.append("Runtime helper: " + plain_shell_command("runtime-helper", project_root=Path.cwd().resolve()))
     print("\n".join(lines))
 
 
@@ -945,18 +1804,489 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
     state = load_json(state_file)
     proof_request = load_bootstrap_json(alpha_file(root, "proof_request"))
     preferred = proof_request.get("preferred_artifacts", {})
+    profile = load_project_profile(root) or {}
     lines = [
         "Controlled run started.",
-        "Do this now: Edit only the starter proof files below in place. Leave every other surface unchanged.",
+        "Do this now: make the bounded change, run local verification, then strengthen final_result.json first.",
         f"Artifact root: {display_path(root)}",
         f"Run id: {state.get('run_id', '')}",
-        "Starter proof files are ready for this run.",
+        "Starter proof surface is ready for this run.",
         f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
-        f"- readback: {preferred.get('readback', display_path_from_base(root / 'readback.txt', base=project_root))}",
-        f"- scenario proof: {preferred.get('scenario_proof', display_path_from_base(root / 'scenario_proof.txt', base=project_root))}",
-        "Then run: " + shell_command(root, "check"),
-        "Optional safety fallback: " + shell_command(root, "save"),
+        "- fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.",
+        "Need a canonical final_result shape? run " + plain_shell_command("final-result-template", project_root=project_root),
+        "Then run: " + shell_command(root, "check", project_root=project_root),
     ]
+    if profile.get("workspace_isolation_note", ""):
+        lines.append("Workspace note: " + profile["workspace_isolation_note"])
+    if profile.get("prefers_runtime_evidence", False):
+        lines.append("Runtime helper: " + plain_shell_command("runtime-helper", project_root=project_root))
+    print("\n".join(lines))
+
+
+def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Path) -> None:
+    state = load_json(state_file)
+    proof_request = load_bootstrap_json(alpha_file(root, "proof_request")) if alpha_file(root, "proof_request").exists() else {}
+    preferred = proof_request.get("preferred_artifacts", {})
+    lines = [
+        "Synrail already has a controlled run in progress.",
+        "What happened: this artifact root still points at the current untouched run, so Synrail did not start a second one.",
+        f"Artifact root: {display_path(root)}",
+        f"Run id: {state.get('run_id', '')}",
+        "Continue this run by making the bounded change, running local verification, and strengthening final_result.json first.",
+        f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
+        "- fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.",
+        "Need a canonical final_result shape? run " + plain_shell_command("final-result-template", project_root=project_root),
+        "Next command: " + shell_command(root, "check", project_root=project_root),
+    ]
+    print("\n".join(lines))
+
+
+TERMINAL_RUN_STATES = {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}
+
+
+def agent_wiring_label(project_root: Path) -> str:
+    installed: list[str] = []
+    if (project_root / "AGENTS.md").exists():
+        installed.append("AGENTS.md")
+    if (project_root / "GEMINI.md").exists():
+        installed.append("GEMINI.md")
+    if (project_root / "CLAUDE.md").exists():
+        installed.append("CLAUDE.md")
+    return " + ".join(installed) if installed else "not installed"
+
+
+def format_run_label(state: dict | None) -> str:
+    if not state:
+        return "none"
+    run_id = (state.get("run_id", "") or "").strip()
+    run_state = (state.get("state", "") or "").strip()
+    if run_id and run_state:
+        return f"{run_id} — {run_state}"
+    if run_id:
+        return run_id
+    if run_state:
+        return run_state
+    return "present but unreadable"
+
+
+def humanize_dashboard_next_step(text: str) -> str:
+    value = (text or "").strip()
+    if not value:
+        return value
+    mapping = {
+        "attest target surface": "confirm that this repo/worktree is the intended place for the run",
+        "confirm exact task identity": "confirm that the saved task request still matches this run",
+        "run doctor and clear blocking failure classes": "run readiness checks and clear the blocking failure classes",
+        "start the run in controlled mode before trusting any proof or acceptance": "start this task through Synrail before trusting any proof or acceptance",
+        "restore exact prompt and task identity": "restore the exact task request and prompt identity",
+        "complete bounded execution on the attested target surface": "finish the bounded change on the verified target surface",
+        "capture the final result artifact and rebuild the proof bundle": "capture the final result and rebuild the proof bundle",
+        "repair the final result artifact and rebuild the proof bundle": "repair final_result.json and rebuild the proof bundle",
+        "complete the missing proof sections": "fill in the missing proof sections",
+        "run reverification against the attested target surface": "rerun verification against the verified target surface",
+    }
+    return mapping.get(value, value)
+
+
+def build_workspace_status(root: Path, *, project_root: Path, state_path: Path | None = None) -> dict:
+    state_path = (state_path or alpha_file(root, "state")).resolve()
+    state = load_json(state_path) if state_path.exists() else None
+    profile = load_project_profile(root) or {}
+    bootstrap_exists = alpha_file(root, "bootstrap").exists()
+    run_state = ((state or {}).get("state", "") or "").strip()
+    active_run = bool(state and bootstrap_exists and run_state not in TERMINAL_RUN_STATES)
+    if active_run:
+        workspace_state = "controlled run in progress"
+    elif state and not bootstrap_exists:
+        workspace_state = "setup ready; no controlled run yet"
+    elif state:
+        workspace_state = "controlled run history available"
+    elif root.exists() or profile:
+        workspace_state = "workspace initialized"
+    else:
+        workspace_state = "no Synrail artifacts yet"
+
+    next_step = ""
+    if active_run:
+        next_step = (state or {}).get("next_safe_step", "") or shell_command(root, "check", project_root=project_root)
+    elif state and not bootstrap_exists:
+        next_step = shell_command(root, "start", "Describe the bounded local change.", project_root=project_root)
+    elif state and run_state and run_state not in TERMINAL_RUN_STATES:
+        next_step = (state or {}).get("next_safe_step", "") or shell_command(root, "check", project_root=project_root)
+    else:
+        next_step = shell_command(root, "start", "Describe the bounded local change.", project_root=project_root)
+    human_next_step = humanize_dashboard_next_step(next_step)
+
+    return {
+        "type": "cli_control_kernel",
+        "daemon": False,
+        "workspace": display_path(project_root),
+        "workspace_state": workspace_state,
+        "artifact_root": display_path_from_base(root, base=project_root),
+        "project_type": profile.get("project_type", detect_project_type(project_root)),
+        "agent_wiring": agent_wiring_label(project_root),
+        "workspace_warning": profile.get("workspace_isolation_note", ""),
+        "active_run": format_run_label(state) if active_run else "none",
+        "last_run": format_run_label(state),
+        "next_step": human_next_step,
+        "next_step_raw": next_step,
+        "start_command": shell_command(root, "start", "Describe the bounded local change.", project_root=project_root),
+        "help_command": plain_shell_command("--help", project_root=project_root),
+    }
+
+
+def print_workspace_dashboard(summary: dict) -> None:
+    lines = [
+        "Synrail: local governance dashboard",
+        "Type: CLI control kernel (not a background daemon)",
+        "",
+        f"Workspace: {summary['workspace_state']}",
+        f"Artifact root: {summary['artifact_root']}",
+        f"Project type: {summary['project_type']}",
+        f"Agent wiring: {summary['agent_wiring']}",
+        f"Active run: {summary['active_run']}",
+        f"Last run: {summary['last_run']}",
+        f"Next step: {summary['next_step']}",
+        f"Start new run: {summary['start_command']}",
+        f"Full help: {summary['help_command']}",
+    ]
+    if summary.get("workspace_warning", ""):
+        lines.insert(8, f"Workspace note: {summary['workspace_warning']}")
+    print("\n".join(lines))
+
+
+def final_result_template_payload(*, root: Path | None) -> dict:
+    state: dict = {}
+    if root and alpha_file(root, "state").exists():
+        state = load_json(alpha_file(root, "state"))
+    profile = load_project_profile(root) or {}
+    task_identity = load_text_if_exists(root / "task_identity.txt") if root else ""
+    prompt_identity = load_text_if_exists(root / "prompt_identity.txt") if root else ""
+    baseline_identity = (profile.get("baseline_identity", "") or "").strip()
+    execution_surface_identity = (profile.get("execution_surface_identity", "") or "").strip()
+    changed_file = "path/to/changed_file.ext"
+    notes = [
+        "Replace the sample changed file path with the actual file paths for this run.",
+        "Set status to PROVEN when this run made and verified a real bounded edit.",
+        "Set status to ALREADY_SATISFIED only when the requested state was already present before any edit and the no-op attestation is truthful.",
+        "Set change_disposition to already_satisfied only when the requested state was already present before any edit.",
+        "Keep the scope tight: do not smuggle adjacent spacing, class, or layout tweaks into a task that only asked you to add or insert a small surface change.",
+        "If the task only asked for a simple subtitle or label, keep the new line visually plain and avoid extra emphasis styling unless the task explicitly asked for it.",
+        "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers when you can produce one.",
+        "If git is not installed, do not invent git_diff; leave git_diff empty and use structured diff_provenance instead.",
+        "If git_diff is unavailable, keep diff_provenance explicit with method, changed_file, one exact added_line or removed_line, one stable context_before or context_after anchor, and verification command plus result. If method is omitted but the direct-observation record is otherwise complete, Synrail can normalize it to direct_file_observation during a normal check.",
+        "For tiny edits, do not leave the exact changed line and its stable neighbor only in readback or scenario_proof; copy those anchors into diff_provenance too.",
+        "For an already_satisfied no-op, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.",
+        "In the normal synrail check path, run identity is already carried from the current controlled context; only fill artifact_identity manually when you are doing a standalone bundle check without that context.",
+        "In the normal synrail check path, leave cleanup_status absent and let doctor-ready cleanup truth satisfy it automatically; only fill cleanup_status manually when standalone proof or a later synrail check explicitly asks for an explicit cleanup attestation.",
+        "Use synrail explain-proof after a check to see exact semantic gaps and reasons.",
+    ]
+    if profile.get("workspace_isolation_note", ""):
+        notes.append(profile["workspace_isolation_note"])
+    return {
+        "request_id": state.get("run_id", "RUN_ID_FOR_THIS_CONTROLLED_RUN"),
+        "task_class": state.get("task_class", DEFAULT_ALPHA_TASK_CLASS),
+        "status": "PROVEN",
+        "change_disposition": "modified",
+        "summary": "Describe the bounded change that was actually completed for this run.",
+        "modified_files": [changed_file],
+        "git_diff": (
+            f"diff --git a/{changed_file} b/{changed_file}\n"
+            f"--- a/{changed_file}\n"
+            f"+++ b/{changed_file}\n"
+            "@@ -1,1 +1,2 @@\n"
+            "- old\n"
+            "+ new\n"
+            "+ describe the concrete patch on the named file"
+        ),
+        "diff_provenance": {
+            "method": "direct_file_observation",
+            "changed_file": changed_file,
+            "added_line": "copy one exact added or changed line from the file",
+            "observed_line": "if no edit was required because the requested state was already present, record that exact existing line here instead of inventing a patch",
+            "context_before": "copy one stable line immediately before the changed or observed line",
+            "context_after": "copy one stable line immediately after the changed or observed line",
+            "verification_command": f"grep -n 'needle' {changed_file}",
+            "verification_result": "12:stable neighbor line\n13:exact changed or observed line",
+            "provenance_note": "Use this when git_diff is unavailable or the file is not tracked by git.",
+        },
+        "artifact_identity": {
+            "baseline_identity": baseline_identity or "autodetected_generic_baseline",
+            "execution_surface_identity": execution_surface_identity or "autodetected_generic_worktree",
+            "prompt_identity": prompt_identity or task_identity or "TASK_PROMPT_IDENTITY_FOR_THIS_RUN",
+            "task_identity": task_identity or "TASK_IDENTITY_FOR_THIS_RUN",
+        },
+        "_synrail": {
+            "template_mode": True,
+            "task_identity": task_identity,
+            "notes": notes,
+        },
+    }
+
+
+def runtime_helper_text(*, root: Path | None) -> str:
+    profile = load_project_profile(root) or {}
+    project_root = Path(profile.get("project_root", "") or Path.cwd()).resolve()
+    project_type = profile.get("project_type", detect_project_type(project_root))
+    prefers_runtime = bool(profile.get("prefers_runtime_evidence", False) or project_prefers_runtime_evidence(project_root))
+    lines = [
+        "Synrail runtime helper",
+        f"Project root: {display_path(project_root)}",
+    ]
+    workspace_note = (profile.get("workspace_isolation_note", "") or "").strip()
+    if workspace_note:
+        lines.append(f"Workspace note: {workspace_note}")
+    if not prefers_runtime:
+        lines.extend(
+            [
+                "This repo does not look render-first.",
+                "Use the smallest local verification you already trust for this task.",
+                "If you still need UI or rendered-output evidence, prefer curl or direct template render before browser automation.",
+            ]
+        )
+        return "\n".join(lines) + "\n"
+
+    lines.extend(
+        [
+            "For UI, route, or rendered-output tasks, prefer a small local response/render check before browser automation.",
+            "Try one of these paths first:",
+            "1. HTTP path (if the local app is already running):",
+            "   curl -s http://localhost:8000/ | grep -C 2 'needle'",
+        ]
+    )
+    template_root = project_root / "templates"
+    if template_root.exists() or any((child / "templates").exists() for child in project_root.iterdir() if child.is_dir()):
+        lines.extend(
+            [
+                "2. Template/render path (no browser required):",
+                "   python3 -c \"from jinja2 import Environment, FileSystemLoader; env = Environment(loader=FileSystemLoader('templates')); html = env.get_template('index.html').render(); print('needle' in html)\"",
+            ]
+        )
+    if project_type == "python":
+        lines.append("If you need the running app first, start the same local Python entrypoint you already use for this repo and then use curl.")
+    lines.append("Reach for Playwright or browser automation only after one of the smaller local paths above is blocked.")
+    return "\n".join(lines) + "\n"
+
+
+def scenario_proof_template_text(*, root: Path | None) -> str:
+    state: dict = {}
+    if root and alpha_file(root, "state").exists():
+        state = load_json(alpha_file(root, "state"))
+    profile = load_project_profile(root) or {}
+    task_identity = load_text_if_exists(root / "task_identity.txt") if root else ""
+    title = task_identity or "Describe the bounded verification for this run."
+    run_id = state.get("run_id", "RUN_ID_FOR_THIS_CONTROLLED_RUN")
+    lines = [
+        f"### SCENARIO PROOF: {title}",
+        f"Run id: {run_id}",
+        "Scenario: name only the exact runtime context needed for the blocker Synrail explicitly targeted",
+        "Command: paste only the local command, request, or test that verified this named blocker",
+        "Observed: paste only the concrete output, rendered fragment, or behavior needed to unblock it",
+    ]
+    lines.append("Fallback-only note: if final_result.json already carries explicit structured verification, leave this scenario proof untouched unless Synrail explicitly targets this file.")
+    lines.append("When Synrail does explicitly target this file, keep it minimal and concrete; do not add extra narrative beyond the named blocker.")
+    if profile.get("prefers_runtime_evidence", False):
+        lines.append("Runtime hint: prefer a local request, rendered response, or observed runtime output over a source-only grep when possible; run `synrail runtime-helper` for a small curl or template-render path before browser automation")
+    lines.extend(["Status: PASSED", ""])
+    return "\n".join(lines)
+
+
+def readback_template_text(*, root: Path | None) -> str:
+    state: dict = {}
+    if root and alpha_file(root, "state").exists():
+        state = load_json(alpha_file(root, "state"))
+    profile = load_project_profile(root) or {}
+    task_identity = load_text_if_exists(root / "task_identity.txt") if root else ""
+    title = task_identity or "Describe the bounded readback for this run."
+    changed_surface = "path/to/changed_file.ext"
+    final_result_path = root / "final_result.json" if root else None
+    if final_result_path and final_result_path.exists():
+        final_result = load_json(final_result_path)
+        modified_files = list(final_result.get("modified_files", []))
+        if modified_files:
+            changed_surface = str(modified_files[0])
+    lines = [
+        f"### READBACK: {title}",
+        f"Run id: {state.get('run_id', 'RUN_ID_FOR_THIS_CONTROLLED_RUN')}",
+        f"Changed surface: {changed_surface}",
+        "Observed: record only the concrete property needed for the blocker Synrail explicitly targeted",
+    ]
+    lines.append("Fallback-only note: if final_result.json already carries explicit structured verification, leave this readback untouched unless Synrail explicitly targets this file.")
+    lines.append("When Synrail does explicitly target this file, keep it minimal and concrete; do not add extra narrative beyond the named blocker.")
+    if profile.get("prefers_runtime_evidence", False):
+        lines.append("Runtime hint: for UI, route, or rendered output changes, prefer a local response or rendered fragment over source-only grep when possible; run `synrail runtime-helper` for a small curl or template-render path before browser automation")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def maybe_materialize_requested_fallback_surface(*, root: Path | None, prompt_file: Path) -> str:
+    if not root or not prompt_file.exists():
+        return ""
+    payload = load_json(prompt_file)
+    subsurface_id = payload.get("current_step_subsurface_id", "")
+    if subsurface_id == "readback_record":
+        target = root / "readback.txt"
+        if not target.exists():
+            target.write_text(readback_template_text(root=root))
+            return display_path(target)
+        return ""
+    if subsurface_id == "scenario_proof_record":
+        target = root / "scenario_proof.txt"
+        if not target.exists():
+            target.write_text(scenario_proof_template_text(root=root))
+            return display_path(target)
+        return ""
+    return ""
+
+
+def build_proof_explanation(bundle: dict, *, root: Path | None) -> dict:
+    structural_gaps = [
+        {
+            "section": entry.get("section", ""),
+            "why": entry.get("why", ""),
+            "recommended_action": entry.get("recommended_action", ""),
+        }
+        for entry in bundle.get("structural_decision_trace", [])
+        if not entry.get("structurally_complete", False)
+    ]
+    semantic_gaps = [
+        {
+            "section": entry.get("section", ""),
+            "why": entry.get("why", ""),
+            "recommended_action": entry.get("recommended_action", ""),
+        }
+        for entry in bundle.get("semantic_decision_trace", [])
+        if entry.get("evaluated", False) and not entry.get("semantically_sufficient", False)
+    ]
+    helper_commands: list[str] = []
+    if any(section["section"] in {"final_result", "final_result_status", "modified_files", "diff_provenance", "verification_corroboration", "cleanup_status"} for section in structural_gaps + semantic_gaps):
+        helper_commands.append("synrail final-result-template")
+    if any(section["section"] == "readback" for section in structural_gaps + semantic_gaps):
+        helper_commands.append("synrail readback-template")
+    if any(section["section"] in {"scenario_proof", "verification_corroboration"} for section in structural_gaps + semantic_gaps):
+        helper_commands.append("synrail scenario-proof-template")
+    profile = load_project_profile(root) or {}
+    if profile.get("prefers_runtime_evidence", False) and any(
+        section["section"] in {"readback", "scenario_proof", "verification_corroboration"} for section in structural_gaps + semantic_gaps
+    ):
+        helper_commands.append("synrail runtime-helper")
+    helper_commands.append("synrail check")
+    final_result_target = display_path(root / "final_result.json") if root else "final_result.json"
+    readback_target = display_path(root / "readback.txt") if root else "readback.txt"
+    scenario_proof_target = display_path(root / "scenario_proof.txt") if root else "scenario_proof.txt"
+    identity_sources = {
+        "baseline_identity": (profile.get("baseline_identity", "") or "").strip(),
+        "execution_surface_identity": (profile.get("execution_surface_identity", "") or "").strip(),
+        "prompt_identity": load_text_if_exists(root / "prompt_identity.txt") if root else "",
+        "task_identity": load_text_if_exists(root / "task_identity.txt") if root else "",
+    }
+    return {
+        "bundle_status": bundle.get("status", ""),
+        "structural_status": bundle.get("structural_status", ""),
+        "semantic_status": bundle.get("semantic_status", ""),
+        "semantic_next_safe_step": bundle.get("semantic_next_safe_step", ""),
+        "missing_sections": list(bundle.get("missing_sections", [])),
+        "semantically_insufficient_sections": list(bundle.get("semantically_insufficient_sections", [])),
+        "structural_gaps": structural_gaps,
+        "semantic_gaps": semantic_gaps,
+        "helper_commands": helper_commands,
+        "final_result_target": final_result_target,
+        "readback_target": readback_target,
+        "scenario_proof_target": scenario_proof_target,
+        "identity_sources": identity_sources,
+    }
+
+
+def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
+    lines = [
+        "Synrail proof explanation",
+        f"Bundle status: {explanation['bundle_status']}",
+        f"Structural status: {explanation['structural_status']}",
+        f"Semantic status: {explanation['semantic_status']}",
+    ]
+    if explanation.get("semantic_next_safe_step", ""):
+        lines.append(f"Current semantic next step: {explanation['semantic_next_safe_step']}")
+    structural_gaps = explanation.get("structural_gaps", [])
+    semantic_gaps = explanation.get("semantic_gaps", [])
+    if structural_gaps:
+        lines.append("Structural gaps:")
+        for gap in structural_gaps:
+            lines.append(f"- {gap['section']}")
+            if gap["why"]:
+                lines.append(f"  Why: {gap['why']}")
+            if gap["recommended_action"]:
+                lines.append(f"  What to do: {gap['recommended_action']}")
+            if gap["section"] == "diff_provenance":
+                lines.append("  Concrete fix: keep git_diff patch-shaped with diff --git, ---, +++, @@, and the named changed files, or add diff_provenance with changed_file, one exact added or removed line, one stable context anchor, and verification command plus result.")
+                lines.append("  No-op fix: if the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.")
+            if gap["section"] == "artifact_identity":
+                lines.append("  Concrete fix: ensure baseline_identity, execution_surface_identity, prompt_identity, and task_identity are all non-empty for this run.")
+                lines.append("  Normal check path: Synrail usually carries these identity values from the current run context automatically; only fill them manually when a standalone bundle-check lacks that context.")
+            if gap["section"] == "modified_files":
+                lines.append("  No-op fix: if no file had to change because the requested state already existed, set change_disposition to already_satisfied and keep modified_files empty instead of inventing a changed file list.")
+            if gap["section"] == "scope_alignment":
+                lines.append("  Concrete fix: keep only the requested additive change. Remove adjacent spacing, class, or layout rewrites unless the task explicitly asked for them.")
+            if gap["section"] == "presentation_alignment":
+                lines.append("  Concrete fix: keep the newly added line visually plain. Remove extra emphasis styling like italic, opacity, uppercase, or tracking unless the task explicitly asked for it.")
+            if gap["section"] == "verification_corroboration":
+                lines.append("  Concrete fix: keep acceptance tied to explicit local verification. Either add structured diff_provenance with verification command and result in final_result.json, or record a labeled scenario proof with Command and Observed or Result lines instead of prose-only proof text.")
+            if gap["section"] == "final_result_status":
+                lines.append("  Concrete fix: use a trust-bearing closure claim in final_result.json. Set status to PROVEN for an evidenced modification run, or ALREADY_SATISFIED for a truthful no-op attestation.")
+                lines.append("  Avoid generic execution labels like SUCCESS, COMPLETED, or DONE when the bundle is making a trust claim.")
+            if gap["section"] == "cleanup_status":
+                lines.append("  Normal check path: if doctor already reports an acceptable clean execution surface, Synrail can satisfy cleanup_status from that current readiness truth.")
+                lines.append("  Concrete fix: if final_result.json still carries a stale starter cleanup placeholder, delete it and rerun synrail check before authoring a manual cleanup attestation.")
+    if semantic_gaps:
+        lines.append("Semantic gaps:")
+        for gap in semantic_gaps:
+            lines.append(f"- {gap['section']}")
+            if gap["why"]:
+                lines.append(f"  Why: {gap['why']}")
+            if gap["recommended_action"]:
+                lines.append(f"  What to do: {gap['recommended_action']}")
+            if gap["section"] == "diff_provenance":
+                lines.append("  Concrete fix: keep git_diff patch-shaped with diff --git, ---, +++, @@, and the named changed files, or add diff_provenance with changed_file, one exact added or removed line, one stable context anchor, and verification command plus result.")
+                lines.append("  No-op fix: if the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.")
+            if gap["section"] == "artifact_identity":
+                lines.append("  Concrete fix: ensure baseline_identity, execution_surface_identity, prompt_identity, and task_identity are all non-empty for this run.")
+                lines.append("  Normal check path: Synrail usually carries these identity values from the current run context automatically; only fill them manually when a standalone bundle-check lacks that context.")
+            if gap["section"] == "modified_files":
+                lines.append("  No-op fix: if no file had to change because the requested state already existed, set change_disposition to already_satisfied and keep modified_files empty instead of inventing a changed file list.")
+            if gap["section"] == "scope_alignment":
+                lines.append("  Concrete fix: keep only the requested additive change. Remove adjacent spacing, class, or layout rewrites unless the task explicitly asked for them.")
+            if gap["section"] == "presentation_alignment":
+                lines.append("  Concrete fix: keep the newly added line visually plain. Remove extra emphasis styling like italic, opacity, uppercase, or tracking unless the task explicitly asked for it.")
+            if gap["section"] == "verification_corroboration":
+                lines.append("  Concrete fix: keep acceptance tied to explicit local verification. Either add structured diff_provenance with verification command and result in final_result.json, or record a labeled scenario proof with Command and Observed or Result lines instead of prose-only proof text.")
+            if gap["section"] == "final_result_status":
+                lines.append("  Concrete fix: use a trust-bearing closure claim in final_result.json. Set status to PROVEN for an evidenced modification run, or ALREADY_SATISFIED for a truthful no-op attestation.")
+                lines.append("  Avoid generic execution labels like SUCCESS, COMPLETED, or DONE when the bundle is making a trust claim.")
+            if gap["section"] == "cleanup_status":
+                lines.append("  Normal check path: if doctor already reports an acceptable clean execution surface, Synrail can satisfy cleanup_status from that current readiness truth.")
+                lines.append("  Concrete fix: if final_result.json still carries a stale starter cleanup placeholder, delete it and rerun synrail check before authoring a manual cleanup attestation.")
+    if not structural_gaps and not semantic_gaps:
+        lines.append("Synrail did not find structural or semantic proof gaps in the current bundle.")
+    if any(gap["section"] in {"final_result", "final_result_status", "modified_files", "diff_provenance", "verification_corroboration", "artifact_identity", "cleanup_status"} for gap in structural_gaps + semantic_gaps):
+        lines.append(f"final_result target: {explanation['final_result_target']}")
+    if any(gap["section"] == "artifact_identity" for gap in structural_gaps + semantic_gaps):
+        identity_sources = explanation.get("identity_sources", {})
+        lines.append("Current run identity hints:")
+        for key in ["baseline_identity", "execution_surface_identity", "prompt_identity", "task_identity"]:
+            value = identity_sources.get(key, "")
+            if value:
+                lines.append(f"- {key}: {value}")
+    if any(gap["section"] == "readback" for gap in structural_gaps + semantic_gaps):
+        lines.append(f"readback target: {explanation['readback_target']}")
+    if any(gap["section"] in {"scenario_proof", "verification_corroboration"} for gap in structural_gaps + semantic_gaps):
+        lines.append(f"scenario_proof target: {explanation['scenario_proof_target']}")
+    if any(gap["section"] in {"readback", "scenario_proof", "verification_corroboration"} for gap in structural_gaps + semantic_gaps):
+        profile = load_project_profile(root) or {}
+        if profile.get("prefers_runtime_evidence", False):
+            lines.append("Runtime nudge: prefer `synrail runtime-helper` and a small curl or template-render check before browser automation.")
+    if explanation.get("helper_commands", []):
+        lines.append("Helpful commands:")
+        for command in explanation["helper_commands"]:
+            lines.append(f"- {command}")
     print("\n".join(lines))
 
 
@@ -980,7 +2310,38 @@ def human_safe_point_class(value: str) -> str:
     mapping = {
         "VERIFIED_WORKING_STATE": "Verified working state",
         "VERIFIED_ACCEPTED_STATE": "Verified accepted state",
+        "PRE_RUN_SNAPSHOT": "Pre-run workspace snapshot",
         "NOT_SAFE_POINT": "Not a verified restore point",
+    }
+    return mapping.get(value, value)
+
+
+def human_restore_preview_status(value: str) -> str:
+    mapping = {
+        "READY": "Ready",
+        "LIMITED": "Limited",
+        "UNSUPPORTED": "Unsupported",
+        "BLOCKED": "Blocked",
+    }
+    return mapping.get(value, value)
+
+
+def human_workspace_restore_mode(value: str) -> str:
+    mapping = {
+        "git": "Git workspace snapshot",
+        "file_copy": "File-copy workspace snapshot",
+        "artifacts_only": "Checkpoint artifacts only",
+        "none": "No supported workspace snapshot",
+    }
+    return mapping.get(value, value)
+
+
+def human_supported_contour(value: str) -> str:
+    mapping = {
+        "pre_run_snapshot_git": "Pre-run snapshot on a git workspace",
+        "pre_run_snapshot_file_copy": "Pre-run snapshot on a file-copy workspace",
+        "pre_run_snapshot_unsupported": "Pre-run snapshot without supported workspace recovery",
+        "artifact_only_verified_state": "Verified checkpoint artifact restore only",
     }
     return mapping.get(value, value)
 
@@ -1014,6 +2375,27 @@ def print_checkpoint_summary(record_file: Path, *, action: str, root: Path | Non
             f"Restore point confirmation: {payload.get('verification', {}).get('status', '')}",
             human_checkpoint_step(payload.get("next_safe_step", "")),
         ]
+        if root and payload.get("verification", {}).get("status", "") == "PASSED":
+            lines.append("Preview command: " + shell_command(root, "restore") + " --preview")
+    elif action == "preview":
+        lines = [
+            f"Restore preview: {human_restore_preview_status(payload.get('restore_status', ''))}",
+            f"Fallback type: {human_safe_point_class(payload.get('safe_point_class', ''))}",
+            f"Supported contour: {human_supported_contour(payload.get('supported_contour', ''))}",
+            f"Workspace restore mode: {human_workspace_restore_mode(payload.get('workspace_restore_mode', ''))}",
+            "What it means: " + payload.get("summary", ""),
+        ]
+        if payload.get("workspace_restore_destructive", False):
+            lines.append("Caution: this restore will modify project workspace files on the saved project root.")
+        for note in payload.get("notes", []):
+            lines.append("- " + note)
+        if payload.get("restore_supported", False) and root:
+            restore_command = shell_command(root, "restore")
+            if payload.get("workspace_restore_destructive", False):
+                restore_command += " --confirm"
+            lines.append("Next command: " + restore_command)
+        elif payload.get("next_safe_step", ""):
+            lines.append("What to do next: " + payload.get("next_safe_step", ""))
     elif action == "restore":
         restore = payload.get("restore", {})
         rollback = payload.get("rollback", {})
@@ -1041,11 +2423,17 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
         lines.extend(
             [
                 "What it means: You now have a trusted fallback if this run goes non-green.",
-                "What to do next: continue the current workflow. Restore is ready if you need it.",
+                "What to do next: continue the current workflow. Preview the restore contract before using restore on a live workspace.",
             ]
         )
         if root:
-            lines.append("Restore command: " + shell_command(root, "restore"))
+            lines.append("Preview command: " + shell_command(root, "restore") + " --preview")
+            contract = restore_contract(record)
+            if contract.get("restore_supported", False):
+                restore_command = shell_command(root, "restore")
+                if contract.get("workspace_restore_destructive", False):
+                    restore_command += " --confirm"
+                lines.append("Restore command: " + restore_command)
     else:
         lines.extend(
             [
@@ -1059,18 +2447,103 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
 
 
 def cmd_status(args: argparse.Namespace) -> int:
-    state = load_json(Path(args.state_file))
-    summary = {
-        "run_id": state["run_id"],
-        "task_class": state["task_class"],
-        "state": state["state"],
-        "target_surface": state["target_surface"]["status"],
-        "doctor": state["doctor"]["status"],
-        "proof_bundle": state["proof_bundle"]["status"],
-        "closure": state["closure"]["status"],
-        "next_safe_step": state["next_safe_step"],
-    }
-    print(json.dumps(summary, indent=2, ensure_ascii=True))
+    project_root = Path.cwd().resolve()
+    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=project_root)
+    state_path: Path | None = None
+    if getattr(args, "state_file", None):
+        state_path = Path(args.state_file).expanduser().resolve()
+        default_state_path = alpha_file(root, "state")
+        if state_path != default_state_path.resolve():
+            root = state_path.parent
+    summary = build_workspace_status(root, project_root=project_root, state_path=state_path)
+    state_path = (state_path or alpha_file(root, "state")).resolve()
+    if state_path.exists():
+        state = ensure_run_state_extensions(load_json(state_path))
+        summary.update(
+            {
+                "run_id": state.get("run_id", ""),
+                "task_class": state.get("task_class", ""),
+                "state": state.get("state", ""),
+                "target_surface": state.get("target_surface", {}).get("status", ""),
+                "doctor": state.get("doctor", {}).get("status", ""),
+                "proof_bundle": state.get("proof_bundle", {}).get("status", ""),
+                "closure": state.get("closure", {}).get("status", ""),
+                "next_safe_step": state.get("next_safe_step", ""),
+            }
+        )
+    if getattr(args, "json", False):
+        print(json.dumps(summary, indent=2, ensure_ascii=True))
+    else:
+        print_workspace_dashboard(summary)
+    return 0
+
+
+def cmd_explain_proof(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
+    bundle_file = Path(getattr(args, "bundle_file", "") or alpha_file(root, "bundle")).expanduser().resolve()
+    if not bundle_file.exists():
+        if getattr(args, "json", False):
+            print(json.dumps({"result": "ERROR", "reason": "BUNDLE_FILE_REQUIRED", "next_command": "synrail check"}, ensure_ascii=True))
+        else:
+            print("Synrail does not have a proof explanation yet.")
+            print("What is missing: bundle.json has not been generated for this run.")
+            print("What to do next: run synrail check first so Synrail can evaluate the current proof bundle.")
+        return 2
+    bundle = load_json(bundle_file)
+    explanation = build_proof_explanation(bundle, root=root)
+    if getattr(args, "json", False):
+        print(json.dumps(explanation, indent=2, ensure_ascii=True))
+    else:
+        print_proof_explanation(explanation, root=root)
+    return 0
+
+
+def cmd_final_result_template(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
+    payload = final_result_template_payload(root=root if root.exists() else None)
+    text = json.dumps(payload, indent=2, ensure_ascii=True) + "\n"
+    if getattr(args, "output", None):
+        target = Path(args.output).expanduser().resolve()
+        target.write_text(text)
+        print(f"Wrote canonical final_result template to {display_path(target)}")
+    else:
+        print(text, end="")
+    return 0
+
+
+def cmd_scenario_proof_template(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
+    text = scenario_proof_template_text(root=root if root.exists() else None)
+    if getattr(args, "output", None):
+        target = Path(args.output).expanduser().resolve()
+        target.write_text(text)
+        print(f"Wrote canonical scenario_proof template to {display_path(target)}")
+    else:
+        print(text, end="")
+    return 0
+
+
+def cmd_readback_template(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
+    text = readback_template_text(root=root if root.exists() else None)
+    if getattr(args, "output", None):
+        target = Path(args.output).expanduser().resolve()
+        target.write_text(text)
+        print(f"Wrote canonical readback template to {display_path(target)}")
+    else:
+        print(text, end="")
+    return 0
+
+
+def cmd_runtime_helper(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
+    text = runtime_helper_text(root=root if root.exists() else None)
+    if getattr(args, "output", None):
+        target = Path(args.output).expanduser().resolve()
+        target.write_text(text)
+        print(f"Wrote runtime helper guidance to {display_path(target)}")
+    else:
+        print(text, end="")
     return 0
 
 
@@ -1140,7 +2613,7 @@ def cmd_start(args: argparse.Namespace) -> int:
     existing_state_path = Path(args.output)
     existing_state = load_json(existing_state_path) if existing_state_path.exists() else None
     if not getattr(args, "run_id", None):
-        args.run_id = existing_state.get("run_id", "") if existing_state else default_alpha_run_id()
+        args.run_id = default_alpha_run_id()
     if not getattr(args, "task_class", None):
         args.task_class = existing_state.get("task_class", DEFAULT_ALPHA_TASK_CLASS) if existing_state else DEFAULT_ALPHA_TASK_CLASS
 
@@ -1151,12 +2624,34 @@ def cmd_start(args: argparse.Namespace) -> int:
         else:
             print("Synrail could not start a controlled run yet.")
             print("What is missing: the original task request for this run.")
-            print("What to do next: pass --task-identity or save the task request first, then rerun synrail start.")
+            print(
+                "What to do next: run `"
+                + plain_shell_command("start", "Describe the bounded local change.", project_root=project_root)
+                + "` or pass --task-identity, then retry."
+            )
         return 2
 
     existing_proof = existing_preferred_proof_artifacts(root)
+    previous_state = existing_state.get("state", "") if existing_state else ""
+    active_bootstrap = alpha_file(root, "bootstrap").exists()
+    if existing_state and active_bootstrap and previous_state and previous_state not in TERMINAL_RUN_STATES and not existing_proof:
+        if args.mode == "dev":
+            print(
+                json.dumps(
+                    {
+                        "result": "OK",
+                        "reason": "CONTROLLED_RUN_ALREADY_ACTIVE",
+                        "reused_existing_run": True,
+                        "run_id": existing_state.get("run_id", ""),
+                        "next_command": shell_command(root, "check", project_root=project_root),
+                    },
+                    ensure_ascii=True,
+                )
+            )
+        else:
+            print_existing_run_summary(root=root, state_file=existing_state_path, project_root=project_root)
+        return 0
     if existing_proof:
-        previous_state = existing_state.get("state", "") if existing_state else ""
         if previous_state in ("CLOSURE_ACCEPTED", "CLOSURE_REJECTED"):
             for _aid, path in preferred_proof_artifact_paths(root).items():
                 path.unlink(missing_ok=True)
@@ -1210,6 +2705,10 @@ def cmd_start(args: argparse.Namespace) -> int:
     validation = apply_bootstrap_defaults(args, root=root)
     if validation:
         save_bootstrap_json(alpha_file(root, "bootstrap_validation"), validation)
+    update_last_known_final_result_hash(
+        Path(args.output),
+        preferred_proof_artifact_paths(root)["final_result"],
+    )
     print_start_summary(root=root, state_file=Path(args.output), project_root=project_root)
     return 0
 
@@ -1265,26 +2764,13 @@ def cmd_telemetry_enable(args: argparse.Namespace) -> int:
 
 
 def cmd_telemetry_export(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args)
-    if not root:
-        print(json.dumps({"result": "ERROR", "reason": "ARTIFACT_ROOT_REQUIRED"}, ensure_ascii=True))
-        return 2
-    if not getattr(args, "output", None):
-        args.output = str(default_session_replay_file(root))
-    if not getattr(args, "issue_output", None):
-        args.issue_output = str(default_issue_body_file(root))
-    try:
-        record = export_session_replay(root, Path(args.output), Path(args.issue_output))
-    except ValueError as exc:
-        print("Synrail could not export feedback yet.")
-        print("What happened: telemetry is not enabled for this artifact root.")
-        print("What to do next: rerun synrail start with --telemetry-opt-in or use synrail telemetry enable before exporting feedback.")
-        return 2
-    print("Feedback export ready.")
-    print("What it includes: one session replay and one issue-ready summary.")
-    print(f"Command count captured: {record['command_count']}")
-    print("Use this when you want to send back a non-green run without hand-assembling artifacts.")
-    return 0
+    return run_telemetry_export_command(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        default_session_replay_file=default_session_replay_file,
+        default_issue_body_file=default_issue_body_file,
+        export_session_replay=export_session_replay,
+    )
 
 
 def cmd_bundle_check(args: argparse.Namespace) -> int:
@@ -1301,6 +2787,9 @@ def cmd_bundle_check(args: argparse.Namespace) -> int:
         ("--execution-surface-identity", args.execution_surface_identity),
         ("--prompt-identity", args.prompt_identity),
         ("--task-identity", args.task_identity),
+        ("--doctor-file", args.doctor_file),
+        ("--last-known-final-result-hash", getattr(args, "last_known_final_result_hash", None)),
+        ("--starter-final-result-hash", getattr(args, "starter_final_result_hash", None)),
     ]
     for flag, value in optional_pairs:
         if value:
@@ -1577,11 +3066,13 @@ def cmd_save(args: argparse.Namespace) -> int:
     record_output = Path(getattr(args, "output", "") or checkpoint_record_file(root, checkpoint_id))
     record_root = Path(getattr(args, "checkpoint_root", "") or checkpoint_root(root, checkpoint_id))
     state_file = Path(getattr(args, "state_file", "") or alpha_file(root, "state"))
+    project_root = Path(getattr(args, "project_root", "") or ".").resolve()
     create_forwarded = [
         "create",
         "--checkpoint-id", checkpoint_id,
         "--checkpoint-root", str(record_root),
         "--state-file", str(state_file),
+        "--project-root", str(project_root),
         "--output", str(record_output),
     ]
     for attr, flag in [
@@ -1688,7 +3179,38 @@ def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
     if root and not getattr(args, "target_root", None):
         args.target_root = str(root)
     if root and not getattr(args, "output", None):
-        args.output = str(alpha_file(root, "checkpoint_restore"))
+        output_file_id = "checkpoint_restore_preview" if getattr(args, "preview", False) else "checkpoint_restore"
+        args.output = str(alpha_file(root, output_file_id))
+    if not root and not getattr(args, "output", None):
+        print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_OUTPUT_REQUIRED"}, ensure_ascii=True))
+        return 2
+    if getattr(args, "preview", False):
+        if not getattr(args, "checkpoint_record_file", None):
+            if args.mode == "dev":
+                print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
+            else:
+                print("Synrail could not find a restore point to preview.")
+                if root:
+                    print("What to do next: create one before relying on restore semantics.")
+                    print("Next command: " + shell_command(root, "save"))
+            return 2
+        forwarded = [
+            "preview",
+            "--checkpoint-record-file", args.checkpoint_record_file,
+            "--target-root", args.target_root,
+            "--output", args.output,
+        ]
+        if args.mode == "dev":
+            return run_python(CHECKPOINT, forwarded)
+        completed = run_python_capture(CHECKPOINT, forwarded)
+        if completed.returncode != 0:
+            if completed.stderr.strip():
+                print(completed.stderr.strip(), file=sys.stderr)
+            if completed.stdout.strip():
+                print(completed.stdout.strip())
+            return completed.returncode
+        print_checkpoint_summary(Path(args.output), action="preview", root=root)
+        return 0
     if not getattr(args, "checkpoint_record_file", None):
         if args.mode == "dev":
             print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
@@ -1698,6 +3220,32 @@ def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
                 print("What to do next: create one while the project is in a verified working state.")
                 print("Next command: " + shell_command(root, "save"))
         return 2
+    if not getattr(args, "confirm", False):
+        preview_output = Path(args.output).with_name("checkpoint_restore_preview.json")
+        forwarded = [
+            "preview",
+            "--checkpoint-record-file", args.checkpoint_record_file,
+            "--target-root", args.target_root,
+            "--output", str(preview_output),
+        ]
+        completed = run_python_capture(CHECKPOINT, forwarded)
+        if completed.returncode != 0:
+            if completed.stderr.strip():
+                print(completed.stderr.strip(), file=sys.stderr)
+            if completed.stdout.strip():
+                print(completed.stdout.strip())
+            return completed.returncode
+        preview_payload = load_json(preview_output)
+        if preview_payload.get("workspace_restore_destructive", False):
+            if args.mode == "dev":
+                print(json.dumps({"result": "ERROR", "reason": "RESTORE_CONFIRM_REQUIRED"}, ensure_ascii=True))
+            else:
+                print("Synrail will not run this destructive restore without explicit confirmation.")
+                print("What happened: this restore would modify project workspace files on the saved project root.")
+                print("What to do next: preview the restore carefully, then rerun with --confirm if you want to proceed.")
+                print("Preview command: " + shell_command(root, "restore") + " --preview")
+                print("Next command: " + shell_command(root, "restore") + " --confirm")
+            return 2
     forwarded = [
         "restore",
         "--checkpoint-record-file", args.checkpoint_record_file,
@@ -1782,6 +3330,10 @@ def cmd_thin_output(args: argparse.Namespace) -> int:
         existing = maybe_existing_alpha_file(root, "consistency_recovery")
         if existing:
             args.consistency_recovery_file = existing
+    if root and not getattr(args, "refresh_file", None):
+        existing = maybe_existing_alpha_file(root, "refresh")
+        if existing:
+            args.refresh_file = existing
     if root and not getattr(args, "checkpoint_record_file", None):
         discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
         if discovered:
@@ -1797,6 +3349,7 @@ def cmd_thin_output(args: argparse.Namespace) -> int:
         ("--doctor-file", args.doctor_file),
         ("--checkpoint-record-file", args.checkpoint_record_file),
         ("--consistency-recovery-file", args.consistency_recovery_file),
+        ("--refresh-file", getattr(args, "refresh_file", None)),
     ]:
         if value:
             forwarded.extend([flag, value])
@@ -1815,6 +3368,12 @@ def cmd_thin_output(args: argparse.Namespace) -> int:
 
 def cmd_generate_prompt(args: argparse.Namespace) -> int:
     root = alpha_root_from_args(args)
+    if root and not getattr(args, "state_file", None):
+        args.state_file = str(alpha_file(root, "state"))
+    if root and not getattr(args, "report_file", None):
+        existing = maybe_existing_alpha_file(root, "report")
+        if existing:
+            args.report_file = existing
     if root and not getattr(args, "repair_packet_file", None):
         args.repair_packet_file = str(alpha_file(root, "repair_packet"))
     if root and not getattr(args, "doctor_file", None):
@@ -1828,14 +3387,22 @@ def cmd_generate_prompt(args: argparse.Namespace) -> int:
         if discovered:
             args.checkpoint_record_file = discovered
     if not args.repair_packet_file or not Path(args.repair_packet_file).exists():
-        if args.mode == "dev":
-            print(json.dumps({"result": "ERROR", "reason": "REPAIR_PACKET_REQUIRED"}, ensure_ascii=True))
-        else:
-            print("Synrail does not have the next bounded repair instruction yet.")
-            if root:
-                print("What to do next: run one check first so Synrail can build the bounded next step.")
-                print("Next command: " + shell_command(root, "check"))
-        return 2
+        state_file = getattr(args, "state_file", None)
+        if root and state_file and Path(state_file).expanduser().resolve().exists():
+            state = load_json(Path(state_file).expanduser().resolve())
+            apply_resume_output_defaults(args, state)
+            ensure_repair_packet_synthesis_defaults(args)
+            synthesize_repair_packet(args, state)
+        if not args.repair_packet_file or not Path(args.repair_packet_file).exists():
+            if args.mode == "dev":
+                print(json.dumps({"result": "ERROR", "reason": "REPAIR_PACKET_REQUIRED"}, ensure_ascii=True))
+                return 2
+            else:
+                print("Synrail does not have the next bounded repair instruction yet.")
+                if root:
+                    print("What to do next: run one check first so Synrail can build the bounded next step.")
+                    print("Next command: " + shell_command(root, "check"))
+                return 2
     forwarded = [
         "--repair-packet-file", args.repair_packet_file,
         "--output", args.output,
@@ -1853,14 +3420,26 @@ def cmd_generate_prompt(args: argparse.Namespace) -> int:
         if completed.stdout.strip():
             print(completed.stdout.strip())
         return completed.returncode
+    created_fallback = maybe_materialize_requested_fallback_surface(root=root, prompt_file=Path(args.output))
+    if created_fallback:
+        print(f"Prepared fallback surface: {created_fallback}")
     print_prompt_summary(Path(args.output))
     return 0
 
 
 def cmd_check(args: argparse.Namespace) -> int:
     root = alpha_root_from_args(args, ensure=True)
+    project_profile = load_project_profile(root) or {} if root else {}
+    project_root_text = (project_profile.get("project_root", "") or "").strip()
+    project_root = Path(project_root_text).resolve() if project_root_text else Path.cwd().resolve()
     if root and not getattr(args, "state_file", None):
         args.state_file = str(alpha_file(root, "state"))
+    if root and getattr(args, "state_file", None):
+        state_path = Path(args.state_file)
+        if state_path.exists():
+            state = ensure_run_state_extensions(load_json(state_path))
+            state["check_count"] = int(state.get("check_count", 0)) + 1
+            save_json(state_path, state)
     if root and not getattr(args, "report_file", None):
         args.report_file = str(alpha_file(root, "report"))
     if root and not getattr(args, "output", None):
@@ -1918,7 +3497,8 @@ def cmd_check(args: argparse.Namespace) -> int:
     )
 
     if runtime_requested:
-        state = load_json(Path(args.state_file))
+        state = ensure_run_state_extensions(load_json(Path(args.state_file)))
+        maybe_apply_observed_git_scope_defaults(args, state=state)
         orchestrate_args = argparse.Namespace(
             artifact_root=args.artifact_root,
             state_file=args.state_file,
@@ -1976,6 +3556,10 @@ def cmd_check(args: argparse.Namespace) -> int:
             credential_env=list(getattr(args, "credential_env", [])),
             prompt_identity_file=getattr(args, "prompt_identity_file", None),
             target_identity_file=getattr(args, "target_identity_file", None),
+            changed_file=list(getattr(args, "changed_file", [])),
+            allowed_scope_path=list(getattr(args, "allowed_scope_path", [])),
+            last_known_final_result_hash=state.get("last_known_final_result_hash", ""),
+            starter_final_result_hash=starter_hash_for_artifact(root, "final_result"),
             _capture_output=(args.mode == "default"),
         )
         orchestrate_code = cmd_orchestrate(orchestrate_args)
@@ -1991,11 +3575,19 @@ def cmd_check(args: argparse.Namespace) -> int:
                 if proof_request_file and proof_request_file.exists():
                     proof_request = load_bootstrap_json(proof_request_file)
                     preferred = proof_request.get("preferred_artifacts", {})
-                    print("What is missing: Synrail is still waiting for the proof artifacts for this controlled run.")
-                    print("What to do next: edit the starter proof files already placed at these paths, then rerun synrail check.")
-                    for label in ["final_result", "readback", "scenario_proof"]:
-                        if preferred.get(label, ""):
-                            print(f"- {label}: {preferred[label]}")
+                    print("What is missing: Synrail is still waiting for explicit proof artifacts and local verification evidence for this controlled run.")
+                    print(
+                        "What to do next: make the bounded change, run local verification, then strengthen final_result.json first and rerun "
+                        + plain_shell_command("check", project_root=project_root)
+                        + "."
+                    )
+                    if preferred.get("final_result", ""):
+                        print(f"- final_result: {preferred['final_result']}")
+                    print("- fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.")
+                    print("Need a canonical final_result shape? run " + plain_shell_command("final-result-template", project_root=project_root))
+                    profile = load_project_profile(root) or {}
+                    if profile.get("prefers_runtime_evidence", False):
+                        print("Need a small UI/runtime verification path? run " + plain_shell_command("runtime-helper", project_root=project_root))
                 else:
                     profile = load_project_profile(root)
                     candidates = (profile or {}).get("final_result_candidates", [])
@@ -2007,6 +3599,14 @@ def cmd_check(args: argparse.Namespace) -> int:
             else:
                 print("What to do next: provide the missing runtime context or rerun with --mode dev for full technical detail.")
         return 2
+
+    report_path = Path(args.report_file)
+    report_payload = load_json(report_path) if report_path.exists() else {}
+    if root and report_payload.get("result", "") == "OK":
+        update_last_known_final_result_hash(
+            Path(args.state_file),
+            preferred_proof_artifact_paths(root)["final_result"],
+        )
 
     args._suppress_summary = True
     thin_code = cmd_thin_output(args)
@@ -2032,8 +3632,11 @@ def cmd_check(args: argparse.Namespace) -> int:
                 forwarded.extend(["--doctor-file", args.doctor_file])
             prompt_completed = run_python_capture(PROMPT_BRIDGE, forwarded)
             if prompt_completed.returncode == 0:
+                created_fallback = maybe_materialize_requested_fallback_surface(root=root, prompt_file=Path(prompt_output))
                 print("")
-                print("Bounded repair summary:")
+                if created_fallback:
+                    print(f"Prepared fallback surface: {created_fallback}")
+                print("What to fix:")
                 print_prompt_summary_compact(Path(prompt_output), include_prompt=False)
     return thin_code
 
@@ -2135,24 +3738,13 @@ def cmd_observability(args: argparse.Namespace) -> int:
 
 
 def cmd_session_export(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args)
-    if root:
-        if not getattr(args, "state_file", None):
-            args.state_file = maybe_existing_alpha_file(root, "state")
-        if not getattr(args, "report_file", None):
-            args.report_file = maybe_existing_alpha_file(root, "report")
-        if not getattr(args, "repair_packet_file", None):
-            args.repair_packet_file = maybe_existing_alpha_file(root, "repair_packet")
-        if not getattr(args, "repair_receipt_file", None):
-            args.repair_receipt_file = maybe_existing_alpha_file(root, "repair_receipt")
-        if not getattr(args, "refresh_file", None):
-            args.refresh_file = maybe_existing_alpha_file(root, "refresh")
-        if not getattr(args, "output", None):
-            args.output = str(alpha_file(root, "session_export"))
-    if not getattr(args, "state_file", None) or not getattr(args, "report_file", None):
-        print(json.dumps({"result": "ERROR", "reason": "STATE_AND_REPORT_REQUIRED"}, ensure_ascii=True))
-        return 2
-    return cmd_observability(args)
+    return run_session_export_command(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        alpha_file=alpha_file,
+        cmd_observability=cmd_observability,
+    )
 
 
 def cmd_deploy(args: argparse.Namespace) -> int:
@@ -2211,25 +3803,35 @@ def cmd_deploy(args: argparse.Namespace) -> int:
             print("What to do next: verify you are deploying the correct run.")
         return 2
 
-    # Gate 3: verify target binding if provided
-    deploy_target = getattr(args, "deploy_target", "") or ""
-    bootstrap_file = alpha_file(root, "bootstrap")
-    if deploy_target and bootstrap_file.exists():
-        bootstrap = load_bootstrap_json(bootstrap_file)
-        bootstrap_target = bootstrap.get("task_identity", "").strip()
-        if bootstrap_target and deploy_target not in bootstrap_target:
-            if getattr(args, "mode", "default") == "dev":
-                print(json.dumps({
-                    "result": "BLOCKED",
-                    "reason": "DEPLOY_TARGET_MISMATCH",
-                    "deploy_target": deploy_target,
-                    "bootstrap_task_identity": bootstrap_target,
-                }, ensure_ascii=True))
-            else:
-                print("Synrail deploy blocked.")
-                print(f"What happened: deploy target '{deploy_target}' does not match the task identity of this run.")
-                print("What to do next: verify you are deploying to the correct target.")
-            return 2
+    # Gate 3: verify stable target identity binding
+    expected_target_identity = expected_target_identity_for_root(root)
+    if not expected_target_identity:
+        if getattr(args, "mode", "default") == "dev":
+            print(json.dumps({
+                "result": "BLOCKED",
+                "reason": "DEPLOY_TARGET_IDENTITY_MISSING",
+                "run_id": run_id,
+            }, ensure_ascii=True))
+        else:
+            print("Synrail deploy blocked.")
+            print("What happened: this run does not have a stable target identity record.")
+            print("What to do next: restart the controlled run and keep the target identity attested before deployment.")
+        return 2
+
+    deploy_target = (getattr(args, "deploy_target", "") or "").strip()
+    if deploy_target and deploy_target != expected_target_identity:
+        if getattr(args, "mode", "default") == "dev":
+            print(json.dumps({
+                "result": "BLOCKED",
+                "reason": "DEPLOY_TARGET_MISMATCH",
+                "deploy_target": deploy_target,
+                "expected_target_identity": expected_target_identity,
+            }, ensure_ascii=True))
+        else:
+            print("Synrail deploy blocked.")
+            print(f"What happened: deploy target '{deploy_target}' does not match the attested target identity '{expected_target_identity}'.")
+            print("What to do next: verify you are deploying to the correct target.")
+        return 2
 
     # All gates passed — record the deploy receipt
     deploy_receipt = {
@@ -2238,6 +3840,7 @@ def cmd_deploy(args: argparse.Namespace) -> int:
         "run_id": run_id,
         "task_class": state.get("task_class", ""),
         "closure_state": current_state,
+        "target_identity": expected_target_identity,
         "deploy_target": deploy_target,
         "deploy_time_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "deploy_authorized_by": "synrail deploy gate",
@@ -2252,8 +3855,7 @@ def cmd_deploy(args: argparse.Namespace) -> int:
         print("Synrail deploy authorized.")
         print(f"Run: {run_id}")
         print(f"State: {current_state}")
-        if deploy_target:
-            print(f"Target: {deploy_target}")
+        print(f"Target identity: {expected_target_identity}")
         print(f"Receipt: {display_path(receipt_path)}")
         print("You may now proceed with the deployment side effect.")
 
@@ -2279,70 +3881,57 @@ def cmd_deploy_check(args: argparse.Namespace) -> int:
 
     # Cross-check against current state
     state_file = Path(getattr(args, "state_file", "") or str(alpha_file(root, "state")))
-    if state_file.exists():
-        state = load_json(state_file)
-        if state.get("run_id", "") != receipt.get("run_id", ""):
-            print(json.dumps({
-                "result": "BLOCKED",
-                "reason": "DEPLOY_RECEIPT_RUN_ID_STALE",
-                "receipt_run_id": receipt.get("run_id", ""),
-                "current_run_id": state.get("run_id", ""),
-            }, ensure_ascii=True))
-            return 2
+    if not state_file.exists():
+        print(json.dumps({"result": "BLOCKED", "reason": "NO_STATE_FILE"}, ensure_ascii=True))
+        return 2
+
+    state = load_json(state_file)
+    if state.get("state", "") != "CLOSURE_ACCEPTED":
+        print(json.dumps({
+            "result": "BLOCKED",
+            "reason": "DEPLOY_CURRENT_STATE_NOT_ACCEPTED",
+            "current_state": state.get("state", ""),
+        }, ensure_ascii=True))
+        return 2
+    if state.get("run_id", "") != receipt.get("run_id", ""):
+        print(json.dumps({
+            "result": "BLOCKED",
+            "reason": "DEPLOY_RECEIPT_RUN_ID_STALE",
+            "receipt_run_id": receipt.get("run_id", ""),
+            "current_run_id": state.get("run_id", ""),
+        }, ensure_ascii=True))
+        return 2
+
+    expected_target_identity = expected_target_identity_for_root(root)
+    receipt_target_identity = (receipt.get("target_identity", "") or "").strip()
+    if not receipt_target_identity:
+        print(json.dumps({"result": "BLOCKED", "reason": "DEPLOY_RECEIPT_TARGET_IDENTITY_MISSING"}, ensure_ascii=True))
+        return 2
+    if not expected_target_identity:
+        print(json.dumps({"result": "BLOCKED", "reason": "DEPLOY_TARGET_IDENTITY_MISSING"}, ensure_ascii=True))
+        return 2
+    if receipt_target_identity != expected_target_identity:
+        print(json.dumps({
+            "result": "BLOCKED",
+            "reason": "DEPLOY_RECEIPT_TARGET_IDENTITY_STALE",
+            "receipt_target_identity": receipt_target_identity,
+            "current_target_identity": expected_target_identity,
+        }, ensure_ascii=True))
+        return 2
 
     print(json.dumps({"result": "OK", "deploy_receipt": receipt}, ensure_ascii=True))
     return 0
 
 
 def cmd_bug_packet(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args)
-    if root:
-        for attr, file_id in [
-            ("state_file", "state"),
-            ("report_file", "report"),
-            ("doctor_file", "doctor"),
-            ("acceptance_validation_file", "acceptance_validation"),
-            ("repair_packet_file", "repair_packet"),
-            ("observability_file", "observability"),
-            ("thin_output_file", "thin_output"),
-        ]:
-            if not getattr(args, attr, None):
-                value = maybe_existing_alpha_file(root, file_id)
-                if value:
-                    setattr(args, attr, value)
-        if not getattr(args, "observability_file", None):
-            session_export = maybe_existing_alpha_file(root, "session_export")
-            if session_export:
-                args.observability_file = session_export
-        if not getattr(args, "output", None):
-            args.output = str(alpha_file(root, "bug_packet"))
-        if not getattr(args, "issue_output", None):
-            args.issue_output = str(root / "bug_packet_issue.md")
-    if not getattr(args, "state_file", None) or not getattr(args, "report_file", None):
-        print("Synrail could not build the bug packet yet.")
-        print("What is missing: state and report are both required.")
-        return 2
-    forwarded = [
-        "--state-file", args.state_file,
-        "--report-file", args.report_file,
-        "--output", args.output,
-    ]
-    for flag, value in [
-        ("--doctor-file", args.doctor_file),
-        ("--acceptance-validation-file", args.acceptance_validation_file),
-        ("--repair-packet-file", args.repair_packet_file),
-        ("--observability-file", args.observability_file),
-        ("--thin-output-file", args.thin_output_file),
-        ("--issue-output", args.issue_output),
-    ]:
-        if value:
-            forwarded.extend([flag, value])
-    code = run_python(BUG_PACKET, forwarded)
-    if code == 0:
-        print("Bug packet ready.")
-        print("What it includes: one compact runtime summary and one issue-ready markdown body.")
-        print("Use this only when telemetry export is not enough for the bug report.")
-    return code
+    return run_bug_packet_command(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        alpha_file=alpha_file,
+        run_python=run_python,
+        bug_packet_script=BUG_PACKET,
+    )
 
 
 def cmd_reproducibility(args: argparse.Namespace) -> int:
@@ -2628,7 +4217,7 @@ def discover_resume_sibling_inputs(args: argparse.Namespace, state: dict) -> Non
             args.readback = str(candidate)
 
     if not getattr(args, "scenario_proof", None):
-        candidate = existing_variants("later_scenario.txt", "scenario.txt")
+        candidate = existing_variants("later_scenario_proof.txt", "scenario_proof.txt", "later_scenario.txt", "scenario.txt")
         if candidate:
             args.scenario_proof = str(candidate)
 
@@ -2755,12 +4344,24 @@ def apply_resume_output_defaults(args: argparse.Namespace, state: dict) -> None:
         if not getattr(args, attr, None):
             setattr(args, attr, value)
 
+    project_profile: dict = {}
+    for candidate_name in [runtime_name("project_profile.json"), "project_profile.json"]:
+        candidate = root / candidate_name
+        if candidate.exists():
+            project_profile = load_json(candidate)
+            break
+
     baseline_identity = state.get("target_surface", {}).get("identity", "") or state["run_id"]
     execution_surface_identity = state.get("target_surface", {}).get("identity", "") or baseline_identity
+    target_path = (
+        project_profile.get("target_path", "")
+        or project_profile.get("project_root", "")
+        or (str(root.parent) if root.name.startswith(".synrail") else str(root))
+    )
     context_defaults = {
         "doctor_run_id": f"{state['run_id']}_RESUME",
         "doctor_level": "CORE_DOCTOR",
-        "target_path": str(root),
+        "target_path": target_path,
         "target_classification": "resume_surface",
         "baseline_identity": baseline_identity,
         "intended_run_class": "core_probe",
@@ -2777,6 +4378,44 @@ def apply_resume_output_defaults(args: argparse.Namespace, state: dict) -> None:
         args.task_identity = ""
     if getattr(args, "final_result", None) is None:
         args.final_result = ""
+
+
+def ensure_repair_packet_synthesis_defaults(args: argparse.Namespace) -> None:
+    string_defaults = {
+        "final_result": "",
+        "readback": "",
+        "scenario_proof": "",
+        "target_identity_file": "",
+        "artifact_path": "",
+        "helper_path": "",
+        "prompt_identity": "",
+        "task_identity": "",
+        "refresh_output": "",
+        "refresh_event_type": "",
+        "refresh_recovery_status": "NOT_REQUIRED",
+    }
+    bool_defaults = {
+        "prompt_identity_ok": False,
+        "clean_surface": False,
+        "artifact_viable": False,
+        "helper_ok": False,
+        "credentials_ok": False,
+        "refresh_reverification_complete": False,
+        "refresh_use_bundle": False,
+        "refresh_use_closure": False,
+    }
+    list_defaults = {
+        "credential_env": [],
+    }
+    for attr, value in string_defaults.items():
+        if getattr(args, attr, None) is None:
+            setattr(args, attr, value)
+    for attr, value in bool_defaults.items():
+        if getattr(args, attr, None) is None:
+            setattr(args, attr, value)
+    for attr, value in list_defaults.items():
+        if getattr(args, attr, None) is None:
+            setattr(args, attr, list(value))
 
 
 def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> list[str]:
@@ -2933,6 +4572,8 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ("--acceptance-validation-output", getattr(args, "acceptance_validation_output", None)),
         ("--project-profile-file", getattr(args, "project_profile_file", None)),
         ("--bootstrap-provenance-reason", getattr(args, "bootstrap_provenance_reason", None)),
+        ("--last-known-final-result-hash", getattr(args, "last_known_final_result_hash", None)),
+        ("--starter-final-result-hash", getattr(args, "starter_final_result_hash", None)),
     ]:
         if value:
             forwarded.extend([flag, value])
@@ -2949,6 +4590,10 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     ]:
         if enabled:
             forwarded.append(flag)
+    for changed_file in getattr(args, "changed_file", []):
+        forwarded.extend(["--changed-file", changed_file])
+    for allowed_scope_path in getattr(args, "allowed_scope_path", []):
+        forwarded.extend(["--allowed-scope-path", allowed_scope_path])
     for env_name in args.credential_env:
         forwarded.extend(["--credential-env", env_name])
     if getattr(args, "_capture_output", False):
@@ -2967,7 +4612,9 @@ def cmd_resume(args: argparse.Namespace) -> int:
     if not getattr(args, "state_file", None):
         print(json.dumps({"result": "ERROR", "reason": "STATE_FILE_REQUIRED"}, ensure_ascii=True))
         return 2
-    state = load_json(Path(args.state_file))
+    state_path = Path(args.state_file)
+    state = ensure_run_state_extensions(load_json(state_path))
+    apply_bootstrap_defaults(args, root=state_path.parent)
     args.resume_from_state = state["state"]
     apply_resume_output_defaults(args, state)
     temp_runtime_files: list[str] = []
@@ -3088,6 +4735,8 @@ def add_orchestration_args(
     parser.add_argument("--artifact-path")
     parser.add_argument("--helper-path")
     parser.add_argument("--credential-env", action="append", default=[])
+    parser.add_argument("--changed-file", action="append", default=[])
+    parser.add_argument("--allowed-scope-path", action="append", default=[])
     parser.add_argument("--prompt-identity-file")
     parser.add_argument("--target-identity-file")
     parser.add_argument("--bootstrap-provenance-ok", action="store_true")
@@ -3095,13 +4744,44 @@ def add_orchestration_args(
     parser.add_argument("--acceptance-criteria-file")
     parser.add_argument("--acceptance-validation-output")
     parser.add_argument("--project-profile-file")
+    parser.add_argument("--last-known-final-result-hash")
+    parser.add_argument("--starter-final-result-hash")
+
+
+class _SuppressingHelpFormatter(argparse.HelpFormatter):
+    """Formatter that genuinely hides subcommands with help=SUPPRESS."""
+
+    def _format_action(self, action: argparse.Action) -> str:
+        if isinstance(action, argparse._SubParsersAction):
+            parts: list[str] = []
+            for choice_action in action._get_subactions():
+                if choice_action.help != argparse.SUPPRESS:
+                    parts.append(self._format_action(choice_action))
+            return self._join_parts(parts)
+        return super()._format_action(action)
+
+    def _format_usage(self, usage, actions, groups, prefix):  # type: ignore[override]
+        # Show only visible subcommands in the usage line
+        for action in actions:
+            if isinstance(action, argparse._SubParsersAction):
+                visible_names = {
+                    ca.dest for ca in action._choices_actions
+                    if ca.help != argparse.SUPPRESS
+                }
+                if visible_names:
+                    orig_choices = action.choices
+                    action.choices = {k: v for k, v in orig_choices.items() if k in visible_names}
+                    result = super()._format_usage(usage, actions, groups, prefix)
+                    action.choices = orig_choices
+                    return result
+        return super()._format_usage(usage, actions, groups, prefix)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="synrail")
-    sub = parser.add_subparsers(dest="cmd", required=True)
+    parser = argparse.ArgumentParser(prog="synrail", formatter_class=_SuppressingHelpFormatter)
+    sub = parser.add_subparsers(dest="cmd")
 
-    p_init = sub.add_parser("init")
+    p_init = sub.add_parser("init", help=argparse.SUPPRESS)
     p_init.add_argument("--run-id")
     p_init.add_argument("--task-class", default=DEFAULT_ALPHA_TASK_CLASS)
     p_init.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
@@ -3114,7 +4794,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--output")
     p_init.set_defaults(func=cmd_init)
 
-    p_start = sub.add_parser("start")
+    p_start = sub.add_parser("start", help="Begin a new controlled run")
     p_start.add_argument("--run-id")
     p_start.add_argument("--task-class", default=DEFAULT_ALPHA_TASK_CLASS)
     p_start.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
@@ -3125,14 +4805,21 @@ def build_parser() -> argparse.ArgumentParser:
     p_start.add_argument("--tester-id", default="alpha_tester")
     p_start.add_argument("--mode", default="default", choices=["default", "dev"])
     p_start.add_argument("--output")
+    p_start.add_argument("task_request", nargs="?")
     p_start.set_defaults(func=cmd_start)
 
-    p_refresh_acceptance = sub.add_parser("refresh-acceptance", aliases=["acceptance-refresh"])
+    p_install_agent_files = sub.add_parser("install-agent-files", help=argparse.SUPPRESS)
+    p_install_agent_files.add_argument("--project-root", default=".")
+    p_install_agent_files.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_install_agent_files.add_argument("--force", action="store_true")
+    p_install_agent_files.set_defaults(func=cmd_install_agent_files)
+
+    p_refresh_acceptance = sub.add_parser("refresh-acceptance", aliases=["acceptance-refresh"], help=argparse.SUPPRESS)
     p_refresh_acceptance.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_refresh_acceptance.add_argument("--mode", default="default", choices=["default", "dev"])
     p_refresh_acceptance.set_defaults(func=cmd_refresh_acceptance)
 
-    p_check = sub.add_parser("check")
+    p_check = sub.add_parser("check", help="Run the full verification pipeline")
     p_check.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_check.add_argument("--state-file")
     p_check.add_argument("--report-file")
@@ -3186,15 +4873,45 @@ def build_parser() -> argparse.ArgumentParser:
     p_check.add_argument("--artifact-path")
     p_check.add_argument("--helper-path")
     p_check.add_argument("--credential-env", action="append", default=[])
+    p_check.add_argument("--changed-file", action="append", default=[])
+    p_check.add_argument("--allowed-scope-path", action="append", default=[])
     p_check.add_argument("--prompt-identity-file")
     p_check.add_argument("--target-identity-file")
     p_check.set_defaults(func=cmd_check)
 
-    p_status = sub.add_parser("status")
-    p_status.add_argument("state_file")
+    p_status = sub.add_parser("status", aliases=["dashboard"], help="Show current run state")
+    p_status.add_argument("state_file", nargs="?")
+    p_status.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_status.add_argument("--json", action="store_true")
     p_status.set_defaults(func=cmd_status)
 
-    p_bundle = sub.add_parser("bundle-check")
+    p_explain_proof = sub.add_parser("explain-proof", aliases=["proof-explain"], help="Show what proof files are needed and why")
+    p_explain_proof.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_explain_proof.add_argument("--bundle-file")
+    p_explain_proof.add_argument("--json", action="store_true")
+    p_explain_proof.set_defaults(func=cmd_explain_proof)
+
+    p_final_result_template = sub.add_parser("final-result-template", help=argparse.SUPPRESS)
+    p_final_result_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_final_result_template.add_argument("--output")
+    p_final_result_template.set_defaults(func=cmd_final_result_template)
+
+    p_readback_template = sub.add_parser("readback-template", help=argparse.SUPPRESS)
+    p_readback_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_readback_template.add_argument("--output")
+    p_readback_template.set_defaults(func=cmd_readback_template)
+
+    p_scenario_proof_template = sub.add_parser("scenario-proof-template", help=argparse.SUPPRESS)
+    p_scenario_proof_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_scenario_proof_template.add_argument("--output")
+    p_scenario_proof_template.set_defaults(func=cmd_scenario_proof_template)
+
+    p_runtime_helper = sub.add_parser("runtime-helper", help=argparse.SUPPRESS)
+    p_runtime_helper.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_runtime_helper.add_argument("--output")
+    p_runtime_helper.set_defaults(func=cmd_runtime_helper)
+
+    p_bundle = sub.add_parser("bundle-check", help=argparse.SUPPRESS)
     p_bundle.add_argument("--final-result", required=True)
     p_bundle.add_argument("--task-class", required=True)
     p_bundle.add_argument("--output", required=True)
@@ -3205,26 +4922,29 @@ def build_parser() -> argparse.ArgumentParser:
     p_bundle.add_argument("--execution-surface-identity")
     p_bundle.add_argument("--prompt-identity")
     p_bundle.add_argument("--task-identity")
+    p_bundle.add_argument("--doctor-file")
+    p_bundle.add_argument("--last-known-final-result-hash")
+    p_bundle.add_argument("--starter-final-result-hash")
     p_bundle.set_defaults(func=cmd_bundle_check)
 
-    p_apply_bundle = sub.add_parser("apply-bundle")
+    p_apply_bundle = sub.add_parser("apply-bundle", help=argparse.SUPPRESS)
     p_apply_bundle.add_argument("state_file")
     p_apply_bundle.add_argument("bundle_file")
     p_apply_bundle.set_defaults(func=cmd_apply_bundle)
 
-    p_closure = sub.add_parser("closure")
+    p_closure = sub.add_parser("closure", help=argparse.SUPPRESS)
     p_closure.add_argument("--state-file", required=True)
     p_closure.add_argument("--bundle-file", required=True)
     p_closure.add_argument("--output", required=True)
     p_closure.add_argument("--update-state", action="store_true")
     p_closure.set_defaults(func=cmd_closure)
 
-    p_apply_closure = sub.add_parser("apply-closure")
+    p_apply_closure = sub.add_parser("apply-closure", help=argparse.SUPPRESS)
     p_apply_closure.add_argument("state_file")
     p_apply_closure.add_argument("closure_file")
     p_apply_closure.set_defaults(func=cmd_apply_closure)
 
-    p_refresh = sub.add_parser("refresh")
+    p_refresh = sub.add_parser("refresh", help=argparse.SUPPRESS)
     p_refresh.add_argument("--state-file", required=True)
     p_refresh.add_argument("--event-type", required=True)
     p_refresh.add_argument("--output", required=True)
@@ -3236,12 +4956,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_refresh.add_argument("--update-state", action="store_true")
     p_refresh.set_defaults(func=cmd_refresh)
 
-    p_validate = sub.add_parser("validate")
+    p_validate = sub.add_parser("validate", help=argparse.SUPPRESS)
     p_validate.add_argument("--schema", required=True)
     p_validate.add_argument("--document", required=True)
     p_validate.set_defaults(func=cmd_validate)
 
-    p_doctor = sub.add_parser("doctor")
+    p_doctor = sub.add_parser("doctor", help=argparse.SUPPRESS)
     p_doctor.add_argument("--doctor-run-id", required=True)
     p_doctor.add_argument("--doctor-level", required=True, choices=["CORE_DOCTOR", "SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"])
     p_doctor.add_argument("--target-path", required=True)
@@ -3267,24 +4987,24 @@ def build_parser() -> argparse.ArgumentParser:
     p_doctor.add_argument("--allowed-scope-path", action="append", default=[])
     p_doctor.set_defaults(func=cmd_doctor)
 
-    p_compare = sub.add_parser("compare")
+    p_compare = sub.add_parser("compare", help=argparse.SUPPRESS)
     p_compare.add_argument("--baseline-file", required=True)
     p_compare.add_argument("--synrail-file", required=True)
     p_compare.add_argument("--output", required=True)
     p_compare.set_defaults(func=cmd_compare)
 
-    p_substitute_pressure = sub.add_parser("substitute-pressure")
+    p_substitute_pressure = sub.add_parser("substitute-pressure", help=argparse.SUPPRESS)
     p_substitute_pressure.add_argument("--record", action="append", required=True)
     p_substitute_pressure.add_argument("--output", required=True)
     p_substitute_pressure.set_defaults(func=cmd_substitute_pressure)
 
-    p_hybrid = sub.add_parser("hybrid-status")
+    p_hybrid = sub.add_parser("hybrid-status", help=argparse.SUPPRESS)
     p_hybrid.add_argument("--cost-record", required=True)
     p_hybrid.add_argument("--hybrid-record", action="append", required=True)
     p_hybrid.add_argument("--output", required=True)
     p_hybrid.set_defaults(func=cmd_hybrid_status)
 
-    p_mode = sub.add_parser("recommend-mode")
+    p_mode = sub.add_parser("recommend-mode", help=argparse.SUPPRESS)
     p_mode.add_argument("--cost-record", required=True)
     p_mode.add_argument("--hybrid-status")
     p_mode.add_argument("--scenario-class", required=True)
@@ -3298,14 +5018,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_mode.add_argument("--output", required=True)
     p_mode.set_defaults(func=cmd_recommend_mode)
 
-    p_select = sub.add_parser("select-mode")
+    p_select = sub.add_parser("select-mode", help=argparse.SUPPRESS)
     p_select.add_argument("--recommendation-file", required=True)
     p_select.add_argument("--selected-mode", choices=["FULL_GOVERNED_PATH", "LIGHTWEIGHT_BASELINE", "HYBRID_EXCEPTION"])
     p_select.add_argument("--selected-with-preparation", action="store_true")
     p_select.add_argument("--output", required=True)
     p_select.set_defaults(func=cmd_select_mode)
 
-    p_plan = sub.add_parser("plan-proof")
+    p_plan = sub.add_parser("plan-proof", help=argparse.SUPPRESS)
     p_plan.add_argument("--run-id", required=True)
     p_plan.add_argument("--task-class", required=True)
     p_plan.add_argument("--artifact-root", required=True)
@@ -3316,19 +5036,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_plan.add_argument("--output", required=True)
     p_plan.set_defaults(func=cmd_plan_proof)
 
-    p_prep = sub.add_parser("preparation-receipt")
+    p_prep = sub.add_parser("preparation-receipt", help=argparse.SUPPRESS)
     p_prep.add_argument("--plan-file", required=True)
     p_prep.add_argument("--bundle-file", required=True)
     p_prep.add_argument("--output", required=True)
     p_prep.set_defaults(func=cmd_preparation_receipt)
 
-    p_governed_cost = sub.add_parser("governed-cost")
+    p_governed_cost = sub.add_parser("governed-cost", help=argparse.SUPPRESS)
     p_governed_cost.add_argument("--unprepared-file", required=True)
     p_governed_cost.add_argument("--prepared-file", required=True)
     p_governed_cost.add_argument("--output", required=True)
     p_governed_cost.set_defaults(func=cmd_governed_cost)
 
-    p_checkpoint_create = sub.add_parser("create-checkpoint")
+    p_checkpoint_create = sub.add_parser("create-checkpoint", help=argparse.SUPPRESS)
     p_checkpoint_create.add_argument("--checkpoint-id")
     p_checkpoint_create.add_argument("--artifact-root")
     p_checkpoint_create.add_argument("--checkpoint-root")
@@ -3347,11 +5067,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_create.add_argument("--output")
     p_checkpoint_create.set_defaults(func=cmd_create_checkpoint)
 
-    p_save = sub.add_parser("save")
+    p_save = sub.add_parser("save", help="Save a checkpoint of the current verified state")
     p_save.add_argument("--checkpoint-id", default="working")
     p_save.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_save.add_argument("--checkpoint-root")
     p_save.add_argument("--state-file")
+    p_save.add_argument("--project-root")
     p_save.add_argument("--report-file")
     p_save.add_argument("--orchestration-file")
     p_save.add_argument("--bundle-file")
@@ -3366,24 +5087,26 @@ def build_parser() -> argparse.ArgumentParser:
     p_save.add_argument("--output")
     p_save.set_defaults(func=cmd_save)
 
-    p_checkpoint_verify = sub.add_parser("verify-checkpoint", aliases=["confirm-restore"])
-    p_checkpoint_verify.add_argument("--artifact-root")
+    p_checkpoint_verify = sub.add_parser("verify-checkpoint", aliases=["confirm-restore"], help=argparse.SUPPRESS)
+    p_checkpoint_verify.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_checkpoint_verify.add_argument("--checkpoint-id")
     p_checkpoint_verify.add_argument("--checkpoint-record-file")
     p_checkpoint_verify.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_verify.add_argument("--output")
     p_checkpoint_verify.set_defaults(func=cmd_verify_checkpoint)
 
-    p_checkpoint_restore = sub.add_parser("restore-checkpoint")
-    p_checkpoint_restore.add_argument("--artifact-root")
+    p_checkpoint_restore = sub.add_parser("restore-checkpoint", help=argparse.SUPPRESS)
+    p_checkpoint_restore.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_checkpoint_restore.add_argument("--checkpoint-id")
     p_checkpoint_restore.add_argument("--checkpoint-record-file")
     p_checkpoint_restore.add_argument("--target-root")
+    p_checkpoint_restore.add_argument("--preview", action="store_true")
+    p_checkpoint_restore.add_argument("--confirm", action="store_true")
     p_checkpoint_restore.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_restore.add_argument("--output")
     p_checkpoint_restore.set_defaults(func=cmd_restore_checkpoint)
 
-    p_checkpoint = sub.add_parser("checkpoint")
+    p_checkpoint = sub.add_parser("checkpoint", help=argparse.SUPPRESS)
     checkpoint_sub = p_checkpoint.add_subparsers(dest="checkpoint_cmd", required=True)
 
     p_checkpoint_nested_create = checkpoint_sub.add_parser("create")
@@ -3418,20 +5141,24 @@ def build_parser() -> argparse.ArgumentParser:
     p_checkpoint_nested_restore.add_argument("--checkpoint-id")
     p_checkpoint_nested_restore.add_argument("--checkpoint-record-file")
     p_checkpoint_nested_restore.add_argument("--target-root")
+    p_checkpoint_nested_restore.add_argument("--preview", action="store_true")
+    p_checkpoint_nested_restore.add_argument("--confirm", action="store_true")
     p_checkpoint_nested_restore.add_argument("--mode", default="default", choices=["default", "dev"])
     p_checkpoint_nested_restore.add_argument("--output")
     p_checkpoint_nested_restore.set_defaults(func=cmd_restore_checkpoint)
 
-    p_restore = sub.add_parser("restore")
+    p_restore = sub.add_parser("restore", help="Restore workspace from a saved checkpoint")
     p_restore.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_restore.add_argument("--checkpoint-id")
     p_restore.add_argument("--checkpoint-record-file")
     p_restore.add_argument("--target-root")
+    p_restore.add_argument("--preview", action="store_true")
+    p_restore.add_argument("--confirm", action="store_true")
     p_restore.add_argument("--mode", default="default", choices=["default", "dev"])
     p_restore.add_argument("--output")
     p_restore.set_defaults(func=cmd_restore)
 
-    p_telemetry = sub.add_parser("telemetry")
+    p_telemetry = sub.add_parser("telemetry", help=argparse.SUPPRESS)
     telemetry_sub = p_telemetry.add_subparsers(dest="telemetry_cmd", required=True)
 
     p_telemetry_enable = telemetry_sub.add_parser("enable")
@@ -3445,7 +5172,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_telemetry_export.add_argument("--issue-output")
     p_telemetry_export.set_defaults(func=cmd_telemetry_export)
 
-    p_artifact_consistency = sub.add_parser("artifact-consistency")
+    p_artifact_consistency = sub.add_parser("artifact-consistency", help=argparse.SUPPRESS)
     p_artifact_consistency.add_argument("--artifact-root")
     p_artifact_consistency.add_argument("--state-file")
     p_artifact_consistency.add_argument("--output")
@@ -3457,7 +5184,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_artifact_consistency.add_argument("--repair-receipt-file")
     p_artifact_consistency.set_defaults(func=cmd_artifact_consistency)
 
-    p_observability = sub.add_parser("observability")
+    p_observability = sub.add_parser("observability", help=argparse.SUPPRESS)
     p_observability.add_argument("--state-file", required=True)
     p_observability.add_argument("--report-file", required=True)
     p_observability.add_argument("--output", required=True)
@@ -3466,7 +5193,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_observability.add_argument("--refresh-file")
     p_observability.set_defaults(func=cmd_observability)
 
-    p_session_export = sub.add_parser("session-export")
+    p_session_export = sub.add_parser("session-export", help=argparse.SUPPRESS)
     p_session_export.add_argument("--artifact-root")
     p_session_export.add_argument("--state-file")
     p_session_export.add_argument("--report-file")
@@ -3476,7 +5203,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_session_export.add_argument("--refresh-file")
     p_session_export.set_defaults(func=cmd_session_export)
 
-    p_deploy = sub.add_parser("deploy")
+    p_deploy = sub.add_parser("deploy", help=argparse.SUPPRESS)
     p_deploy.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_deploy.add_argument("--state-file")
     p_deploy.add_argument("--deploy-run-id")
@@ -3484,12 +5211,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_deploy.add_argument("--mode", default="default", choices=["default", "dev"])
     p_deploy.set_defaults(func=cmd_deploy)
 
-    p_deploy_check = sub.add_parser("deploy-check")
+    p_deploy_check = sub.add_parser("deploy-check", help=argparse.SUPPRESS)
     p_deploy_check.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_deploy_check.add_argument("--state-file")
     p_deploy_check.set_defaults(func=cmd_deploy_check)
 
-    p_bug_packet = sub.add_parser("bug-packet")
+    p_bug_packet = sub.add_parser("bug-packet", help=argparse.SUPPRESS)
     p_bug_packet.add_argument("--artifact-root")
     p_bug_packet.add_argument("--state-file")
     p_bug_packet.add_argument("--report-file")
@@ -3502,7 +5229,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_bug_packet.add_argument("--issue-output")
     p_bug_packet.set_defaults(func=cmd_bug_packet)
 
-    p_thin_output = sub.add_parser("thin-output")
+    p_thin_output = sub.add_parser("thin-output", help=argparse.SUPPRESS)
     p_thin_output.add_argument("--artifact-root")
     p_thin_output.add_argument("--state-file")
     p_thin_output.add_argument("--report-file")
@@ -3510,12 +5237,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_thin_output.add_argument("--output")
     p_thin_output.add_argument("--repair-packet-file")
     p_thin_output.add_argument("--doctor-file")
+    p_thin_output.add_argument("--refresh-file")
     p_thin_output.add_argument("--checkpoint-id")
     p_thin_output.add_argument("--checkpoint-record-file")
     p_thin_output.add_argument("--consistency-recovery-file")
     p_thin_output.set_defaults(func=cmd_thin_output)
 
-    p_generate_prompt = sub.add_parser("generate-prompt", aliases=["next-step", "repair-step"])
+    p_generate_prompt = sub.add_parser("generate-prompt", aliases=["next-step", "repair-step"], help=argparse.SUPPRESS)
     p_generate_prompt.add_argument("--artifact-root")
     p_generate_prompt.add_argument("--repair-packet-file")
     p_generate_prompt.add_argument("--mode", default="default", choices=["default", "dev"])
@@ -3525,7 +5253,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_generate_prompt.add_argument("--doctor-file")
     p_generate_prompt.set_defaults(func=cmd_generate_prompt)
 
-    p_thin_output_reading = sub.add_parser("thin-output-reading")
+    p_thin_output_reading = sub.add_parser("thin-output-reading", help=argparse.SUPPRESS)
     p_thin_output_reading.add_argument("--thin-output-file", required=True)
     p_thin_output_reading.add_argument("--prompt-bridge-file", required=True)
     p_thin_output_reading.add_argument("--report-file", required=True)
@@ -3533,14 +5261,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_thin_output_reading.add_argument("--output", required=True)
     p_thin_output_reading.set_defaults(func=cmd_thin_output_reading)
 
-    p_prompt_followup = sub.add_parser("prompt-followup")
+    p_prompt_followup = sub.add_parser("prompt-followup", help=argparse.SUPPRESS)
     p_prompt_followup.add_argument("--repair-packet-file", required=True)
     p_prompt_followup.add_argument("--prompt-bridge-file", required=True)
     p_prompt_followup.add_argument("--output", required=True)
     p_prompt_followup.add_argument("--thin-output-file")
     p_prompt_followup.set_defaults(func=cmd_prompt_followup)
 
-    p_prompt_retry_guard = sub.add_parser("prompt-retry-guard")
+    p_prompt_retry_guard = sub.add_parser("prompt-retry-guard", help=argparse.SUPPRESS)
     p_prompt_retry_guard.add_argument("--packet-a-file", required=True)
     p_prompt_retry_guard.add_argument("--prompt-a-file", required=True)
     p_prompt_retry_guard.add_argument("--packet-b-file", required=True)
@@ -3548,45 +5276,45 @@ def build_parser() -> argparse.ArgumentParser:
     p_prompt_retry_guard.add_argument("--output", required=True)
     p_prompt_retry_guard.set_defaults(func=cmd_prompt_retry_guard)
 
-    p_consistency_recovery = sub.add_parser("consistency-recovery")
+    p_consistency_recovery = sub.add_parser("consistency-recovery", help=argparse.SUPPRESS)
     p_consistency_recovery.add_argument("--consistency-file", required=True)
     p_consistency_recovery.add_argument("--output", required=True)
     p_consistency_recovery.add_argument("--checkpoint-record-file")
     p_consistency_recovery.set_defaults(func=cmd_consistency_recovery)
 
-    p_checkpoint_operator_reading = sub.add_parser("checkpoint-operator-reading")
+    p_checkpoint_operator_reading = sub.add_parser("checkpoint-operator-reading", help=argparse.SUPPRESS)
     p_checkpoint_operator_reading.add_argument("--second-operator-file", required=True)
     p_checkpoint_operator_reading.add_argument("--thin-output-file", required=True)
     p_checkpoint_operator_reading.add_argument("--repair-packet-file", required=True)
     p_checkpoint_operator_reading.add_argument("--output", required=True)
     p_checkpoint_operator_reading.set_defaults(func=cmd_checkpoint_operator_reading)
 
-    p_consistency_recovery_prompt = sub.add_parser("consistency-recovery-prompt")
+    p_consistency_recovery_prompt = sub.add_parser("consistency-recovery-prompt", help=argparse.SUPPRESS)
     p_consistency_recovery_prompt.add_argument("--consistency-recovery-file", required=True)
     p_consistency_recovery_prompt.add_argument("--output", required=True)
     p_consistency_recovery_prompt.add_argument("--thin-output-file")
     p_consistency_recovery_prompt.set_defaults(func=cmd_consistency_recovery_prompt)
 
-    p_consistency_recovery_prompt_reading = sub.add_parser("consistency-recovery-prompt-reading")
+    p_consistency_recovery_prompt_reading = sub.add_parser("consistency-recovery-prompt-reading", help=argparse.SUPPRESS)
     p_consistency_recovery_prompt_reading.add_argument("--consistency-recovery-file", required=True)
     p_consistency_recovery_prompt_reading.add_argument("--prompt-file", required=True)
     p_consistency_recovery_prompt_reading.add_argument("--output", required=True)
     p_consistency_recovery_prompt_reading.set_defaults(func=cmd_consistency_recovery_prompt_reading)
 
-    p_reproducibility = sub.add_parser("reproducibility")
+    p_reproducibility = sub.add_parser("reproducibility", help=argparse.SUPPRESS)
     p_reproducibility.add_argument("--run-a", required=True)
     p_reproducibility.add_argument("--run-b", required=True)
     p_reproducibility.add_argument("--output", required=True)
     p_reproducibility.set_defaults(func=cmd_reproducibility)
 
-    p_second_operator = sub.add_parser("second-operator")
+    p_second_operator = sub.add_parser("second-operator", help=argparse.SUPPRESS)
     p_second_operator.add_argument("--state-file", required=True)
     p_second_operator.add_argument("--repair-packet-file", required=True)
     p_second_operator.add_argument("--run-file", required=True)
     p_second_operator.add_argument("--output", required=True)
     p_second_operator.set_defaults(func=cmd_second_operator)
 
-    p_operator_brief = sub.add_parser("operator-brief")
+    p_operator_brief = sub.add_parser("operator-brief", help=argparse.SUPPRESS)
     p_operator_brief.add_argument("--state-file", required=True)
     p_operator_brief.add_argument("--report-file", required=True)
     p_operator_brief.add_argument("--repair-packet-file", required=True)
@@ -3594,30 +5322,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_operator_brief.add_argument("--output", required=True)
     p_operator_brief.set_defaults(func=cmd_operator_brief)
 
-    p_operator_brief_chain = sub.add_parser("operator-brief-chain")
+    p_operator_brief_chain = sub.add_parser("operator-brief-chain", help=argparse.SUPPRESS)
     p_operator_brief_chain.add_argument("--brief", action="append", required=True)
     p_operator_brief_chain.add_argument("--output", required=True)
     p_operator_brief_chain.set_defaults(func=cmd_operator_brief_chain)
 
-    p_operator_render = sub.add_parser("operator-render")
+    p_operator_render = sub.add_parser("operator-render", help=argparse.SUPPRESS)
     p_operator_render.add_argument("--brief-file")
     p_operator_render.add_argument("--chain-file")
     p_operator_render.add_argument("--output", required=True)
     p_operator_render.set_defaults(func=cmd_operator_render)
 
-    p_operator_render_adoption = sub.add_parser("operator-render-adoption")
+    p_operator_render_adoption = sub.add_parser("operator-render-adoption", help=argparse.SUPPRESS)
     p_operator_render_adoption.add_argument("--source", required=True)
     p_operator_render_adoption.add_argument("--render", required=True)
     p_operator_render_adoption.add_argument("--label", required=True)
     p_operator_render_adoption.add_argument("--output", required=True)
     p_operator_render_adoption.set_defaults(func=cmd_operator_render_adoption)
 
-    p_operator_render_adoption_delta = sub.add_parser("operator-render-adoption-delta")
+    p_operator_render_adoption_delta = sub.add_parser("operator-render-adoption-delta", help=argparse.SUPPRESS)
     p_operator_render_adoption_delta.add_argument("--record", action="append", required=True)
     p_operator_render_adoption_delta.add_argument("--output", required=True)
     p_operator_render_adoption_delta.set_defaults(func=cmd_operator_render_adoption_delta)
 
-    p_operator_reading = sub.add_parser("operator-reading")
+    p_operator_reading = sub.add_parser("operator-reading", help=argparse.SUPPRESS)
     p_operator_reading.add_argument("--second-operator-file", required=True)
     p_operator_reading.add_argument("--brief-file", required=True)
     p_operator_reading.add_argument("--render-file", required=True)
@@ -3625,7 +5353,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_operator_reading.add_argument("--output", required=True)
     p_operator_reading.set_defaults(func=cmd_operator_reading)
 
-    p_externality_pressure = sub.add_parser("externality-pressure")
+    p_externality_pressure = sub.add_parser("externality-pressure", help=argparse.SUPPRESS)
     p_externality_pressure.add_argument("--reproducibility-file", required=True)
     p_externality_pressure.add_argument("--second-operator-file", required=True)
     p_externality_pressure.add_argument("--operator-reading-file", required=True)
@@ -3633,12 +5361,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_externality_pressure.add_argument("--output", required=True)
     p_externality_pressure.set_defaults(func=cmd_externality_pressure)
 
-    p_repair_handoff = sub.add_parser("repair-handoff")
+    p_repair_handoff = sub.add_parser("repair-handoff", help=argparse.SUPPRESS)
     p_repair_handoff.add_argument("--state-file", required=True)
     p_repair_handoff.add_argument("--output", required=True)
     p_repair_handoff.set_defaults(func=cmd_repair_handoff)
 
-    p_repair_packet = sub.add_parser("repair-packet")
+    p_repair_packet = sub.add_parser("repair-packet", help=argparse.SUPPRESS)
     p_repair_packet.add_argument("--state-file", required=True)
     p_repair_packet.add_argument("--artifact-root", required=True)
     p_repair_packet.add_argument("--output", required=True)
@@ -3677,11 +5405,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_repair_packet.add_argument("--refresh-use-closure", action="store_true", default=None)
     p_repair_packet.set_defaults(func=cmd_repair_packet)
 
-    p_orchestrate = sub.add_parser("orchestrate")
+    p_orchestrate = sub.add_parser("orchestrate", help=argparse.SUPPRESS)
     add_orchestration_args(p_orchestrate, include_resume_from_state=True)
     p_orchestrate.set_defaults(func=cmd_orchestrate)
 
-    p_resume = sub.add_parser("resume", aliases=["continue", "retry"])
+    p_resume = sub.add_parser("resume", aliases=["continue", "retry"], help=argparse.SUPPRESS)
     add_orchestration_args(p_resume, include_resume_from_state=False, relaxed_runtime=True)
     p_resume.add_argument("--mode", default="default", choices=["default", "dev"])
     p_resume.set_defaults(func=cmd_resume)
@@ -3689,9 +5417,18 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args()
+    parsed_argv = list(sys.argv[1:] if argv is None else argv)
+    args = parser.parse_args(parsed_argv)
+    if not getattr(args, "cmd", None):
+        dashboard_args = argparse.Namespace(
+            cmd="status",
+            artifact_root=DEFAULT_ALPHA_ARTIFACT_ROOT,
+            state_file=None,
+            json=False,
+        )
+        return cmd_status(dashboard_args)
     caught: Exception | None = None
     exit_code = 1
     try:

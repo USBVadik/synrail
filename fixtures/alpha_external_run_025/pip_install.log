@@ -1,0 +1,21 @@
+Obtaining file:///root/synrail_025_checkout/workspace
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Getting requirements to build editable: started
+  Getting requirements to build editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: synrail
+  Building editable for synrail (pyproject.toml): started
+  Building editable for synrail (pyproject.toml): finished with status 'done'
+  Created wheel for synrail: filename=synrail-0.1.0-0.editable-py3-none-any.whl size=2990 sha256=65cb536f5bbb85acabde697521f69a14f7488a4df594cf048130b864181f6bc6
+  Stored in directory: /tmp/pip-ephem-wheel-cache-wf6shpid/wheels/1d/08/d2/1634ca16c60f4efc88e2d33c9fe11b12eec82270792432c68d
+Successfully built synrail
+Installing collected packages: synrail
+  Attempting uninstall: synrail
+    Found existing installation: synrail 0.1.0
+    Uninstalling synrail-0.1.0:
+      Successfully uninstalled synrail-0.1.0
+Successfully installed synrail-0.1.0

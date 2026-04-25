@@ -1,1 +1,4 @@
-scenario ok
+Scenario: cinematic zoom trigger on core/router.py
+Command: python -m pytest tests/test_router.py::test_zoom_handler -v
+Observed: test_zoom_handler PASSED, returned handler path /api/zoom with cinematic_helper active.
+Status: PASSED

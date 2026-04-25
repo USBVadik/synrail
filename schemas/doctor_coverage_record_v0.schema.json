@@ -27,6 +27,7 @@
     "critical_missing_fail_modes",
     "critical_modes_without_measured_evidence",
     "critical_modes_with_mismatched_evidence",
+    "deployment_context_confirmed",
     "threshold_met",
     "gate_status",
     "gate_reason"
@@ -119,6 +120,7 @@
     "critical_missing_fail_modes": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "critical_modes_without_measured_evidence": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "critical_modes_with_mismatched_evidence": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "deployment_context_confirmed": {"type": "boolean"},
     "threshold_met": {"type": "boolean"},
     "gate_status": {"type": "string", "enum": ["PASS", "BLOCKED"]},
     "gate_reason": {"type": "string", "minLength": 1}

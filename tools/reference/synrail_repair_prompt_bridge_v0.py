@@ -84,18 +84,23 @@ def human_scope_label(scope_id: str, *, repair_packet: dict | None = None) -> st
         "proof_bundle_surface": "the proof bundle for this run",
         "final_result_artifact": "the final result artifact for this run",
         "final_result_payload": f"the result payload in {proof_paths['final_result']}",
+        "final_result_status_record": f"the trust-bearing status field in {proof_paths['final_result']}",
+        "scope_alignment_record": f"the scope-alignment section in {proof_paths['final_result']}",
+        "presentation_alignment_record": f"the presentation-alignment section in {proof_paths['final_result']}",
         "diff_provenance_record": f"the diff provenance section in {proof_paths['final_result']}",
+        "artifact_identity_record": f"the artifact identity section in {proof_paths['final_result']}",
         "cleanup_status_record": f"the cleanup status section in {proof_paths['final_result']}",
         "readback_record": f"the readback starter file at {proof_paths['readback']}",
         "scenario_proof_record": f"the scenario proof starter file at {proof_paths['scenario_proof']}",
         "target_identity_record": "the task target for this run",
+        "forward_orchestration_entrypoint": "the Synrail start command for this run, not a proof file",
     }
     return labels.get(scope_id, humanize_token(scope_id))
 
 
 def human_required_input(input_id: str) -> str:
     labels = {
-        "clean_surface_confirmation": "confirmation that the workspace is clean and safe to use",
+        "clean_surface_confirmation": "confirmation that the workspace is clean and safe to use (`--clean-surface` on the next retry)",
         "helper_path": "the blocking helper path",
         "prompt_identity_file": "the original task request record",
         "target_identity_file": "the task target record",
@@ -103,6 +108,23 @@ def human_required_input(input_id: str) -> str:
         "refresh_reverification_complete": "confirmation that reverification completed",
     }
     return labels.get(input_id, humanize_token(input_id))
+
+
+def reusable_proof_surfaces(repair_packet: dict) -> list[str]:
+    proof_bundle = (repair_packet.get("repair_handoff", {}) or {}).get("state", {}).get("proof_bundle", {})
+    stale_sections = set(proof_bundle.get("missing_sections", [])) | set(proof_bundle.get("semantically_insufficient_sections", []))
+    reusable: list[str] = []
+    for section, details in proof_bundle.items():
+        if section in {"status", "structural_status", "semantic_status", "missing_sections", "semantically_insufficient_sections", "semantic_next_safe_step"}:
+            continue
+        if section in stale_sections or not isinstance(details, dict):
+            continue
+        if not (details.get("semantically_sufficient", False) or details.get("structurally_complete", False)):
+            continue
+        label = humanize_token(section)
+        if label and label not in reusable:
+            reusable.append(label)
+    return reusable
 
 
 def focused_step_details(repair_packet: dict, current_step_id: str, stale_subsurfaces: list[str]) -> tuple[str, str, str]:
@@ -118,19 +140,182 @@ def focused_step_details(repair_packet: dict, current_step_id: str, stale_subsur
     if current_step_id == "repair_final_result_artifact":
         labels = {
             "final_result_payload": f"repair the result payload in {proof_paths['final_result']}",
+            "final_result_status_record": f"set a trust-bearing final_result.status in {proof_paths['final_result']}",
+            "scope_alignment_record": f"remove unrelated adjacent edits in {proof_paths['final_result']}",
+            "presentation_alignment_record": f"remove extra emphasis styling in {proof_paths['final_result']}",
             "diff_provenance_record": f"record diff provenance in {proof_paths['final_result']}",
+            "artifact_identity_record": f"record artifact identity in {proof_paths['final_result']}",
             "cleanup_status_record": f"record cleanup status in {proof_paths['final_result']}",
         }
         if subsurface_id:
             return labels.get(subsurface_id, human_step_label(current_step_id)), subsurface_id, target_path
     if current_step_id == "complete_missing_proof_sections":
         labels = {
+            "diff_provenance_record": f"record diff provenance in {proof_paths['final_result']}",
+            "final_result_status_record": f"set a trust-bearing final_result.status in {proof_paths['final_result']}",
+            "scope_alignment_record": f"remove unrelated adjacent edits in {proof_paths['final_result']}",
+            "presentation_alignment_record": f"remove extra emphasis styling in {proof_paths['final_result']}",
+            "artifact_identity_record": f"record artifact identity in {proof_paths['final_result']}",
+            "cleanup_status_record": f"record cleanup status in {proof_paths['final_result']}",
+            "final_result_payload": f"repair the result payload in {proof_paths['final_result']}",
             "readback_record": f"record readback in {proof_paths['readback']}",
             "scenario_proof_record": f"record scenario proof in {proof_paths['scenario_proof']}",
         }
         if subsurface_id:
             return labels.get(subsurface_id, human_step_label(current_step_id)), subsurface_id, target_path
+    if current_step_id == "restore_readiness_truth" and subsurface_id:
+        return human_step_label(current_step_id), subsurface_id, target_path
+    if current_step_id == "continue_forward_orchestration" and subsurface_id:
+        return "start this task through Synrail", subsurface_id, target_path
     return human_step_label(current_step_id), "", ""
+
+
+def final_result_repair_checklist(*, current_step_subsurface_id: str, current_step_target_path: str) -> list[str]:
+    if not current_step_target_path or not current_step_target_path.endswith("final_result.json"):
+        return []
+    common = [
+        f"Checklist for {current_step_target_path}:",
+        "- final_result.status: use PROVEN for an evidenced modification run, or ALREADY_SATISFIED only when the requested state was already present before any edit",
+        "- change_disposition: use modified for a real edit, or already_satisfied only when the requested state was already present before any edit",
+        "- modified_files: list each concrete changed file path, or keep [] only for a truthful already_satisfied no-op attestation",
+        "- scope: if the task only asked you to add or insert something, do not also rewrite adjacent spacing, classes, or layout just to make room for it",
+        "- presentation: if the task only asked for a small added label or subtitle, keep the new surface visually plain and avoid extra emphasis styling unless the task explicitly asked for it",
+        "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files when you can produce one; keep it empty for a truthful already_satisfied no-op attestation",
+        "- diff_provenance: if git_diff is unavailable or the file is untracked, record method, changed_file, one exact added_line or removed_line, one stable context_before or context_after anchor, and verification_command plus verification_result",
+        "- If diff_provenance.method is missing but the rest of the direct-observation record is strong, Synrail can normalize it to direct_file_observation during a normal check; still include it explicitly when you can",
+        "- If final_result.json already carries that strong structured verification, do not spend this repair step rewriting readback.txt or scenario_proof.txt unless Synrail explicitly targets them",
+        "- diff_provenance for already_satisfied: record changed_file, observed_line, verification_command, verification_result, and provenance_note instead of inventing a patch",
+        "- artifact_identity: when identity is missing, fill baseline_identity, execution_surface_identity, prompt_identity, and task_identity for this run",
+        "- cleanup_status: leave it absent during the normal check path unless Synrail explicitly names cleanup_status as the blocker or standalone proof needs explicit cleanup attestation",
+        "- Need a canonical shape? run `synrail final-result-template`",
+        "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+    ]
+    if current_step_subsurface_id == "final_result_payload":
+        return common
+    if current_step_subsurface_id == "final_result_status_record":
+        return [
+            f"Checklist for {current_step_target_path}:",
+            "- final_result.status: use PROVEN for an evidenced modification run",
+            "- final_result.status: use ALREADY_SATISFIED only for a truthful no-op attestation where the requested state was already present before any edit",
+            "- Do not use decorative execution labels like SUCCESS, COMPLETED, DONE, or OK when the bundle is making a trust claim",
+            "- Keep final_result.status aligned with change_disposition and the actual proof contour",
+            "- Need a canonical shape? run `synrail final-result-template`",
+            "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+        ]
+    if current_step_subsurface_id == "scope_alignment_record":
+        return [
+            f"Checklist for {current_step_target_path}:",
+            "- Keep only the user-requested additive change in scope",
+            "- If the task asked for a small inserted label, subtitle, or caption, do not also tweak adjacent margin, padding, class, or layout lines unless the task explicitly asked for that too",
+            "- modified_files and git_diff should describe only the requested additive change",
+            "- If the requested state was already present before any edit, use change_disposition=already_satisfied instead of inventing cleanup edits",
+            "- Need a canonical shape? run `synrail final-result-template`",
+            "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+        ]
+    if current_step_subsurface_id == "presentation_alignment_record":
+        return [
+            f"Checklist for {current_step_target_path}:",
+            "- Keep the newly added line visually plain unless the task explicitly asked for styling",
+            "- Avoid extra emphasis classes such as italic, uppercase, tracking, opacity, animation, shadow, or heavy font-weight when the task only asked for a simple subtitle or label",
+            "- Keep the added line consistent with the nearby UI instead of improvising a new visual treatment",
+            "- Need a canonical shape? run `synrail final-result-template`",
+            "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+        ]
+    if current_step_subsurface_id == "diff_provenance_record":
+        return [
+            f"Checklist for {current_step_target_path}:",
+            "- change_disposition: use modified for a real edit, or already_satisfied only when the requested state was already present before any edit",
+            "- modified_files: list each concrete changed file path first, or keep [] only for a truthful already_satisfied no-op attestation",
+            "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files when you can produce one; keep it empty for a truthful already_satisfied no-op attestation",
+            "- diff_provenance.method: name how you captured the evidence (for example direct_file_observation); if it is omitted but the direct-observation record is otherwise complete, Synrail can infer direct_file_observation during a normal check",
+            "- diff_provenance.changed_file: name one concrete modified file from modified_files",
+            "- diff_provenance.added_line or diff_provenance.removed_line: record the exact changed line for a real edit",
+            "- diff_provenance.context_before or diff_provenance.context_after: copy one stable neighbor line from the same file so the direct observation has a concrete anchor, not just an isolated changed line",
+            "- diff_provenance.observed_line: for already_satisfied, record the concrete line that was already present",
+            "- diff_provenance.verification_command and diff_provenance.verification_result: capture the command and observed output that proved the changed line or observed line; for tiny edits, prefer output that includes the changed line plus a stable neighbor",
+            "- diff_provenance.provenance_note: explain why this is direct observation, especially for already_satisfied or untracked files",
+            "- If this direct-observation record is already strong, leave readback.txt and scenario_proof.txt alone unless Synrail later names them as the exact blocker",
+            "- Need a canonical shape? run `synrail final-result-template`",
+            "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+        ]
+    if current_step_subsurface_id == "artifact_identity_record":
+        return [
+            f"Checklist for {current_step_target_path}:",
+            "- artifact_identity.baseline_identity: use the current run baseline identity",
+            "- artifact_identity.execution_surface_identity: use the current worktree or execution surface identity",
+            "- artifact_identity.prompt_identity: use the prompt identity already attached to this run",
+            "- artifact_identity.task_identity: use the task identity already attached to this run",
+            "- If check or retry already knows these values, mirroring them here keeps low-level bundle-check reproducible too",
+            "- Need a canonical shape? run `synrail final-result-template`",
+            "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+        ]
+    if current_step_subsurface_id == "cleanup_status_record":
+        return [
+            f"Checklist for {current_step_target_path}:",
+            "- Only fill cleanup_status when Synrail explicitly targets cleanup_status as the blocker for this step",
+            "- cleanup_status.success: true when the workspace is clean after the intended change",
+            "- cleanup_status.summary: say the workspace is clean and only the intended files changed",
+            "- Need a canonical shape? run `synrail final-result-template`",
+            "- Need exact semantic reasons after a check? run `synrail explain-proof`",
+        ]
+    return common
+
+
+def readback_repair_checklist(*, current_step_subsurface_id: str, current_step_target_path: str) -> list[str]:
+    if current_step_subsurface_id != "readback_record":
+        return []
+    if not current_step_target_path or not current_step_target_path.endswith("readback.txt"):
+        return []
+    return [
+        f"Checklist for {current_step_target_path}:",
+        "- Synrail explicitly targeted readback.txt for this step, so record only the concrete observed property needed to unblock this named gap",
+        "- Changed surface: name the actual changed file path explicitly (e.g. src/app.js, not 'the file')",
+        "- Observed: describe a concrete property from the changed surface — a function name, class name, line content, or rendered element",
+        "- Do not paraphrase or restate the task description — prove you read the actual changed code or output",
+        "- At least 2 lines with at least one concrete identifier (file path, function/class name, line number, or code token)",
+        "- For UI or rendered changes, prefer local runtime evidence (curl, test output) over source-only grep when possible",
+        "- Keep the readback minimal and concrete; do not add extra narrative beyond the exact observed surface needed for this blocker",
+    ]
+
+
+def scenario_proof_repair_checklist(*, current_step_subsurface_id: str, current_step_target_path: str) -> list[str]:
+    if current_step_subsurface_id != "scenario_proof_record":
+        return []
+    if not current_step_target_path or not current_step_target_path.endswith("scenario_proof.txt"):
+        return []
+    return [
+        f"Checklist for {current_step_target_path}:",
+        "- Synrail explicitly targeted scenario_proof.txt for this step, so record only the concrete verification needed to unblock this named gap",
+        "- Scenario: name the exact runtime context (file path, URL, command)",
+        "- Command: include the actual command, request, or test that was run (e.g. 'python -m pytest tests/test_x.py', 'curl localhost:3000/api')",
+        "- Observed: include concrete output — a status code, a rendered fragment, a returned value, not just 'it works'",
+        "- Status: PASSED when the expected outcome was observed; otherwise use FAILED or BLOCKED truthfully",
+        "- At least 3 lines with at least one concrete identifier or command",
+        "- Do not restate the task description — prove the verification actually happened",
+        "- Keep the scenario proof minimal and concrete; do not add extra narrative beyond the exact verification needed for this blocker",
+    ]
+
+
+FINAL_RESULT_FIRST_SUBSURFACES = {
+    "final_result_payload",
+    "final_result_status_record",
+    "scope_alignment_record",
+    "presentation_alignment_record",
+    "diff_provenance_record",
+    "artifact_identity_record",
+    "cleanup_status_record",
+}
+
+
+def final_result_first_guardrails(*, current_step_subsurface_id: str, proof_paths: dict[str, str]) -> list[str]:
+    if current_step_subsurface_id not in FINAL_RESULT_FIRST_SUBSURFACES:
+        return []
+    lines = [
+        f"Do not touch fallback proof surfaces like {proof_paths['readback']} or {proof_paths['scenario_proof']} unless Synrail explicitly targets them.",
+    ]
+    if current_step_subsurface_id != "cleanup_status_record":
+        lines.append("Do not add cleanup_status unless Synrail explicitly names cleanup_status as the blocker for this step.")
+    return lines
 
 
 def load_json(path: Path) -> dict:
@@ -176,12 +361,12 @@ def next_command(repair_packet: dict, current_step_id: str) -> str:
         resumability.get("status", "") == "REPAIRABLE"
         and termination.get("status", "CONTINUE") != "TERMINATE"
     ):
-        return "synrail retry"
+        return "synrail check"
     if (
         repair_packet.get("resumability_family", "") == "NOT_RESUMABLE_FRESH_ORCHESTRATION"
         or current_step_id == "continue_forward_orchestration"
     ):
-        return "synrail check"
+        return "synrail start"
     return ""
 
 
@@ -207,13 +392,21 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         current_step_subsurface_id=current_step_subsurface_id,
         current_step_target_path=current_step_target_path,
     )
+    proof_paths = proof_target_paths(repair_packet)
+    final_result_guardrails = final_result_first_guardrails(
+        current_step_subsurface_id=current_step_subsurface_id,
+        proof_paths=proof_paths,
+    )
     allowed_scope = [current_step_subsurface_id] if current_step_subsurface_id else (stale_subsurfaces or ["current_repair_step_only"])
     allowed_scope_labels = [human_scope_label(scope_id, repair_packet=repair_packet) for scope_id in allowed_scope]
+    reusable_scope_labels = reusable_proof_surfaces(repair_packet)
     required_input_labels = [human_required_input(input_id) for input_id in required_inputs]
     forbidden_scope = [
         "Do not broaden scope beyond the current repair step.",
         "Do not modify accepted or terminal-state logic.",
         "Do not claim closure or acceptance unless the repaired run actually reaches it.",
+        "Do not send a final success/completion answer to the user until a later synrail check prints Status: Accepted.",
+        "Do not call the work functionally complete, 100% done, or fully done while Synrail is non-green.",
     ]
     broken_truth = failure_reason(repair_packet)
     failure_label = (
@@ -238,10 +431,12 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
     ]
     for input_id in required_inputs:
         must_pass.append(f"Provide required input: {human_required_input(input_id)}")
+    must_pass.extend(final_result_guardrails)
     if next_safe_step_label:
         must_pass.append(f"Keep the next safe step aligned with: {next_safe_step_label}")
     if current_step_target_path:
         must_pass.append(f"Edit only this starter file in place: {current_step_target_path}")
+    must_pass.append("Rerun Synrail after this repair and do not report task completion unless the later check prints Status: Accepted.")
     acceptance_criteria = list(must_pass)
     checkpoint_hint = checkpoint_note(checkpoint, repair_packet=repair_packet)
     prompt_lines = [
@@ -260,19 +455,38 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         ),
         f"Stale artifacts: {', '.join(stale_artifacts) if stale_artifacts else 'none'}",
         f"Stale subsurfaces: {', '.join(stale_subsurfaces) if stale_subsurfaces else 'none'}",
+        f"Reusable proof surfaces: {', '.join(reusable_scope_labels) if reusable_scope_labels else 'none'}",
         f"Allowed scope: {', '.join(allowed_scope_labels) if allowed_scope_labels else 'only the current bounded repair step'}",
         f"Required inputs: {', '.join(required_input_labels) if required_input_labels else 'none'}",
         f"What must be true after repair: {next_safe_step_label or 'follow the next safe step from the repair packet'}",
         (
             f"Edit in place: {current_step_target_path}."
             if current_step_target_path
-            else "Edit in place: keep the repair inside the current bounded proof surface."
+            else (
+                "No proof-file edit is required for this step; run the named Synrail command instead."
+                if current_step_id == "continue_forward_orchestration"
+                else "Edit in place: keep the repair inside the current bounded proof surface."
+            )
         ),
+        *final_result_guardrails,
         "Do not touch unrelated files, state transitions, or acceptance logic.",
+        "Final-answer guard: do not tell the user this task is complete, 100% done, or functionally complete until a later synrail check prints Status: Accepted.",
         "Return only the bounded repair needed for this current step and keep this same repair path intact.",
     ]
     if checkpoint_hint:
         prompt_lines.append(checkpoint_hint)
+    prompt_lines.extend(final_result_repair_checklist(
+        current_step_subsurface_id=current_step_subsurface_id,
+        current_step_target_path=current_step_target_path,
+    ))
+    prompt_lines.extend(readback_repair_checklist(
+        current_step_subsurface_id=current_step_subsurface_id,
+        current_step_target_path=current_step_target_path,
+    ))
+    prompt_lines.extend(scenario_proof_repair_checklist(
+        current_step_subsurface_id=current_step_subsurface_id,
+        current_step_target_path=current_step_target_path,
+    ))
     return {
         "schema_version": "repair_prompt_bridge_record_v0",
         "run_id": repair_packet["run_id"],
@@ -287,6 +501,7 @@ def build_record(*, repair_packet: dict, checkpoint: dict | None = None, doctor:
         "failure_label": failure_label,
         "stale_artifact_ids": stale_artifacts,
         "stale_subsurface_ids": stale_subsurfaces,
+        "reusable_proof_surfaces": reusable_scope_labels,
         "allowed_scope": allowed_scope,
         "allowed_scope_labels": allowed_scope_labels,
         "required_inputs": required_inputs,

@@ -1,0 +1,2 @@
+Restore point confirmation: PASSED
+This restore point is ready. You can use synrail restore if you need it.

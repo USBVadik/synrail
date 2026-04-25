@@ -12,7 +12,7 @@ from pathlib import Path
 MISSING_SECTION_STEPS = {
     "readback": "collect readback from changed sections on the attested surface",
     "scenario_proof": "rerun the scenario check against the attested target surface",
-    "artifact_identity": "repair baseline, surface, prompt, and task identity fields",
+    "artifact_identity": "restore baseline, execution surface, prompt, and task identity values",
     "cleanup_status": "record cleanup status for the execution surface",
     "final_result": "recover the final result artifact and rerun bundle assembly",
     "modified_files": "recover modified-files evidence from the final result artifact",
@@ -21,10 +21,11 @@ MISSING_SECTION_STEPS = {
 
 SEMANTIC_SECTION_STEPS = {
     "modified_files": "record the actual changed files in the final result artifact",
-    "diff_provenance": "capture non-empty diff or provenance evidence for the changed files",
+    "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record",
+    "final_result_status": "state a trust-bearing final_result.status for this run",
     "readback": "record substantive readback from the changed sections on the attested surface",
     "scenario_proof": "record an explicit scenario-proof result for the attested target surface",
-    "artifact_identity": "repair baseline, surface, prompt, and task identity fields",
+    "artifact_identity": "restore baseline, execution surface, prompt, and task identity values for this run",
     "cleanup_status": "record a successful cleanup status for the execution surface",
 }
 
@@ -56,14 +57,17 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
     semantically_insufficient_sections = list(bundle.get("semantically_insufficient_sections", []))
     state_run_id = state.get("run_id", "")
     bundle_run_id = bundle.get("run_id", "")
+    artifact_request_id = (bundle.get("final_result", {}).get("request_id", "") or "").strip()
     run_id = state_run_id or bundle_run_id
     task_class = state.get("task_class", bundle.get("task_class", ""))
     criteria_validation = criteria_validation or {}
 
-    # Cross-artifact identity binding: if both state and bundle carry a run_id,
-    # they must agree.  A mismatch means the bundle was built from a different
-    # run and cannot be trusted for closure.
-    run_id_mismatch = bool(state_run_id and bundle_run_id and state_run_id != bundle_run_id)
+    # Cross-artifact identity binding: if state, bundle, or final-result
+    # request_id disagree, the proof was assembled from mixed run surfaces.
+    run_id_mismatch = bool(
+        (state_run_id and artifact_request_id and state_run_id != artifact_request_id)
+        or (state_run_id and bundle_run_id and state_run_id != bundle_run_id)
+    )
 
     verdict = {
         "schema_version": "closure_verdict_v0",
@@ -78,6 +82,7 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         "acceptance_criteria_revision_id": criteria_validation.get("criteria_revision_id", ""),
         "acceptance_criteria_status": criteria_validation.get("status", ""),
         "acceptance_criteria_reason": criteria_validation.get("reason", ""),
+        "closure_warnings": [],
     }
 
     if run_id_mismatch:
@@ -109,6 +114,12 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         verdict["next_allowed_transition"] = "DOCTOR_READINESS"
         verdict["narrow_next_safe_step"] = "run doctor and clear blocking failure classes"
         return verdict
+
+    doctor_overrides = list(state["doctor"].get("override_gates", []))
+    if doctor_overrides:
+        verdict["closure_warnings"].append(
+            f"doctor_override_present: {', '.join(doctor_overrides)}"
+        )
 
     if not state["integrity"].get("bootstrap_provenance_ok", False):
         verdict["blocking_reason"] = "CONTROLLED_BOOTSTRAP_NOT_CONFIRMED"
@@ -146,10 +157,34 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         verdict["narrow_next_safe_step"] = first_missing_step(missing_sections)
         return verdict
 
+    recheck = bundle.get("verification_recheck", {})
+    if recheck.get("executed") and not recheck.get("matched"):
+        verdict["closure_status"] = "REJECTED"
+        verdict["blocking_reason"] = "VERIFICATION_RECHECK_FAILED"
+        verdict["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
+        verdict["narrow_next_safe_step"] = "re-run the verification and update diff_provenance"
+        return verdict
+
     if state["recovery"]["status"] == "PENDING" and not state["recovery"]["reverification_complete"]:
         verdict["blocking_reason"] = "RECOVERY_REVERIFICATION_INCOMPLETE"
         verdict["next_allowed_transition"] = "RECOVERY_REVERIFICATION"
         verdict["narrow_next_safe_step"] = "run reverification against the attested target surface"
+        return verdict
+
+    artifact_integrity_warning = bool(bundle.get("artifact_integrity_warning", False))
+    if artifact_integrity_warning:
+        verdict["closure_warnings"].append("artifact_modified_outside_workflow")
+        verdict["closure_status"] = "REJECTED"
+        verdict["blocking_reason"] = "ARTIFACT_INTEGRITY_FAILED"
+        verdict["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
+        verdict["narrow_next_safe_step"] = "rebuild the final result artifact and proof bundle on the current surface"
+        return verdict
+
+    if doctor_overrides:
+        verdict["closure_status"] = "REJECTED"
+        verdict["blocking_reason"] = "DOCTOR_OVERRIDE_PRESENT"
+        verdict["next_allowed_transition"] = "DOCTOR_READINESS"
+        verdict["narrow_next_safe_step"] = "rerun doctor without override gates before trusting closure"
         return verdict
 
     verdict["closure_status"] = "ACCEPTED"
@@ -168,11 +203,18 @@ def apply_verdict_to_state(state: dict, bundle: dict, verdict: dict) -> dict:
     state["proof_bundle"]["missing_sections"] = list(bundle.get("missing_sections", []))
     state["proof_bundle"]["semantically_insufficient_sections"] = list(bundle.get("semantically_insufficient_sections", []))
     state["proof_bundle"]["semantic_next_safe_step"] = bundle.get("semantic_next_safe_step", "")
+    state["proof_bundle"]["final_result"] = dict(bundle.get("final_result", {}))
+    state["proof_bundle"]["verification_corroboration"] = dict(bundle.get("verification_corroboration", {}))
+    state["proof_bundle"]["verification_recheck"] = dict(bundle.get("verification_recheck", {}))
+    state["proof_bundle"]["artifact_identity"] = dict(bundle.get("artifact_identity", {}))
+    state["proof_bundle"]["cleanup_status"] = dict(bundle.get("cleanup_status", {}))
+    state["proof_bundle"]["artifact_integrity_warning"] = bool(bundle.get("artifact_integrity_warning", False))
     state["closure"]["status"] = verdict["closure_status"]
     state["closure"]["blocking_reason"] = verdict["blocking_reason"]
     state["closure"]["next_allowed_transition"] = verdict["next_allowed_transition"]
     state["closure"]["narrow_next_safe_step"] = verdict["narrow_next_safe_step"]
     state["closure"]["missing_sections"] = list(verdict["missing_sections"])
+    state["closure"]["warnings"] = list(verdict.get("closure_warnings", []))
     state["next_safe_step"] = verdict["narrow_next_safe_step"]
 
     if verdict["closure_status"] == "ACCEPTED":

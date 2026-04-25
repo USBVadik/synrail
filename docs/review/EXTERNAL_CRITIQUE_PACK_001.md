@@ -28,11 +28,13 @@ The current product form is one narrow controlled-start alpha lane over that ker
 
 Give them:
 
-1. the repository snapshot at the commit you want reviewed
+1. the exact selected repository snapshot at the commit you want reviewed
 2. this review pack under `docs/review/`
 3. the current alpha lane docs under `docs/core/`
 4. the full source tree
 5. the fixtures and tests
+
+Use one explicitly selected snapshot for docs, tests, fixtures, and message. Do not assemble the review packet from a drifting local working tree.
 
 If you want a send-ready reviewer message and exact handoff packet, use:
 
@@ -79,7 +81,12 @@ Deep technical review path:
 - measured doctor coverage gate
 - executable continuation arbiter
 - regression tests for truth-critical failures
-- a compact external tester pack
+- a compact external tester pack plus claim-validation pack
+- refresh-driven stale-obligation guidance in the default non-green shell
+- one repeatable everyday benchmark pack whose broader class is still baseline-favorable overall
+- one narrow focused `small_template_text_fix` family with five justified low-drag paths and a machine-readable split where the canonical pack reads `FOCUSED_CLASS_CHEAP_ENOUGH` plus `FOCUSED_CLASS_BEHAVIOR_CHEAP_BY_DEFAULT`, but same-family pressure can still keep kernel cheapness while dropping behavior cheapness to `FOCUSED_CLASS_BEHAVIOR_NOT_YET_CHEAP_BY_DEFAULT`
+
+Read that as one narrow focused win, not as a class victory: the broader everyday lane is still `BASELINE_GOOD_ENOUGH`, and same-family pressure already shows behavior cheapness is not fully independent.
 
 But it is still intentionally narrow:
 
@@ -95,11 +102,10 @@ We do not want polite feedback.
 
 We want pressure on:
 
-1. whether the truth surfaces are actually strict enough
-2. whether the kernel still self-validates in hidden ways
-3. whether the first alpha contour still has unnecessary ceremony
-4. whether the default shell says something useful or just translates internal jargon
-5. whether the system wins against simpler substitutes in enough real situations
+1. whether the broader everyday lane beats simpler substitutes, or whether the current `small_template_text_fix` win is still too narrow to justify the control mass
+2. which proof surface still feels self-issued or too author-shaped to trust
+3. whether restore, re-entry, or handoff value is concrete enough to justify the ceremony
+4. what you would cut first if that value is still too weak
 
 ## Current runnable review surfaces
 
@@ -110,14 +116,23 @@ Start here for live runnable and fixture-backed review:
 - [../core/ALPHA_TELEMETRY_001.md](../core/ALPHA_TELEMETRY_001.md)
 - [../../tests/test_truth_regressions.py](../../tests/test_truth_regressions.py)
 - [../../tests/test_alpha_test_pack_smoke.py](../../tests/test_alpha_test_pack_smoke.py)
+- [../../tests/test_claim_validation_pack.py](../../tests/test_claim_validation_pack.py)
+- [../../tests/test_everyday_benchmark_pack.py](../../tests/test_everyday_benchmark_pack.py)
+- [../../tests/test_small_template_text_fix_benchmark_pack.py](../../tests/test_small_template_text_fix_benchmark_pack.py)
+- [../../tests/test_cost_of_control_v0.py](../../tests/test_cost_of_control_v0.py)
+- `fixtures/repeatable_everyday_benchmark_pack_001.json`
+- `fixtures/cost_of_control_everyday_001.json`
+- `fixtures/small_template_text_fix_benchmark_pack_001.json`
+- `fixtures/cost_of_control_small_template_text_fix_001.json`
+- `fixtures/small_template_text_fix_behavior_pressure_pack_001.json`
+- `fixtures/cost_of_control_small_template_text_fix_behavior_pressure_001.json`
 
 ## Recommended review commands
 
 Install:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install .
+python3 tools/reference/synrail_install_v0.py --venv .venv
 ```
 
 Run the full current test suite:
@@ -132,10 +147,16 @@ Run the current alpha tester-pack smoke only:
 python3 -m unittest tests.test_alpha_test_pack_smoke -v
 ```
 
+Run the current claim-validation pack:
+
+```bash
+python3 -m unittest tests.test_claim_validation_pack -v
+```
+
 ## Questions we want answered
 
-1. What part of the kernel still looks strict by form but weak by substance?
-2. Where would you expect false accept or false reject to still leak through?
-3. Which runtime artifact is still too self-issued or too hard to trust?
-4. Which part of the alpha lane still feels like operator ceremony instead of workflow?
-5. If you were going to cut scope harder before broader alpha, what would you freeze or remove?
+1. Which step in the everyday lane feels least worth its weight?
+2. Which runtime artifact still feels self-issued or too hard to trust?
+3. Where does the shell still ask for confidence the current proof does not earn?
+4. In restore, re-entry, or handoff, what concrete value does `Synrail` create over a simpler substitute?
+5. If that value is still weak, what would you freeze or remove before broader alpha?

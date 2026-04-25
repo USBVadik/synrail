@@ -71,8 +71,13 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
-def gate(status: str, note: str) -> dict:
-    return {"status": status, "note": note}
+def gate(status: str, note: str, *, override: bool = False, override_reason: str = "") -> dict:
+    return {
+        "status": status,
+        "note": note,
+        "override": override,
+        "override_reason": override_reason,
+    }
 
 
 def non_empty_identity(value: str) -> bool:
@@ -178,8 +183,16 @@ def probe_clean_execution_surface(args: argparse.Namespace) -> dict:
 
     if args.clean_surface:
         if args.changed_file and args.allowed_scope_path:
-            return gate("PASS", "execution surface is explicitly observed and changed files stay within the allowed scope")
-        return gate("PASS", "execution surface is acceptable")
+            return gate(
+                "PASS",
+                "execution surface is explicitly observed and changed files stay within the allowed scope",
+            )
+        return gate(
+            "PASS",
+            "execution surface is acceptable",
+            override=True,
+            override_reason="operator bypass via --clean-surface",
+        )
 
     target = Path(args.target_path)
     if not target.exists():
@@ -206,7 +219,12 @@ def probe_clean_execution_surface(args: argparse.Namespace) -> dict:
 
 def probe_artifact_viability(args: argparse.Namespace) -> dict:
     if args.artifact_viable:
-        return gate("PASS", "machine-readable artifact path is viable")
+        return gate(
+            "PASS",
+            "machine-readable artifact path is viable",
+            override=True,
+            override_reason="operator bypass via --artifact-viable",
+        )
 
     if not args.artifact_path:
         return gate("FAIL", "artifact path is not specified")
@@ -220,7 +238,12 @@ def probe_artifact_viability(args: argparse.Namespace) -> dict:
 
 def probe_helper_integrity(args: argparse.Namespace) -> dict:
     if args.helper_ok:
-        return gate("PASS", "helper surface is trusted or safely bypassed")
+        return gate(
+            "PASS",
+            "helper surface is trusted or safely bypassed",
+            override=True,
+            override_reason="operator bypass via --helper-ok",
+        )
 
     if args.doctor_level not in {"SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"}:
         return gate("NOT_APPLICABLE", "helper integrity not required for this level")
@@ -309,7 +332,12 @@ def probe_python_helper_import_drift(helper: Path) -> str:
 
 def probe_credential_surface(args: argparse.Namespace) -> dict:
     if args.credentials_ok:
-        return gate("PASS", "credential surface is present")
+        return gate(
+            "PASS",
+            "credential surface is present",
+            override=True,
+            override_reason="operator bypass via --credentials-ok",
+        )
 
     if args.doctor_level not in {"SUPPORT_DOCTOR", "EXACT_RETRY_DOCTOR"}:
         return gate("NOT_APPLICABLE", "credential surface not required for this level")
@@ -350,7 +378,12 @@ def probe_credential_surface(args: argparse.Namespace) -> dict:
 
 def probe_prompt_task_identity(args: argparse.Namespace) -> dict:
     if args.prompt_identity_ok:
-        return gate("PASS", "exact prompt and task identity are present")
+        return gate(
+            "PASS",
+            "exact prompt and task identity are present",
+            override=True,
+            override_reason="operator bypass via --prompt-identity-ok",
+        )
 
     if args.doctor_level != "EXACT_RETRY_DOCTOR":
         return gate("NOT_APPLICABLE", "prompt/task identity not required for this level")
@@ -370,6 +403,7 @@ def probe_prompt_task_identity(args: argparse.Namespace) -> dict:
 
 
 def build_record(args: argparse.Namespace) -> dict:
+    deployment_context = getattr(args, "deployment_context", False)
     baseline_identity_gate, observed_target_identity, expected_target_identity = probe_baseline_identity(args)
     gates = {
         "baseline_identity": baseline_identity_gate,
@@ -386,7 +420,12 @@ def build_record(args: argparse.Namespace) -> dict:
         profile=coverage_profile,
         profile_file=coverage_profile_file,
     )
-    coverage = build_coverage_record(coverage_profile, coverage_corpus, corpus_file=coverage_corpus_file)
+    coverage = build_coverage_record(
+        coverage_profile,
+        coverage_corpus,
+        corpus_file=coverage_corpus_file,
+        deployment_context=deployment_context,
+    )
 
     blocking_failure_classes = []
     final_verdict = PASS_VERDICT[args.doctor_level]
@@ -404,6 +443,8 @@ def build_record(args: argparse.Namespace) -> dict:
         final_verdict = VERDICTS["doctor_coverage"]
         next_safe_step = NEXT_STEPS["doctor_coverage"]
 
+    override_gates = [key for key, result in gates.items() if result.get("override")]
+
     return {
         "schema_version": "doctor_record_v0",
         "doctor_run_id": args.doctor_run_id,
@@ -419,6 +460,7 @@ def build_record(args: argparse.Namespace) -> dict:
         },
         "intended_run_class": args.intended_run_class,
         "gate_results": gates,
+        "override_gates": override_gates,
         "coverage": coverage,
         "blocking_failure_classes": blocking_failure_classes,
         "final_verdict": final_verdict,
@@ -430,6 +472,7 @@ def apply_record_to_state(state: dict, record: dict) -> dict:
     acceptable = record["final_verdict"].startswith("ACCEPTABLE_")
     state["doctor"]["status"] = "PASS" if acceptable else "FAIL"
     state["doctor"]["blocking_failure_classes"] = list(record["blocking_failure_classes"])
+    state["doctor"]["override_gates"] = list(record.get("override_gates", []))
     if not acceptable:
         state["state"] = "DOCTOR_BLOCKED"
         state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
@@ -468,6 +511,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--allowed-scope-path", action="append", default=[])
     parser.add_argument("--coverage-profile-file")
     parser.add_argument("--coverage-corpus-file")
+    parser.add_argument("--deployment-context", action="store_true")
     return parser
 
 

@@ -1,0 +1,12 @@
+final_status=PROVEN
+semantic_status=SUFFICIENT
+closure=ACCEPTED
+repair_count=0
+rejection_count=0
+normalized_method=direct_file_observation
+runtime_verification_sufficient=True
+readback_waived=True
+scenario_waived=True
+readback_unchanged=False
+scenario_unchanged=False
+modified_files=['alpha.py']

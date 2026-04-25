@@ -11,6 +11,7 @@
     "scenario_class",
     "task_class",
     "path_id",
+    "data_provenance",
     "closure_result",
     "blocker_to_closure_cycles",
     "false_success_risk",
@@ -45,6 +46,10 @@
     },
     "path_id": {
       "type": "string"
+    },
+    "data_provenance": {
+      "type": "string",
+      "enum": ["curated_local_estimate", "pressure_synthetic", "external_empirical"]
     },
     "closure_result": {
       "type": "string",
@@ -95,6 +100,30 @@
       "minimum": 0
     },
     "artifact_completeness_percent": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "mandatory_mental_steps": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "operator_visible_action_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "got_lost_moment_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "trust_bearing_artifact_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "visible_surface_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "skippable_visible_surface_count": {
       "type": "integer",
       "minimum": 0
     },

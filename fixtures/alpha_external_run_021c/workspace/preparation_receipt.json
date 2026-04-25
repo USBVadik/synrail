@@ -1,0 +1,16 @@
+{
+  "schema_version": "governed_path_preparation_receipt_v0",
+  "plan_file": "/root/alpha_external_run_021c/workspace/.synrail/plan.json",
+  "bundle_file": "/root/alpha_external_run_021c/workspace/.synrail/bundle.json",
+  "run_id": "ALPHA_RUN_20260418T182121308198Z_f37953",
+  "task_class": "bounded_change",
+  "bundle_run_matches_plan": true,
+  "bundle_task_class_matches_plan": true,
+  "planned_required_sections_count": 7,
+  "planned_required_sections_present_count": 7,
+  "bundle_status": "COMPLETE",
+  "missing_required_sections": [],
+  "complete_on_first_bundle_pass": true,
+  "ready_for_closure": true,
+  "next_safe_step": "run closure on the complete planned bundle"
+}

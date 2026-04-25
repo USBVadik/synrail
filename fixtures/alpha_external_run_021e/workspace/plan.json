@@ -1,0 +1,31 @@
+{
+  "schema_version": "proof_bundle_plan_v0",
+  "run_id": "ALPHA_RUN_20260418T190925770719Z_c03bb2",
+  "task_class": "bounded_change",
+  "governed_mode": "FULL_GOVERNED_PATH",
+  "required_sections": [
+    "final_result",
+    "modified_files",
+    "diff_provenance",
+    "readback",
+    "scenario_proof",
+    "artifact_identity",
+    "cleanup_status"
+  ],
+  "recommended_artifacts": {
+    "final_result": "/root/synrail_021e_checkout/workspace/.synrail/final_result.json",
+    "readback": "/root/synrail_021e_checkout/workspace/.synrail/readback.txt",
+    "scenario_proof": "/root/synrail_021e_checkout/workspace/.synrail/scenario.txt",
+    "bundle_output": "/root/synrail_021e_checkout/workspace/.synrail/bundle.json",
+    "closure_output": "/root/synrail_021e_checkout/workspace/.synrail/closure.json",
+    "preparation_receipt_output": "/root/synrail_021e_checkout/workspace/.synrail/preparation_receipt.json"
+  },
+  "artifact_identity": {
+    "baseline_identity": "autodetected_python_baseline",
+    "execution_surface_identity": "autodetected_python_worktree",
+    "prompt_identity": "Add a one-line docstring to the main function in alpha.py",
+    "task_identity": "Add a one-line docstring to the main function in alpha.py"
+  },
+  "planning_status": "READY",
+  "next_safe_step": "collect the planned proof artifacts and assemble the bundle before closure"
+}

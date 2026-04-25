@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import datetime as dt
 import json
 import os
 import subprocess
@@ -130,6 +131,10 @@ def _finalize_and_exit(ctx: OrchestrationContext, args: argparse.Namespace, repo
     return exit_code
 
 
+def now_iso() -> str:
+    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
 def default_state(run_id: str, task_class: str) -> dict:
     return {
         "schema_version": "run_state_v0",
@@ -144,6 +149,7 @@ def default_state(run_id: str, task_class: str) -> dict:
         "doctor": {
             "status": "UNKNOWN",
             "blocking_failure_classes": [],
+            "override_gates": [],
         },
         "integrity": {
             "status": "UNKNOWN",
@@ -162,6 +168,7 @@ def default_state(run_id: str, task_class: str) -> dict:
             "semantic_status": "MISSING",
             "semantically_insufficient_sections": [],
             "semantic_next_safe_step": "",
+            "artifact_integrity_warning": False,
         },
         "closure": {
             "status": "OPEN",
@@ -169,12 +176,17 @@ def default_state(run_id: str, task_class: str) -> dict:
             "next_allowed_transition": "TARGET_SURFACE_ATTESTED",
             "narrow_next_safe_step": "attest target surface",
             "missing_sections": [],
+            "warnings": [],
         },
         "recovery": {
             "status": "NOT_REQUIRED",
             "reverification_complete": False,
         },
         "next_safe_step": "attest target surface",
+        "start_timestamp_utc": now_iso(),
+        "closure_timestamp_utc": "",
+        "check_count": 0,
+        "last_known_final_result_hash": "",
     }
 
 
@@ -374,6 +386,13 @@ def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path
 
 
 def save_state(path: Path, state: dict) -> None:
+    state.setdefault("start_timestamp_utc", "")
+    state.setdefault("closure_timestamp_utc", "")
+    state.setdefault("check_count", 0)
+    state.setdefault("last_known_final_result_hash", "")
+    state.setdefault("doctor", {}).setdefault("override_gates", [])
+    state.setdefault("proof_bundle", {}).setdefault("artifact_integrity_warning", False)
+    state.setdefault("closure", {}).setdefault("warnings", [])
     save_json(path, state)
 
 
@@ -664,6 +683,7 @@ def enter_blocked_state(
     state["closure"]["next_allowed_transition"] = next_allowed_transition
     state["closure"]["narrow_next_safe_step"] = narrow_next_safe_step
     state["closure"]["missing_sections"] = list(missing_sections or [])
+    state["closure"]["warnings"] = []
     state["next_safe_step"] = narrow_next_safe_step
     return state
 
@@ -933,6 +953,7 @@ def transition(state: dict, target: str) -> tuple[int, dict, dict | None]:
         state["closure"]["next_allowed_transition"] = "NONE"
         state["closure"]["narrow_next_safe_step"] = "NONE"
         state["closure"]["missing_sections"] = []
+        state["closure_timestamp_utc"] = now_iso()
         return 0, allow(state, target, "NONE"), None
 
     if target == "CLOSURE_REJECTED":
@@ -952,6 +973,11 @@ def apply_bundle(state: dict, bundle: dict) -> tuple[int, dict, dict | None]:
     state["proof_bundle"]["semantic_status"] = bundle.get("semantic_status", "")
     state["proof_bundle"]["semantically_insufficient_sections"] = list(bundle.get("semantically_insufficient_sections", []))
     state["proof_bundle"]["semantic_next_safe_step"] = bundle.get("semantic_next_safe_step", "")
+    state["proof_bundle"]["final_result"] = dict(bundle.get("final_result", {}))
+    state["proof_bundle"]["verification_corroboration"] = dict(bundle.get("verification_corroboration", {}))
+    state["proof_bundle"]["artifact_identity"] = dict(bundle.get("artifact_identity", {}))
+    state["proof_bundle"]["cleanup_status"] = dict(bundle.get("cleanup_status", {}))
+    state["proof_bundle"]["artifact_integrity_warning"] = bool(bundle.get("artifact_integrity_warning", False))
 
     if bundle.get("status") == "COMPLETE":
         return transition(state, "PROOF_BUNDLE_COMPLETE")
@@ -991,6 +1017,7 @@ def apply_doctor(state: dict, record: dict) -> tuple[int, dict, dict | None]:
     acceptable = record.get("final_verdict", "").startswith("ACCEPTABLE_")
     state["doctor"]["status"] = "PASS" if acceptable else "FAIL"
     state["doctor"]["blocking_failure_classes"] = list(record.get("blocking_failure_classes", []))
+    state["doctor"]["override_gates"] = list(record.get("override_gates", []))
 
     if acceptable:
         if state["state"] == "DOCTOR_BLOCKED":
@@ -1000,6 +1027,7 @@ def apply_doctor(state: dict, record: dict) -> tuple[int, dict, dict | None]:
         state["closure"]["next_allowed_transition"] = "READY"
         state["closure"]["narrow_next_safe_step"] = "confirm exact task identity"
         state["closure"]["missing_sections"] = []
+        state["closure"]["warnings"] = []
         state["next_safe_step"] = "confirm exact task identity"
         return 0, state, None
 
@@ -1063,6 +1091,7 @@ def apply_closure(state: dict, verdict: dict) -> tuple[int, dict, dict | None]:
     state["closure"]["next_allowed_transition"] = verdict["next_allowed_transition"]
     state["closure"]["narrow_next_safe_step"] = verdict["narrow_next_safe_step"]
     state["closure"]["missing_sections"] = list(verdict["missing_sections"])
+    state["closure"]["warnings"] = list(verdict.get("closure_warnings", []))
     state["next_safe_step"] = verdict["narrow_next_safe_step"]
 
     if verdict["closure_status"] == "ACCEPTED":
@@ -1085,7 +1114,10 @@ def apply_closure(state: dict, verdict: dict) -> tuple[int, dict, dict | None]:
         return 0, state, None
 
     if verdict["blocking_reason"] == "MISSING_PROOF_SECTIONS":
-        state["state"] = "PROOF_BUNDLE_PARTIAL"
+        if state["proof_bundle"].get("semantic_status") == "INSUFFICIENT" or state["proof_bundle"].get("semantically_insufficient_sections"):
+            state["state"] = "PROOF_BUNDLE_STRUCTURALLY_COMPLETE"
+        else:
+            state["state"] = "PROOF_BUNDLE_PARTIAL"
         return 0, state, None
 
     if state["proof_bundle"]["status"] == "COMPLETE":
@@ -2097,6 +2129,10 @@ def _phase_doctor(ctx: OrchestrationContext, args: argparse.Namespace) -> int | 
     ]:
         if value:
             doctor_args.extend([flag, value])
+    for changed_file in getattr(args, "changed_file", []):
+        doctor_args.extend(["--changed-file", changed_file])
+    for allowed_scope_path in getattr(args, "allowed_scope_path", []):
+        doctor_args.extend(["--allowed-scope-path", allowed_scope_path])
     for env_name in args.credential_env:
         doctor_args.extend(["--credential-env", env_name])
 
@@ -2310,6 +2346,12 @@ def _phase_execution_and_proof(ctx: OrchestrationContext, args: argparse.Namespa
         "--prompt-identity", args.prompt_identity,
         "--task-identity", args.task_identity,
     ]
+    if getattr(args, "last_known_final_result_hash", ""):
+        bundle_args.extend(["--last-known-final-result-hash", args.last_known_final_result_hash])
+    if getattr(args, "starter_final_result_hash", ""):
+        bundle_args.extend(["--starter-final-result-hash", args.starter_final_result_hash])
+    if args.doctor_output:
+        bundle_args.extend(["--doctor-file", args.doctor_output])
     if args.readback:
         bundle_args.extend(["--readback", args.readback])
     if args.scenario_proof:
@@ -2635,6 +2677,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--intended-run-class", required=True, choices=["core_probe", "support_run", "exact_retry"])
     p_orchestrate.add_argument("--doctor-output", required=True)
     p_orchestrate.add_argument("--final-result", required=True)
+    p_orchestrate.add_argument("--last-known-final-result-hash")
+    p_orchestrate.add_argument("--starter-final-result-hash")
     p_orchestrate.add_argument("--task-class", required=True)
     p_orchestrate.add_argument("--bundle-output", required=True)
     p_orchestrate.add_argument("--closure-output", required=True)
@@ -2669,6 +2713,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--artifact-path")
     p_orchestrate.add_argument("--helper-path")
     p_orchestrate.add_argument("--credential-env", action="append", default=[])
+    p_orchestrate.add_argument("--changed-file", action="append", default=[])
+    p_orchestrate.add_argument("--allowed-scope-path", action="append", default=[])
     p_orchestrate.add_argument("--prompt-identity-file")
     p_orchestrate.add_argument("--target-identity-file")
     p_orchestrate.add_argument("--bootstrap-provenance-ok", action="store_true")

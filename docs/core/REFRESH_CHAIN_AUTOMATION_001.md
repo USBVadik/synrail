@@ -55,13 +55,16 @@ The current precedence rule is now explicit:
 
 1. `closure_invalidated_by_doctor`
 2. `closure_invalidated_by_invalid_bundle`
-3. `closure_invalidated_by_partial_bundle`
-4. `closure_invalidated_by_recovery`
+3. `closure_invalidated_by_semantic_bundle`
+4. `closure_invalidated_by_partial_bundle`
+5. `closure_invalidated_by_recovery`
 
 So when multiple degradations apply at once, the refresh report names:
 
 - all applicable invalidations
 - one `dominant_invalidation`
+
+That same refresh record now also feeds the default thin-output shell for the active run, so `synrail check` can point at only the stale obligation class instead of broadly restating the whole non-green contour.
 
 ## v0 recovery reconciliation rule
 
