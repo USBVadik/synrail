@@ -186,8 +186,6 @@ def probe_clean_execution_surface(args: argparse.Namespace) -> dict:
             return gate(
                 "PASS",
                 "execution surface is explicitly observed and changed files stay within the allowed scope",
-                override=True,
-                override_reason="operator bypass via --clean-surface",
             )
         return gate(
             "PASS",

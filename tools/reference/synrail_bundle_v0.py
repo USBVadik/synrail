@@ -52,6 +52,21 @@ def file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def starter_final_result_replacement_is_sanctioned(
+    *,
+    last_known_final_result_hash: str,
+    starter_final_result_hash: str,
+    current_final_result_hash: str,
+) -> bool:
+    return bool(
+        last_known_final_result_hash
+        and starter_final_result_hash
+        and current_final_result_hash
+        and last_known_final_result_hash == starter_final_result_hash
+        and current_final_result_hash != starter_final_result_hash
+    )
+
+
 def normalize_verification_recheck_text(value: str, *, executable: str) -> str:
     normalized = value.rstrip("\n")
     if executable != "grep":
@@ -1560,10 +1575,17 @@ def build_bundle(args: argparse.Namespace) -> dict:
     cleanup_semantically_sufficient = cleanup_requirement_sufficient
     final_request_id = (final.get("request_id", "") or "").strip()
     current_final_result_hash = file_sha256(final_path) if final_path and final_path.exists() else ""
+    last_known_final_result_hash = non_empty_string(getattr(args, "last_known_final_result_hash", ""))
+    starter_final_result_hash = non_empty_string(getattr(args, "starter_final_result_hash", ""))
     artifact_integrity_warning = bool(
-        getattr(args, "last_known_final_result_hash", "")
+        last_known_final_result_hash
         and current_final_result_hash
-        and current_final_result_hash != args.last_known_final_result_hash
+        and current_final_result_hash != last_known_final_result_hash
+        and not starter_final_result_replacement_is_sanctioned(
+            last_known_final_result_hash=last_known_final_result_hash,
+            starter_final_result_hash=starter_final_result_hash,
+            current_final_result_hash=current_final_result_hash,
+        )
     )
 
     bundle = {
@@ -1985,6 +2007,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--task-identity")
     parser.add_argument("--doctor-file")
     parser.add_argument("--last-known-final-result-hash")
+    parser.add_argument("--starter-final-result-hash")
     parser.add_argument("--output", required=True)
     return parser
 

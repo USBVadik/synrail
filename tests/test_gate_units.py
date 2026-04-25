@@ -514,20 +514,32 @@ class TestBuildVerdict(unittest.TestCase):
         self.assertEqual("ACCEPTED", verdict["closure_status"])
         self.assertEqual("", verdict["blocking_reason"])
 
-    def test_accepts_with_doctor_override_warning(self) -> None:
+    def test_rejects_with_doctor_override_present(self) -> None:
         state = self._full_state()
         state["doctor"]["override_gates"] = ["clean_execution_surface", "artifact_viability"]
         verdict = build_verdict(state, self._complete_bundle())
-        self.assertEqual("ACCEPTED", verdict["closure_status"])
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("DOCTOR_OVERRIDE_PRESENT", verdict["blocking_reason"])
+        self.assertEqual("DOCTOR_READINESS", verdict["next_allowed_transition"])
+        self.assertEqual(
+            "rerun doctor without override gates before trusting closure",
+            verdict["narrow_next_safe_step"],
+        )
         self.assertIn(
             "doctor_override_present: clean_execution_surface, artifact_viability",
             verdict["closure_warnings"],
         )
 
-    def test_accepts_with_artifact_integrity_warning(self) -> None:
+    def test_rejects_with_artifact_integrity_drift(self) -> None:
         bundle = self._complete_bundle() | {"artifact_integrity_warning": True}
         verdict = build_verdict(self._full_state(), bundle)
-        self.assertEqual("ACCEPTED", verdict["closure_status"])
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("ARTIFACT_INTEGRITY_FAILED", verdict["blocking_reason"])
+        self.assertEqual("PROOF_BUNDLE_REPAIR", verdict["next_allowed_transition"])
+        self.assertEqual(
+            "rebuild the final result artifact and proof bundle on the current surface",
+            verdict["narrow_next_safe_step"],
+        )
         self.assertIn("artifact_modified_outside_workflow", verdict["closure_warnings"])
 
 

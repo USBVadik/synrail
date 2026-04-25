@@ -2129,6 +2129,10 @@ def _phase_doctor(ctx: OrchestrationContext, args: argparse.Namespace) -> int | 
     ]:
         if value:
             doctor_args.extend([flag, value])
+    for changed_file in getattr(args, "changed_file", []):
+        doctor_args.extend(["--changed-file", changed_file])
+    for allowed_scope_path in getattr(args, "allowed_scope_path", []):
+        doctor_args.extend(["--allowed-scope-path", allowed_scope_path])
     for env_name in args.credential_env:
         doctor_args.extend(["--credential-env", env_name])
 
@@ -2344,6 +2348,8 @@ def _phase_execution_and_proof(ctx: OrchestrationContext, args: argparse.Namespa
     ]
     if getattr(args, "last_known_final_result_hash", ""):
         bundle_args.extend(["--last-known-final-result-hash", args.last_known_final_result_hash])
+    if getattr(args, "starter_final_result_hash", ""):
+        bundle_args.extend(["--starter-final-result-hash", args.starter_final_result_hash])
     if args.doctor_output:
         bundle_args.extend(["--doctor-file", args.doctor_output])
     if args.readback:
@@ -2672,6 +2678,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--doctor-output", required=True)
     p_orchestrate.add_argument("--final-result", required=True)
     p_orchestrate.add_argument("--last-known-final-result-hash")
+    p_orchestrate.add_argument("--starter-final-result-hash")
     p_orchestrate.add_argument("--task-class", required=True)
     p_orchestrate.add_argument("--bundle-output", required=True)
     p_orchestrate.add_argument("--closure-output", required=True)
@@ -2706,6 +2713,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--artifact-path")
     p_orchestrate.add_argument("--helper-path")
     p_orchestrate.add_argument("--credential-env", action="append", default=[])
+    p_orchestrate.add_argument("--changed-file", action="append", default=[])
+    p_orchestrate.add_argument("--allowed-scope-path", action="append", default=[])
     p_orchestrate.add_argument("--prompt-identity-file")
     p_orchestrate.add_argument("--target-identity-file")
     p_orchestrate.add_argument("--bootstrap-provenance-ok", action="store_true")

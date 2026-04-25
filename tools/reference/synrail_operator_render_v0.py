@@ -8,9 +8,10 @@ import json
 import sys
 from pathlib import Path
 
-
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+try:
+    from .synrail_io_v0 import load_json
+except ImportError:
+    from synrail_io_v0 import load_json
 
 
 def save_text(path: Path, content: str) -> None:

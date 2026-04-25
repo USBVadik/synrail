@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 import shutil
 import sys
@@ -57,6 +58,8 @@ def bundle_args(*, final_result: Path) -> argparse.Namespace:
         prompt_identity="prompt-001",
         task_identity="task-001",
         doctor_file="",
+        last_known_final_result_hash="",
+        starter_final_result_hash="",
         output="",
     )
 
@@ -300,8 +303,36 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("FAIL", record["gate_results"]["baseline_identity"]["status"])
         self.assertIn("does not match", record["gate_results"]["baseline_identity"]["note"])
 
-    def test_doctor_records_override_gates_when_bypass_flags_are_used(self) -> None:
+    def test_doctor_records_override_gates_for_true_bypass_flags(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_doctor_override_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.helper_ok = True
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+
+            record = build_doctor_record(args)
+
+        self.assertIn("clean_execution_surface", record["override_gates"])
+        self.assertIn("artifact_viability", record["override_gates"])
+        self.assertIn("helper_integrity", record["override_gates"])
+        self.assertIn("credential_surface", record["override_gates"])
+        self.assertIn("prompt_task_identity", record["override_gates"])
+        self.assertTrue(record["gate_results"]["clean_execution_surface"]["override"])
+        self.assertEqual(
+            "operator bypass via --clean-surface",
+            record["gate_results"]["clean_execution_surface"]["override_reason"],
+        )
+
+    def test_doctor_treats_observed_safe_scope_as_non_override(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_observed_scope_") as tmpdir:
             tmp = Path(tmpdir)
             target_root = tmp / "target_surface"
             artifact_path = tmp / "artifacts" / "final_result.json"
@@ -319,16 +350,11 @@ class TruthRegressionTests(unittest.TestCase):
 
             record = build_doctor_record(args)
 
-        self.assertIn("clean_execution_surface", record["override_gates"])
-        self.assertIn("artifact_viability", record["override_gates"])
-        self.assertIn("helper_integrity", record["override_gates"])
-        self.assertIn("credential_surface", record["override_gates"])
-        self.assertIn("prompt_task_identity", record["override_gates"])
-        self.assertTrue(record["gate_results"]["clean_execution_surface"]["override"])
-        self.assertEqual(
-            "operator bypass via --clean-surface",
-            record["gate_results"]["clean_execution_surface"]["override_reason"],
-        )
+        self.assertNotIn("clean_execution_surface", record["override_gates"])
+        self.assertEqual("PASS", record["gate_results"]["clean_execution_surface"]["status"])
+        self.assertFalse(record["gate_results"]["clean_execution_surface"]["override"])
+        self.assertEqual("", record["gate_results"]["clean_execution_surface"]["override_reason"])
+        self.assertIn("explicitly observed", record["gate_results"]["clean_execution_surface"]["note"])
 
     def test_doctor_records_no_override_gates_when_no_bypass_flags_are_used(self) -> None:
         corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
@@ -354,6 +380,41 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual([], record["override_gates"])
         self.assertFalse(record["gate_results"]["clean_execution_surface"]["override"])
         self.assertEqual("", record["gate_results"]["clean_execution_surface"]["override_reason"])
+
+    def test_closure_rejects_doctor_override_gates_on_otherwise_valid_bundle(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        state["doctor"]["override_gates"] = ["clean_execution_surface", "artifact_viability"]
+        bundle = load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "bundle_valid.json")
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("DOCTOR_OVERRIDE_PRESENT", verdict["blocking_reason"])
+        self.assertEqual("DOCTOR_READINESS", verdict["next_allowed_transition"])
+        self.assertEqual(
+            "rerun doctor without override gates before trusting closure",
+            verdict["narrow_next_safe_step"],
+        )
+        self.assertIn(
+            "doctor_override_present: clean_execution_surface, artifact_viability",
+            verdict["closure_warnings"],
+        )
+
+    def test_closure_rejects_artifact_integrity_drift_on_otherwise_valid_bundle(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        bundle = copy.deepcopy(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "bundle_valid.json"))
+        bundle["artifact_integrity_warning"] = True
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("ARTIFACT_INTEGRITY_FAILED", verdict["blocking_reason"])
+        self.assertEqual("PROOF_BUNDLE_REPAIR", verdict["next_allowed_transition"])
+        self.assertEqual(
+            "rebuild the final result artifact and proof bundle on the current surface",
+            verdict["narrow_next_safe_step"],
+        )
+        self.assertIn("artifact_modified_outside_workflow", verdict["closure_warnings"])
 
     def test_bundle_recheck_matches_allowed_command(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
@@ -525,6 +586,62 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertIn("diff_provenance", bundle["semantically_insufficient_sections"])
         self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
         self.assertEqual("PROOF_BUNDLE_STRENGTHENING", verdict["next_allowed_transition"])
+
+    def test_bundle_allows_first_sanctioned_replacement_of_starter_final_result(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_first_proof_replacement_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            starter_payload = {
+                "request_id": state["run_id"],
+                "task_class": state["task_class"],
+                "status": "PENDING_PROOF",
+                "change_disposition": "modified",
+                "summary": "Replace this starter payload with the actual bounded result for this run.",
+            }
+            final_result.write_text(json.dumps(starter_payload, indent=2, ensure_ascii=True) + "\n")
+            starter_hash = hashlib.sha256(final_result.read_bytes()).hexdigest()
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "task_class": state["task_class"],
+                "status": "PROVEN",
+                "change_disposition": "modified",
+                "summary": "Tightened closure trust policy and verified it locally.",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "def starter_final_result_replacement_is_sanctioned(",
+                    "context_before": "def file_sha256(path: Path) -> str:",
+                    "context_after": "def normalize_verification_recheck_text(value: str, *, executable: str) -> str:",
+                    "verification_command": "grep -n 'starter_final_result_replacement_is_sanctioned' tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "55:def starter_final_result_replacement_is_sanctioned(",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            args = bundle_args(final_result=final_result)
+            args.last_known_final_result_hash = starter_hash
+            args.starter_final_result_hash = starter_hash
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertFalse(bundle["artifact_integrity_warning"])
+        self.assertEqual("COMPLETE", bundle["status"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
 
     def test_narrative_proof_bundle_is_semantically_blocked(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))

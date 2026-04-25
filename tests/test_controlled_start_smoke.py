@@ -13,6 +13,10 @@ import unittest
 from pathlib import Path
 
 
+def run(cmd: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(cmd, cwd=cwd, check=False, capture_output=True, text=True)
+
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ALPHA_ENTRY = REPO_ROOT / "alpha.py"
 
@@ -1031,6 +1035,67 @@ class ControlledStartSmokeTests(unittest.TestCase):
                 retried_state["integrity"]["bootstrap_provenance_reason"],
             )
 
+    def test_check_does_not_treat_first_starter_replacement_as_integrity_drift(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_first_starter_replacement_check_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                "--task-identity",
+                "Allow the first sanctioned final_result replacement without artifact drift.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            state = load_json(artifact_root / "state.json")
+            write_json(
+                artifact_root / "final_result.json",
+                {
+                    "request_id": state["run_id"],
+                    "task_class": state["task_class"],
+                    "status": "PROVEN",
+                    "change_disposition": "modified",
+                    "summary": "Implemented the bounded change and verified it locally.",
+                    "modified_files": ["src/app.py"],
+                    "git_diff": "",
+                    "diff_provenance": {
+                        "method": "direct_file_observation",
+                        "changed_file": "src/app.py",
+                        "added_line": 'print("patched")',
+                        "context_before": "def main():",
+                        "context_after": "    return 0",
+                        "verification_command": "python3 -c \"print('patched')\"",
+                        "verification_result": "patched",
+                    },
+                    "artifact_identity": {
+                        "baseline_identity": "autodetected_generic_baseline",
+                        "execution_surface_identity": "autodetected_generic_worktree",
+                        "prompt_identity": "Allow the first sanctioned final_result replacement without artifact drift.",
+                        "task_identity": "Allow the first sanctioned final_result replacement without artifact drift.",
+                    },
+                },
+            )
+
+            check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertNotIn("artifact integrity failed", check.stdout.lower())
+
+            bundle = load_json(artifact_root / "bundle.json")
+            report = load_json(artifact_root / "report.json")
+            checked_state = load_json(artifact_root / "state.json")
+            self.assertFalse(bundle["artifact_integrity_warning"])
+            self.assertNotEqual("ARTIFACT_INTEGRITY_FAILED", report.get("reason", ""))
+            self.assertFalse(checked_state["proof_bundle"]["artifact_integrity_warning"])
+            self.assertIn(report.get("reason", ""), {"", "NONE", "DOCTOR_OVERRIDE_PRESENT"})
+            if report.get("reason", "") == "DOCTOR_OVERRIDE_PRESENT":
+                self.assertIn("doctor override present", check.stdout.lower())
+
     def test_repair_step_synthesizes_missing_packet_with_final_result_first_before_scenario_gap(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_repair_step_scenario_packet_") as tmpdir:
             project_root = Path(tmpdir) / "project"
@@ -1083,6 +1148,175 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("Repair target: set a trust-bearing final_result.status in .synrail/final_result.json", repair_step.stdout)
             self.assertIn("Do not touch fallback proof surfaces like .synrail/readback.txt or .synrail/scenario_proof.txt unless Synrail explicitly targets them.", load_json(artifact_root / "prompt.json")["prompt"])
 
+
+    def test_check_accepts_git_worktree_when_observed_changes_match_final_result_scope(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_git_observed_scope_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            git_init = run(["git", "init"], cwd=project_root)
+            self.assertEqual(0, git_init.returncode, git_init.stdout + git_init.stderr)
+            tracked_file = project_root / "src" / "app.py"
+            tracked_file.parent.mkdir(parents=True, exist_ok=True)
+            tracked_file.write_text("def main():\n    return 0\n")
+            git_add = run(["git", "add", "src/app.py"], cwd=project_root)
+            self.assertEqual(0, git_add.returncode, git_add.stdout + git_add.stderr)
+            git_commit = run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=Synrail Tests",
+                    "-c",
+                    "user.email=synrail-tests@example.com",
+                    "commit",
+                    "-m",
+                    "seed",
+                ],
+                cwd=project_root,
+            )
+            self.assertEqual(0, git_commit.returncode, git_commit.stdout + git_commit.stderr)
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                "--task-identity",
+                "Accept honest observed-safe git worktree scope without override gates.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            tracked_file.write_text('def main():\n    print("patched")\n    return 0\n')
+            state = load_json(artifact_root / "state.json")
+            write_json(
+                artifact_root / "final_result.json",
+                {
+                    "request_id": state["run_id"],
+                    "task_class": state["task_class"],
+                    "status": "PROVEN",
+                    "change_disposition": "modified",
+                    "summary": "Implemented the bounded change and verified it locally.",
+                    "modified_files": ["src/app.py"],
+                    "git_diff": "",
+                    "diff_provenance": {
+                        "method": "direct_file_observation",
+                        "changed_file": "src/app.py",
+                        "added_line": '    print("patched")',
+                        "context_before": "def main():",
+                        "context_after": "    return 0",
+                        "verification_command": "python3 -c \"print('patched')\"",
+                        "verification_result": "patched",
+                    },
+                    "artifact_identity": {
+                        "baseline_identity": "autodetected_python_baseline",
+                        "execution_surface_identity": "autodetected_python_worktree",
+                        "prompt_identity": "Accept honest observed-safe git worktree scope without override gates.",
+                        "task_identity": "Accept honest observed-safe git worktree scope without override gates.",
+                    },
+                },
+            )
+
+            check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertNotIn("doctor override present", check.stdout.lower())
+
+            doctor = load_json(artifact_root / "doctor.json")
+            report = load_json(artifact_root / "report.json")
+            thin_output = load_json(artifact_root / "thin_output.json")
+            self.assertEqual([], doctor["override_gates"])
+            self.assertFalse(doctor["gate_results"]["clean_execution_surface"]["override"])
+            self.assertIn("explicitly observed", doctor["gate_results"]["clean_execution_surface"]["note"])
+            self.assertNotEqual("DOCTOR_OVERRIDE_PRESENT", report.get("reason", ""))
+            self.assertEqual("ACCEPTED", thin_output["outcome_class"])
+
+    def test_check_rejects_git_worktree_when_modified_files_exceed_proven_scope(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_git_unproven_scope_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            git_init = run(["git", "init"], cwd=project_root)
+            self.assertEqual(0, git_init.returncode, git_init.stdout + git_init.stderr)
+            intended_file = project_root / "intended.txt"
+            unrelated_file = project_root / "unrelated.txt"
+            intended_file.write_text("before intended\n")
+            unrelated_file.write_text("before unrelated\n")
+            git_add = run(["git", "add", "intended.txt", "unrelated.txt"], cwd=project_root)
+            self.assertEqual(0, git_add.returncode, git_add.stdout + git_add.stderr)
+            git_commit = run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=Synrail Tests",
+                    "-c",
+                    "user.email=synrail-tests@example.com",
+                    "commit",
+                    "-m",
+                    "seed",
+                ],
+                cwd=project_root,
+            )
+            self.assertEqual(0, git_commit.returncode, git_commit.stdout + git_commit.stderr)
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                "--task-identity",
+                "Reject non-override observed scope when dirty files exceed proven proof-backed scope.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            intended_file.write_text("after intended\n")
+            unrelated_file.write_text("after unrelated\n")
+            state = load_json(artifact_root / "state.json")
+            write_json(
+                artifact_root / "final_result.json",
+                {
+                    "request_id": state["run_id"],
+                    "task_class": state["task_class"],
+                    "status": "PROVEN",
+                    "change_disposition": "modified",
+                    "summary": "Implemented the bounded change and verified it locally.",
+                    "modified_files": ["intended.txt", "unrelated.txt"],
+                    "git_diff": "",
+                    "diff_provenance": {
+                        "method": "direct_file_observation",
+                        "changed_file": "intended.txt",
+                        "added_line": "after intended",
+                        "context_before": "before intended",
+                        "verification_command": "python3 -c \"print(open('intended.txt').read().strip())\"",
+                        "verification_result": "after intended",
+                    },
+                    "artifact_identity": {
+                        "baseline_identity": "autodetected_python_baseline",
+                        "execution_surface_identity": "autodetected_python_worktree",
+                        "prompt_identity": "Reject non-override observed scope when dirty files exceed proven proof-backed scope.",
+                        "task_identity": "Reject non-override observed scope when dirty files exceed proven proof-backed scope.",
+                    },
+                },
+            )
+
+            check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertIn("workspace not trusted", check.stdout.lower())
+            self.assertIn("workspace is not ready yet", check.stdout.lower())
+
+            doctor = load_json(artifact_root / "doctor.json")
+            report = load_json(artifact_root / "report.json")
+            thin_output = load_json(artifact_root / "thin_output.json")
+            self.assertIn("execution surface has out-of-scope modifications", doctor["gate_results"]["clean_execution_surface"]["note"])
+            self.assertIn("unrelated.txt", doctor["gate_results"]["clean_execution_surface"]["note"])
+            self.assertEqual("FAIL", doctor["gate_results"]["clean_execution_surface"]["status"])
+            self.assertEqual([], doctor["override_gates"])
+            self.assertEqual("DOCTOR_NOT_GREEN", report.get("reason", ""))
+            self.assertNotEqual("ACCEPTED", thin_output["outcome_class"])
 
     def test_check_waives_cleanup_from_runtime_doctor_truth(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_cleanup_happy_path_") as tmpdir:

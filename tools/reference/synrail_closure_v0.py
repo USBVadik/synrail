@@ -171,8 +171,21 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         verdict["narrow_next_safe_step"] = "run reverification against the attested target surface"
         return verdict
 
-    if bundle.get("artifact_integrity_warning", False):
+    artifact_integrity_warning = bool(bundle.get("artifact_integrity_warning", False))
+    if artifact_integrity_warning:
         verdict["closure_warnings"].append("artifact_modified_outside_workflow")
+        verdict["closure_status"] = "REJECTED"
+        verdict["blocking_reason"] = "ARTIFACT_INTEGRITY_FAILED"
+        verdict["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
+        verdict["narrow_next_safe_step"] = "rebuild the final result artifact and proof bundle on the current surface"
+        return verdict
+
+    if doctor_overrides:
+        verdict["closure_status"] = "REJECTED"
+        verdict["blocking_reason"] = "DOCTOR_OVERRIDE_PRESENT"
+        verdict["next_allowed_transition"] = "DOCTOR_READINESS"
+        verdict["narrow_next_safe_step"] = "rerun doctor without override gates before trusting closure"
+        return verdict
 
     verdict["closure_status"] = "ACCEPTED"
     verdict["blocking_reason"] = ""

@@ -194,6 +194,176 @@ def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
+def normalize_repo_relative_path(value: str) -> str:
+    return value.strip().replace("\\", "/").strip("/")
+
+
+def dedupe_preserving_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for value in values:
+        candidate = value.strip()
+        if not candidate or candidate in seen:
+            continue
+        seen.add(candidate)
+        ordered.append(candidate)
+    return ordered
+
+
+def filter_artifact_root_changes(changed_files: list[str], artifact_root: str) -> list[str]:
+    normalized_root = normalize_repo_relative_path(artifact_root)
+
+    filtered: list[str] = []
+    for value in changed_files:
+        normalized = normalize_repo_relative_path(value)
+        top_level = normalized.split("/", 1)[0] if normalized else ""
+        if top_level.startswith(".synrail"):
+            continue
+        if normalized_root and (normalized == normalized_root or normalized.startswith(f"{normalized_root}/")):
+            continue
+        filtered.append(value)
+    return filtered
+
+
+def git_status_changed_paths(target: Path) -> list[str] | None:
+    completed = subprocess.run(
+        ["git", "-C", str(target), "status", "--porcelain", "--untracked-files=all"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return None
+
+    changed_paths: list[str] = []
+    for raw_line in completed.stdout.splitlines():
+        if len(raw_line) < 4:
+            continue
+        candidate = raw_line[3:].strip()
+        if not candidate:
+            continue
+        if " -> " in candidate:
+            candidate = candidate.split(" -> ", 1)[1].strip()
+        changed_paths.append(candidate)
+    return dedupe_preserving_order(changed_paths)
+
+
+def diff_provenance_records_from_final_result(final_result: dict) -> list[dict]:
+    records: list[dict] = []
+    diff_provenance = final_result.get("diff_provenance", {})
+    if isinstance(diff_provenance, dict):
+        records.append(diff_provenance)
+    elif isinstance(diff_provenance, list):
+        records.extend(value for value in diff_provenance if isinstance(value, dict))
+
+    for key in ("diff_provenance_records", "per_file_diff_provenance", "per_file_diff_provenance_records"):
+        value = final_result.get(key, [])
+        if isinstance(value, list):
+            records.extend(item for item in value if isinstance(item, dict))
+    return records
+
+
+def patch_shaped_git_diff_paths(git_diff: object) -> list[str]:
+    if not isinstance(git_diff, str):
+        return []
+
+    diff_text = git_diff.strip()
+    if not diff_text:
+        return []
+    if "diff --git " not in diff_text or "\n--- " not in diff_text or "\n+++ " not in diff_text or "\n@@" not in diff_text:
+        return []
+
+    changed_paths: list[str] = []
+    for raw_line in diff_text.splitlines():
+        if not raw_line.startswith("diff --git "):
+            continue
+        payload = raw_line[len("diff --git ") :].strip()
+        if not payload.startswith("a/") or " b/" not in payload:
+            continue
+        before, after = payload.split(" b/", 1)
+        before_path = normalize_repo_relative_path(before[2:])
+        after_path = normalize_repo_relative_path(after)
+        candidate = after_path or before_path
+        if candidate and candidate != "dev/null":
+            changed_paths.append(candidate)
+    return dedupe_preserving_order(changed_paths)
+
+
+def proof_backed_scope_paths_from_final_result(final_result_path: Path) -> list[str]:
+    if not final_result_path.exists():
+        return []
+    try:
+        final_result = load_json(final_result_path)
+    except (OSError, json.JSONDecodeError):
+        return []
+
+    allowed_scope_paths = list(patch_shaped_git_diff_paths(final_result.get("git_diff", "")))
+    for record in diff_provenance_records_from_final_result(final_result):
+        changed_file = record.get("changed_file", "")
+        if not isinstance(changed_file, str):
+            continue
+        normalized = normalize_repo_relative_path(changed_file)
+        if normalized:
+            allowed_scope_paths.append(normalized)
+    return dedupe_preserving_order(allowed_scope_paths)
+
+
+def observed_changes_within_allowed_scope(changed_files: list[str], allowed_scope_paths: list[str]) -> bool:
+    normalized_allowed = [normalize_repo_relative_path(value) for value in allowed_scope_paths if normalize_repo_relative_path(value)]
+    if not changed_files or not normalized_allowed:
+        return False
+
+    for value in changed_files:
+        normalized = normalize_repo_relative_path(value)
+        if not normalized:
+            continue
+        if any(normalized == allowed or normalized.startswith(f"{allowed}/") for allowed in normalized_allowed):
+            continue
+        return False
+    return True
+
+
+def maybe_apply_observed_git_scope_defaults(args: argparse.Namespace, *, state: dict | None = None) -> None:
+    target_path_text = getattr(args, "target_path", "") or ""
+    final_result_text = getattr(args, "final_result", "") or ""
+    state_file_text = getattr(args, "state_file", "") or ""
+    if not target_path_text or not final_result_text or not state_file_text:
+        return
+
+    target_path = Path(target_path_text)
+    if not (target_path / ".git").exists():
+        return
+
+    if state is None:
+        state_path = Path(state_file_text)
+        if not state_path.exists():
+            return
+        state = ensure_run_state_extensions(load_json(state_path))
+
+    current_state = state.get("state", "")
+    if not current_state or current_state in {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}:
+        return
+
+    changed_files = list(getattr(args, "changed_file", []) or [])
+    allowed_scope_paths = list(getattr(args, "allowed_scope_path", []) or [])
+    if not changed_files:
+        observed_changed = git_status_changed_paths(target_path)
+        if observed_changed:
+            changed_files = filter_artifact_root_changes(
+                observed_changed,
+                getattr(args, "artifact_root", "") or "",
+            )
+    if not allowed_scope_paths:
+        allowed_scope_paths = proof_backed_scope_paths_from_final_result(Path(final_result_text))
+
+    if changed_files:
+        args.changed_file = changed_files
+    if allowed_scope_paths:
+        args.allowed_scope_path = allowed_scope_paths
+    if observed_changes_within_allowed_scope(changed_files, allowed_scope_paths):
+        args.clean_surface = True
+
+
 def comparison_harness_for_inputs(baseline_file: str, synrail_file: str) -> Path:
     baseline = load_json(Path(baseline_file))
     synrail = load_json(Path(synrail_file))
@@ -1026,19 +1196,26 @@ def update_last_known_final_result_hash(state_path: Path, final_result_path: Pat
     save_json(state_path, state)
 
 
-def untouched_preferred_proof_paths(root: Path | None) -> set[Path]:
+def starter_hash_for_artifact(root: Path | None, artifact_id: str) -> str:
     if not root:
-        return set()
+        return ""
     proof_request_file = alpha_file(root, "proof_request")
     if not proof_request_file.exists():
-        return set()
+        return ""
     proof_request = load_bootstrap_json(proof_request_file)
     starter_hashes = proof_request.get("starter_hashes", {})
     if not isinstance(starter_hashes, dict):
+        return ""
+    value = starter_hashes.get(artifact_id, "")
+    return value.strip() if isinstance(value, str) else ""
+
+
+def untouched_preferred_proof_paths(root: Path | None) -> set[Path]:
+    if not root:
         return set()
     untouched: set[Path] = set()
     for artifact_id, path in preferred_proof_artifact_paths(root).items():
-        expected_hash = starter_hashes.get(artifact_id, "")
+        expected_hash = starter_hash_for_artifact(root, artifact_id)
         if expected_hash and path.exists() and path.is_file() and file_sha256(path) == expected_hash:
             untouched.add(path.resolve())
     return untouched
@@ -2612,6 +2789,7 @@ def cmd_bundle_check(args: argparse.Namespace) -> int:
         ("--task-identity", args.task_identity),
         ("--doctor-file", args.doctor_file),
         ("--last-known-final-result-hash", getattr(args, "last_known_final_result_hash", None)),
+        ("--starter-final-result-hash", getattr(args, "starter_final_result_hash", None)),
     ]
     for flag, value in optional_pairs:
         if value:
@@ -3320,12 +3498,7 @@ def cmd_check(args: argparse.Namespace) -> int:
 
     if runtime_requested:
         state = ensure_run_state_extensions(load_json(Path(args.state_file)))
-        # Auto-detect clean_surface: during an active controlled run,
-        # the workspace is expected to have uncommitted changes.
-        if not getattr(args, "clean_surface", False):
-            current_state = state.get("state", "")
-            if current_state and current_state not in {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}:
-                args.clean_surface = True
+        maybe_apply_observed_git_scope_defaults(args, state=state)
         orchestrate_args = argparse.Namespace(
             artifact_root=args.artifact_root,
             state_file=args.state_file,
@@ -3383,7 +3556,10 @@ def cmd_check(args: argparse.Namespace) -> int:
             credential_env=list(getattr(args, "credential_env", [])),
             prompt_identity_file=getattr(args, "prompt_identity_file", None),
             target_identity_file=getattr(args, "target_identity_file", None),
+            changed_file=list(getattr(args, "changed_file", [])),
+            allowed_scope_path=list(getattr(args, "allowed_scope_path", [])),
             last_known_final_result_hash=state.get("last_known_final_result_hash", ""),
+            starter_final_result_hash=starter_hash_for_artifact(root, "final_result"),
             _capture_output=(args.mode == "default"),
         )
         orchestrate_code = cmd_orchestrate(orchestrate_args)
@@ -4397,6 +4573,7 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ("--project-profile-file", getattr(args, "project_profile_file", None)),
         ("--bootstrap-provenance-reason", getattr(args, "bootstrap_provenance_reason", None)),
         ("--last-known-final-result-hash", getattr(args, "last_known_final_result_hash", None)),
+        ("--starter-final-result-hash", getattr(args, "starter_final_result_hash", None)),
     ]:
         if value:
             forwarded.extend([flag, value])
@@ -4413,6 +4590,10 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
     ]:
         if enabled:
             forwarded.append(flag)
+    for changed_file in getattr(args, "changed_file", []):
+        forwarded.extend(["--changed-file", changed_file])
+    for allowed_scope_path in getattr(args, "allowed_scope_path", []):
+        forwarded.extend(["--allowed-scope-path", allowed_scope_path])
     for env_name in args.credential_env:
         forwarded.extend(["--credential-env", env_name])
     if getattr(args, "_capture_output", False):
@@ -4554,6 +4735,8 @@ def add_orchestration_args(
     parser.add_argument("--artifact-path")
     parser.add_argument("--helper-path")
     parser.add_argument("--credential-env", action="append", default=[])
+    parser.add_argument("--changed-file", action="append", default=[])
+    parser.add_argument("--allowed-scope-path", action="append", default=[])
     parser.add_argument("--prompt-identity-file")
     parser.add_argument("--target-identity-file")
     parser.add_argument("--bootstrap-provenance-ok", action="store_true")
@@ -4562,6 +4745,7 @@ def add_orchestration_args(
     parser.add_argument("--acceptance-validation-output")
     parser.add_argument("--project-profile-file")
     parser.add_argument("--last-known-final-result-hash")
+    parser.add_argument("--starter-final-result-hash")
 
 
 class _SuppressingHelpFormatter(argparse.HelpFormatter):
@@ -4689,6 +4873,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_check.add_argument("--artifact-path")
     p_check.add_argument("--helper-path")
     p_check.add_argument("--credential-env", action="append", default=[])
+    p_check.add_argument("--changed-file", action="append", default=[])
+    p_check.add_argument("--allowed-scope-path", action="append", default=[])
     p_check.add_argument("--prompt-identity-file")
     p_check.add_argument("--target-identity-file")
     p_check.set_defaults(func=cmd_check)
@@ -4738,6 +4924,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_bundle.add_argument("--task-identity")
     p_bundle.add_argument("--doctor-file")
     p_bundle.add_argument("--last-known-final-result-hash")
+    p_bundle.add_argument("--starter-final-result-hash")
     p_bundle.set_defaults(func=cmd_bundle_check)
 
     p_apply_bundle = sub.add_parser("apply-bundle", help=argparse.SUPPRESS)
