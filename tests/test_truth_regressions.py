@@ -46,6 +46,58 @@ def controlled_state(state: dict) -> dict:
     return payload
 
 
+def _normalise_grep_result_line(value: str) -> str:
+    prefix, sep, rest = value.partition(":")
+    return rest if sep and prefix.isdigit() else value
+
+
+def _recheck_file_content(record: dict) -> str:
+    for key in ("added_line", "observed_line", "context_after", "context_before", "verification_result"):
+        value = record.get(key, "")
+        if isinstance(value, str) and value.strip():
+            return _normalise_grep_result_line(value).rstrip("\n") + "\n"
+    return "synrail test evidence\n"
+
+
+def write_project_profile_for_recheck(root: Path, *, project_root: Path) -> Path:
+    state_file = root / "state.json"
+    if not state_file.exists():
+        state_file.write_text("{}\n")
+    (root / "project_profile.json").write_text(json.dumps({
+        "project_root": str(project_root),
+    }, indent=2, ensure_ascii=True) + "\n")
+    return state_file
+
+
+def prepare_recheck_project_context(final_result: Path) -> str:
+    try:
+        final_payload = json.loads(final_result.read_text())
+    except (OSError, json.JSONDecodeError):
+        return ""
+    if not isinstance(final_payload, dict):
+        return ""
+    record = final_payload.get("diff_provenance", {})
+    if not isinstance(record, dict):
+        return ""
+    changed_file = record.get("changed_file", "")
+    if not isinstance(changed_file, str) or not changed_file.strip():
+        return ""
+    changed_path = Path(changed_file)
+    if changed_path.is_absolute() or ".." in changed_path.parts:
+        return ""
+
+    repo_path = REPO_ROOT / changed_path
+    if repo_path.exists():
+        return str(write_project_profile_for_recheck(final_result.parent, project_root=REPO_ROOT))
+
+    project_root = final_result.parent / "recheck_project"
+    target = project_root / changed_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not target.exists():
+        target.write_text(_recheck_file_content(record))
+    return str(write_project_profile_for_recheck(final_result.parent, project_root=project_root))
+
+
 def bundle_args(*, final_result: Path) -> argparse.Namespace:
     return argparse.Namespace(
         final_result=str(final_result),
@@ -58,10 +110,23 @@ def bundle_args(*, final_result: Path) -> argparse.Namespace:
         prompt_identity="prompt-001",
         task_identity="task-001",
         doctor_file="",
-        last_known_final_result_hash="",
-        starter_final_result_hash="",
+        state_file=prepare_recheck_project_context(final_result),
         output="",
     )
+
+
+def write_state_bound_hash_context(root: Path, *, state: dict, starter_hash: str) -> Path:
+    state_file = root / "state.json"
+    state_payload = copy.deepcopy(state)
+    state_payload["last_known_final_result_hash"] = starter_hash
+    state_file.write_text(json.dumps(state_payload, indent=2, ensure_ascii=True) + "\n")
+    (root / "project_profile.json").write_text(json.dumps({
+        "project_root": str(REPO_ROOT),
+    }, indent=2, ensure_ascii=True) + "\n")
+    (root / "proof_request.json").write_text(json.dumps({
+        "starter_hashes": {"final_result": starter_hash},
+    }, indent=2, ensure_ascii=True) + "\n")
+    return state_file
 
 
 def doctor_args(*, corpus_file: Path, target_path: Path, artifact_path: Path) -> argparse.Namespace:
@@ -431,11 +496,11 @@ class TruthRegressionTests(unittest.TestCase):
                 "diff_provenance": {
                     "method": "direct_file_observation",
                     "changed_file": "tools/reference/synrail_bundle_v0.py",
-                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                     "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
                     "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
                     "verification_command": "grep -n 'VERIFICATION_RECHECK_ALLOWED_BINARIES' tools/reference/synrail_bundle_v0.py",
-                    "verification_result": "38:VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                    "verification_result": "38:VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                 },
                 "artifact_identity": {
                     "baseline_identity": "trusted_clean",
@@ -473,7 +538,7 @@ class TruthRegressionTests(unittest.TestCase):
                 "diff_provenance": {
                     "method": "direct_file_observation",
                     "changed_file": "tools/reference/synrail_bundle_v0.py",
-                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                     "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
                     "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
                     "verification_command": "grep -n 'VERIFICATION_RECHECK_ALLOWED_BINARIES' tools/reference/synrail_bundle_v0.py",
@@ -501,6 +566,8 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("PROOF_BUNDLE_REPAIR", verdict["next_allowed_transition"])
 
     def test_bundle_recheck_skips_command_outside_allowlist(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
         with tempfile.TemporaryDirectory(prefix="synrail_recheck_skip_") as tmpdir:
             tmp = Path(tmpdir)
             final_result = tmp / "final_result.json"
@@ -511,7 +578,7 @@ class TruthRegressionTests(unittest.TestCase):
                 "diff_provenance": {
                     "method": "direct_file_observation",
                     "changed_file": "tools/reference/synrail_bundle_v0.py",
-                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                     "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
                     "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
                     "verification_command": "sed -n 1p tools/reference/synrail_bundle_v0.py",
@@ -530,11 +597,58 @@ class TruthRegressionTests(unittest.TestCase):
             }, indent=2, ensure_ascii=True) + "\n")
 
             bundle = build_bundle(bundle_args(final_result=final_result))
+            verdict = build_verdict(copy.deepcopy(state), bundle)
 
         self.assertFalse(bundle["verification_recheck"]["executed"])
         self.assertFalse(bundle["verification_recheck"]["command_allowed"])
         self.assertFalse(bundle["verification_recheck"]["matched"])
+        self.assertTrue(bundle["verification_recheck"]["required"])
         self.assertEqual("command_not_in_allowlist", bundle["verification_recheck"]["skip_reason"])
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("VERIFICATION_RECHECK_NOT_EXECUTED", verdict["blocking_reason"])
+
+    def test_bundle_recheck_rejects_python_command_without_executing_it(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_python_block_") as tmpdir:
+            tmp = Path(tmpdir)
+            marker = tmp / "python_recheck_executed.txt"
+            final_result = tmp / "final_result.json"
+            final_result.write_text(json.dumps({
+                "status": "PROVEN",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                    "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
+                    "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
+                    "verification_command": f"python3 -c \"open({str(marker)!r}, 'w').write('executed')\"",
+                    "verification_result": "executed",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            bundle = build_bundle(bundle_args(final_result=final_result))
+            verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertFalse(marker.exists())
+        self.assertFalse(bundle["verification_recheck"]["executed"])
+        self.assertFalse(bundle["verification_recheck"]["command_allowed"])
+        self.assertTrue(bundle["verification_recheck"]["required"])
+        self.assertEqual("command_not_in_allowlist", bundle["verification_recheck"]["skip_reason"])
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("VERIFICATION_RECHECK_NOT_EXECUTED", verdict["blocking_reason"])
 
     def test_bundle_recheck_marks_timeout(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_recheck_timeout_") as tmpdir:
@@ -547,10 +661,10 @@ class TruthRegressionTests(unittest.TestCase):
                 "diff_provenance": {
                     "method": "direct_file_observation",
                     "changed_file": "tools/reference/synrail_bundle_v0.py",
-                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                     "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
                     "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
-                    "verification_command": "python3 -c \"import time; time.sleep(11)\"",
+                    "verification_command": "tail -f tools/reference/synrail_bundle_v0.py",
                     "verification_result": "done",
                 },
                 "artifact_identity": {
@@ -633,8 +747,7 @@ class TruthRegressionTests(unittest.TestCase):
             }, indent=2, ensure_ascii=True) + "\n")
 
             args = bundle_args(final_result=final_result)
-            args.last_known_final_result_hash = starter_hash
-            args.starter_final_result_hash = starter_hash
+            args.state_file = str(write_state_bound_hash_context(tmp, state=state, starter_hash=starter_hash))
             bundle = build_bundle(args)
 
         verdict = build_verdict(copy.deepcopy(state), bundle)
@@ -642,6 +755,57 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertFalse(bundle["artifact_integrity_warning"])
         self.assertEqual("COMPLETE", bundle["status"])
         self.assertEqual("ACCEPTED", verdict["closure_status"])
+
+    def test_bundle_ignores_forged_cli_hashes_for_artifact_integrity(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_hash_cli_bypass_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                    "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
+                    "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
+                    "verification_command": "grep -n 'VERIFICATION_RECHECK_ALLOWED_BINARIES' tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            state_file = tmp / "state.json"
+            state_payload = copy.deepcopy(state)
+            state_payload["last_known_final_result_hash"] = "0" * 64
+            state_file.write_text(json.dumps(state_payload, indent=2, ensure_ascii=True) + "\n")
+            (tmp / "proof_request.json").write_text(json.dumps({
+                "starter_hashes": {"final_result": "1" * 64},
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            args = bundle_args(final_result=final_result)
+            args.state_file = str(state_file)
+            args.last_known_final_result_hash = hashlib.sha256(final_result.read_bytes()).hexdigest()
+            args.starter_final_result_hash = args.last_known_final_result_hash
+            bundle = build_bundle(args)
+            verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertTrue(bundle["artifact_integrity_warning"])
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("ARTIFACT_INTEGRITY_FAILED", verdict["blocking_reason"])
 
     def test_narrative_proof_bundle_is_semantically_blocked(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
@@ -2106,11 +2270,11 @@ class TestHostileProofIndependence(unittest.TestCase):
                 "diff_provenance": {
                     "method": "direct_file_observation",
                     "changed_file": "tools/reference/synrail_bundle_v0.py",
-                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                     "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
                     "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
                     "verification_command": "grep -n 'VERIFICATION_RECHECK_ALLOWED_BINARIES' tools/reference/synrail_bundle_v0.py",
-                    "verification_result": "39:VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\", \"python3\"}",
+                    "verification_result": "39:VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                 },
                 "artifact_identity": {
                     "baseline_identity": "trusted_clean",

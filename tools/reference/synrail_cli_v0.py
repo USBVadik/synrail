@@ -2788,8 +2788,7 @@ def cmd_bundle_check(args: argparse.Namespace) -> int:
         ("--prompt-identity", args.prompt_identity),
         ("--task-identity", args.task_identity),
         ("--doctor-file", args.doctor_file),
-        ("--last-known-final-result-hash", getattr(args, "last_known_final_result_hash", None)),
-        ("--starter-final-result-hash", getattr(args, "starter_final_result_hash", None)),
+        ("--state-file", getattr(args, "state_file", None)),
     ]
     for flag, value in optional_pairs:
         if value:
@@ -3558,8 +3557,6 @@ def cmd_check(args: argparse.Namespace) -> int:
             target_identity_file=getattr(args, "target_identity_file", None),
             changed_file=list(getattr(args, "changed_file", [])),
             allowed_scope_path=list(getattr(args, "allowed_scope_path", [])),
-            last_known_final_result_hash=state.get("last_known_final_result_hash", ""),
-            starter_final_result_hash=starter_hash_for_artifact(root, "final_result"),
             _capture_output=(args.mode == "default"),
         )
         orchestrate_code = cmd_orchestrate(orchestrate_args)
@@ -4572,8 +4569,6 @@ def cmd_orchestrate(args: argparse.Namespace) -> int:
         ("--acceptance-validation-output", getattr(args, "acceptance_validation_output", None)),
         ("--project-profile-file", getattr(args, "project_profile_file", None)),
         ("--bootstrap-provenance-reason", getattr(args, "bootstrap_provenance_reason", None)),
-        ("--last-known-final-result-hash", getattr(args, "last_known_final_result_hash", None)),
-        ("--starter-final-result-hash", getattr(args, "starter_final_result_hash", None)),
     ]:
         if value:
             forwarded.extend([flag, value])
@@ -4744,8 +4739,6 @@ def add_orchestration_args(
     parser.add_argument("--acceptance-criteria-file")
     parser.add_argument("--acceptance-validation-output")
     parser.add_argument("--project-profile-file")
-    parser.add_argument("--last-known-final-result-hash")
-    parser.add_argument("--starter-final-result-hash")
 
 
 class _SuppressingHelpFormatter(argparse.HelpFormatter):
@@ -4923,8 +4916,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_bundle.add_argument("--prompt-identity")
     p_bundle.add_argument("--task-identity")
     p_bundle.add_argument("--doctor-file")
-    p_bundle.add_argument("--last-known-final-result-hash")
-    p_bundle.add_argument("--starter-final-result-hash")
+    p_bundle.add_argument("--state-file")
     p_bundle.set_defaults(func=cmd_bundle_check)
 
     p_apply_bundle = sub.add_parser("apply-bundle", help=argparse.SUPPRESS)

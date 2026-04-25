@@ -158,6 +158,12 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         return verdict
 
     recheck = bundle.get("verification_recheck", {})
+    if recheck.get("required") and not recheck.get("executed"):
+        verdict["closure_status"] = "REJECTED"
+        verdict["blocking_reason"] = "VERIFICATION_RECHECK_NOT_EXECUTED"
+        verdict["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
+        verdict["narrow_next_safe_step"] = "replace the verification_command with an allowed local read-only command and rerun check"
+        return verdict
     if recheck.get("executed") and not recheck.get("matched"):
         verdict["closure_status"] = "REJECTED"
         verdict["blocking_reason"] = "VERIFICATION_RECHECK_FAILED"

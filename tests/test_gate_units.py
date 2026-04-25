@@ -514,6 +514,20 @@ class TestBuildVerdict(unittest.TestCase):
         self.assertEqual("ACCEPTED", verdict["closure_status"])
         self.assertEqual("", verdict["blocking_reason"])
 
+    def test_blocks_when_required_verification_recheck_did_not_execute(self) -> None:
+        bundle = self._complete_bundle() | {
+            "verification_recheck": {
+                "required": True,
+                "executed": False,
+                "matched": False,
+                "skip_reason": "command_not_in_allowlist",
+            }
+        }
+        verdict = build_verdict(self._full_state(), bundle)
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("VERIFICATION_RECHECK_NOT_EXECUTED", verdict["blocking_reason"])
+        self.assertEqual("PROOF_BUNDLE_REPAIR", verdict["next_allowed_transition"])
+
     def test_rejects_with_doctor_override_present(self) -> None:
         state = self._full_state()
         state["doctor"]["override_gates"] = ["clean_execution_surface", "artifact_viability"]

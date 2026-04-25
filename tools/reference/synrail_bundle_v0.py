@@ -41,10 +41,9 @@ SEMANTIC_SECTION_STEPS = {
 }
 
 GENERIC_EXECUTION_STATUSES = {"SUCCESS", "COMPLETED", "DONE", "OK", "PASSED"}
-VERIFICATION_RECHECK_ALLOWED_BINARIES = {"grep", "cat", "head", "tail", "git", "python3"}
+VERIFICATION_RECHECK_ALLOWED_BINARIES = {"grep", "cat", "head", "tail", "git"}
 VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10
 VERIFICATION_RECHECK_STDOUT_LIMIT = 4096
-VERIFICATION_RECHECK_PYTHON_INLINE_LIMIT = 500
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -78,8 +77,10 @@ def normalize_verification_recheck_text(value: str, *, executable: str) -> str:
     return "\n".join(lines)
 
 
-def verification_recheck_result(record: object) -> dict:
+def verification_recheck_result(record: object, *, project_root: Path | None = None) -> dict:
+    recheck_root = (project_root or PROJECT_ROOT).resolve()
     result = {
+        "required": False,
         "executed": False,
         "command_allowed": False,
         "matched": False,
@@ -111,20 +112,12 @@ def verification_recheck_result(record: object) -> dict:
         result["skip_reason"] = "command_not_in_allowlist"
         return result
 
-    if executable == "python3":
-        if len(argv) != 3 or argv[1] != "-c":
-            result["skip_reason"] = "command_not_in_allowlist"
-            return result
-        if len(argv[2]) > VERIFICATION_RECHECK_PYTHON_INLINE_LIMIT:
-            result["skip_reason"] = "python_inline_too_long"
-            return result
-
     result["command_allowed"] = True
     changed_file = non_empty_string(record.get("changed_file", ""))
     if changed_file:
         changed_path = Path(changed_file)
         if not changed_path.is_absolute():
-            changed_path = PROJECT_ROOT / changed_path
+            changed_path = recheck_root / changed_path
         if not changed_path.exists():
             result["skip_reason"] = "changed_file_missing"
             return result
@@ -137,7 +130,7 @@ def verification_recheck_result(record: object) -> dict:
             check=False,
             capture_output=True,
             text=True,
-            cwd=PROJECT_ROOT,
+            cwd=recheck_root,
             timeout=VERIFICATION_RECHECK_TIMEOUT_SECONDS,
         )
     except subprocess.TimeoutExpired as exc:
@@ -250,6 +243,42 @@ def non_empty_string(value: object) -> str:
     if not isinstance(value, str):
         return ""
     return value.strip()
+
+
+def load_json_object_if_present(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    ok, payload = load_json_if_valid(path)
+    if not ok or not isinstance(payload, dict):
+        return {}
+    return payload
+
+
+def state_bound_final_result_hashes(state_file: object) -> tuple[str, str]:
+    state_file_text = non_empty_string(state_file)
+    if not state_file_text:
+        return "", ""
+    state_path = Path(state_file_text)
+    state_payload = load_json_object_if_present(state_path)
+    last_known_hash = non_empty_string(state_payload.get("last_known_final_result_hash", ""))
+    proof_request_payload = load_json_object_if_present(state_path.with_name("proof_request.json"))
+    starter_hashes = proof_request_payload.get("starter_hashes", {})
+    starter_hash = ""
+    if isinstance(starter_hashes, dict):
+        starter_hash = non_empty_string(starter_hashes.get("final_result", ""))
+    return last_known_hash, starter_hash
+
+
+def state_bound_project_root(state_file: object) -> Path:
+    state_file_text = non_empty_string(state_file)
+    if not state_file_text:
+        return PROJECT_ROOT
+    state_path = Path(state_file_text)
+    project_profile = load_json_object_if_present(state_path.with_name("project_profile.json"))
+    project_root = non_empty_string(project_profile.get("project_root", ""))
+    if not project_root:
+        return PROJECT_ROOT
+    return Path(project_root).expanduser().resolve()
 
 
 def first_non_empty(*values: object) -> str:
@@ -1519,7 +1548,11 @@ def build_bundle(args: argparse.Namespace) -> dict:
         readback_text=readback_text,
         scenario_text=scenario_text,
     )
-    verification_recheck = verification_recheck_result(diff_provenance_record)
+    verification_recheck = verification_recheck_result(
+        diff_provenance_record,
+        project_root=state_bound_project_root(getattr(args, "state_file", "")),
+    )
+    verification_recheck["required"] = bool(runtime_verification_semantically_sufficient)
     final_result_status_semantically_sufficient = final_result_status_is_semantically_sufficient(
         status=normalized_status,
         change_disposition=change_disposition,
@@ -1575,8 +1608,9 @@ def build_bundle(args: argparse.Namespace) -> dict:
     cleanup_semantically_sufficient = cleanup_requirement_sufficient
     final_request_id = (final.get("request_id", "") or "").strip()
     current_final_result_hash = file_sha256(final_path) if final_path and final_path.exists() else ""
-    last_known_final_result_hash = non_empty_string(getattr(args, "last_known_final_result_hash", ""))
-    starter_final_result_hash = non_empty_string(getattr(args, "starter_final_result_hash", ""))
+    last_known_final_result_hash, starter_final_result_hash = state_bound_final_result_hashes(
+        getattr(args, "state_file", "")
+    )
     artifact_integrity_warning = bool(
         last_known_final_result_hash
         and current_final_result_hash
@@ -2006,8 +2040,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--prompt-identity")
     parser.add_argument("--task-identity")
     parser.add_argument("--doctor-file")
-    parser.add_argument("--last-known-final-result-hash")
-    parser.add_argument("--starter-final-result-hash")
+    parser.add_argument("--state-file")
     parser.add_argument("--output", required=True)
     return parser
 

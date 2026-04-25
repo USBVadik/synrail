@@ -2345,11 +2345,8 @@ def _phase_execution_and_proof(ctx: OrchestrationContext, args: argparse.Namespa
         "--execution-surface-identity", args.execution_surface_identity,
         "--prompt-identity", args.prompt_identity,
         "--task-identity", args.task_identity,
+        "--state-file", args.state_file,
     ]
-    if getattr(args, "last_known_final_result_hash", ""):
-        bundle_args.extend(["--last-known-final-result-hash", args.last_known_final_result_hash])
-    if getattr(args, "starter_final_result_hash", ""):
-        bundle_args.extend(["--starter-final-result-hash", args.starter_final_result_hash])
     if args.doctor_output:
         bundle_args.extend(["--doctor-file", args.doctor_output])
     if args.readback:
@@ -2677,8 +2674,6 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--intended-run-class", required=True, choices=["core_probe", "support_run", "exact_retry"])
     p_orchestrate.add_argument("--doctor-output", required=True)
     p_orchestrate.add_argument("--final-result", required=True)
-    p_orchestrate.add_argument("--last-known-final-result-hash")
-    p_orchestrate.add_argument("--starter-final-result-hash")
     p_orchestrate.add_argument("--task-class", required=True)
     p_orchestrate.add_argument("--bundle-output", required=True)
     p_orchestrate.add_argument("--closure-output", required=True)

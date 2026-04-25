@@ -1053,6 +1053,9 @@ class ControlledStartSmokeTests(unittest.TestCase):
             )
             self.assertEqual(0, start.returncode, start.stdout + start.stderr)
 
+            tracked_file = project_root / "src" / "app.py"
+            tracked_file.parent.mkdir(parents=True, exist_ok=True)
+            tracked_file.write_text('def main():\n    print("patched")\n    return 0\n')
             state = load_json(artifact_root / "state.json")
             write_json(
                 artifact_root / "final_result.json",
@@ -1070,8 +1073,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
                         "added_line": 'print("patched")',
                         "context_before": "def main():",
                         "context_after": "    return 0",
-                        "verification_command": "python3 -c \"print('patched')\"",
-                        "verification_result": "patched",
+                        "verification_command": "grep -n 'print(\"patched\")' src/app.py",
+                        "verification_result": '    print("patched")',
                     },
                     "artifact_identity": {
                         "baseline_identity": "autodetected_generic_baseline",
@@ -1207,8 +1210,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
                         "added_line": '    print("patched")',
                         "context_before": "def main():",
                         "context_after": "    return 0",
-                        "verification_command": "python3 -c \"print('patched')\"",
-                        "verification_result": "patched",
+                        "verification_command": "grep -n 'print(\"patched\")' src/app.py",
+                        "verification_result": '    print("patched")',
                     },
                     "artifact_identity": {
                         "baseline_identity": "autodetected_python_baseline",
@@ -1291,7 +1294,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
                         "changed_file": "intended.txt",
                         "added_line": "after intended",
                         "context_before": "before intended",
-                        "verification_command": "python3 -c \"print(open('intended.txt').read().strip())\"",
+                        "verification_command": "grep -n 'after intended' intended.txt",
                         "verification_result": "after intended",
                     },
                     "artifact_identity": {
@@ -1336,6 +1339,9 @@ class ControlledStartSmokeTests(unittest.TestCase):
             )
             self.assertEqual(0, start.returncode, start.stdout + start.stderr)
 
+            tracked_file = project_root / "src" / "app.py"
+            tracked_file.parent.mkdir(parents=True, exist_ok=True)
+            tracked_file.write_text('def main():\n    print("patched")\n    return 0\n')
             state = load_json(artifact_root / "state.json")
             write_json(
                 artifact_root / "final_result.json",
@@ -1353,8 +1359,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
                         "added_line": 'print("patched")',
                         "context_before": "def main():",
                         "context_after": "    return 0",
-                        "verification_command": "python3 -c \"print('patched')\"",
-                        "verification_result": "patched",
+                        "verification_command": "grep -n 'print(\"patched\")' src/app.py",
+                        "verification_result": '    print("patched")',
                     },
                     "artifact_identity": {
                         "baseline_identity": "autodetected_generic_baseline",
