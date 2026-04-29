@@ -390,6 +390,14 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertIn("helper_integrity", record["override_gates"])
         self.assertIn("credential_surface", record["override_gates"])
         self.assertIn("prompt_task_identity", record["override_gates"])
+        self.assertEqual(
+            {
+                "gate": "clean_execution_surface",
+                "reason": "operator bypass via --clean-surface",
+            },
+            record["override_summary"][0],
+        )
+        self.assertIn("clean_execution_surface: operator bypass via --clean-surface", record["override_warning"])
         self.assertTrue(record["gate_results"]["clean_execution_surface"]["override"])
         self.assertEqual(
             "operator bypass via --clean-surface",
@@ -443,6 +451,8 @@ class TruthRegressionTests(unittest.TestCase):
             record = build_doctor_record(args)
 
         self.assertEqual([], record["override_gates"])
+        self.assertEqual([], record["override_summary"])
+        self.assertEqual("", record["override_warning"])
         self.assertFalse(record["gate_results"]["clean_execution_surface"]["override"])
         self.assertEqual("", record["gate_results"]["clean_execution_surface"]["override_reason"])
 
@@ -499,8 +509,8 @@ class TruthRegressionTests(unittest.TestCase):
                     "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                     "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
                     "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
-                    "verification_command": "grep -n 'VERIFICATION_RECHECK_ALLOWED_BINARIES' tools/reference/synrail_bundle_v0.py",
-                    "verification_result": "38:VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                    "verification_command": "grep -n '^VERIFICATION_RECHECK_ALLOWED_BINARIES =' tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                 },
                 "artifact_identity": {
                     "baseline_identity": "trusted_clean",
@@ -522,6 +532,100 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertTrue(bundle["verification_recheck"]["matched"])
         self.assertEqual("", bundle["verification_recheck"]["skip_reason"])
         self.assertEqual("ACCEPTED", verdict["closure_status"])
+
+    def test_verification_recheck_matches_grep_output_without_expected_line_number(self) -> None:
+        from synrail_bundle_v0 import verification_recheck_result
+
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_grep_line_number_") as tmpdir:
+            tmp = Path(tmpdir)
+            target = tmp / "src" / "app.py"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("import os\nimport logging\n")
+
+            result = verification_recheck_result(
+                {
+                    "changed_file": "src/app.py",
+                    "verification_command": "grep -n 'import logging' src/app.py",
+                    "verification_result": "import logging",
+                },
+                project_root=tmp,
+            )
+
+        self.assertTrue(result["executed"])
+        self.assertTrue(result["command_allowed"])
+        self.assertTrue(result["matched"])
+        self.assertEqual("", result["skip_reason"])
+
+    def test_verification_recheck_preserves_indented_expected_line(self) -> None:
+        from synrail_bundle_v0 import verification_recheck_result
+
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_indented_expected_") as tmpdir:
+            tmp = Path(tmpdir)
+            target = tmp / "src" / "app.py"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("def main():\n    print(\"patched\")\n")
+
+            result = verification_recheck_result(
+                {
+                    "changed_file": "src/app.py",
+                    "verification_command": "grep -n '^    print(\"patched\")$' src/app.py",
+                    "verification_result": '    print("patched")',
+                },
+                project_root=tmp,
+            )
+
+        self.assertTrue(result["executed"])
+        self.assertTrue(result["command_allowed"])
+        self.assertTrue(result["matched"])
+        self.assertEqual("", result["skip_reason"])
+
+    def test_verification_recheck_rejects_hostile_substring_output(self) -> None:
+        from synrail_bundle_v0 import verification_recheck_result
+
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_hostile_substring_") as tmpdir:
+            tmp = Path(tmpdir)
+            target = tmp / "src" / "app.py"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("import os\n# DO NOT import logging\n")
+
+            result = verification_recheck_result(
+                {
+                    "changed_file": "src/app.py",
+                    "verification_command": "grep -n 'import logging' src/app.py",
+                    "verification_result": "import logging",
+                },
+                project_root=tmp,
+            )
+
+        self.assertTrue(result["executed"])
+        self.assertTrue(result["command_allowed"])
+        self.assertFalse(result["matched"])
+        self.assertEqual("", result["skip_reason"])
+        self.assertIn("# DO NOT import logging", result["stdout_snippet"])
+
+    def test_verification_recheck_rejects_ambiguous_multi_line_output(self) -> None:
+        from synrail_bundle_v0 import verification_recheck_result
+
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_ambiguous_multiline_") as tmpdir:
+            tmp = Path(tmpdir)
+            target = tmp / "src" / "app.py"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("import os\n# DO NOT import logging\nimport logging_disabled\n")
+
+            result = verification_recheck_result(
+                {
+                    "changed_file": "src/app.py",
+                    "verification_command": "grep -n logging src/app.py",
+                    "verification_result": "import logging",
+                },
+                project_root=tmp,
+            )
+
+        self.assertTrue(result["executed"])
+        self.assertTrue(result["command_allowed"])
+        self.assertFalse(result["matched"])
+        self.assertEqual("", result["skip_reason"])
+        self.assertIn("import logging_disabled", result["stdout_snippet"])
 
     def test_bundle_recheck_blocks_closure_on_mismatch(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
@@ -731,8 +835,8 @@ class TruthRegressionTests(unittest.TestCase):
                     "added_line": "def starter_final_result_replacement_is_sanctioned(",
                     "context_before": "def file_sha256(path: Path) -> str:",
                     "context_after": "def normalize_verification_recheck_text(value: str, *, executable: str) -> str:",
-                    "verification_command": "grep -n 'starter_final_result_replacement_is_sanctioned' tools/reference/synrail_bundle_v0.py",
-                    "verification_result": "55:def starter_final_result_replacement_is_sanctioned(",
+                    "verification_command": "grep -n '^def starter_final_result_replacement_is_sanctioned' tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "def starter_final_result_replacement_is_sanctioned(",
                 },
                 "artifact_identity": {
                     "baseline_identity": "trusted_clean",
@@ -773,7 +877,7 @@ class TruthRegressionTests(unittest.TestCase):
                     "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                     "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
                     "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
-                    "verification_command": "grep -n 'VERIFICATION_RECHECK_ALLOWED_BINARIES' tools/reference/synrail_bundle_v0.py",
+                    "verification_command": "grep -n '^VERIFICATION_RECHECK_ALLOWED_BINARIES =' tools/reference/synrail_bundle_v0.py",
                     "verification_result": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                 },
                 "artifact_identity": {

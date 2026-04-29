@@ -1073,8 +1073,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
                         "added_line": 'print("patched")',
                         "context_before": "def main():",
                         "context_after": "    return 0",
-                        "verification_command": "grep -n 'print(\"patched\")' src/app.py",
-                        "verification_result": '    print("patched")',
+                        "verification_command": "grep -n '^    print(\"patched\")$' src/app.py",
+                        "verification_result": '2:    print("patched")',
                     },
                     "artifact_identity": {
                         "baseline_identity": "autodetected_generic_baseline",
@@ -1152,6 +1152,105 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("Do not touch fallback proof surfaces like .synrail/readback.txt or .synrail/scenario_proof.txt unless Synrail explicitly targets them.", load_json(artifact_root / "prompt.json")["prompt"])
 
 
+    def test_doctor_surfaces_override_warning_and_preserves_json_stdout(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_override_warning_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            doctor_output = project_root / "doctor.json"
+            artifact_path = project_root / "artifacts" / "final_result.json"
+            artifact_path.parent.mkdir(parents=True, exist_ok=True)
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            doctor = self.run_alpha(
+                "doctor",
+                "--doctor-run-id", "DOCTOR_OVERRIDE_001",
+                "--doctor-level", "CORE_DOCTOR",
+                "--target-path", str(project_root),
+                "--target-classification", "core_surface",
+                "--baseline-identity", "TRUSTED_BASELINE_001",
+                "--intended-run-class", "core_probe",
+                "--artifact-path", str(artifact_path),
+                "--output", str(doctor_output),
+                "--clean-surface",
+                cwd=project_root,
+            )
+            self.assertEqual(0, doctor.returncode, doctor.stdout + doctor.stderr)
+            self.assertEqual("OK", json.loads(doctor.stdout.strip())["result"])
+            self.assertIn("doctor override present", doctor.stderr.lower())
+            self.assertIn("clean_execution_surface", doctor.stderr)
+
+            record = load_json(doctor_output)
+            self.assertEqual(["clean_execution_surface"], record["override_gates"])
+            self.assertEqual(
+                [{"gate": "clean_execution_surface", "reason": "operator bypass via --clean-surface"}],
+                record["override_summary"],
+            )
+            self.assertIn("clean_execution_surface: operator bypass via --clean-surface", record["override_warning"])
+
+    def test_check_surfaces_early_doctor_override_warning(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_check_override_warning_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                "--task-identity",
+                "Surface doctor override warnings before closure summary.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            tracked_file = project_root / "src" / "app.py"
+            tracked_file.parent.mkdir(parents=True, exist_ok=True)
+            tracked_file.write_text('def main():\n    print("patched")\n    return 0\n')
+            state = load_json(artifact_root / "state.json")
+            write_json(
+                artifact_root / "final_result.json",
+                {
+                    "request_id": state["run_id"],
+                    "task_class": state["task_class"],
+                    "status": "PROVEN",
+                    "change_disposition": "modified",
+                    "summary": "Implemented the bounded change and verified it locally.",
+                    "modified_files": ["src/app.py"],
+                    "git_diff": "",
+                    "diff_provenance": {
+                        "method": "direct_file_observation",
+                        "changed_file": "src/app.py",
+                        "added_line": '    print("patched")',
+                        "context_before": "def main():",
+                        "context_after": "    return 0",
+                        "verification_command": "grep -n '^    print(\"patched\")$' src/app.py",
+                        "verification_result": '2:    print("patched")',
+                    },
+                    "artifact_identity": {
+                        "baseline_identity": "autodetected_generic_baseline",
+                        "execution_surface_identity": "autodetected_generic_worktree",
+                        "prompt_identity": "Surface doctor override warnings before closure summary.",
+                        "task_identity": "Surface doctor override warnings before closure summary.",
+                    },
+                },
+            )
+
+            check = self.run_alpha("check", "--artifact-root", ".synrail", "--clean-surface", cwd=project_root)
+            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            lower_stdout = check.stdout.lower()
+            self.assertIn("warning: doctor override present", lower_stdout)
+            self.assertLess(lower_stdout.index("warning: doctor override present"), lower_stdout.index("status:"))
+
+            doctor = load_json(artifact_root / "doctor.json")
+            report = load_json(artifact_root / "report.json")
+            self.assertEqual(["clean_execution_surface"], doctor["override_gates"])
+            self.assertEqual(
+                [{"gate": "clean_execution_surface", "reason": "operator bypass via --clean-surface"}],
+                doctor["override_summary"],
+            )
+            self.assertEqual("DOCTOR_OVERRIDE_PRESENT", report.get("reason", ""))
+
     def test_check_accepts_git_worktree_when_observed_changes_match_final_result_scope(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_git_observed_scope_") as tmpdir:
             project_root = Path(tmpdir) / "project"
@@ -1210,8 +1309,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
                         "added_line": '    print("patched")',
                         "context_before": "def main():",
                         "context_after": "    return 0",
-                        "verification_command": "grep -n 'print(\"patched\")' src/app.py",
-                        "verification_result": '    print("patched")',
+                        "verification_command": "grep -n '^    print(\"patched\")$' src/app.py",
+                        "verification_result": '2:    print("patched")',
                     },
                     "artifact_identity": {
                         "baseline_identity": "autodetected_python_baseline",
@@ -1359,8 +1458,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
                         "added_line": 'print("patched")',
                         "context_before": "def main():",
                         "context_after": "    return 0",
-                        "verification_command": "grep -n 'print(\"patched\")' src/app.py",
-                        "verification_result": '    print("patched")',
+                        "verification_command": "grep -n '^    print(\"patched\")$' src/app.py",
+                        "verification_result": '2:    print("patched")',
                     },
                     "artifact_identity": {
                         "baseline_identity": "autodetected_generic_baseline",
@@ -1388,6 +1487,27 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertTrue(accepted_state["closure_timestamp_utc"])
             self.assertEqual(1, accepted_state["check_count"])
 
+
+    def test_start_refuses_unreadable_existing_state_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_corrupted_state_start_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            state_path = artifact_root / "state.json"
+            state_path.write_text("{not valid json\n")
+
+            start = self.run_alpha(
+                "start",
+                "P0.2 corrupted state smoke.",
+                cwd=project_root,
+            )
+
+            self.assertEqual(2, start.returncode)
+            self.assertNotIn("Traceback", start.stdout)
+            self.assertNotIn("Traceback", start.stderr)
+            self.assertIn("run state is unreadable", start.stdout)
+            self.assertIn("move the corrupted artifact root", start.stdout)
+            self.assertEqual("{not valid json\n", state_path.read_text())
 
     def test_start_after_terminal_state_auto_clears_proof(self) -> None:
         """After CLOSURE_ACCEPTED, next synrail start should work without manual cleanup."""

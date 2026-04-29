@@ -80,6 +80,33 @@ def gate(status: str, note: str, *, override: bool = False, override_reason: str
     }
 
 
+def build_override_summary(gates: dict[str, dict]) -> list[dict[str, str]]:
+    return [
+        {
+            "gate": key,
+            "reason": result.get("override_reason", ""),
+        }
+        for key, result in gates.items()
+        if result.get("override")
+    ]
+
+
+def build_override_warning(override_summary: list[dict[str, str]]) -> str:
+    if not override_summary:
+        return ""
+    details = []
+    for item in override_summary:
+        gate = item.get("gate", "")
+        reason = item.get("reason", "")
+        if gate and reason:
+            details.append(f"{gate}: {reason}")
+        elif gate:
+            details.append(gate)
+    if not details:
+        return "doctor override present"
+    return "doctor override present: " + "; ".join(details)
+
+
 def non_empty_identity(value: str) -> bool:
     return bool(value and value.strip() and value.strip().upper() != "UNKNOWN")
 
@@ -443,7 +470,8 @@ def build_record(args: argparse.Namespace) -> dict:
         final_verdict = VERDICTS["doctor_coverage"]
         next_safe_step = NEXT_STEPS["doctor_coverage"]
 
-    override_gates = [key for key, result in gates.items() if result.get("override")]
+    override_summary = build_override_summary(gates)
+    override_gates = [item["gate"] for item in override_summary]
 
     return {
         "schema_version": "doctor_record_v0",
@@ -461,6 +489,8 @@ def build_record(args: argparse.Namespace) -> dict:
         "intended_run_class": args.intended_run_class,
         "gate_results": gates,
         "override_gates": override_gates,
+        "override_summary": override_summary,
+        "override_warning": build_override_warning(override_summary),
         "coverage": coverage,
         "blocking_failure_classes": blocking_failure_classes,
         "final_verdict": final_verdict,

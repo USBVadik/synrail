@@ -92,7 +92,7 @@ def verification_recheck_result(record: object, *, project_root: Path | None = N
         return result
 
     verification_command = non_empty_string(record.get("verification_command", ""))
-    verification_result = non_empty_string(record.get("verification_result", ""))
+    verification_result = string_or_empty(record.get("verification_result", ""))
     if not (verification_command and verification_result):
         result["skip_reason"] = "verification_missing"
         return result
@@ -145,10 +145,7 @@ def verification_recheck_result(record: object, *, project_root: Path | None = N
     result["stdout_snippet"] = stdout[:VERIFICATION_RECHECK_STDOUT_LIMIT]
     normalized_stdout = normalize_verification_recheck_text(stdout, executable=executable)
     normalized_expected = normalize_verification_recheck_text(verification_result, executable=executable)
-    result["matched"] = (
-        normalized_stdout == normalized_expected
-        or normalized_expected in normalized_stdout
-    )
+    result["matched"] = normalized_stdout == normalized_expected
     if not result["matched"] and completed.returncode != 0:
         result["skip_reason"] = f"exit_code_{completed.returncode}"
     return result
@@ -243,6 +240,12 @@ def non_empty_string(value: object) -> str:
     if not isinstance(value, str):
         return ""
     return value.strip()
+
+
+def string_or_empty(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    return value
 
 
 def load_json_object_if_present(path: Path) -> dict:

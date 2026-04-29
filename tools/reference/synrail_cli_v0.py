@@ -1739,6 +1739,77 @@ def print_prompt_summary(output_file: Path) -> None:
     print_prompt_summary_compact(output_file, include_prompt=True)
 
 
+def doctor_output_path(args: argparse.Namespace) -> Path | None:
+    output = getattr(args, "output", None) or getattr(args, "doctor_output", None)
+    if not output:
+        return None
+    return Path(output)
+
+
+def expected_doctor_target_identity(args: argparse.Namespace) -> str:
+    return getattr(args, "expected_target_identity", None) or getattr(args, "execution_surface_identity", None) or ""
+
+
+def doctor_forwarded_args(args: argparse.Namespace) -> list[str]:
+    output_path = doctor_output_path(args)
+    forwarded = [
+        "--doctor-run-id", args.doctor_run_id,
+        "--doctor-level", args.doctor_level,
+        "--target-path", args.target_path,
+        "--target-classification", args.target_classification,
+        "--baseline-identity", args.baseline_identity,
+        "--intended-run-class", args.intended_run_class,
+        "--output", str(output_path) if output_path else "",
+    ]
+    if getattr(args, "state_file", None):
+        forwarded.extend(["--state-file", args.state_file])
+    if getattr(args, "update_state", False):
+        forwarded.append("--update-state")
+    if getattr(args, "clean_surface", False):
+        forwarded.append("--clean-surface")
+    if getattr(args, "artifact_viable", False):
+        forwarded.append("--artifact-viable")
+    if getattr(args, "helper_ok", False):
+        forwarded.append("--helper-ok")
+    if getattr(args, "credentials_ok", False):
+        forwarded.append("--credentials-ok")
+    if getattr(args, "prompt_identity_ok", False):
+        forwarded.append("--prompt-identity-ok")
+    optional_pairs = [
+        ("--artifact-path", getattr(args, "artifact_path", None)),
+        ("--helper-path", getattr(args, "helper_path", None)),
+        ("--prompt-identity-file", getattr(args, "prompt_identity_file", None)),
+        ("--expected-task-identity", getattr(args, "expected_task_identity", None)),
+        ("--target-identity-file", getattr(args, "target_identity_file", None)),
+        ("--expected-target-identity", expected_doctor_target_identity(args)),
+    ]
+    for flag, value in optional_pairs:
+        if value:
+            forwarded.extend([flag, value])
+    for changed_file in getattr(args, "changed_file", []):
+        forwarded.extend(["--changed-file", changed_file])
+    for allowed_scope_path in getattr(args, "allowed_scope_path", []):
+        forwarded.extend(["--allowed-scope-path", allowed_scope_path])
+    for env_name in getattr(args, "credential_env", []):
+        forwarded.extend(["--credential-env", env_name])
+    return forwarded
+
+
+def load_doctor_record_from_args(args: argparse.Namespace) -> dict:
+    output_path = doctor_output_path(args)
+    if not output_path or not output_path.exists():
+        return {}
+    return load_json(output_path)
+
+
+def print_doctor_override_warning(record: dict, *, file = sys.stdout) -> None:
+    warning = record.get("override_warning", "")
+    if not warning:
+        return
+    print(f"WARNING: {warning}", file=file)
+    print("Closure will reject override-backed readiness until you rerun without overrides.", file=file)
+
+
 def print_prompt_summary_compact(output_file: Path, *, include_prompt: bool = False) -> None:
     if not output_file.exists():
         return
@@ -2611,7 +2682,28 @@ def cmd_start(args: argparse.Namespace) -> int:
         args.output = str(alpha_file(root, "state"))
 
     existing_state_path = Path(args.output)
-    existing_state = load_json(existing_state_path) if existing_state_path.exists() else None
+    try:
+        existing_state = load_json(existing_state_path) if existing_state_path.exists() else None
+    except (OSError, json.JSONDecodeError):
+        if args.mode == "dev":
+            print(
+                json.dumps(
+                    {
+                        "result": "ERROR",
+                        "reason": "CONTROLLED_START_STATE_UNREADABLE",
+                        "state_file": str(existing_state_path),
+                        "next_safe_step": f"move the corrupted artifact root aside or repair {root} before retrying controlled start",
+                    },
+                    ensure_ascii=True,
+                )
+            )
+        else:
+            print("Synrail could not start this run yet.")
+            print(f"What happened: run state is unreadable at {existing_state_path}.")
+            print(
+                f"What to do next: move the corrupted artifact root `{root}` aside or repair that state with a future recover command, then retry controlled start."
+            )
+        return 2
     if not getattr(args, "run_id", None):
         args.run_id = default_alpha_run_id()
     if not getattr(args, "task_class", None):
@@ -2846,47 +2938,19 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--doctor-run-id", args.doctor_run_id,
-        "--doctor-level", args.doctor_level,
-        "--target-path", args.target_path,
-        "--target-classification", args.target_classification,
-        "--baseline-identity", args.baseline_identity,
-        "--intended-run-class", args.intended_run_class,
-        "--output", args.output,
-    ]
-    if args.state_file:
-        forwarded.extend(["--state-file", args.state_file])
-    if args.update_state:
-        forwarded.append("--update-state")
-    if args.clean_surface:
-        forwarded.append("--clean-surface")
-    if args.artifact_viable:
-        forwarded.append("--artifact-viable")
-    if args.helper_ok:
-        forwarded.append("--helper-ok")
-    if args.credentials_ok:
-        forwarded.append("--credentials-ok")
-    if args.prompt_identity_ok:
-        forwarded.append("--prompt-identity-ok")
-    optional_pairs = [
-        ("--artifact-path", args.artifact_path),
-        ("--helper-path", args.helper_path),
-        ("--prompt-identity-file", args.prompt_identity_file),
-        ("--expected-task-identity", args.expected_task_identity),
-        ("--target-identity-file", args.target_identity_file),
-        ("--expected-target-identity", args.expected_target_identity),
-    ]
-    for flag, value in optional_pairs:
-        if value:
-            forwarded.extend([flag, value])
-    for changed_file in args.changed_file:
-        forwarded.extend(["--changed-file", changed_file])
-    for allowed_scope_path in args.allowed_scope_path:
-        forwarded.extend(["--allowed-scope-path", allowed_scope_path])
-    for env_name in args.credential_env:
-        forwarded.extend(["--credential-env", env_name])
-    return run_python(DOCTOR, forwarded)
+    completed = run_python_capture(DOCTOR, doctor_forwarded_args(args))
+    if completed.returncode != 0:
+        if completed.stderr.strip():
+            print(completed.stderr.strip(), file=sys.stderr)
+        if completed.stdout.strip():
+            print(completed.stdout.strip())
+        return completed.returncode
+    print_doctor_override_warning(load_doctor_record_from_args(args), file=sys.stderr)
+    if completed.stderr.strip():
+        print(completed.stderr.strip(), file=sys.stderr)
+    if completed.stdout.strip():
+        print(completed.stdout.strip())
+    return completed.returncode
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
@@ -3559,6 +3623,16 @@ def cmd_check(args: argparse.Namespace) -> int:
             allowed_scope_path=list(getattr(args, "allowed_scope_path", [])),
             _capture_output=(args.mode == "default"),
         )
+        apply_alpha_runtime_file_defaults(orchestrate_args)
+        doctor_completed = run_python_capture(DOCTOR, doctor_forwarded_args(orchestrate_args))
+        if doctor_completed.returncode != 0:
+            if doctor_completed.stderr.strip():
+                print(doctor_completed.stderr.strip(), file=sys.stderr)
+            if doctor_completed.stdout.strip():
+                print(doctor_completed.stdout.strip())
+            return doctor_completed.returncode
+        if args.mode == "default":
+            print_doctor_override_warning(load_doctor_record_from_args(orchestrate_args))
         orchestrate_code = cmd_orchestrate(orchestrate_args)
         if orchestrate_code != 0 and not Path(args.report_file).exists():
             return orchestrate_code
