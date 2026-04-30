@@ -158,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Repo path linked via: {pth_file}")
     print(f"Command: {rel_synrail}")
     print(git_preflight_line())
-    print("No-git proof path: leave git_diff empty and fill diff_provenance with changed_file, exact changed line, context, verification_command, and verification_result.")
+    print("No-git proof path: leave git_diff empty and use structured provenance — diff_provenance for a single-file change, or diff_provenance_records/per_file_diff_provenance with one changed_file-backed record per modified file for a multi-file change.")
     if project_root is not None:
         rel_project = os.path.relpath(project_root, Path.cwd())
         print(f"Agent files installed into: {rel_project}")

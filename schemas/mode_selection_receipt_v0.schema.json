@@ -58,6 +58,12 @@
     "heavier_contour_entered": {
       "type": "boolean"
     },
+    "selection_evidence_provenance_mix": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "estimated_avoided_operator_minutes": {
       "type": "integer"
     },

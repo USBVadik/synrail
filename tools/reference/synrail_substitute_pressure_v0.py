@@ -8,15 +8,16 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
+
 VERDICTS = ["SYNRAIL_BETTER", "SUBSTITUTE_GOOD_ENOUGH", "UNCLEAR"]
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
 def build_record(paths: list[Path]) -> dict:

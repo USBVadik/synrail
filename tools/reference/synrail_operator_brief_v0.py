@@ -9,17 +9,42 @@ import sys
 from pathlib import Path
 
 try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
+
+try:
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
     from .synrail_repair_focus_v0 import focused_repair_action_instruction
 except ImportError:
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
     from synrail_repair_focus_v0 import focused_repair_action_instruction
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+OPERATOR_BRIEF_PATH_SCOPES = {
+    "state_file": ARTIFACT_SCOPE,
+    "report_file": ARTIFACT_SCOPE,
+    "repair_packet_file": ARTIFACT_SCOPE,
+    "doctor_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+}
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_operator_brief_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=OPERATOR_BRIEF_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
+
+
+
 
 
 def normalize_report(payload: dict) -> dict:
@@ -179,18 +204,33 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    state = load_json(Path(args.state_file))
-    report = normalize_report(load_json(Path(args.report_file)))
-    packet = load_json(Path(args.repair_packet_file))
-    doctor = load_json(Path(args.doctor_file)) if args.doctor_file else None
-    record = build_record(
-        state=state,
-        report=report,
-        packet=packet,
-        doctor=doctor,
-        state_file=args.state_file,
-        repair_packet_file=args.repair_packet_file,
-    )
+    try:
+        artifact_root = Path(args.state_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "state_file",
+            args.state_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_operator_brief_paths(args, artifact_root=artifact_root, project_root=project_root)
+        state = load_json(Path(args.state_file))
+        report = normalize_report(load_json(Path(args.report_file)))
+        packet = load_json(Path(args.repair_packet_file))
+        doctor = load_json(Path(args.doctor_file)) if args.doctor_file else None
+        record = build_record(
+            state=state,
+            report=report,
+            packet=packet,
+            doctor=doctor,
+            state_file=args.state_file,
+            repair_packet_file=args.repair_packet_file,
+        )
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     save_json(Path(args.output), record)
     print(json.dumps({"result": "OK", "primary_action": record["primary_action"]}, ensure_ascii=True))
     return 0

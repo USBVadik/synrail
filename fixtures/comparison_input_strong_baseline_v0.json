@@ -3,6 +3,7 @@
   "system": "baseline",
   "scenario_id": "SCENARIO_STRONG_001",
   "task_class": "bounded_router_trigger_fix",
+  "data_provenance": "curated_local_estimate",
   "closure_result": "ACCEPTED",
   "blocker_to_closure_cycles": 2,
   "false_success_risk": "HIGH",

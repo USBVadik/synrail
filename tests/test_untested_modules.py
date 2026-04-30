@@ -49,6 +49,7 @@ from synrail_repair_packet_v0 import (
     missing_input_ids,
     build_continuation_core,
     build_continuation_plan,
+    build_selection_context,
     provided_input_ids,
     scalar_arg,
 )
@@ -670,6 +671,32 @@ class TestMissingInputIds(unittest.TestCase):
         handoff = {"required_inputs": []}
         result = missing_input_ids(handoff, ["anything"])
         self.assertEqual([], result)
+
+
+class TestBuildSelectionContext(unittest.TestCase):
+    def test_empty_selection_context_keeps_empty_provenance_mix(self) -> None:
+        context = build_selection_context(None)
+
+        self.assertEqual([], context["selection_evidence_provenance_mix"])
+        self.assertEqual(0, context["estimated_avoided_operator_minutes"])
+
+    def test_selection_context_carries_provenance_mix_from_receipt(self) -> None:
+        context = build_selection_context({
+            "scenario_class": "repeatable_everyday_local",
+            "recommended_mode": "LIGHTWEIGHT_BASELINE",
+            "selected_mode": "LIGHTWEIGHT_BASELINE",
+            "followed_recommendation": True,
+            "governed_preparation_recommended": False,
+            "selected_with_preparation": False,
+            "heavier_contour_entered": False,
+            "selection_evidence_provenance_mix": ["curated_local_estimate"],
+            "estimated_avoided_operator_minutes": 1,
+            "estimated_avoided_interventions": 1,
+            "estimated_avoided_closure_latency_minutes": 1,
+        })
+
+        self.assertEqual(["curated_local_estimate"], context["selection_evidence_provenance_mix"])
+        self.assertEqual(1, context["estimated_avoided_operator_minutes"])
 
 
 class TestBuildContinuationPlan(unittest.TestCase):

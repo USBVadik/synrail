@@ -8,13 +8,40 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+try:
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+except ImportError:
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+MODE_SELECTOR_PATH_SCOPES = {
+    "cost_record": ARTIFACT_SCOPE,
+    "hybrid_status": ARTIFACT_SCOPE,
+    "governed_cost_delta": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_mode_selector_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=MODE_SELECTOR_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
+
+
+
 
 
 def average(records: list[dict], key: str) -> int:
@@ -58,6 +85,7 @@ def choose_mode(
     avg_interventions_added: int,
     avg_closure_latency_minutes_added: int,
     avg_false_green_exposure_reduced: int,
+    evidence_label: str,
 ) -> tuple[str, str, str]:
     if meaningful_high_risk(args):
         return (
@@ -68,7 +96,7 @@ def choose_mode(
 
     if class_verdict == "BASELINE_GOOD_ENOUGH":
         why = (
-            f"measured class evidence already says baseline is good enough here; using baseline likely avoids about "
+            f"current {evidence_label} class evidence already says baseline is good enough here; using baseline likely avoids about "
             f"{avg_operator_minutes_added} added operator {unit(avg_operator_minutes_added, 'minute', 'minutes')}, "
             f"{avg_interventions_added} extra {unit(avg_interventions_added, 'intervention', 'interventions')}, "
             f"and {avg_closure_latency_minutes_added} extra closure-latency minutes without giving up a decisive safety gain"
@@ -96,7 +124,7 @@ def choose_mode(
 
     if class_verdict == "SYNRAIL_BETTER":
         why = (
-            f"measured class evidence says Synrail earns its cost here, including about {avg_false_green_exposure_reduced} "
+            f"current {evidence_label} class evidence says Synrail earns its cost here, including about {avg_false_green_exposure_reduced} "
             "units of false-green reduction on the current class signal"
         )
         return ("FULL_GOVERNED_PATH", "", why)
@@ -104,8 +132,23 @@ def choose_mode(
     return (
         "LIGHTWEIGHT_BASELINE",
         "",
-        "class evidence is still mixed or absent, so baseline stays the cheaper default until the risk or measured signal clearly justifies more control",
+        f"class evidence is still mixed or absent, so baseline stays the cheaper default until the risk or current {evidence_label} signal clearly justifies more control",
     )
+
+
+def evidence_label_for_mix(provenance_mix: object) -> str:
+    if not isinstance(provenance_mix, list):
+        return "available"
+    values = {item for item in provenance_mix if isinstance(item, str) and item}
+    if values == {"curated_local_estimate"}:
+        return "curated-local-estimate"
+    if values and values <= {"external_empirical"}:
+        return "external-empirical"
+    if values and "external_empirical" in values:
+        return "mixed-provenance"
+    if values:
+        return "mixed-provenance"
+    return "available"
 
 
 def governed_preparation_reading(path: str | None) -> tuple[bool, str]:
@@ -143,6 +186,7 @@ def build_record(args: argparse.Namespace) -> dict:
     comparison_records = [load_json(Path(item["path"])) for item in cost_record["source_records"]]
     class_records = [record for record in comparison_records if record["scenario_class"] == args.scenario_class]
     class_verdict = aggregate_verdict(class_records)
+    evidence_label = evidence_label_for_mix(cost_record.get("provenance_mix", []))
 
     avg_operator_minutes_added = average(class_records, "operator_minutes_added")
     avg_interventions_added = average(class_records, "intervention_count_added")
@@ -157,6 +201,7 @@ def build_record(args: argparse.Namespace) -> dict:
         avg_interventions_added=avg_interventions_added,
         avg_closure_latency_minutes_added=avg_closure_latency_minutes_added,
         avg_false_green_exposure_reduced=avg_false_green_exposure_reduced,
+        evidence_label=evidence_label,
     )
 
     governed_preparation_recommended, governed_preparation_why = governed_preparation_reading(args.governed_cost_delta)
@@ -192,6 +237,7 @@ def build_record(args: argparse.Namespace) -> dict:
             "class_record_count": len(class_records),
             "class_verdict": class_verdict,
             "hybrid_status": hybrid_status_value,
+            "provenance_mix": list(cost_record.get("provenance_mix", [])),
             "avg_operator_minutes_added_if_synrail": avg_operator_minutes_added,
             "avg_interventions_added_if_synrail": avg_interventions_added,
             "avg_closure_latency_minutes_added_if_synrail": avg_closure_latency_minutes_added,
@@ -226,7 +272,21 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     try:
+        artifact_root = Path(args.cost_record).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "cost_record",
+            args.cost_record,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_mode_selector_paths(args, artifact_root=artifact_root, project_root=project_root)
         record = build_record(args)
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     except ValueError as exc:
         print(json.dumps({"result": "ERROR", "reason": str(exc)}, ensure_ascii=True))
         return 2

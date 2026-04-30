@@ -14,6 +14,11 @@ import tempfile
 from pathlib import Path
 
 try:
+    from .synrail_io_v0 import load_json
+except ImportError:
+    from synrail_io_v0 import load_json
+
+try:
     from .synrail_artifact_consistency_v0 import build_record as build_artifact_consistency_record
     from .synrail_artifact_repair_receipt_v0 import build_receipt as build_artifact_repair_receipt
     from .synrail_observability_v0 import build_record as build_observability_record
@@ -25,6 +30,67 @@ except ImportError:
     from synrail_observability_v0 import build_record as build_observability_record
     from synrail_repair_handoff_v0 import build_repair_handoff, build_resumability
     from synrail_repair_packet_v0 import build_packet_from_runtime_truth
+
+try:
+    from .synrail_path_scope_v0 import (
+        ARTIFACT_SCOPE,
+        DUAL_SCOPE,
+        PROJECT_SCOPE,
+        PathScopeValidationError,
+        validate_namespace_paths,
+        validate_root_within_project,
+    )
+except ImportError:
+    from synrail_path_scope_v0 import (
+        ARTIFACT_SCOPE,
+        DUAL_SCOPE,
+        PROJECT_SCOPE,
+        PathScopeValidationError,
+        validate_namespace_paths,
+        validate_root_within_project,
+    )
+
+
+SPINE_PATH_SCOPES = {
+    "output": ARTIFACT_SCOPE,
+    "state_file": ARTIFACT_SCOPE,
+    "bundle_file": ARTIFACT_SCOPE,
+    "doctor_file": ARTIFACT_SCOPE,
+    "closure_file": ARTIFACT_SCOPE,
+    "repair_handoff_file": ARTIFACT_SCOPE,
+    "repair_handoff_output": ARTIFACT_SCOPE,
+    "repair_packet_file": ARTIFACT_SCOPE,
+    "repair_packet_output": ARTIFACT_SCOPE,
+    "repair_receipt_file": ARTIFACT_SCOPE,
+    "repair_receipt_output": ARTIFACT_SCOPE,
+    "mode_selection_receipt": ARTIFACT_SCOPE,
+    "doctor_output": ARTIFACT_SCOPE,
+    "final_result": DUAL_SCOPE,
+    "readback": DUAL_SCOPE,
+    "scenario_proof": DUAL_SCOPE,
+    "plan_output": ARTIFACT_SCOPE,
+    "preparation_receipt_output": ARTIFACT_SCOPE,
+    "preparation_artifact_root": ARTIFACT_SCOPE,
+    "refresh_output": ARTIFACT_SCOPE,
+    "observability_output": ARTIFACT_SCOPE,
+    "artifact_consistency_output": ARTIFACT_SCOPE,
+    "baseline_file": ARTIFACT_SCOPE,
+    "synrail_file": ARTIFACT_SCOPE,
+    "comparison_output": ARTIFACT_SCOPE,
+    "worked_artifact_output": ARTIFACT_SCOPE,
+    "run_artifact_output": ARTIFACT_SCOPE,
+    "artifact_path": DUAL_SCOPE,
+    "helper_path": PROJECT_SCOPE,
+    "prompt_identity_file": ARTIFACT_SCOPE,
+    "target_identity_file": DUAL_SCOPE,
+    "coverage_profile_file": PROJECT_SCOPE,
+    "coverage_corpus_file": PROJECT_SCOPE,
+    "acceptance_criteria_file": ARTIFACT_SCOPE,
+    "acceptance_validation_output": ARTIFACT_SCOPE,
+    "project_profile_file": ARTIFACT_SCOPE,
+    "report_output": ARTIFACT_SCOPE,
+    "target_path": PROJECT_SCOPE,
+}
 
 
 TERMINAL_STATES = {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}
@@ -194,8 +260,6 @@ def load_state(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
 
 
 def load_mode_selection_receipt(path: Path) -> dict:
@@ -2125,6 +2189,8 @@ def _phase_doctor(ctx: OrchestrationContext, args: argparse.Namespace) -> int | 
         ("--prompt-identity-file", args.prompt_identity_file),
         ("--expected-task-identity", args.task_identity),
         ("--target-identity-file", args.target_identity_file),
+        ("--coverage-profile-file", getattr(args, "coverage_profile_file", None)),
+        ("--coverage-corpus-file", getattr(args, "coverage_corpus_file", None)),
         ("--expected-target-identity", args.execution_surface_identity),
     ]:
         if value:
@@ -2597,6 +2663,53 @@ def _phase_final_report(ctx: OrchestrationContext, args: argparse.Namespace) -> 
     return 0
 
 
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def inferred_spine_artifact_root(args: argparse.Namespace) -> Path | None:
+    for field in [
+        "state_file",
+        "output",
+        "report_output",
+        "doctor_output",
+        "bundle_output",
+        "closure_output",
+    ]:
+        value = getattr(args, field, None)
+        if value:
+            return Path(value).expanduser().resolve().parent
+    return None
+
+
+def validate_spine_paths(args: argparse.Namespace) -> None:
+    artifact_root = inferred_spine_artifact_root(args)
+    project_root = current_project_root()
+    if artifact_root is not None:
+        anchor_field = "state_file"
+        anchor_value = getattr(args, "state_file", None)
+        if not anchor_value:
+            for field in ["output", "report_output", "doctor_output", "bundle_output", "closure_output"]:
+                value = getattr(args, field, None)
+                if value:
+                    anchor_field = field
+                    anchor_value = value
+                    break
+        validate_root_within_project(
+            anchor_field,
+            str(anchor_value),
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+    validate_namespace_paths(
+        args,
+        field_scopes=SPINE_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
+
 def cmd_orchestrate(args: argparse.Namespace) -> int:
     ctx = OrchestrationContext(
         state=load_state(Path(args.state_file)),
@@ -2712,6 +2825,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--allowed-scope-path", action="append", default=[])
     p_orchestrate.add_argument("--prompt-identity-file")
     p_orchestrate.add_argument("--target-identity-file")
+    p_orchestrate.add_argument("--coverage-profile-file")
+    p_orchestrate.add_argument("--coverage-corpus-file")
     p_orchestrate.add_argument("--bootstrap-provenance-ok", action="store_true")
     p_orchestrate.add_argument("--bootstrap-provenance-reason", default="")
     p_orchestrate.add_argument("--expected-target-identity")
@@ -2726,7 +2841,13 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    return args.func(args)
+    try:
+        if getattr(args, "cmd", "") in {"init", "transition", "show", "apply-bundle", "apply-doctor", "apply-closure", "orchestrate"}:
+            validate_spine_paths(args)
+        return args.func(args)
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
 
 
 if __name__ == "__main__":

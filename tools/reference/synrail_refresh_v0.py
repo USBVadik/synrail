@@ -8,13 +8,40 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+try:
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+except ImportError:
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+REFRESH_PATH_SCOPES = {
+    "state_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+    "bundle_file": ARTIFACT_SCOPE,
+    "closure_file": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_refresh_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=REFRESH_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
+
+
+
 
 
 PRECEDENCE = [
@@ -192,10 +219,25 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
 
-    state_path = Path(args.state_file)
-    output_path = Path(args.output)
-    state = load_json(state_path)
-    updated_state, report = apply_event(args, state)
+    try:
+        artifact_root = Path(args.state_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "state_file",
+            args.state_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_refresh_paths(args, artifact_root=artifact_root, project_root=project_root)
+        state_path = Path(args.state_file)
+        output_path = Path(args.output)
+        state = load_json(state_path)
+        updated_state, report = apply_event(args, state)
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     save_json(output_path, report)
     if args.update_state:
         save_json(state_path, updated_state)

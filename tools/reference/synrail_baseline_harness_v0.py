@@ -8,16 +8,17 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
+
 
 SCORE = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
 def compare(baseline: dict, synrail: dict) -> tuple[str, list[str]]:

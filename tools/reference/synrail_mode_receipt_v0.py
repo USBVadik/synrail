@@ -10,11 +10,30 @@ from pathlib import Path
 
 try:
     from .synrail_io_v0 import load_json, save_json
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
 except ImportError:
     from synrail_io_v0 import load_json, save_json
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
 
 
 MODES = {"FULL_GOVERNED_PATH", "LIGHTWEIGHT_BASELINE", "HYBRID_EXCEPTION"}
+MODE_RECEIPT_PATH_SCOPES = {
+    "recommendation_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_mode_receipt_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=MODE_RECEIPT_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
 
 
 def build_receipt(recommendation_path: Path, selected_mode: str | None, selected_with_preparation: bool) -> dict:
@@ -54,6 +73,7 @@ def build_receipt(recommendation_path: Path, selected_mode: str | None, selected
         "selected_with_preparation": bool(selected_with_preparation),
         "followed_recommendation": followed_recommendation,
         "heavier_contour_entered": heavier_contour_entered,
+        "selection_evidence_provenance_mix": list(evidence.get("provenance_mix", [])),
         "estimated_avoided_operator_minutes": avoided_operator_minutes,
         "estimated_avoided_interventions": avoided_interventions,
         "estimated_avoided_closure_latency_minutes": avoided_latency,
@@ -75,7 +95,21 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     try:
+        artifact_root = Path(args.recommendation_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "recommendation_file",
+            args.recommendation_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_mode_receipt_paths(args, artifact_root=artifact_root, project_root=project_root)
         receipt = build_receipt(Path(args.recommendation_file), args.selected_mode, args.selected_with_preparation)
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     except ValueError as exc:
         print(json.dumps({"result": "ERROR", "reason": str(exc)}, ensure_ascii=True))
         return 2

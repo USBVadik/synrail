@@ -8,9 +8,12 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_io_v0 import load_json
+except ImportError:
+    from synrail_io_v0 import load_json
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+
 
 
 def validate_node(value, schema: dict, path: str, errors: list[str]) -> None:

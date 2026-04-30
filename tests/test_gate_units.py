@@ -528,17 +528,14 @@ class TestBuildVerdict(unittest.TestCase):
         self.assertEqual("VERIFICATION_RECHECK_NOT_EXECUTED", verdict["blocking_reason"])
         self.assertEqual("PROOF_BUNDLE_REPAIR", verdict["next_allowed_transition"])
 
-    def test_rejects_with_doctor_override_present(self) -> None:
+    def test_accepts_with_doctor_override_warning_present(self) -> None:
         state = self._full_state()
         state["doctor"]["override_gates"] = ["clean_execution_surface", "artifact_viability"]
         verdict = build_verdict(state, self._complete_bundle())
-        self.assertEqual("REJECTED", verdict["closure_status"])
-        self.assertEqual("DOCTOR_OVERRIDE_PRESENT", verdict["blocking_reason"])
-        self.assertEqual("DOCTOR_READINESS", verdict["next_allowed_transition"])
-        self.assertEqual(
-            "rerun doctor without override gates before trusting closure",
-            verdict["narrow_next_safe_step"],
-        )
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+        self.assertEqual("", verdict["blocking_reason"])
+        self.assertEqual("NONE", verdict["next_allowed_transition"])
+        self.assertEqual("NONE", verdict["narrow_next_safe_step"])
         self.assertIn(
             "doctor_override_present: clean_execution_surface, artifact_viability",
             verdict["closure_warnings"],

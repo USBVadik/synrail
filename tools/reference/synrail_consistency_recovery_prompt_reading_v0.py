@@ -10,8 +10,30 @@ from pathlib import Path
 
 try:
     from .synrail_io_v0 import load_json, save_json
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
 except ImportError:
     from synrail_io_v0 import load_json, save_json
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+
+
+CONSISTENCY_RECOVERY_PROMPT_READING_PATH_SCOPES = {
+    "consistency_recovery_file": ARTIFACT_SCOPE,
+    "prompt_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_consistency_recovery_prompt_reading_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=CONSISTENCY_RECOVERY_PROMPT_READING_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
 
 
 def build_record(*, recovery: dict, prompt: dict) -> dict:
@@ -56,10 +78,25 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    record = build_record(
-        recovery=load_json(Path(args.consistency_recovery_file)),
-        prompt=load_json(Path(args.prompt_file)),
-    )
+    try:
+        artifact_root = Path(args.consistency_recovery_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "consistency_recovery_file",
+            args.consistency_recovery_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_consistency_recovery_prompt_reading_paths(args, artifact_root=artifact_root, project_root=project_root)
+        record = build_record(
+            recovery=load_json(Path(args.consistency_recovery_file)),
+            prompt=load_json(Path(args.prompt_file)),
+        )
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     save_json(Path(args.output), record)
     print(json.dumps({"result": "OK", "verdict": record["verdict"]}, ensure_ascii=True))
     return 0 if record["verdict"] == "RECOVERY_PROMPT_BOUNDED" else 2

@@ -10,8 +10,30 @@ from pathlib import Path
 
 try:
     from .synrail_io_v0 import load_json, save_json
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
 except ImportError:
     from synrail_io_v0 import load_json, save_json
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+
+
+PREPARATION_RECEIPT_PATH_SCOPES = {
+    "plan_file": ARTIFACT_SCOPE,
+    "bundle_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_preparation_receipt_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=PREPARATION_RECEIPT_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
 
 
 def build_receipt(plan_path: Path, bundle_path: Path) -> dict:
@@ -69,7 +91,21 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     try:
+        artifact_root = Path(args.plan_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "plan_file",
+            args.plan_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_preparation_receipt_paths(args, artifact_root=artifact_root, project_root=project_root)
         receipt = build_receipt(Path(args.plan_file), Path(args.bundle_file))
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     except ValueError as exc:
         print(json.dumps({"result": "ERROR", "reason": str(exc)}, ensure_ascii=True))
         return 2

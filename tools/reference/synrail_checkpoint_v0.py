@@ -13,9 +13,16 @@ import tempfile
 from pathlib import Path
 
 try:
+    from .synrail_io_v0 import load_json, save_json_safe as save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json_safe as save_json
+
+try:
+    from .synrail_path_scope_v0 import PROJECT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
     from .synrail_repair_handoff_v0 import build_resumability
     from .synrail_validate_v0 import load_json as load_json_document, validate_document
 except ImportError:
+    from synrail_path_scope_v0 import PROJECT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
     from synrail_repair_handoff_v0 import build_resumability
     from synrail_validate_v0 import load_json as load_json_document, validate_document
 
@@ -62,14 +69,41 @@ ARTIFACT_FLAGS = [
     ("repair_receipt_file", "repair_receipt", "REPAIR_RECEIPT", False),
 ]
 
+CHECKPOINT_CREATE_PATH_SCOPES = {
+    "checkpoint_root": PROJECT_SCOPE,
+    "output": PROJECT_SCOPE,
+}
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+CHECKPOINT_VERIFY_PATH_SCOPES = {
+    "checkpoint_record_file": PROJECT_SCOPE,
+    "output": PROJECT_SCOPE,
+}
+
+CHECKPOINT_RESTORE_PATH_SCOPES = {
+    "checkpoint_record_file": PROJECT_SCOPE,
+    "target_root": PROJECT_SCOPE,
+    "output": PROJECT_SCOPE,
+}
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_checkpoint_create_paths(args: argparse.Namespace, *, project_root: Path) -> None:
+    validate_namespace_paths(args, field_scopes=CHECKPOINT_CREATE_PATH_SCOPES, project_root=project_root, artifact_root=None)
+
+
+def validate_checkpoint_verify_paths(args: argparse.Namespace, *, project_root: Path) -> None:
+    validate_namespace_paths(args, field_scopes=CHECKPOINT_VERIFY_PATH_SCOPES, project_root=project_root, artifact_root=None)
+
+
+def validate_checkpoint_restore_paths(args: argparse.Namespace, *, project_root: Path) -> None:
+    validate_namespace_paths(args, field_scopes=CHECKPOINT_RESTORE_PATH_SCOPES, project_root=project_root, artifact_root=None)
+
+
+
+
 
 
 def _git_head_ref(project_root: Path) -> str:
@@ -1061,33 +1095,66 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
+    try:
+        project_root = current_project_root()
 
-    if args.cmd == "create":
-        record = create_record(args)
-        save_json(Path(args.output), record)
-        print(json.dumps({"result": record["result"], "checkpoint_id": record["checkpoint_id"]}, ensure_ascii=True))
-        return 0
+        if args.cmd == "create":
+            checkpoint_root = Path(args.checkpoint_root).expanduser().resolve()
+            validate_root_within_project(
+                "checkpoint_root",
+                args.checkpoint_root,
+                root=checkpoint_root,
+                project_root=project_root,
+                artifact_root=None,
+            )
+            validate_checkpoint_create_paths(args, project_root=project_root)
+            record = create_record(args)
+            save_json(Path(args.output), record)
+            print(json.dumps({"result": record["result"], "checkpoint_id": record["checkpoint_id"]}, ensure_ascii=True))
+            return 0
 
-    if args.cmd == "verify":
-        record = load_json(Path(args.checkpoint_record_file))
-        verified = verify_record(record)
-        save_json(Path(args.output), verified)
-        print(json.dumps({"result": verified["result"], "verification_status": verified["verification"]["status"]}, ensure_ascii=True))
-        return 0 if verified["result"] == "OK" else 2
+        if args.cmd == "verify":
+            validate_checkpoint_verify_paths(args, project_root=project_root)
+            record = load_json(Path(args.checkpoint_record_file))
+            verified = verify_record(record)
+            save_json(Path(args.output), verified)
+            print(json.dumps({"result": verified["result"], "verification_status": verified["verification"]["status"]}, ensure_ascii=True))
+            return 0 if verified["result"] == "OK" else 2
 
-    if args.cmd == "restore":
-        record = load_json(Path(args.checkpoint_record_file))
-        restored = restore_record(record, Path(args.target_root))
-        save_json(Path(args.output), restored)
-        print(json.dumps({"result": restored["result"], "event_type": restored["event_type"], "rollback_status": restored["rollback"]["status"]}, ensure_ascii=True))
-        return 0 if restored["result"] == "OK" else 2
+        if args.cmd == "restore":
+            target_root = Path(args.target_root).expanduser().resolve()
+            validate_root_within_project(
+                "target_root",
+                args.target_root,
+                root=target_root,
+                project_root=project_root,
+                artifact_root=None,
+            )
+            validate_checkpoint_restore_paths(args, project_root=project_root)
+            record = load_json(Path(args.checkpoint_record_file))
+            restored = restore_record(record, Path(args.target_root))
+            save_json(Path(args.output), restored)
+            print(json.dumps({"result": restored["result"], "event_type": restored["event_type"], "rollback_status": restored["rollback"]["status"]}, ensure_ascii=True))
+            return 0 if restored["result"] == "OK" else 2
 
-    if args.cmd == "preview":
-        record = load_json(Path(args.checkpoint_record_file))
-        preview = restore_preview(record, Path(args.target_root))
-        save_json(Path(args.output), preview)
-        print(json.dumps({"result": "OK", "restore_status": preview["restore_status"], "restore_supported": preview["restore_supported"]}, ensure_ascii=True))
-        return 0
+        if args.cmd == "preview":
+            target_root = Path(args.target_root).expanduser().resolve()
+            validate_root_within_project(
+                "target_root",
+                args.target_root,
+                root=target_root,
+                project_root=project_root,
+                artifact_root=None,
+            )
+            validate_checkpoint_restore_paths(args, project_root=project_root)
+            record = load_json(Path(args.checkpoint_record_file))
+            preview = restore_preview(record, Path(args.target_root))
+            save_json(Path(args.output), preview)
+            print(json.dumps({"result": "OK", "restore_status": preview["restore_status"], "restore_supported": preview["restore_supported"]}, ensure_ascii=True))
+            return 0
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
 
     parser.error(f"unknown command {args.cmd}")
     return 2

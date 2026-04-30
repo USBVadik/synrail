@@ -8,6 +8,11 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
+
 
 VERDICTS = {
     "baseline_identity": "NOT_ACCEPTABLE_BASELINE_IDENTITY",
@@ -34,12 +39,8 @@ FAILURE_CLASSES = {
 }
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
 
 
 def gate(status: str, note: str) -> dict:

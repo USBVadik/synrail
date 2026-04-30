@@ -20,6 +20,23 @@ from synrail_cost_of_control_v0 import build_cost_record, build_cost_record_from
 
 
 class CostOfControlV0Tests(unittest.TestCase):
+    def test_all_comparison_input_fixtures_include_required_data_provenance(self) -> None:
+        schema_v0 = json.loads((REPO_ROOT / "schemas" / "comparison_input_v0.schema.json").read_text())
+        schema_v1 = json.loads((REPO_ROOT / "schemas" / "comparison_input_v1.schema.json").read_text())
+
+        for path in sorted((REPO_ROOT / "fixtures").glob("comparison_input_*.json")):
+            payload = json.loads(path.read_text())
+            schema = schema_v1 if payload["schema_version"] == "comparison_input_v1" else schema_v0
+            required = set(schema["required"])
+            self.assertTrue(required.issubset(payload.keys()), path.name)
+            self.assertIn("data_provenance", schema["properties"], path.name)
+            self.assertEqual(
+                ["curated_local_estimate", "pressure_synthetic", "external_empirical"],
+                schema["properties"]["data_provenance"]["enum"],
+                path.name,
+            )
+            self.assertEqual("curated_local_estimate", payload["data_provenance"], path.name)
+
     def test_reference_fixtures_and_schema_include_kernel_cheapness_fields(self) -> None:
         schema = json.loads((REPO_ROOT / "schemas" / "cost_of_control_record_v0.schema.json").read_text())
         reading = schema["properties"]["reading"]

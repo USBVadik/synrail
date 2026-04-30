@@ -8,13 +8,39 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+try:
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+except ImportError:
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+GOVERNED_COST_DELTA_PATH_SCOPES = {
+    "unprepared_file": ARTIFACT_SCOPE,
+    "prepared_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_governed_cost_delta_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=GOVERNED_COST_DELTA_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
+
+
+
 
 
 def summarize(unprepared: dict, prepared: dict) -> dict:
@@ -106,37 +132,52 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    unprepared = load_json(Path(args.unprepared_file))
-    prepared = load_json(Path(args.prepared_file))
+    try:
+        artifact_root = Path(args.unprepared_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "unprepared_file",
+            args.unprepared_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_governed_cost_delta_paths(args, artifact_root=artifact_root, project_root=project_root)
+        unprepared = load_json(Path(args.unprepared_file))
+        prepared = load_json(Path(args.prepared_file))
 
-    if unprepared.get("schema_version") != "governed_path_cost_input_v0":
-        print(json.dumps({"result": "ERROR", "reason": "UNPREPARED_INPUT_SCHEMA_MISMATCH"}, ensure_ascii=True))
-        return 2
-    if prepared.get("schema_version") != "governed_path_cost_input_v0":
-        print(json.dumps({"result": "ERROR", "reason": "PREPARED_INPUT_SCHEMA_MISMATCH"}, ensure_ascii=True))
-        return 2
-    if unprepared["scenario_id"] != prepared["scenario_id"]:
-        print(json.dumps({"result": "ERROR", "reason": "SCENARIO_ID_MISMATCH"}, ensure_ascii=True))
-        return 2
-    if unprepared["scenario_class"] != prepared["scenario_class"]:
-        print(json.dumps({"result": "ERROR", "reason": "SCENARIO_CLASS_MISMATCH"}, ensure_ascii=True))
-        return 2
+        if unprepared.get("schema_version") != "governed_path_cost_input_v0":
+            print(json.dumps({"result": "ERROR", "reason": "UNPREPARED_INPUT_SCHEMA_MISMATCH"}, ensure_ascii=True))
+            return 2
+        if prepared.get("schema_version") != "governed_path_cost_input_v0":
+            print(json.dumps({"result": "ERROR", "reason": "PREPARED_INPUT_SCHEMA_MISMATCH"}, ensure_ascii=True))
+            return 2
+        if unprepared["scenario_id"] != prepared["scenario_id"]:
+            print(json.dumps({"result": "ERROR", "reason": "SCENARIO_ID_MISMATCH"}, ensure_ascii=True))
+            return 2
+        if unprepared["scenario_class"] != prepared["scenario_class"]:
+            print(json.dumps({"result": "ERROR", "reason": "SCENARIO_CLASS_MISMATCH"}, ensure_ascii=True))
+            return 2
 
-    verdict, why, reasons, summary = compare(unprepared, prepared)
-    record = {
-        "schema_version": "governed_path_cost_delta_v0",
-        "scenario_id": unprepared["scenario_id"],
-        "scenario_class": unprepared["scenario_class"],
-        "task_class": unprepared["task_class"],
-        "unprepared_path": unprepared["path_id"],
-        "prepared_path": prepared["path_id"],
-        "unprepared": unprepared,
-        "prepared": prepared,
-        "economics_summary": summary,
-        "verdict": verdict,
-        "why_verdict": why,
-        "reasons": reasons,
-    }
+        verdict, why, reasons, summary = compare(unprepared, prepared)
+        record = {
+            "schema_version": "governed_path_cost_delta_v0",
+            "scenario_id": unprepared["scenario_id"],
+            "scenario_class": unprepared["scenario_class"],
+            "task_class": unprepared["task_class"],
+            "unprepared_path": unprepared["path_id"],
+            "prepared_path": prepared["path_id"],
+            "unprepared": unprepared,
+            "prepared": prepared,
+            "economics_summary": summary,
+            "verdict": verdict,
+            "why_verdict": why,
+            "reasons": reasons,
+        }
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     save_json(Path(args.output), record)
     print(json.dumps({"result": "OK", "verdict": verdict}, ensure_ascii=True))
     return 0

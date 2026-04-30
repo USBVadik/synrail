@@ -3,6 +3,7 @@
   "system": "baseline",
   "scenario_id": "SCENARIO_HYBRID_001",
   "task_class": "medium_risk_ambiguous_fix",
+  "data_provenance": "curated_local_estimate",
   "closure_result": "ACCEPTED",
   "blocker_to_closure_cycles": 2,
   "false_success_risk": "LOW",

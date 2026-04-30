@@ -8,6 +8,21 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_io_v0 import save_json
+except ImportError:
+    from synrail_io_v0 import save_json
+
+try:
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+except ImportError:
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+
+
+PROOF_PLAN_PATH_SCOPES = {
+    "artifact_root": ARTIFACT_SCOPE,
+}
+
 
 REQUIRED_SECTION_NAMES = [
     "final_result",
@@ -18,8 +33,19 @@ REQUIRED_SECTION_NAMES = [
 ]
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_proof_plan_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=PROOF_PLAN_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
+
 
 
 def build_plan(args: argparse.Namespace) -> dict:
@@ -65,7 +91,22 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    plan = build_plan(args)
+    try:
+        artifact_root = Path(args.artifact_root).expanduser().resolve()
+        project_root = current_project_root()
+        validate_root_within_project(
+            "artifact_root",
+            args.artifact_root,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_proof_plan_paths(args, artifact_root=artifact_root, project_root=project_root)
+        plan = build_plan(args)
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     save_json(Path(args.output), plan)
     print(json.dumps({"result": "OK", "planning_status": plan["planning_status"]}, ensure_ascii=True))
     return 0
