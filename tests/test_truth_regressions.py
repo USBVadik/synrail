@@ -7,7 +7,9 @@ import argparse
 import copy
 import hashlib
 import json
+import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -300,6 +302,157 @@ class TruthRegressionTests(unittest.TestCase):
             record["coverage"]["critical_modes_without_measured_evidence"],
         )
 
+    def test_doctor_rejects_symlinked_coverage_profile_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_coverage_profile_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            profile_target = tmp / "real_profile.json"
+            profile = load_json(TOOLS_ROOT / "doctor_coverage_profile_v0.json")
+            profile_target.write_text(json.dumps(profile, indent=2, ensure_ascii=True) + "\n")
+            profile_link = tmp / "profile_link.json"
+            profile_link.symlink_to(profile_target)
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.coverage_profile_file = str(profile_link)
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_DOCTOR_COVERAGE", record["final_verdict"])
+        self.assertFalse(record["coverage"]["threshold_met"])
+        self.assertEqual("BLOCKED", record["coverage"]["gate_status"])
+        self.assertEqual("DOCTOR_COVERAGE_PROFILE_SYMLINK_SURFACE", record["coverage"]["gate_reason"])
+
+    def test_doctor_rejects_symlinked_coverage_corpus_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_coverage_corpus_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+
+            corpus_target = tmp / "real_corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_target.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+            corpus_link = tmp / "corpus_link.json"
+            corpus_link.symlink_to(corpus_target)
+
+            args = doctor_args(corpus_file=corpus_target, target_path=target_root, artifact_path=artifact_path)
+            args.coverage_corpus_file = str(corpus_link)
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_DOCTOR_COVERAGE", record["final_verdict"])
+        self.assertFalse(record["coverage"]["threshold_met"])
+        self.assertEqual("BLOCKED", record["coverage"]["gate_status"])
+        self.assertEqual("DOCTOR_COVERAGE_CORPUS_SYMLINK_SURFACE", record["coverage"]["gate_reason"])
+
+    def test_doctor_rejects_symlinked_coverage_profile_parent_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_coverage_profile_parent_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            real_profile_root = tmp / "real_profile_root"
+            linked_profile_root = tmp / "linked_profile_root"
+            real_profile_root.mkdir(parents=True, exist_ok=True)
+            linked_profile_root.symlink_to(real_profile_root, target_is_directory=True)
+            profile = load_json(TOOLS_ROOT / "doctor_coverage_profile_v0.json")
+            (real_profile_root / "profile.json").write_text(json.dumps(profile, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.coverage_profile_file = str(linked_profile_root / "profile.json")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_DOCTOR_COVERAGE", record["final_verdict"])
+        self.assertFalse(record["coverage"]["threshold_met"])
+        self.assertEqual("BLOCKED", record["coverage"]["gate_status"])
+        self.assertEqual("DOCTOR_COVERAGE_PROFILE_PARENT_SYMLINK_SURFACE", record["coverage"]["gate_reason"])
+
+    def test_doctor_rejects_symlinked_coverage_corpus_parent_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_coverage_corpus_parent_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+
+            real_corpus_root = tmp / "real_corpus_root"
+            linked_corpus_root = tmp / "linked_corpus_root"
+            real_corpus_root.mkdir(parents=True, exist_ok=True)
+            linked_corpus_root.symlink_to(real_corpus_root, target_is_directory=True)
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            (real_corpus_root / "corpus.json").write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=real_corpus_root / "corpus.json", target_path=target_root, artifact_path=artifact_path)
+            args.coverage_corpus_file = str(linked_corpus_root / "corpus.json")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_DOCTOR_COVERAGE", record["final_verdict"])
+        self.assertFalse(record["coverage"]["threshold_met"])
+        self.assertEqual("BLOCKED", record["coverage"]["gate_status"])
+        self.assertEqual("DOCTOR_COVERAGE_CORPUS_PARENT_SYMLINK_SURFACE", record["coverage"]["gate_reason"])
+
+    def test_doctor_rejects_symlinked_coverage_profile_ancestor_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_coverage_profile_ancestor_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            corpus_path = tmp / "corpus.json"
+            real_inputs_root = tmp / "real_inputs"
+            linked_inputs_root = tmp / "linked_inputs"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+            (real_inputs_root / "profiles").mkdir(parents=True, exist_ok=True)
+            (real_inputs_root / "profiles" / "nested_profile.json").write_text(
+                json.dumps(load_json(TOOLS_ROOT / "doctor_coverage_profile_v0.json"), indent=2, ensure_ascii=True) + "\n"
+            )
+            linked_inputs_root.symlink_to(real_inputs_root, target_is_directory=True)
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.coverage_profile_file = str(linked_inputs_root / "profiles" / "nested_profile.json")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_DOCTOR_COVERAGE", record["final_verdict"])
+        self.assertFalse(record["coverage"]["threshold_met"])
+        self.assertEqual("BLOCKED", record["coverage"]["gate_status"])
+        self.assertEqual("DOCTOR_COVERAGE_PROFILE_ANCESTOR_SYMLINK_SURFACE", record["coverage"]["gate_reason"])
+
+    def test_doctor_rejects_symlinked_coverage_corpus_ancestor_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_coverage_corpus_ancestor_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            real_inputs_root = tmp / "real_inputs"
+            linked_inputs_root = tmp / "linked_inputs"
+            target_root.mkdir(parents=True, exist_ok=True)
+            (real_inputs_root / "corpora").mkdir(parents=True, exist_ok=True)
+            (real_inputs_root / "corpora" / "nested_corpus.json").write_text(
+                json.dumps(load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json"), indent=2, ensure_ascii=True) + "\n"
+            )
+            linked_inputs_root.symlink_to(real_inputs_root, target_is_directory=True)
+
+            args = doctor_args(corpus_file=real_inputs_root / "corpora" / "nested_corpus.json", target_path=target_root, artifact_path=artifact_path)
+            args.coverage_corpus_file = str(linked_inputs_root / "corpora" / "nested_corpus.json")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_DOCTOR_COVERAGE", record["final_verdict"])
+        self.assertFalse(record["coverage"]["threshold_met"])
+        self.assertEqual("BLOCKED", record["coverage"]["gate_status"])
+        self.assertEqual("DOCTOR_COVERAGE_CORPUS_ANCESTOR_SYMLINK_SURFACE", record["coverage"]["gate_reason"])
+
     def test_doctor_identity_silent_pass_is_now_blocked(self) -> None:
         """Expected target identity specified but no target_identity_file → must FAIL."""
         with tempfile.TemporaryDirectory(prefix="synrail_doctor_identity_") as tmpdir:
@@ -368,6 +521,215 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("FAIL", record["gate_results"]["baseline_identity"]["status"])
         self.assertIn("does not match", record["gate_results"]["baseline_identity"]["note"])
 
+    def test_doctor_rejects_symlinked_target_identity_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_target_identity_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            identity_target = tmp / "real_target_identity.txt"
+            identity_target.write_text("EXPECTED_SURFACE_001\n")
+            identity_link = tmp / "target_identity_link.txt"
+            identity_link.symlink_to(identity_target)
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.expected_target_identity = "EXPECTED_SURFACE_001"
+            args.target_identity_file = str(identity_link)
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_BASELINE_IDENTITY", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["baseline_identity"]["status"])
+        self.assertIn("symlink", record["gate_results"]["baseline_identity"]["note"])
+
+    def test_doctor_rejects_symlinked_clean_execution_parent_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_clean_execution_parent_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            real_target_root = tmp / "real_target_root"
+            linked_target_root = tmp / "linked_target_root"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            corpus_path = tmp / "corpus.json"
+            real_target_root.mkdir(parents=True, exist_ok=True)
+            linked_target_root.symlink_to(real_target_root, target_is_directory=True)
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(
+                corpus_file=corpus_path,
+                target_path=linked_target_root / "child_target",
+                artifact_path=artifact_path,
+            )
+            args.clean_surface = False
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("FAIL", record["gate_results"]["clean_execution_surface"]["status"])
+        self.assertIn("parent is a symlink", record["gate_results"]["clean_execution_surface"]["note"])
+
+    def test_doctor_rejects_symlinked_clean_execution_ancestor_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_clean_execution_ancestor_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            real_target_root = tmp / "real_target_root"
+            linked_ancestor_root = tmp / "linked_ancestor_root"
+            nested_root = linked_ancestor_root / "nested"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            corpus_path = tmp / "corpus.json"
+            real_target_root.mkdir(parents=True, exist_ok=True)
+            linked_ancestor_root.symlink_to(real_target_root, target_is_directory=True)
+            (real_target_root / "nested").mkdir(parents=True, exist_ok=True)
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(
+                corpus_file=corpus_path,
+                target_path=nested_root / "child_target",
+                artifact_path=artifact_path,
+            )
+            args.clean_surface = False
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("FAIL", record["gate_results"]["clean_execution_surface"]["status"])
+        self.assertIn("ancestor is a symlink", record["gate_results"]["clean_execution_surface"]["note"])
+
+    def test_doctor_allows_clean_execution_when_symlink_is_above_target_contour(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_clean_execution_bounded_") as tmpdir:
+            tmp = Path(tmpdir)
+            real_workspace = tmp / "real_workspace"
+            workspace_link = tmp / "workspace_link"
+            project_root = workspace_link / "project"
+            target_root = project_root / "target_surface"
+            artifact_path = project_root / "artifacts" / "final_result.json"
+            real_workspace.mkdir(parents=True, exist_ok=True)
+            workspace_link.symlink_to(real_workspace, target_is_directory=True)
+            target_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "artifacts").mkdir(parents=True, exist_ok=True)
+            corpus_path = project_root / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(
+                corpus_file=corpus_path,
+                target_path=target_root,
+                artifact_path=artifact_path,
+            )
+            args.clean_surface = False
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("PASS", record["gate_results"]["clean_execution_surface"]["status"])
+        self.assertIn("explicitly observed", record["gate_results"]["clean_execution_surface"]["note"])
+
+    def test_doctor_rejects_symlinked_target_identity_parent_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_target_identity_parent_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            real_identity_root = tmp / "real_identity_root"
+            linked_identity_root = tmp / "linked_identity_root"
+            real_identity_root.mkdir(parents=True, exist_ok=True)
+            linked_identity_root.symlink_to(real_identity_root, target_is_directory=True)
+            (real_identity_root / "target_identity.txt").write_text("EXPECTED_SURFACE_001\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.expected_target_identity = "EXPECTED_SURFACE_001"
+            args.target_identity_file = str(linked_identity_root / "target_identity.txt")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_BASELINE_IDENTITY", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["baseline_identity"]["status"])
+        self.assertIn("parent is a symlink", record["gate_results"]["baseline_identity"]["note"])
+
+    def test_doctor_rejects_symlinked_target_identity_ancestor_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_target_identity_ancestor_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            real_identity_root = tmp / "real_identity_root"
+            linked_ancestor_root = tmp / "linked_ancestor_root"
+            nested_root = linked_ancestor_root / "nested"
+            real_identity_root.mkdir(parents=True, exist_ok=True)
+            linked_ancestor_root.symlink_to(real_identity_root, target_is_directory=True)
+            (real_identity_root / "nested").mkdir(parents=True, exist_ok=True)
+            (real_identity_root / "nested" / "target_identity.txt").write_text("EXPECTED_SURFACE_001\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.expected_target_identity = "EXPECTED_SURFACE_001"
+            args.target_identity_file = str(nested_root / "target_identity.txt")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_BASELINE_IDENTITY", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["baseline_identity"]["status"])
+        self.assertIn("ancestor is a symlink", record["gate_results"]["baseline_identity"]["note"])
+
+    def test_doctor_allows_target_identity_when_symlink_is_above_target_contour(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_target_identity_bounded_") as tmpdir:
+            tmp = Path(tmpdir)
+            real_workspace = tmp / "real_workspace"
+            workspace_link = tmp / "workspace_link"
+            project_root = workspace_link / "project"
+            target_root = project_root / "target_surface"
+            artifact_path = project_root / "artifacts" / "final_result.json"
+            real_workspace.mkdir(parents=True, exist_ok=True)
+            workspace_link.symlink_to(real_workspace, target_is_directory=True)
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = project_root / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+            identity_dir = project_root / "identities"
+            identity_dir.mkdir(parents=True, exist_ok=True)
+            (identity_dir / "target_identity.txt").write_text("EXPECTED_SURFACE_001\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.expected_target_identity = "EXPECTED_SURFACE_001"
+            args.target_identity_file = str(identity_dir / "target_identity.txt")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("PASS", record["gate_results"]["baseline_identity"]["status"])
+        self.assertIn("matches expectation", record["gate_results"]["baseline_identity"]["note"])
+
+    def test_doctor_rejects_symlinked_target_execution_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_target_surface_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            real_target_root = tmp / "real_target_surface"
+            target_link = tmp / "target_surface_link"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            real_target_root.mkdir(parents=True, exist_ok=True)
+            target_link.symlink_to(real_target_root, target_is_directory=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_link, artifact_path=artifact_path)
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.helper_ok = True
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_DIRTY_SURFACE", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["clean_execution_surface"]["status"])
+        self.assertIn("symlink", record["gate_results"]["clean_execution_surface"]["note"])
+
     def test_doctor_records_override_gates_for_true_bypass_flags(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_doctor_override_") as tmpdir:
             tmp = Path(tmpdir)
@@ -391,13 +753,13 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertIn("credential_surface", record["override_gates"])
         self.assertIn("prompt_task_identity", record["override_gates"])
         self.assertEqual(
-            {
-                "gate": "clean_execution_surface",
-                "reason": "operator bypass via --clean-surface",
-            },
-            record["override_summary"][0],
+            "doctor override present: clean_execution_surface, artifact_viability, helper_integrity, credential_surface, prompt_task_identity",
+            record["override_summary"],
         )
-        self.assertIn("clean_execution_surface: operator bypass via --clean-surface", record["override_warning"])
+        self.assertIn(
+            "clean_execution_surface: operator bypass via --clean-surface",
+            record["override_warnings"],
+        )
         self.assertTrue(record["gate_results"]["clean_execution_surface"]["override"])
         self.assertEqual(
             "operator bypass via --clean-surface",
@@ -451,25 +813,2462 @@ class TruthRegressionTests(unittest.TestCase):
             record = build_doctor_record(args)
 
         self.assertEqual([], record["override_gates"])
-        self.assertEqual([], record["override_summary"])
-        self.assertEqual("", record["override_warning"])
         self.assertFalse(record["gate_results"]["clean_execution_surface"]["override"])
         self.assertEqual("", record["gate_results"]["clean_execution_surface"]["override_reason"])
 
-    def test_closure_rejects_doctor_override_gates_on_otherwise_valid_bundle(self) -> None:
+    def test_doctor_rejects_symlinked_prompt_identity_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_prompt_identity_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_root = tmp / "artifacts"
+            artifact_path = artifact_root / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            prompt_target = tmp / "real_prompt_identity.txt"
+            prompt_target.write_text("TASK-IDENTITY-001\n")
+            prompt_link = tmp / "prompt_identity_link.txt"
+            prompt_link.symlink_to(prompt_target)
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "EXACT_RETRY_DOCTOR"
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.helper_ok = True
+            args.credentials_ok = True
+            args.expected_task_identity = "TASK-IDENTITY-001"
+            args.prompt_identity_file = str(prompt_link)
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_EXACT_PROMPT_MISSING", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["prompt_task_identity"]["status"])
+        self.assertIn("symlink", record["gate_results"]["prompt_task_identity"]["note"])
+
+    def test_doctor_rejects_symlinked_prompt_identity_parent_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_prompt_identity_parent_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_root = tmp / "artifacts"
+            artifact_path = artifact_root / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            real_prompt_root = tmp / "real_prompt_root"
+            linked_prompt_root = tmp / "linked_prompt_root"
+            real_prompt_root.mkdir(parents=True, exist_ok=True)
+            linked_prompt_root.symlink_to(real_prompt_root, target_is_directory=True)
+            (real_prompt_root / "prompt_identity.txt").write_text("TASK-IDENTITY-001\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "EXACT_RETRY_DOCTOR"
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.helper_ok = True
+            args.credentials_ok = True
+            args.expected_task_identity = "TASK-IDENTITY-001"
+            args.prompt_identity_file = str(linked_prompt_root / "prompt_identity.txt")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_EXACT_PROMPT_MISSING", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["prompt_task_identity"]["status"])
+        self.assertIn("parent is a symlink", record["gate_results"]["prompt_task_identity"]["note"])
+
+    def test_doctor_rejects_symlinked_prompt_identity_ancestor_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_prompt_identity_ancestor_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_root = tmp / "artifacts"
+            artifact_path = artifact_root / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            real_prompt_root = tmp / "real_prompt_root"
+            linked_ancestor_root = tmp / "linked_ancestor_root"
+            nested_root = linked_ancestor_root / "nested"
+            real_prompt_root.mkdir(parents=True, exist_ok=True)
+            linked_ancestor_root.symlink_to(real_prompt_root, target_is_directory=True)
+            (real_prompt_root / "nested").mkdir(parents=True, exist_ok=True)
+            (real_prompt_root / "nested" / "prompt_identity.txt").write_text("TASK-IDENTITY-001\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "EXACT_RETRY_DOCTOR"
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.helper_ok = True
+            args.credentials_ok = True
+            args.expected_task_identity = "TASK-IDENTITY-001"
+            args.prompt_identity_file = str(nested_root / "prompt_identity.txt")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_EXACT_PROMPT_MISSING", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["prompt_task_identity"]["status"])
+        self.assertIn("ancestor is a symlink", record["gate_results"]["prompt_task_identity"]["note"])
+
+    def test_doctor_allows_prompt_identity_when_symlink_is_above_target_contour(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_prompt_identity_bounded_") as tmpdir:
+            tmp = Path(tmpdir)
+            real_workspace = tmp / "real_workspace"
+            workspace_link = tmp / "workspace_link"
+            project_root = workspace_link / "project"
+            target_root = project_root / "target_surface"
+            artifact_root = project_root / "artifacts"
+            artifact_path = artifact_root / "final_result.json"
+            real_workspace.mkdir(parents=True, exist_ok=True)
+            workspace_link.symlink_to(real_workspace, target_is_directory=True)
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = project_root / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+            prompt_dir = project_root / "prompts"
+            prompt_dir.mkdir(parents=True, exist_ok=True)
+            (prompt_dir / "prompt_identity.txt").write_text("TASK-IDENTITY-001\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "EXACT_RETRY_DOCTOR"
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.helper_ok = True
+            args.credentials_ok = True
+            args.expected_task_identity = "TASK-IDENTITY-001"
+            args.prompt_identity_file = str(prompt_dir / "prompt_identity.txt")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("PASS", record["gate_results"]["prompt_task_identity"]["status"])
+        self.assertIn("artifact is present", record["gate_results"]["prompt_task_identity"]["note"])
+
+    def test_doctor_rejects_symlinked_credential_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_credential_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            credential_target = tmp / "real_credentials"
+            credential_target.write_text("aws_access_key_id = demo\n")
+            credential_link = tmp / "credentials_link"
+            credential_link.symlink_to(credential_target)
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "SUPPORT_DOCTOR"
+            args.helper_ok = True
+            args.prompt_identity_ok = True
+            args.credential_env = ["AWS_SHARED_CREDENTIALS_FILE"]
+
+            previous_value = os.environ.get("AWS_SHARED_CREDENTIALS_FILE")
+            os.environ["AWS_SHARED_CREDENTIALS_FILE"] = str(credential_link)
+            try:
+                record = build_doctor_record(args)
+            finally:
+                if previous_value is None:
+                    os.environ.pop("AWS_SHARED_CREDENTIALS_FILE", None)
+                else:
+                    os.environ["AWS_SHARED_CREDENTIALS_FILE"] = previous_value
+
+        self.assertEqual("NOT_ACCEPTABLE_CREDENTIAL_SURFACE", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["credential_surface"]["status"])
+        self.assertIn("symlink", record["gate_results"]["credential_surface"]["note"])
+
+    def test_doctor_rejects_symlinked_credential_parent_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_credential_parent_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            real_credential_root = tmp / "real_credentials_root"
+            linked_credential_root = tmp / "linked_credentials_root"
+            real_credential_root.mkdir(parents=True, exist_ok=True)
+            linked_credential_root.symlink_to(real_credential_root, target_is_directory=True)
+            (real_credential_root / "credentials").write_text("aws_access_key_id = demo\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "SUPPORT_DOCTOR"
+            args.helper_ok = True
+            args.prompt_identity_ok = True
+            args.credential_env = ["AWS_SHARED_CREDENTIALS_FILE"]
+
+            previous_value = os.environ.get("AWS_SHARED_CREDENTIALS_FILE")
+            os.environ["AWS_SHARED_CREDENTIALS_FILE"] = str(linked_credential_root / "credentials")
+            try:
+                record = build_doctor_record(args)
+            finally:
+                if previous_value is None:
+                    os.environ.pop("AWS_SHARED_CREDENTIALS_FILE", None)
+                else:
+                    os.environ["AWS_SHARED_CREDENTIALS_FILE"] = previous_value
+
+        self.assertEqual("NOT_ACCEPTABLE_CREDENTIAL_SURFACE", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["credential_surface"]["status"])
+        self.assertIn("symlinked parent", record["gate_results"]["credential_surface"]["note"])
+
+    def test_doctor_rejects_symlinked_credential_ancestor_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_credential_ancestor_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_path = tmp / "artifacts" / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            real_credential_root = tmp / "real_credentials_root"
+            linked_ancestor_root = tmp / "linked_ancestor_root"
+            nested_root = linked_ancestor_root / "nested"
+            real_credential_root.mkdir(parents=True, exist_ok=True)
+            linked_ancestor_root.symlink_to(real_credential_root, target_is_directory=True)
+            (real_credential_root / "nested").mkdir(parents=True, exist_ok=True)
+            (real_credential_root / "nested" / "credentials").write_text("aws_access_key_id = demo\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "SUPPORT_DOCTOR"
+            args.helper_ok = True
+            args.prompt_identity_ok = True
+            args.credential_env = ["AWS_SHARED_CREDENTIALS_FILE"]
+
+            previous_value = os.environ.get("AWS_SHARED_CREDENTIALS_FILE")
+            os.environ["AWS_SHARED_CREDENTIALS_FILE"] = str(nested_root / "credentials")
+            try:
+                record = build_doctor_record(args)
+            finally:
+                if previous_value is None:
+                    os.environ.pop("AWS_SHARED_CREDENTIALS_FILE", None)
+                else:
+                    os.environ["AWS_SHARED_CREDENTIALS_FILE"] = previous_value
+
+        self.assertEqual("NOT_ACCEPTABLE_CREDENTIAL_SURFACE", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["credential_surface"]["status"])
+        self.assertIn("symlinked ancestor", record["gate_results"]["credential_surface"]["note"])
+
+    def test_doctor_allows_credential_when_symlink_is_above_target_contour(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_credential_bounded_") as tmpdir:
+            tmp = Path(tmpdir)
+            real_workspace = tmp / "real_workspace"
+            workspace_link = tmp / "workspace_link"
+            project_root = workspace_link / "project"
+            target_root = project_root / "target_surface"
+            artifact_path = project_root / "artifacts" / "final_result.json"
+            real_workspace.mkdir(parents=True, exist_ok=True)
+            workspace_link.symlink_to(real_workspace, target_is_directory=True)
+            target_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "artifacts").mkdir(parents=True, exist_ok=True)
+            corpus_path = project_root / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+            credential_dir = project_root / "credentials"
+            credential_dir.mkdir(parents=True, exist_ok=True)
+            (credential_dir / "credentials").write_text("aws_access_key_id = demo\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "SUPPORT_DOCTOR"
+            args.helper_ok = True
+            args.prompt_identity_ok = True
+            args.credential_env = ["AWS_SHARED_CREDENTIALS_FILE"]
+
+            previous_value = os.environ.get("AWS_SHARED_CREDENTIALS_FILE")
+            os.environ["AWS_SHARED_CREDENTIALS_FILE"] = str(credential_dir / "credentials")
+            try:
+                record = build_doctor_record(args)
+            finally:
+                if previous_value is None:
+                    os.environ.pop("AWS_SHARED_CREDENTIALS_FILE", None)
+                else:
+                    os.environ["AWS_SHARED_CREDENTIALS_FILE"] = previous_value
+
+        self.assertEqual("PASS", record["gate_results"]["credential_surface"]["status"])
+        self.assertIn("required credential env is present", record["gate_results"]["credential_surface"]["note"])
+
+    def test_doctor_rejects_symlinked_helper_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_helper_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_root = tmp / "artifacts"
+            artifact_path = artifact_root / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            helper_target = tmp / "real_helper.py"
+            helper_target.write_text("print('ok')\n")
+            helper_link = tmp / "helper_link.py"
+            helper_link.symlink_to(helper_target)
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "SUPPORT_DOCTOR"
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+            args.helper_path = str(helper_link)
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_HELPER_INTEGRITY", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["helper_integrity"]["status"])
+        self.assertIn("symlink", record["gate_results"]["helper_integrity"]["note"])
+
+    def test_doctor_rejects_symlinked_helper_parent_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_helper_parent_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_root = tmp / "artifacts"
+            artifact_path = artifact_root / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            real_helper_root = tmp / "real_helper_root"
+            linked_helper_root = tmp / "linked_helper_root"
+            real_helper_root.mkdir(parents=True, exist_ok=True)
+            linked_helper_root.symlink_to(real_helper_root, target_is_directory=True)
+            (real_helper_root / "helper.py").write_text("print('ok')\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "SUPPORT_DOCTOR"
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+            args.helper_path = str(linked_helper_root / "helper.py")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_HELPER_INTEGRITY", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["helper_integrity"]["status"])
+        self.assertIn("parent is a symlink", record["gate_results"]["helper_integrity"]["note"])
+
+    def test_doctor_rejects_symlinked_helper_ancestor_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_helper_ancestor_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifact_root = tmp / "artifacts"
+            artifact_path = artifact_root / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            real_helper_root = tmp / "real_helper_root"
+            linked_ancestor_root = tmp / "linked_ancestor_root"
+            nested_root = linked_ancestor_root / "nested"
+            real_helper_root.mkdir(parents=True, exist_ok=True)
+            linked_ancestor_root.symlink_to(real_helper_root, target_is_directory=True)
+            (real_helper_root / "nested").mkdir(parents=True, exist_ok=True)
+            (real_helper_root / "nested" / "helper.py").write_text("print('ok')\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "SUPPORT_DOCTOR"
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+            args.helper_path = str(nested_root / "helper.py")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_HELPER_INTEGRITY", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["helper_integrity"]["status"])
+        self.assertIn("ancestor is a symlink", record["gate_results"]["helper_integrity"]["note"])
+
+    def test_doctor_allows_helper_when_symlink_is_above_target_contour(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_helper_bounded_") as tmpdir:
+            tmp = Path(tmpdir)
+            real_workspace = tmp / "real_workspace"
+            workspace_link = tmp / "workspace_link"
+            project_root = workspace_link / "project"
+            target_root = project_root / "target_surface"
+            artifact_root = project_root / "artifacts"
+            artifact_path = artifact_root / "final_result.json"
+            real_workspace.mkdir(parents=True, exist_ok=True)
+            workspace_link.symlink_to(real_workspace, target_is_directory=True)
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = project_root / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+            helper_dir = project_root / "helpers"
+            helper_dir.mkdir(parents=True, exist_ok=True)
+            (helper_dir / "helper.py").write_text("print('ok')\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "SUPPORT_DOCTOR"
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+            args.helper_path = str(helper_dir / "helper.py")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("PASS", record["gate_results"]["helper_integrity"]["status"])
+        self.assertIn("parses successfully", record["gate_results"]["helper_integrity"]["note"])
+
+    def test_doctor_rejects_symlinked_artifact_parent_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_artifact_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            real_artifacts = tmp / "real_artifacts"
+            symlinked_artifacts = tmp / "artifacts_link"
+            target_root.mkdir(parents=True, exist_ok=True)
+            real_artifacts.mkdir(parents=True, exist_ok=True)
+            symlinked_artifacts.symlink_to(real_artifacts, target_is_directory=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            artifact_path = symlinked_artifacts / "final_result.json"
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.helper_ok = True
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_ARTIFACT_PATH", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["artifact_viability"]["status"])
+        self.assertIn("symlink", record["gate_results"]["artifact_viability"]["note"])
+
+    def test_doctor_rejects_symlinked_artifact_ancestor_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_artifact_ancestor_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            real_artifacts = tmp / "real_artifacts"
+            linked_ancestor_root = tmp / "linked_ancestor_root"
+            nested_root = linked_ancestor_root / "nested"
+            target_root.mkdir(parents=True, exist_ok=True)
+            real_artifacts.mkdir(parents=True, exist_ok=True)
+            linked_ancestor_root.symlink_to(real_artifacts, target_is_directory=True)
+            (real_artifacts / "nested").mkdir(parents=True, exist_ok=True)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            artifact_path = nested_root / "final_result.json"
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.helper_ok = True
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_ARTIFACT_PATH", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["artifact_viability"]["status"])
+        self.assertIn("ancestor is a symlink", record["gate_results"]["artifact_viability"]["note"])
+
+    def test_doctor_allows_artifact_path_when_symlink_is_above_target_contour(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_artifact_bounded_") as tmpdir:
+            tmp = Path(tmpdir)
+            real_workspace = tmp / "real_workspace"
+            workspace_link = tmp / "workspace_link"
+            project_root = workspace_link / "project"
+            target_root = project_root / "target_surface"
+            artifact_root = project_root / "artifacts" / "nested"
+            real_workspace.mkdir(parents=True, exist_ok=True)
+            workspace_link.symlink_to(real_workspace, target_is_directory=True)
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = project_root / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_root / "final_result.json")
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.helper_ok = True
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("PASS", record["gate_results"]["artifact_viability"]["status"])
+        self.assertIn("parent exists", record["gate_results"]["artifact_viability"]["note"])
+
+    def test_doctor_rejects_broken_symlinked_artifact_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_artifact_broken_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "target_surface"
+            artifacts = tmp / "artifacts"
+            broken_target = tmp / "missing_final_result.json"
+            artifact_link = artifacts / "final_result.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifacts.mkdir(parents=True, exist_ok=True)
+            artifact_link.symlink_to(broken_target)
+            corpus_path = tmp / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_link)
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.helper_ok = True
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_ARTIFACT_PATH", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["artifact_viability"]["status"])
+        self.assertIn("symlink", record["gate_results"]["artifact_viability"]["note"])
+
+    def test_doctor_cli_rejects_symlinked_output_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_output_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            real_artifact_root = tmp / "real_artifacts"
+            output_link = artifact_root / "doctor_link.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            real_artifact_root.mkdir(parents=True, exist_ok=True)
+            output_link.symlink_to(real_artifact_root / "doctor.json")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(output_link),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--output", payload["path_arg"])
+        self.assertIn("symlink", payload["detail"])
+
+    def test_doctor_cli_rejects_symlinked_output_parent_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_output_parent_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            real_artifact_root = project_root / ".synrail_real"
+            linked_artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            real_artifact_root.mkdir(parents=True, exist_ok=True)
+            linked_artifact_root.symlink_to(real_artifact_root, target_is_directory=True)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(linked_artifact_root / "doctor.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--output", payload["path_arg"])
+        self.assertIn("parent is a symlink", payload["detail"])
+
+    def test_doctor_cli_rejects_symlinked_state_update_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_state_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            real_artifact_root = tmp / "real_artifacts"
+            state_link = artifact_root / "state_link.json"
+            real_state = real_artifact_root / "state.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            real_artifact_root.mkdir(parents=True, exist_ok=True)
+            real_state.write_text("{}\n")
+            state_link.symlink_to(real_state)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--update-state",
+                    "--state-file",
+                    str(state_link),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--state-file", payload["path_arg"])
+        self.assertIn("symlink", payload["detail"])
+
+    def test_doctor_cli_rejects_symlinked_state_update_parent_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_state_parent_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            real_state_root = artifact_root / "real_state"
+            linked_state_root = artifact_root / "state_link"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            real_state_root.mkdir(parents=True, exist_ok=True)
+            linked_state_root.symlink_to(real_state_root, target_is_directory=True)
+            (real_state_root / "state.json").write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--update-state",
+                    "--state-file",
+                    str(linked_state_root / "state.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--state-file", payload["path_arg"])
+        self.assertIn("parent is a symlink", payload["detail"])
+
+    def test_doctor_cli_rejects_symlinked_output_ancestor_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_output_ancestor_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            real_project_root = tmp / "real_project"
+            link_root = tmp / "linked_root"
+            project_root = link_root / "project"
+            artifact_root = project_root / ".synrail"
+            real_project_root.mkdir(parents=True, exist_ok=True)
+            link_root.symlink_to(real_project_root, target_is_directory=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--output", payload["path_arg"])
+        self.assertIn("ancestor is a symlink", payload["detail"])
+
+    def test_doctor_cli_rejects_symlinked_state_update_ancestor_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_state_ancestor_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            real_state_ancestor = artifact_root / "real_state_ancestor"
+            linked_state_ancestor = artifact_root / "state_ancestor_link"
+            real_state_root = real_state_ancestor / "nested"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            real_state_root.mkdir(parents=True, exist_ok=True)
+            linked_state_ancestor.symlink_to(real_state_ancestor, target_is_directory=True)
+            (real_state_root / "state.json").write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--update-state",
+                    "--state-file",
+                    str(linked_state_ancestor / "nested" / "state.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--state-file", payload["path_arg"])
+        self.assertIn("ancestor is a symlink", payload["detail"])
+
+    def run_doctor_cli(self, *extra_args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                sys.executable,
+                str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                *extra_args,
+            ],
+            cwd=cwd,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+    def test_doctor_cli_rejects_target_identity_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_target_identity_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside.txt"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.write_text("outside\n")
+
+            result = self.run_doctor_cli(
+                "--doctor-run-id",
+                "R1",
+                "--doctor-level",
+                "CORE_DOCTOR",
+                "--target-path",
+                str(project_root),
+                "--target-classification",
+                "local",
+                "--baseline-identity",
+                "baseline",
+                "--intended-run-class",
+                "core_probe",
+                "--output",
+                str(artifact_root / "doctor.json"),
+                "--target-identity-file",
+                str(outside),
+                cwd=project_root,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--target-identity-file", payload["path_arg"])
+        self.assertIn("escapes project and artifact roots", payload["detail"])
+
+    def test_acceptance_criteria_build_rejects_output_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_acceptance_build_output_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "acceptance_criteria.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "project_profile.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "project_profile_v0",
+                        "project_root": str(project_root),
+                        "project_type": "generic",
+                        "task_class": "bounded_change",
+                        "target_classification": "attested_target_surface",
+                        "intended_run_class": "core_probe",
+                        "baseline_identity": "trusted_clean",
+                        "execution_surface_identity": "clean-clone",
+                    },
+                    indent=2,
+                    ensure_ascii=True,
+                )
+                + "\n"
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_acceptance_criteria_v0.py"),
+                    "build",
+                    "--project-profile-file",
+                    str(artifact_root / "project_profile.json"),
+                    "--output",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--output", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_acceptance_criteria_validate_rejects_state_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_acceptance_validate_state_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "state.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("{}\n")
+            profile = {
+                "schema_version": "project_profile_v0",
+                "project_root": str(project_root),
+                "project_type": "generic",
+                "task_class": "bounded_change",
+                "target_classification": "attested_target_surface",
+                "intended_run_class": "core_probe",
+                "baseline_identity": "trusted_clean",
+                "execution_surface_identity": "clean-clone",
+            }
+            criteria = build_acceptance_criteria(profile, generated_by="truth-regression-suite")
+            (artifact_root / "project_profile.json").write_text(json.dumps(profile, indent=2, ensure_ascii=True) + "\n")
+            (artifact_root / "acceptance_criteria.json").write_text(json.dumps(criteria, indent=2, ensure_ascii=True) + "\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_acceptance_criteria_v0.py"),
+                    "validate",
+                    "--criteria-file",
+                    str(artifact_root / "acceptance_criteria.json"),
+                    "--state-file",
+                    str(outside),
+                    "--project-profile-file",
+                    str(artifact_root / "project_profile.json"),
+                    "--output",
+                    str(artifact_root / "acceptance_validation.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--state-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_doctor_cli_rejects_prompt_identity_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_prompt_identity_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = project_root / "prompt_identity.txt"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.write_text("task identity\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "EXACT_RETRY_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "exact_retry",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--prompt-identity-file",
+                    str(outside),
+                    "--expected-task-identity",
+                    "task identity",
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--prompt-identity-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_doctor_cli_rejects_helper_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_helper_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "helper.py"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.write_text("print('ok')\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "SUPPORT_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "support_run",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--helper-path",
+                    str(outside),
+                    "--artifact-viable",
+                    "--credentials-ok",
+                    "--prompt-identity-ok",
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--helper-path", payload["path_arg"])
+        self.assertIn("escapes project root", payload["detail"])
+
+    def test_doctor_cli_rejects_artifact_path_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_artifact_path_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "final_result.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--artifact-path",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--artifact-path", payload["path_arg"])
+        self.assertIn("escapes project and artifact roots", payload["detail"])
+
+    def test_doctor_cli_rejects_coverage_profile_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_coverage_profile_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "profile.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--coverage-profile-file",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--coverage-profile-file", payload["path_arg"])
+        self.assertIn("escapes project root", payload["detail"])
+
+    def test_doctor_cli_rejects_coverage_corpus_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_coverage_corpus_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "corpus.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--coverage-corpus-file",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--coverage-corpus-file", payload["path_arg"])
+        self.assertIn("escapes project root", payload["detail"])
+
+    def test_doctor_cli_rejects_symlinked_target_identity_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_target_identity_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            identity_target = tmp / "real_target_identity.txt"
+            identity_target.write_text("EXPECTED_SURFACE_001\n")
+            identity_link = tmp / "target_identity_link.txt"
+            identity_link.symlink_to(identity_target)
+
+            result = self.run_doctor_cli(
+                "--doctor-run-id", "R1",
+                "--doctor-level", "CORE_DOCTOR",
+                "--target-path", str(project_root),
+                "--target-classification", "local",
+                "--baseline-identity", "baseline",
+                "--intended-run-class", "core_probe",
+                "--output", str(artifact_root / "doctor.json"),
+                "--target-identity-file", str(identity_link),
+                cwd=project_root,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("--target-identity-file", payload["path_arg"])
+        self.assertIn("symlink", payload["detail"])
+
+    def test_doctor_cli_rejects_symlinked_prompt_identity_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_prompt_identity_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            prompt_target = tmp / "real_prompt_identity.txt"
+            prompt_target.write_text("TASK-IDENTITY-001\n")
+            prompt_link = tmp / "prompt_identity_link.txt"
+            prompt_link.symlink_to(prompt_target)
+
+            result = self.run_doctor_cli(
+                "--doctor-run-id", "R1",
+                "--doctor-level", "EXACT_RETRY_DOCTOR",
+                "--target-path", str(project_root),
+                "--target-classification", "local",
+                "--baseline-identity", "baseline",
+                "--intended-run-class", "exact_retry",
+                "--output", str(artifact_root / "doctor.json"),
+                "--prompt-identity-file", str(prompt_link),
+                "--expected-task-identity", "TASK-IDENTITY-001",
+                cwd=project_root,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("--prompt-identity-file", payload["path_arg"])
+        self.assertIn("symlink", payload["detail"])
+
+    def test_doctor_cli_rejects_symlinked_helper_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_helper_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            helper_target = tmp / "real_helper.py"
+            helper_target.write_text("print('ok')\n")
+            helper_link = tmp / "helper_link.py"
+            helper_link.symlink_to(helper_target)
+
+            result = self.run_doctor_cli(
+                "--doctor-run-id", "R1",
+                "--doctor-level", "SUPPORT_DOCTOR",
+                "--target-path", str(project_root),
+                "--target-classification", "local",
+                "--baseline-identity", "baseline",
+                "--intended-run-class", "support_run",
+                "--output", str(artifact_root / "doctor.json"),
+                "--helper-path", str(helper_link),
+                "--artifact-viable",
+                "--credentials-ok",
+                "--prompt-identity-ok",
+                cwd=project_root,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("--helper-path", payload["path_arg"])
+        self.assertIn("symlink", payload["detail"])
+
+    def test_doctor_cli_rejects_symlinked_artifact_path_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_artifact_path_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            artifact_target = tmp / "real_final_result.json"
+            artifact_target.write_text("{}\n")
+            artifact_link = tmp / "artifact_link.json"
+            artifact_link.symlink_to(artifact_target)
+
+            result = self.run_doctor_cli(
+                "--doctor-run-id", "R1",
+                "--doctor-level", "CORE_DOCTOR",
+                "--target-path", str(project_root),
+                "--target-classification", "local",
+                "--baseline-identity", "baseline",
+                "--intended-run-class", "core_probe",
+                "--output", str(artifact_root / "doctor.json"),
+                "--artifact-path", str(artifact_link),
+                cwd=project_root,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("--artifact-path", payload["path_arg"])
+        self.assertIn("symlink", payload["detail"])
+
+    def test_doctor_cli_rejects_symlinked_coverage_profile_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_coverage_profile_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            profile_target = tmp / "real_profile.json"
+            profile_target.write_text("{}\n")
+            profile_link = tmp / "profile_link.json"
+            profile_link.symlink_to(profile_target)
+
+            result = self.run_doctor_cli(
+                "--doctor-run-id", "R1",
+                "--doctor-level", "CORE_DOCTOR",
+                "--target-path", str(project_root),
+                "--target-classification", "local",
+                "--baseline-identity", "baseline",
+                "--intended-run-class", "core_probe",
+                "--output", str(artifact_root / "doctor.json"),
+                "--coverage-profile-file", str(profile_link),
+                cwd=project_root,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("--coverage-profile-file", payload["path_arg"])
+        self.assertIn("symlink", payload["detail"])
+
+    def test_doctor_cli_rejects_symlinked_coverage_corpus_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_cli_coverage_corpus_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            corpus_target = tmp / "real_corpus.json"
+            corpus_target.write_text("[]\n")
+            corpus_link = tmp / "corpus_link.json"
+            corpus_link.symlink_to(corpus_target)
+
+            result = self.run_doctor_cli(
+                "--doctor-run-id", "R1",
+                "--doctor-level", "CORE_DOCTOR",
+                "--target-path", str(project_root),
+                "--target-classification", "local",
+                "--baseline-identity", "baseline",
+                "--intended-run-class", "core_probe",
+                "--output", str(artifact_root / "doctor.json"),
+                "--coverage-corpus-file", str(corpus_link),
+                cwd=project_root,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("--coverage-corpus-file", payload["path_arg"])
+        self.assertIn("symlink", payload["detail"])
+
+    def test_refresh_cli_rejects_bundle_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_refresh_bundle_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "bundle.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("{}\n")
+            (artifact_root / "state.json").write_text(json.dumps(controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")), indent=2, ensure_ascii=True) + "\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_refresh_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--event-type",
+                    "bundle_refresh",
+                    "--bundle-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "refresh.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--bundle-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_closure_cli_rejects_bundle_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_closure_bundle_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "bundle.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("{}\n")
+            (artifact_root / "state.json").write_text(json.dumps(controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")), indent=2, ensure_ascii=True) + "\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_closure_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--bundle-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "closure.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--bundle-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_artifact_consistency_cli_rejects_report_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_artifact_consistency_report_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "report.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("{}\n")
+            (artifact_root / "state.json").write_text(json.dumps(controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")), indent=2, ensure_ascii=True) + "\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_artifact_consistency_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--report-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "artifact_consistency.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--report-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_continuation_arbiter_cli_rejects_repair_receipt_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_continuation_arbiter_receipt_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "repair_receipt.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("{}\n")
+            state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+            packet = load_json(FIXTURES_ROOT / "continuation_arbiter_run_001" / "repair_packet.json")
+            packet["run_id"] = state["run_id"]
+            packet["task_class"] = state["task_class"]
+            (artifact_root / "state.json").write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+            (artifact_root / "repair_packet.json").write_text(json.dumps(packet, indent=2, ensure_ascii=True) + "\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_continuation_arbiter_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--repair-packet-file",
+                    str(artifact_root / "repair_packet.json"),
+                    "--repair-receipt-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "continuation_arbiter.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--repair-receipt-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_bug_packet_cli_rejects_report_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_bug_packet_report_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "report.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("{}\n")
+            (artifact_root / "state.json").write_text(json.dumps(controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")), indent=2, ensure_ascii=True) + "\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_bug_packet_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--report-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "bug_packet.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--report-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_thin_output_cli_rejects_report_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_thin_output_report_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "report.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("{}\n")
+            (artifact_root / "state.json").write_text(json.dumps(controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")), indent=2, ensure_ascii=True) + "\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_thin_output_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--report-file",
+                    str(outside),
+                    "--mode",
+                    "default",
+                    "--output",
+                    str(artifact_root / "thin_output.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--report-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_repair_handoff_cli_rejects_output_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_repair_handoff_output_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "repair_handoff.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "state.json").write_text(json.dumps(controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")), indent=2, ensure_ascii=True) + "\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_repair_handoff_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--output",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--output", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_artifact_repair_receipt_cli_rejects_report_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_artifact_repair_receipt_report_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "report.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "repair_packet.json").write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_artifact_repair_receipt_v0.py"),
+                    "--repair-packet-file",
+                    str(artifact_root / "repair_packet.json"),
+                    "--resulting-state-file",
+                    str(artifact_root / "state.json"),
+                    "--report-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "repair_receipt.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--report-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_checkpoint_preview_cli_rejects_checkpoint_record_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_checkpoint_preview_record_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            outside = tmp / "outside" / "checkpoint_record.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_checkpoint_v0.py"),
+                    "preview",
+                    "--checkpoint-record-file",
+                    str(outside),
+                    "--target-root",
+                    str(project_root),
+                    "--output",
+                    str(project_root / "checkpoint_preview.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--checkpoint-record-file", payload["path_arg"])
+        self.assertIn("escapes project root", payload["detail"])
+
+    def test_consistency_recovery_cli_rejects_checkpoint_record_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_consistency_recovery_checkpoint_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "checkpoint_record.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "consistency.json").write_text("{}\n")
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_consistency_recovery_v0.py"),
+                    "--consistency-file",
+                    str(artifact_root / "consistency.json"),
+                    "--checkpoint-record-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "consistency_recovery.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--checkpoint-record-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_repair_prompt_bridge_cli_rejects_doctor_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_repair_prompt_bridge_doctor_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "doctor.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "repair_packet.json").write_text("{}\n")
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_repair_prompt_bridge_v0.py"),
+                    "--repair-packet-file",
+                    str(artifact_root / "repair_packet.json"),
+                    "--doctor-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "prompt.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--doctor-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_governed_cost_cli_rejects_prepared_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_governed_cost_prepared_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "prepared.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "unprepared.json").write_text("{}\n")
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_governed_cost_delta_v0.py"),
+                    "--unprepared-file",
+                    str(artifact_root / "unprepared.json"),
+                    "--prepared-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "governed_cost_delta.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--prepared-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_hybrid_status_cli_rejects_hybrid_record_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_hybrid_status_record_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "hybrid.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "cost.json").write_text("{}\n")
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_hybrid_status_v0.py"),
+                    "--cost-record",
+                    str(artifact_root / "cost.json"),
+                    "--hybrid-record",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "hybrid_status.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--hybrid-record", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_consistency_recovery_prompt_cli_rejects_thin_output_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_consistency_recovery_prompt_thin_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "thin_output.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "consistency_recovery.json").write_text("{}\n")
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_consistency_recovery_prompt_v0.py"),
+                    "--consistency-recovery-file",
+                    str(artifact_root / "consistency_recovery.json"),
+                    "--thin-output-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "prompt.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--thin-output-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_consistency_recovery_prompt_reading_cli_rejects_prompt_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_consistency_recovery_prompt_reading_prompt_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "prompt.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "consistency_recovery.json").write_text("{}\n")
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_consistency_recovery_prompt_reading_v0.py"),
+                    "--consistency-recovery-file",
+                    str(artifact_root / "consistency_recovery.json"),
+                    "--prompt-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "prompt_reading.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--prompt-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_mode_selector_cli_rejects_governed_cost_delta_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_mode_selector_governed_cost_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "governed_cost_delta.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "cost_record.json").write_text("{}\n")
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_mode_selector_v0.py"),
+                    "--cost-record",
+                    str(artifact_root / "cost_record.json"),
+                    "--scenario-class",
+                    "medium_risk_ambiguous_closure",
+                    "--task-class",
+                    "bounded_change",
+                    "--false-success-risk",
+                    "LOW",
+                    "--recovery-cost",
+                    "LOW",
+                    "--governed-cost-delta",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "mode_recommendation.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--governed-cost-delta", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_mode_selector_uses_curated_label_for_curated_local_estimate_provenance(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_mode_selector_provenance_label_") as tmpdir:
+            tmp = Path(tmpdir)
+            artifact_root = tmp / ".synrail"
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            comparison_path = artifact_root / "comparison.json"
+            cost_path = artifact_root / "cost_record.json"
+            output_path = artifact_root / "recommendation.json"
+            comparison_path.write_text(json.dumps({
+                "schema_version": "baseline_comparison_record_v1",
+                "scenario_id": "S1",
+                "scenario_class": "repeatable_everyday_local",
+                "task_class": "small_template_text_fix",
+                "verdict": "BASELINE_GOOD_ENOUGH",
+                "baseline_data_provenance": "curated_local_estimate",
+                "synrail_data_provenance": "curated_local_estimate",
+                "economics_summary": {
+                    "operator_minutes_added": 1,
+                    "intervention_count_added": 1,
+                    "repair_cycles_added": 0,
+                    "invalidation_count_added": 0,
+                    "closure_latency_minutes_added": 1,
+                    "checks_per_accepted_closure_added": 0,
+                    "false_green_exposure_reduced": 0,
+                    "artifact_completeness_percent_gain": 0,
+                    "mandatory_mental_steps_added": 0,
+                    "trust_bearing_artifacts_added": 0,
+                    "required_visible_surfaces_added": 0,
+                    "skippable_visible_surfaces_added": 0,
+                    "operator_visible_actions_added": 0,
+                    "got_lost_moments_added": 0,
+                    "kernel_control_mass_added": 0,
+                    "behavioral_control_tax_added": 0,
+                    "fixed_control_mass_added": 0,
+                    "total_control_burden_added": 1
+                }
+            }, indent=2, ensure_ascii=True) + "\n")
+            cost_path.write_text(json.dumps({
+                "schema_version": "cost_of_control_record_v0",
+                "source_records": [{"path": str(comparison_path), "scenario_id": "S1", "scenario_class": "repeatable_everyday_local", "verdict": "BASELINE_GOOD_ENOUGH"}],
+                "provenance_mix": ["curated_local_estimate"]
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_mode_selector_v0.py"),
+                    "--cost-record",
+                    str(cost_path),
+                    "--scenario-class",
+                    "repeatable_everyday_local",
+                    "--task-class",
+                    "small_template_text_fix",
+                    "--false-success-risk",
+                    "LOW",
+                    "--recovery-cost",
+                    "LOW",
+                    "--output",
+                    str(output_path),
+                ],
+                cwd=tmp,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(output_path.read_text())
+
+        self.assertEqual(["curated_local_estimate"], payload["evidence_summary"]["provenance_mix"])
+        self.assertIn("current curated-local-estimate class evidence", payload["why"])
+        self.assertNotIn("measured class evidence", payload["why"])
+
+    def test_proof_plan_cli_rejects_output_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_proof_plan_output_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "proof_plan.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_proof_plan_v0.py"),
+                    "--run-id",
+                    "RUN_001",
+                    "--task-class",
+                    "bounded_change",
+                    "--artifact-root",
+                    str(artifact_root),
+                    "--baseline-identity",
+                    "baseline",
+                    "--execution-surface-identity",
+                    "surface",
+                    "--prompt-identity",
+                    "prompt",
+                    "--task-identity",
+                    "task",
+                    "--output",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--output", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_mode_receipt_cli_rejects_output_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_mode_receipt_output_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "mode_receipt.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "recommendation.json").write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_mode_receipt_v0.py"),
+                    "--recommendation-file",
+                    str(artifact_root / "recommendation.json"),
+                    "--output",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--output", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_mode_receipt_carries_selection_evidence_provenance_mix(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_mode_receipt_provenance_mix_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            recommendation = artifact_root / "recommendation.json"
+            receipt = artifact_root / "selection_receipt.json"
+            recommendation.write_text(json.dumps({
+                "schema_version": "mode_recommendation_v0",
+                "scenario_class": "repeatable_everyday_local",
+                "task_class": "small_template_text_fix",
+                "risk_inputs": {
+                    "false_success_risk": "LOW",
+                    "recovery_cost": "LOW",
+                    "execution_surface_ambiguous": False,
+                    "artifact_truth_nontrivial": False,
+                    "explicit_hybrid_ambiguity": ""
+                },
+                "evidence_summary": {
+                    "class_record_count": 1,
+                    "class_verdict": "BASELINE_GOOD_ENOUGH",
+                    "hybrid_status": "",
+                    "provenance_mix": ["curated_local_estimate"],
+                    "avg_operator_minutes_added_if_synrail": 1,
+                    "avg_interventions_added_if_synrail": 1,
+                    "avg_closure_latency_minutes_added_if_synrail": 1,
+                    "avg_false_green_exposure_reduced_if_synrail": 0
+                },
+                "recommended_mode": "LIGHTWEIGHT_BASELINE",
+                "secondary_exception_mode": "",
+                "why": "current curated-local-estimate class evidence already says baseline is good enough here",
+                "next_safe_step": "use the lightweight baseline"
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_mode_receipt_v0.py"),
+                    "--recommendation-file",
+                    str(recommendation),
+                    "--output",
+                    str(receipt),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(receipt.read_text())
+
+        self.assertEqual(["curated_local_estimate"], payload["selection_evidence_provenance_mix"])
+        self.assertEqual(1, payload["estimated_avoided_operator_minutes"])
+
+    def test_preparation_receipt_cli_rejects_bundle_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_preparation_receipt_bundle_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "bundle.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "plan.json").write_text("{}\n")
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_preparation_receipt_v0.py"),
+                    "--plan-file",
+                    str(artifact_root / "plan.json"),
+                    "--bundle-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "preparation_receipt.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--bundle-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_operator_brief_cli_rejects_doctor_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_operator_brief_doctor_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "doctor.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "state.json").write_text("{}\n")
+            (artifact_root / "report.json").write_text("{}\n")
+            (artifact_root / "repair_packet.json").write_text("{}\n")
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_operator_brief_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--report-file",
+                    str(artifact_root / "report.json"),
+                    "--repair-packet-file",
+                    str(artifact_root / "repair_packet.json"),
+                    "--doctor-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "operator_brief.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--doctor-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_second_operator_cli_rejects_run_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_second_operator_run_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "run.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "state.json").write_text("{}\n")
+            (artifact_root / "repair_packet.json").write_text("{}\n")
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_second_operator_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--repair-packet-file",
+                    str(artifact_root / "repair_packet.json"),
+                    "--run-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "second_operator.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--run-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_repair_packet_cli_rejects_report_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_repair_packet_report_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "report.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "state.json").write_text("{}\n")
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_repair_packet_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--artifact-root",
+                    str(artifact_root),
+                    "--report-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "repair_packet.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--report-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_observability_cli_rejects_refresh_file_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_observability_refresh_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "refresh.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "state.json").write_text("{}\n")
+            (artifact_root / "report.json").write_text("{}\n")
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_observability_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--report-file",
+                    str(artifact_root / "report.json"),
+                    "--refresh-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "observability.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--refresh-file", payload["path_arg"])
+        self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_bundle_cli_rejects_output_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_bundle_output_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "bundle.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "final_result.json").write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_bundle_v0.py"),
+                    "--final-result",
+                    str(artifact_root / "final_result.json"),
+                    "--task-class",
+                    "bounded_change",
+                    "--output",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--output", payload["path_arg"])
+        self.assertIn("escapes project root", payload["detail"])
+
+    def test_cli_bundle_command_rejects_output_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_cli_bundle_output_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "bundle.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "final_result.json").write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_cli_v0.py"),
+                    "bundle-check",
+                    "--final-result",
+                    str(artifact_root / "final_result.json"),
+                    "--task-class",
+                    "bounded_change",
+                    "--output",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--output", payload["path_arg"])
+        self.assertIn("escapes project root", payload["detail"])
+
+    def test_spine_orchestrate_rejects_coverage_profile_escape_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_spine_coverage_profile_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside = tmp / "outside" / "profile.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "state.json").write_text("{}\n")
+            (artifact_root / "final_result.json").write_text("{}\n")
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_spine_v0.py"),
+                    "orchestrate",
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "trusted_worktree",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--doctor-output",
+                    str(artifact_root / "doctor.json"),
+                    "--final-result",
+                    str(artifact_root / "final_result.json"),
+                    "--task-class",
+                    "bounded_change",
+                    "--bundle-output",
+                    str(artifact_root / "bundle.json"),
+                    "--closure-output",
+                    str(artifact_root / "closure.json"),
+                    "--report-output",
+                    str(artifact_root / "report.json"),
+                    "--execution-surface-identity",
+                    "surface",
+                    "--prompt-identity",
+                    "prompt",
+                    "--task-identity",
+                    "task",
+                    "--coverage-profile-file",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--coverage-profile-file", payload["path_arg"])
+        self.assertIn("escapes project root", payload["detail"])
+
+    def test_closure_accepts_with_doctor_override_warning_on_otherwise_valid_bundle(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
         state["doctor"]["override_gates"] = ["clean_execution_surface", "artifact_viability"]
         bundle = load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "bundle_valid.json")
 
         verdict = build_verdict(copy.deepcopy(state), bundle)
 
-        self.assertEqual("REJECTED", verdict["closure_status"])
-        self.assertEqual("DOCTOR_OVERRIDE_PRESENT", verdict["blocking_reason"])
-        self.assertEqual("DOCTOR_READINESS", verdict["next_allowed_transition"])
-        self.assertEqual(
-            "rerun doctor without override gates before trusting closure",
-            verdict["narrow_next_safe_step"],
-        )
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+        self.assertEqual("", verdict["blocking_reason"])
+        self.assertEqual("NONE", verdict["next_allowed_transition"])
+        self.assertEqual("NONE", verdict["narrow_next_safe_step"])
         self.assertIn(
             "doctor_override_present: clean_execution_surface, artifact_viability",
             verdict["closure_warnings"],
@@ -509,7 +3308,7 @@ class TruthRegressionTests(unittest.TestCase):
                     "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                     "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
                     "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
-                    "verification_command": "grep -n '^VERIFICATION_RECHECK_ALLOWED_BINARIES =' tools/reference/synrail_bundle_v0.py",
+                    "verification_command": "grep -n 'VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}' tools/reference/synrail_bundle_v0.py",
                     "verification_result": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                 },
                 "artifact_identity": {
@@ -533,99 +3332,191 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("", bundle["verification_recheck"]["skip_reason"])
         self.assertEqual("ACCEPTED", verdict["closure_status"])
 
-    def test_verification_recheck_matches_grep_output_without_expected_line_number(self) -> None:
-        from synrail_bundle_v0 import verification_recheck_result
+    def test_bundle_marks_structured_diff_without_verification_command_as_partial(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
 
-        with tempfile.TemporaryDirectory(prefix="synrail_recheck_grep_line_number_") as tmpdir:
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_missing_command_") as tmpdir:
             tmp = Path(tmpdir)
-            target = tmp / "src" / "app.py"
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text("import os\nimport logging\n")
+            final_result = tmp / "final_result.json"
+            changed_file = "tmp_recheck/app.py"
 
-            result = verification_recheck_result(
-                {
-                    "changed_file": "src/app.py",
-                    "verification_command": "grep -n 'import logging' src/app.py",
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": [changed_file],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": changed_file,
+                    "added_line": "import logging",
+                    "context_before": "from os import path",
+                    "context_after": "return logging",
+                    "verification_command": "",
                     "verification_result": "import logging",
                 },
-                project_root=tmp,
-            )
-
-        self.assertTrue(result["executed"])
-        self.assertTrue(result["command_allowed"])
-        self.assertTrue(result["matched"])
-        self.assertEqual("", result["skip_reason"])
-
-    def test_verification_recheck_preserves_indented_expected_line(self) -> None:
-        from synrail_bundle_v0 import verification_recheck_result
-
-        with tempfile.TemporaryDirectory(prefix="synrail_recheck_indented_expected_") as tmpdir:
-            tmp = Path(tmpdir)
-            target = tmp / "src" / "app.py"
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text("def main():\n    print(\"patched\")\n")
-
-            result = verification_recheck_result(
-                {
-                    "changed_file": "src/app.py",
-                    "verification_command": "grep -n '^    print(\"patched\")$' src/app.py",
-                    "verification_result": '    print("patched")',
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
                 },
-                project_root=tmp,
-            )
+                "cleanup_status": {
+                    "success": True,
+                    "summary": f"Workspace clean after updating only {changed_file} with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
 
-        self.assertTrue(result["executed"])
-        self.assertTrue(result["command_allowed"])
-        self.assertTrue(result["matched"])
-        self.assertEqual("", result["skip_reason"])
+            bundle = build_bundle(bundle_args(final_result=final_result))
+            verdict = build_verdict(copy.deepcopy(state), bundle)
 
-    def test_verification_recheck_rejects_hostile_substring_output(self) -> None:
-        from synrail_bundle_v0 import verification_recheck_result
+        self.assertFalse(bundle["diff_provenance"]["verification_command_present"])
+        self.assertFalse(bundle["diff_provenance"]["structurally_complete"])
+        self.assertIn("diff_provenance", bundle["missing_sections"])
+        self.assertEqual("PARTIAL", bundle["status"])
+        self.assertEqual("PARTIAL", bundle["structural_status"])
+        self.assertEqual("MISSING_PROOF_SECTIONS", verdict["blocking_reason"])
+
+    def test_bundle_recheck_matches_grep_output_without_line_number_in_expected(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_body_match_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            changed_file = "tmp_recheck/app.py"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": [changed_file],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": changed_file,
+                    "added_line": "import logging",
+                    "context_before": "from os import path",
+                    "context_after": "return logging",
+                    "verification_command": f"grep -n 'import logging' {changed_file}",
+                    "verification_result": "import logging",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": f"Workspace clean after updating only {changed_file} with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            args = bundle_args(final_result=final_result)
+            project_root = tmp / "recheck_project"
+            target = project_root / changed_file
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("import logging\n")
+            bundle = build_bundle(args)
+            verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertTrue(bundle["verification_recheck"]["executed"])
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertTrue(bundle["verification_recheck"]["matched"])
+        self.assertEqual("", bundle["verification_recheck"]["skip_reason"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
+    def test_bundle_recheck_rejects_hostile_substring_output(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
 
         with tempfile.TemporaryDirectory(prefix="synrail_recheck_hostile_substring_") as tmpdir:
             tmp = Path(tmpdir)
-            target = tmp / "src" / "app.py"
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text("import os\n# DO NOT import logging\n")
+            final_result = tmp / "final_result.json"
+            changed_file = "tmp_recheck/app.py"
 
-            result = verification_recheck_result(
-                {
-                    "changed_file": "src/app.py",
-                    "verification_command": "grep -n 'import logging' src/app.py",
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": [changed_file],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": changed_file,
+                    "added_line": "import logging",
+                    "context_before": "from os import path",
+                    "context_after": "return logging",
+                    "verification_command": f"grep -n 'import logging' {changed_file}",
                     "verification_result": "import logging",
                 },
-                project_root=tmp,
-            )
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": f"Workspace clean after updating only {changed_file} with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
 
-        self.assertTrue(result["executed"])
-        self.assertTrue(result["command_allowed"])
-        self.assertFalse(result["matched"])
-        self.assertEqual("", result["skip_reason"])
-        self.assertIn("# DO NOT import logging", result["stdout_snippet"])
+            args = bundle_args(final_result=final_result)
+            project_root = tmp / "recheck_project"
+            target = project_root / changed_file
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("# DO NOT import logging\n")
+            bundle = build_bundle(args)
+            verdict = build_verdict(copy.deepcopy(state), bundle)
 
-    def test_verification_recheck_rejects_ambiguous_multi_line_output(self) -> None:
-        from synrail_bundle_v0 import verification_recheck_result
+        self.assertTrue(bundle["verification_recheck"]["executed"])
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertFalse(bundle["verification_recheck"]["matched"])
+        self.assertEqual("VERIFICATION_RECHECK_FAILED", verdict["blocking_reason"])
 
-        with tempfile.TemporaryDirectory(prefix="synrail_recheck_ambiguous_multiline_") as tmpdir:
+    def test_bundle_recheck_rejects_extra_matching_lines(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_extra_lines_") as tmpdir:
             tmp = Path(tmpdir)
-            target = tmp / "src" / "app.py"
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text("import os\n# DO NOT import logging\nimport logging_disabled\n")
+            final_result = tmp / "final_result.json"
+            changed_file = "tmp_recheck/app.py"
 
-            result = verification_recheck_result(
-                {
-                    "changed_file": "src/app.py",
-                    "verification_command": "grep -n logging src/app.py",
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": [changed_file],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": changed_file,
+                    "added_line": "import logging",
+                    "context_before": "from os import path",
+                    "context_after": "return logging",
+                    "verification_command": f"grep -n 'import logging' {changed_file}",
                     "verification_result": "import logging",
                 },
-                project_root=tmp,
-            )
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": f"Workspace clean after updating only {changed_file} with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
 
-        self.assertTrue(result["executed"])
-        self.assertTrue(result["command_allowed"])
-        self.assertFalse(result["matched"])
-        self.assertEqual("", result["skip_reason"])
-        self.assertIn("import logging_disabled", result["stdout_snippet"])
+            args = bundle_args(final_result=final_result)
+            project_root = tmp / "recheck_project"
+            target = project_root / changed_file
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("import logging\nimport logging extra\n")
+            bundle = build_bundle(args)
+            verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertTrue(bundle["verification_recheck"]["executed"])
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertFalse(bundle["verification_recheck"]["matched"])
+        self.assertEqual("VERIFICATION_RECHECK_FAILED", verdict["blocking_reason"])
 
     def test_bundle_recheck_blocks_closure_on_mismatch(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
@@ -835,7 +3726,7 @@ class TruthRegressionTests(unittest.TestCase):
                     "added_line": "def starter_final_result_replacement_is_sanctioned(",
                     "context_before": "def file_sha256(path: Path) -> str:",
                     "context_after": "def normalize_verification_recheck_text(value: str, *, executable: str) -> str:",
-                    "verification_command": "grep -n '^def starter_final_result_replacement_is_sanctioned' tools/reference/synrail_bundle_v0.py",
+                    "verification_command": "grep -Fno 'def starter_final_result_replacement_is_sanctioned(' tools/reference/synrail_bundle_v0.py",
                     "verification_result": "def starter_final_result_replacement_is_sanctioned(",
                 },
                 "artifact_identity": {
@@ -877,7 +3768,7 @@ class TruthRegressionTests(unittest.TestCase):
                     "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                     "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
                     "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
-                    "verification_command": "grep -n '^VERIFICATION_RECHECK_ALLOWED_BINARIES =' tools/reference/synrail_bundle_v0.py",
+                    "verification_command": "grep -Fno 'VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}' tools/reference/synrail_bundle_v0.py",
                     "verification_result": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
                 },
                 "artifact_identity": {
@@ -1703,6 +4594,154 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
         self.assertIn("diff_provenance", bundle["semantically_insufficient_sections"])
 
+    def test_structured_diff_provenance_rejects_multi_file_change_with_single_record(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_multi_file_single_record_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "change_disposition": "modified",
+                "summary": "Updated two files but only attested one with structured provenance.",
+                "modified_files": ["core/router.py", "tools/cinematic.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "core/router.py",
+                    "added_line": "from tools.cinematic import generate_cinematic_zoom",
+                    "context_before": "from tools.logging import get_logger",
+                    "context_after": "ROUTES = {'/zoom': handle_zoom_request}",
+                    "verification_command": "grep -n 'generate_cinematic_zoom' core/router.py",
+                    "verification_result": "12:from tools.cinematic import generate_cinematic_zoom",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only core/router.py and tools/cinematic.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text(
+                "Changed surfaces: core/router.py and tools/cinematic.py\n"
+                "Observed: the router imports generate_cinematic_zoom and the helper implements the zoom effect.\n"
+            )
+            scenario.write_text(
+                "Scenario: local zoom path check\n"
+                "Command: grep -n 'generate_cinematic_zoom' core/router.py\n"
+                "Observed: router import present\n"
+                "Status: PASSED\n"
+            )
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
+        self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
+        self.assertEqual(1, bundle["diff_provenance"]["record_count"])
+        self.assertFalse(bundle["diff_provenance"]["structured_record_sufficient"])
+        self.assertFalse(bundle["verification_corroboration"]["runtime_verification_sufficient"])
+        self.assertIn("diff_provenance", bundle["semantically_insufficient_sections"])
+        self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
+
+    def test_structured_diff_provenance_accepts_multi_file_change_with_per_file_records(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_multi_file_per_record_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+            project_root = tmp / "recheck_project"
+            (project_root / "core").mkdir(parents=True, exist_ok=True)
+            (project_root / "tools").mkdir(parents=True, exist_ok=True)
+            (project_root / "core" / "router.py").write_text(
+                "from tools.logging import get_logger\n"
+                "from tools.cinematic import generate_cinematic_zoom\n"
+                "ROUTES = {'/zoom': handle_zoom_request}\n"
+            )
+            (project_root / "tools" / "cinematic.py").write_text(
+                "def generate_cinematic_zoom() -> str:\n"
+                "    return \"zoom\"\n"
+            )
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "change_disposition": "modified",
+                "summary": "Updated two files and attested both with per-file structured provenance.",
+                "modified_files": ["core/router.py", "tools/cinematic.py"],
+                "git_diff": "",
+                "diff_provenance_records": [
+                    {
+                        "method": "direct_file_observation",
+                        "changed_file": "core/router.py",
+                        "added_line": "from tools.cinematic import generate_cinematic_zoom",
+                        "context_before": "from tools.logging import get_logger",
+                        "context_after": "ROUTES = {'/zoom': handle_zoom_request}",
+                        "verification_command": "grep -n 'generate_cinematic_zoom' core/router.py",
+                        "verification_result": "2:from tools.cinematic import generate_cinematic_zoom",
+                    },
+                    {
+                        "method": "direct_file_observation",
+                        "changed_file": "tools/cinematic.py",
+                        "added_line": "def generate_cinematic_zoom() -> str:",
+                        "context_after": "    return \"zoom\"",
+                        "verification_command": "grep -n 'generate_cinematic_zoom' tools/cinematic.py",
+                        "verification_result": "1:def generate_cinematic_zoom() -> str:",
+                    },
+                ],
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only core/router.py and tools/cinematic.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text(
+                "Changed surfaces: core/router.py and tools/cinematic.py\n"
+                "Observed: the router imports generate_cinematic_zoom and the helper defines it directly.\n"
+            )
+            scenario.write_text(
+                "Scenario: local zoom path check\n"
+                "Command: grep -n 'generate_cinematic_zoom' core/router.py\n"
+                "Observed: router import present\n"
+                "Status: PASSED\n"
+            )
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            args.state_file = str(write_project_profile_for_recheck(final_result.parent, project_root=project_root))
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("COMPLETE", bundle["status"])
+        self.assertEqual("SUFFICIENT", bundle["semantic_status"])
+        self.assertEqual(2, bundle["diff_provenance"]["record_count"])
+        self.assertTrue(bundle["diff_provenance"]["structured_record_sufficient"])
+        self.assertTrue(bundle["verification_corroboration"]["runtime_verification_sufficient"])
+        self.assertTrue(bundle["verification_recheck"]["executed"])
+        self.assertTrue(bundle["verification_recheck"]["matched"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
     def test_additive_only_task_rejects_adjacent_scope_drift(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
 
@@ -2210,6 +5249,438 @@ class TestHostileProofIndependence(unittest.TestCase):
             self.FILES, task_identity=self.TASK,
         ))
 
+    def test_readback_rejects_present_and_correct_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: present and correct in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_available_and_correct_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: available and correct in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verified_successfully_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verified successfully in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_looks_correct_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: looks correct in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_ready_for_use_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: ready for use in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_working_as_designed_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: working as designed in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_present_and_valid_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: present and valid in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_present_and_available_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: present and available in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_exists_as_expected_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: exists as expected in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_successfully_updated_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: successfully updated in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_successfully_applied_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: successfully applied in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_appears_correct_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: appears correct in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_appears_to_be_correct_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: appears to be correct in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_looks_right_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: looks right in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_is_available_now_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: is available now in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_is_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: is ready in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_has_been_verified_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: has been verified in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_confirmed_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: confirmed ready in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_confirmed_available_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: confirmed available in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_ready_now_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: ready now in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verified_and_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verified and ready in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_now_available_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: now available in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_now_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: now ready in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verification_passed_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verification passed in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_available_to_use_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: available to use in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_looks_available_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: looks available in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_ready_for_verification_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: ready for verification in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verified_as_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verified as ready in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_ready_and_available_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: ready and available in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_is_verified_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: is verified in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_ready_to_use_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: ready to use in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_available_and_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: available and ready in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verified_and_available_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verified and available in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_looks_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: looks ready in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_ready_to_proceed_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: ready to proceed in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_safe_to_proceed_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: safe to proceed in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_good_to_go_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: good to go in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_appears_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: appears ready in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verified_in_place_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verified in place in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verified_on_disk_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verified on disk in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_present_on_disk_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: present on disk in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verified_on_the_filesystem_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verified on the filesystem in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verified_in_file_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verified in file in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_present_in_file_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: present in file in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verified_in_the_file_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verified in the file in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_present_in_the_file_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: present in the file in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verified_in_the_source_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verified in the source in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_present_in_the_source_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: present in the source in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verified_in_code_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verified in code in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_present_in_code_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: present in code in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verified_in_the_code_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verified in the code in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_present_in_the_code_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: present in the code in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_verified_in_source_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: verified in source in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
+    def test_readback_rejects_present_in_source_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import readback_is_semantically_sufficient
+        self.assertFalse(readback_is_semantically_sufficient(
+            "Changed surface: src/app.py\n"
+            "Observed: present in source in src/app.py.",
+            self.FILES, task_identity=self.TASK,
+        ))
+
     def test_readback_rejects_processes_correctly_synonym_bypass(self) -> None:
         from synrail_bundle_v0 import readback_is_semantically_sufficient
         self.assertFalse(readback_is_semantically_sufficient(
@@ -2452,6 +5923,446 @@ class TestHostileProofIndependence(unittest.TestCase):
             "Scenario: verify import\n"
             "Command: grep -n logging src/app.py\n"
             "Observed: exit code 0 for grep on src/app.py\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verified_functioning_properly_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: functioning properly.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_confirmed_operational_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: operational.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_appears_correct_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: appears correct in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_appears_to_be_correct_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: appears to be correct in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_looks_right_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: looks right in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_is_available_now_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: is available now in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_is_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: is ready in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_ready_now_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: ready now in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verified_and_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: verified and ready in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_now_available_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: now available in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_now_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: now ready in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verification_passed_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: verification passed in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_available_to_use_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: available to use in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_looks_available_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: looks available in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_ready_for_verification_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: ready for verification in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verified_as_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: verified as ready in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_ready_and_available_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: ready and available in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_is_verified_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: is verified in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_ready_to_use_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: ready to use in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_available_and_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: available and ready in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verified_and_available_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: verified and available in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_looks_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: looks ready in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_ready_to_proceed_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: ready to proceed in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_safe_to_proceed_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: safe to proceed in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_good_to_go_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: good to go in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_appears_ready_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: appears ready in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verified_in_place_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: verified in place in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verified_on_disk_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: verified on disk in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_present_on_disk_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: present on disk in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verified_on_the_filesystem_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: verified on the filesystem in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verified_in_file_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: verified in file in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_present_in_file_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: present in file in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verified_in_the_file_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: verified in the file in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_present_in_the_file_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: present in the file in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verified_in_the_source_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: verified in the source in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_present_in_the_source_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: present in the source in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verified_in_code_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: verified in code in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_present_in_code_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: present in code in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verified_in_the_code_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: verified in the code in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_present_in_the_code_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: present in the code in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_verified_in_source_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: verified in source in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_present_in_source_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: present in source in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_has_been_verified_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: has been verified in src/app.py.\n"
+            "Status: PASSED",
+            task_identity=self.TASK,
+        ))
+
+    def test_scenario_rejects_processes_correctly_synonym_bypass(self) -> None:
+        from synrail_bundle_v0 import scenario_is_semantically_sufficient
+        self.assertFalse(scenario_is_semantically_sufficient(
+            "Scenario: verify import\n"
+            "Command: grep -n logging src/app.py\n"
+            "Observed: it processes correctly in src/app.py.\n"
             "Status: PASSED",
             task_identity=self.TASK,
         ))

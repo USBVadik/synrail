@@ -314,7 +314,7 @@ If a critic has only 20–30 minutes, I would suggest:
 - [synrail_alpha_evidence_ownership_v0.py](../../tools/reference/synrail_alpha_evidence_ownership_v0.py)
 
 3. Inspect tests:
-- [test_controlled_start_smoke.py](../../tests/test_controlled_start_smoke.py)
+- [test_alpha_test_pack_smoke.py](../../tests/test_alpha_test_pack_smoke.py)
 - [test_truth_regressions.py](../../tests/test_truth_regressions.py)
 - [test_gate_units.py](../../tests/test_gate_units.py)
 - [test_everyday_benchmark_pack.py](../../tests/test_everyday_benchmark_pack.py)

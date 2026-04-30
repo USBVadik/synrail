@@ -389,7 +389,10 @@ class ControlledStartSmokeTests(unittest.TestCase):
 
     def test_proof_plan_keeps_prose_surfaces_fallback_only(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_proof_plan_") as tmpdir:
-            plan_output = Path(tmpdir) / "plan.json"
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            plan_output = artifact_root / "plan.json"
             result = subprocess.run(
                 [
                     sys.executable,
@@ -411,7 +414,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
                     "--output",
                     str(plan_output),
                 ],
-                cwd=REPO_ROOT,
+                cwd=project_root,
                 check=False,
                 capture_output=True,
                 text=True,
@@ -475,6 +478,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn('"git_diff": "diff --git', template.stdout)
             self.assertIn('"diff_provenance": {', template.stdout)
             self.assertIn("If git is not installed, do not invent git_diff", template.stdout)
+            self.assertIn("diff_provenance_records/per_file_diff_provenance", template.stdout)
             self.assertIn('"artifact_identity": {', template.stdout)
             self.assertIn("ALREADY_SATISFIED", template.stdout)
             self.assertIn("already_satisfied", template.stdout)
@@ -1073,8 +1077,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
                         "added_line": 'print("patched")',
                         "context_before": "def main():",
                         "context_after": "    return 0",
-                        "verification_command": "grep -n '^    print(\"patched\")$' src/app.py",
-                        "verification_result": '2:    print("patched")',
+                        "verification_command": "grep -n 'print(\"patched\")' src/app.py",
+                        "verification_result": '    print("patched")',
                     },
                     "artifact_identity": {
                         "baseline_identity": "autodetected_generic_baseline",
@@ -1095,9 +1099,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertFalse(bundle["artifact_integrity_warning"])
             self.assertNotEqual("ARTIFACT_INTEGRITY_FAILED", report.get("reason", ""))
             self.assertFalse(checked_state["proof_bundle"]["artifact_integrity_warning"])
-            self.assertIn(report.get("reason", ""), {"", "NONE", "DOCTOR_OVERRIDE_PRESENT"})
-            if report.get("reason", "") == "DOCTOR_OVERRIDE_PRESENT":
-                self.assertIn("doctor override present", check.stdout.lower())
+            self.assertIn(report.get("reason", ""), {"", "NONE"})
 
     def test_repair_step_synthesizes_missing_packet_with_final_result_first_before_scenario_gap(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_repair_step_scenario_packet_") as tmpdir:
@@ -1155,9 +1157,10 @@ class ControlledStartSmokeTests(unittest.TestCase):
     def test_doctor_surfaces_override_warning_and_preserves_json_stdout(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_doctor_override_warning_") as tmpdir:
             project_root = Path(tmpdir) / "project"
-            doctor_output = project_root / "doctor.json"
-            artifact_path = project_root / "artifacts" / "final_result.json"
+            doctor_output = project_root / ".synrail" / "doctor.json"
+            artifact_path = project_root / ".synrail" / "final_result.json"
             artifact_path.parent.mkdir(parents=True, exist_ok=True)
+            artifact_path.write_text("{}\n")
             project_root.mkdir(parents=True, exist_ok=True)
 
             doctor = self.run_alpha(
@@ -1180,17 +1183,17 @@ class ControlledStartSmokeTests(unittest.TestCase):
 
             record = load_json(doctor_output)
             self.assertEqual(["clean_execution_surface"], record["override_gates"])
-            self.assertEqual(
-                [{"gate": "clean_execution_surface", "reason": "operator bypass via --clean-surface"}],
-                record["override_summary"],
-            )
-            self.assertIn("clean_execution_surface: operator bypass via --clean-surface", record["override_warning"])
+            self.assertEqual("doctor override present: clean_execution_surface", record["override_summary"])
+            self.assertEqual(["clean_execution_surface: operator bypass via --clean-surface"], record["override_warnings"])
 
-    def test_check_surfaces_early_doctor_override_warning(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="synrail_check_override_warning_") as tmpdir:
+    def test_check_surfaces_doctor_override_warning_before_status_summary(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_override_warning_") as tmpdir:
             project_root = Path(tmpdir) / "project"
             artifact_root = project_root / ".synrail"
             project_root.mkdir(parents=True, exist_ok=True)
+
+            tracked_file = project_root / "app.py"
+            tracked_file.write_text("def main():\n    return 0\n")
 
             start = self.run_alpha(
                 "start",
@@ -1199,13 +1202,11 @@ class ControlledStartSmokeTests(unittest.TestCase):
                 "--project-root",
                 str(project_root),
                 "--task-identity",
-                "Surface doctor override warnings before closure summary.",
+                "Surface doctor override warnings before closure.",
                 cwd=project_root,
             )
             self.assertEqual(0, start.returncode, start.stdout + start.stderr)
 
-            tracked_file = project_root / "src" / "app.py"
-            tracked_file.parent.mkdir(parents=True, exist_ok=True)
             tracked_file.write_text('def main():\n    print("patched")\n    return 0\n')
             state = load_json(artifact_root / "state.json")
             write_json(
@@ -1216,40 +1217,125 @@ class ControlledStartSmokeTests(unittest.TestCase):
                     "status": "PROVEN",
                     "change_disposition": "modified",
                     "summary": "Implemented the bounded change and verified it locally.",
+                    "modified_files": ["app.py"],
+                    "git_diff": "",
+                    "diff_provenance": {
+                        "method": "direct_file_observation",
+                        "changed_file": "app.py",
+                        "added_line": '    print("patched")',
+                        "context_before": "def main():",
+                        "context_after": "    return 0",
+                        "verification_command": "grep -n 'patched' app.py",
+                        "verification_result": '    print("patched")',
+                    },
+                    "artifact_identity": {
+                        "baseline_identity": "autodetected_generic_baseline",
+                        "execution_surface_identity": "autodetected_generic_worktree",
+                        "prompt_identity": "Surface doctor override warnings before closure.",
+                        "task_identity": "Surface doctor override warnings before closure.",
+                    },
+                },
+            )
+
+            check = self.run_alpha(
+                "check",
+                "--artifact-root",
+                ".synrail",
+                "--clean-surface",
+                cwd=project_root,
+            )
+            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertIn("warning: doctor override present", check.stdout.lower())
+            self.assertIn("clean_execution_surface: operator bypass via --clean-surface", check.stdout)
+            self.assertLess(
+                check.stdout.lower().index("warning: doctor override present"),
+                check.stdout.index("Status:"),
+            )
+
+            doctor = load_json(artifact_root / "doctor.json")
+            self.assertEqual("doctor override present: clean_execution_surface", doctor["override_summary"])
+            self.assertEqual(["clean_execution_surface: operator bypass via --clean-surface"], doctor["override_warnings"])
+
+    def test_check_prefers_explicit_clean_surface_override_over_observed_scope_defaults(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_clean_surface_override_precedence_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+
+            git_init = run(["git", "init"], cwd=project_root)
+            self.assertEqual(0, git_init.returncode, git_init.stdout + git_init.stderr)
+            tracked_file = project_root / "src" / "app.py"
+            tracked_file.parent.mkdir(parents=True, exist_ok=True)
+            tracked_file.write_text("def main():\n    return 0\n")
+            git_add = run(["git", "add", "src/app.py"], cwd=project_root)
+            self.assertEqual(0, git_add.returncode, git_add.stdout + git_add.stderr)
+            configure_identity = subprocess.run(
+                [
+                    "git",
+                    "-c", "user.name=Test",
+                    "-c", "user.email=test@example.com",
+                    "commit",
+                    "-m",
+                    "seed",
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(0, configure_identity.returncode, configure_identity.stdout + configure_identity.stderr)
+
+            (project_root / "docs").mkdir(parents=True, exist_ok=True)
+            (project_root / "docs" / "out_of_scope.md").write_text("changed\n")
+
+            start = self.run_alpha(
+                "start",
+                "Prefer explicit clean-surface repair input over observed dirty scope defaults.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            write_json(
+                artifact_root / "final_result.json",
+                {
+                    "request_id": "RUN1",
+                    "task_class": "bounded_change",
+                    "status": "PROVEN",
+                    "change_disposition": "modified",
+                    "summary": "Bound one in-scope file only.",
                     "modified_files": ["src/app.py"],
                     "git_diff": "",
                     "diff_provenance": {
                         "method": "direct_file_observation",
                         "changed_file": "src/app.py",
-                        "added_line": '    print("patched")',
+                        "added_line": "    return 0",
                         "context_before": "def main():",
-                        "context_after": "    return 0",
-                        "verification_command": "grep -n '^    print(\"patched\")$' src/app.py",
-                        "verification_result": '2:    print("patched")',
+                        "context_after": "",
+                        "verification_command": "grep -n 'return 0' src/app.py",
+                        "verification_result": "2:    return 0",
                     },
                     "artifact_identity": {
                         "baseline_identity": "autodetected_generic_baseline",
                         "execution_surface_identity": "autodetected_generic_worktree",
-                        "prompt_identity": "Surface doctor override warnings before closure summary.",
-                        "task_identity": "Surface doctor override warnings before closure summary.",
+                        "prompt_identity": "Prefer explicit clean-surface repair input over observed dirty scope defaults.",
+                        "task_identity": "Prefer explicit clean-surface repair input over observed dirty scope defaults.",
                     },
                 },
             )
 
-            check = self.run_alpha("check", "--artifact-root", ".synrail", "--clean-surface", cwd=project_root)
-            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
-            lower_stdout = check.stdout.lower()
-            self.assertIn("warning: doctor override present", lower_stdout)
-            self.assertLess(lower_stdout.index("warning: doctor override present"), lower_stdout.index("status:"))
-
-            doctor = load_json(artifact_root / "doctor.json")
-            report = load_json(artifact_root / "report.json")
-            self.assertEqual(["clean_execution_surface"], doctor["override_gates"])
-            self.assertEqual(
-                [{"gate": "clean_execution_surface", "reason": "operator bypass via --clean-surface"}],
-                doctor["override_summary"],
+            check = self.run_alpha(
+                "check",
+                "--artifact-root",
+                ".synrail",
+                "--clean-surface",
+                cwd=project_root,
             )
-            self.assertEqual("DOCTOR_OVERRIDE_PRESENT", report.get("reason", ""))
+            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertIn("doctor override present", check.stdout.lower())
+            doctor = load_json(artifact_root / "doctor.json")
+            self.assertTrue(doctor["gate_results"]["clean_execution_surface"]["override"])
+            self.assertEqual("PASS", doctor["gate_results"]["clean_execution_surface"]["status"])
 
     def test_check_accepts_git_worktree_when_observed_changes_match_final_result_scope(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_git_observed_scope_") as tmpdir:
@@ -1309,8 +1395,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
                         "added_line": '    print("patched")',
                         "context_before": "def main():",
                         "context_after": "    return 0",
-                        "verification_command": "grep -n '^    print(\"patched\")$' src/app.py",
-                        "verification_result": '2:    print("patched")',
+                        "verification_command": "grep -n 'print(\"patched\")' src/app.py",
+                        "verification_result": '    print("patched")',
                     },
                     "artifact_identity": {
                         "baseline_identity": "autodetected_python_baseline",
@@ -1458,8 +1544,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
                         "added_line": 'print("patched")',
                         "context_before": "def main():",
                         "context_after": "    return 0",
-                        "verification_command": "grep -n '^    print(\"patched\")$' src/app.py",
-                        "verification_result": '2:    print("patched")',
+                        "verification_command": "grep -n 'print(\"patched\")' src/app.py",
+                        "verification_result": '    print("patched")',
                     },
                     "artifact_identity": {
                         "baseline_identity": "autodetected_generic_baseline",
@@ -1487,27 +1573,6 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertTrue(accepted_state["closure_timestamp_utc"])
             self.assertEqual(1, accepted_state["check_count"])
 
-
-    def test_start_refuses_unreadable_existing_state_without_traceback(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="synrail_corrupted_state_start_") as tmpdir:
-            project_root = Path(tmpdir) / "project"
-            artifact_root = project_root / ".synrail"
-            artifact_root.mkdir(parents=True, exist_ok=True)
-            state_path = artifact_root / "state.json"
-            state_path.write_text("{not valid json\n")
-
-            start = self.run_alpha(
-                "start",
-                "P0.2 corrupted state smoke.",
-                cwd=project_root,
-            )
-
-            self.assertEqual(2, start.returncode)
-            self.assertNotIn("Traceback", start.stdout)
-            self.assertNotIn("Traceback", start.stderr)
-            self.assertIn("run state is unreadable", start.stdout)
-            self.assertIn("move the corrupted artifact root", start.stdout)
-            self.assertEqual("{not valid json\n", state_path.read_text())
 
     def test_start_after_terminal_state_auto_clears_proof(self) -> None:
         """After CLOSURE_ACCEPTED, next synrail start should work without manual cleanup."""
@@ -1612,6 +1677,1405 @@ class ControlledStartSmokeTests(unittest.TestCase):
             second_state = load_json(artifact_root / "state.json")
             self.assertEqual(first_run_id, second_state["run_id"])
             self.assertEqual(first_task_identity, (artifact_root / "task_identity.txt").read_text())
+
+    def test_start_rejects_corrupted_existing_state_with_safe_refusal(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_corrupt_start_state_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            state_path = artifact_root / "state.json"
+            state_path.write_text('{"schema_version": "run_state_v0", invalid\n')
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root", ".synrail",
+                "--project-root", str(project_root),
+                "--task-identity", "Handle corrupted state safely.",
+                cwd=project_root,
+            )
+            self.assertEqual(2, start.returncode)
+            self.assertNotIn("Traceback", start.stdout + start.stderr)
+            self.assertNotIn("JSONDecodeError", start.stdout + start.stderr)
+            self.assertIn("current run state artifact is unreadable", start.stdout)
+            self.assertIn("restore a verified checkpoint", start.stdout)
+            self.assertEqual('{"schema_version": "run_state_v0", invalid\n', state_path.read_text())
+
+    def test_check_rejects_artifact_root_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_check_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            outside = Path(tmpdir) / "outside"
+            outside.mkdir(parents=True, exist_ok=True)
+
+            result = self.run_alpha(
+                "check",
+                "--artifact-root",
+                str(outside),
+                cwd=project_root,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("ERROR", payload["result"])
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--artifact-root", payload["path_arg"])
+            self.assertIn("escapes project root", payload["detail"])
+
+    def test_direct_doctor_rejects_target_identity_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside = Path(tmpdir) / "outside.txt"
+            outside.write_text("outside\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--target-identity-file",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--target-identity-file", payload["path_arg"])
+            self.assertIn("escapes project and artifact roots", payload["detail"])
+
+    def test_direct_doctor_rejects_symlinked_output_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_output_symlink_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            real_artifact_root = Path(tmpdir) / "real_artifacts"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            real_artifact_root.mkdir(parents=True, exist_ok=True)
+            output_link = artifact_root / "doctor_link.json"
+            output_link.symlink_to(real_artifact_root / "doctor.json")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(output_link),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--output", payload["path_arg"])
+            self.assertIn("symlink", payload["detail"])
+
+    def test_direct_doctor_rejects_symlinked_state_update_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_state_symlink_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            real_artifact_root = Path(tmpdir) / "real_artifacts"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            real_artifact_root.mkdir(parents=True, exist_ok=True)
+            state_link = artifact_root / "state_link.json"
+            real_state = real_artifact_root / "state.json"
+            real_state.write_text("{}\n")
+            state_link.symlink_to(real_state)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--update-state",
+                    "--state-file",
+                    str(state_link),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--state-file", payload["path_arg"])
+            self.assertIn("symlink", payload["detail"])
+
+    def test_direct_doctor_rejects_symlinked_output_parent_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_output_parent_symlink_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            real_artifact_root = project_root / ".synrail_real"
+            linked_artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            real_artifact_root.mkdir(parents=True, exist_ok=True)
+            linked_artifact_root.symlink_to(real_artifact_root, target_is_directory=True)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(linked_artifact_root / "doctor.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--output", payload["path_arg"])
+            self.assertIn("parent is a symlink", payload["detail"])
+
+    def test_direct_doctor_rejects_symlinked_state_update_parent_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_state_parent_symlink_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            real_state_root = artifact_root / "real_state"
+            linked_state_root = artifact_root / "state_link"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            real_state_root.mkdir(parents=True, exist_ok=True)
+            linked_state_root.symlink_to(real_state_root, target_is_directory=True)
+            (real_state_root / "state.json").write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--update-state",
+                    "--state-file",
+                    str(linked_state_root / "state.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--state-file", payload["path_arg"])
+            self.assertIn("parent is a symlink", payload["detail"])
+
+    def test_direct_doctor_rejects_symlinked_output_ancestor_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_output_ancestor_symlink_") as tmpdir:
+            real_project_root = Path(tmpdir) / "real_project"
+            link_root = Path(tmpdir) / "linked_root"
+            project_root = link_root / "project"
+            artifact_root = project_root / ".synrail"
+            real_project_root.mkdir(parents=True, exist_ok=True)
+            link_root.symlink_to(real_project_root, target_is_directory=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--output", payload["path_arg"])
+            self.assertIn("ancestor is a symlink", payload["detail"])
+
+    def test_direct_doctor_rejects_symlinked_state_update_ancestor_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_state_ancestor_symlink_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            real_state_ancestor = artifact_root / "real_state_ancestor"
+            linked_state_ancestor = artifact_root / "state_ancestor_link"
+            real_state_root = real_state_ancestor / "nested"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            real_state_root.mkdir(parents=True, exist_ok=True)
+            linked_state_ancestor.symlink_to(real_state_ancestor, target_is_directory=True)
+            (real_state_root / "state.json").write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--update-state",
+                    "--state-file",
+                    str(linked_state_ancestor / "nested" / "state.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--state-file", payload["path_arg"])
+            self.assertIn("ancestor is a symlink", payload["detail"])
+
+    def test_alpha_doctor_rejects_coverage_profile_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_alpha_doctor_coverage_profile_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            outside = Path(tmpdir) / "outside" / "profile.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("{}\n")
+
+            result = self.run_alpha(
+                "doctor",
+                "--doctor-run-id",
+                "R1",
+                "--doctor-level",
+                "CORE_DOCTOR",
+                "--target-path",
+                str(project_root),
+                "--target-classification",
+                "local",
+                "--baseline-identity",
+                "baseline",
+                "--intended-run-class",
+                "core_probe",
+                "--output",
+                str(artifact_root / "doctor.json"),
+                "--coverage-profile-file",
+                str(outside),
+                cwd=project_root,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--coverage-profile-file", payload["path_arg"])
+            self.assertIn("escapes project root", payload["detail"])
+
+    def test_alpha_doctor_rejects_coverage_corpus_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_alpha_doctor_coverage_corpus_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            outside = Path(tmpdir) / "outside" / "corpus.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("[]\n")
+
+            result = self.run_alpha(
+                "doctor",
+                "--doctor-run-id",
+                "R1",
+                "--doctor-level",
+                "CORE_DOCTOR",
+                "--target-path",
+                str(project_root),
+                "--target-classification",
+                "local",
+                "--baseline-identity",
+                "baseline",
+                "--intended-run-class",
+                "core_probe",
+                "--output",
+                str(artifact_root / "doctor.json"),
+                "--coverage-corpus-file",
+                str(outside),
+                cwd=project_root,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--coverage-corpus-file", payload["path_arg"])
+            self.assertIn("escapes project root", payload["detail"])
+
+    def test_direct_spine_rejects_coverage_profile_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_spine_coverage_profile_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            outside = Path(tmpdir) / "outside" / "profile.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("{}\n")
+            write_json(
+                artifact_root / "state.json",
+                {
+                    "schema_version": "synrail_state_v0",
+                    "run_id": "R1",
+                    "task_class": "bounded_change",
+                    "state": "READY",
+                    "target_surface": {"identity": "surface"},
+                    "doctor": {"status": "PASS", "override_gates": [], "blocking_failure_classes": []},
+                    "proof_bundle": {"status": "PENDING", "artifact_integrity_warning": False},
+                    "closure": {"status": "CLAIMED_NOT_ACCEPTED", "blocking_reason": "", "warnings": []},
+                    "next_safe_step": "run execution",
+                },
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_spine_v0.py"),
+                    "orchestrate",
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--doctor-output",
+                    str(artifact_root / "doctor.json"),
+                    "--final-result",
+                    str(artifact_root / "final_result.json"),
+                    "--task-class",
+                    "bounded_change",
+                    "--bundle-output",
+                    str(artifact_root / "bundle.json"),
+                    "--closure-output",
+                    str(artifact_root / "closure.json"),
+                    "--report-output",
+                    str(artifact_root / "report.json"),
+                    "--execution-surface-identity",
+                    "surface",
+                    "--prompt-identity",
+                    "prompt",
+                    "--task-identity",
+                    "task",
+                    "--coverage-profile-file",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--coverage-profile-file", payload["path_arg"])
+            self.assertIn("escapes project root", payload["detail"])
+
+    def test_direct_spine_rejects_final_result_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_spine_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "state.json",
+                {
+                    "schema_version": "synrail_state_v0",
+                    "run_id": "R1",
+                    "task_class": "bounded_change",
+                    "state": "READY",
+                    "target_surface": {"identity": "surface"},
+                    "doctor": {"status": "PASS", "override_gates": [], "blocking_failure_classes": []},
+                    "proof_bundle": {"status": "PENDING", "artifact_integrity_warning": False},
+                    "closure": {"status": "CLAIMED_NOT_ACCEPTED", "blocking_reason": "", "warnings": []},
+                    "next_safe_step": "run execution",
+                },
+            )
+            outside = Path(tmpdir) / "outside.json"
+            outside.write_text("{}\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_spine_v0.py"),
+                    "orchestrate",
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--doctor-output",
+                    str(artifact_root / "doctor.json"),
+                    "--final-result",
+                    str(outside),
+                    "--task-class",
+                    "bounded_change",
+                    "--bundle-output",
+                    str(artifact_root / "bundle.json"),
+                    "--closure-output",
+                    str(artifact_root / "closure.json"),
+                    "--report-output",
+                    str(artifact_root / "report.json"),
+                    "--execution-surface-identity",
+                    "surface",
+                    "--prompt-identity",
+                    "prompt",
+                    "--task-identity",
+                    "task",
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--final-result", payload["path_arg"])
+            self.assertIn("escapes project and artifact roots", payload["detail"])
+
+    def test_direct_spine_init_rejects_output_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_spine_init_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            outside = Path(tmpdir) / "outside" / "state.json"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_spine_v0.py"),
+                    "init",
+                    "--run-id",
+                    "R1",
+                    "--task-class",
+                    "bounded_change",
+                    "--output",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--output", payload["path_arg"])
+            self.assertIn("escapes project root", payload["detail"])
+
+
+    def test_alpha_check_rejects_coverage_corpus_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_alpha_check_coverage_corpus_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            outside = Path(tmpdir) / "outside" / "corpus.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text("[]\n")
+            write_json(
+                artifact_root / "state.json",
+                {
+                    "schema_version": "run_state_v0",
+                    "run_id": "R1",
+                    "task_class": "bounded_change",
+                    "state": "READY",
+                    "target_surface": {"status": "ATTESTED", "identity": "surface", "baseline_relation": "baseline"},
+                    "doctor": {"status": "PASS", "blocking_failure_classes": [], "override_gates": []},
+                    "integrity": {"status": "PASS", "exact_task_identity_ok": True, "bootstrap_provenance_ok": True, "bootstrap_provenance_reason": "CONTROLLED_BOOTSTRAP_CONFIRMED"},
+                    "execution": {"status": "NOT_RUN", "artifact_bundle_present": False},
+                    "proof_bundle": {"status": "MISSING", "artifact_integrity_warning": False},
+                    "closure": {"status": "CLAIMED_NOT_ACCEPTED", "blocking_reason": "", "warnings": []},
+                    "recovery": {"status": "NOT_REQUIRED", "reverification_complete": False},
+                    "next_safe_step": "run execution"
+                },
+            )
+            write_json(artifact_root / "final_result.json", {
+                "request_id": "R1",
+                "task_class": "bounded_change",
+                "status": "PROVEN",
+                "change_disposition": "modified",
+                "summary": "ok",
+                "modified_files": [],
+                "git_diff": "",
+                "diff_provenance": {}
+            })
+
+            result = self.run_alpha(
+                "check",
+                "--artifact-root",
+                str(artifact_root),
+                "--target-path",
+                str(project_root),
+                "--baseline-identity",
+                "baseline",
+                "--execution-surface-identity",
+                "surface",
+                "--final-result",
+                str(artifact_root / "final_result.json"),
+                "--coverage-corpus-file",
+                str(outside),
+                cwd=project_root,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--coverage-corpus-file", payload["path_arg"])
+            self.assertIn("escapes project root", payload["detail"])
+
+    def test_direct_bundle_rejects_scenario_proof_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_bundle_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "final_result.json",
+                {
+                    "request_id": "R1",
+                    "task_class": "bounded_change",
+                    "status": "PROVEN",
+                    "change_disposition": "modified",
+                    "summary": "ok",
+                    "modified_files": [],
+                    "git_diff": "",
+                    "diff_provenance": {},
+                },
+            )
+            outside = Path(tmpdir) / "outside.txt"
+            outside.write_text("outside\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_bundle_v0.py"),
+                    "--final-result",
+                    str(artifact_root / "final_result.json"),
+                    "--task-class",
+                    "bounded_change",
+                    "--scenario-proof",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "bundle.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--scenario-proof", payload["path_arg"])
+            self.assertIn("escapes project and artifact roots", payload["detail"])
+
+    def test_direct_bundle_rejects_output_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_bundle_output_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                project_root / "final_result.json",
+                {
+                    "request_id": "R1",
+                    "task_class": "bounded_change",
+                    "status": "PROVEN",
+                    "change_disposition": "modified",
+                    "summary": "ok",
+                    "modified_files": [],
+                    "git_diff": "",
+                    "diff_provenance": {},
+                },
+            )
+            outside = Path(tmpdir) / "outside" / "bundle.json"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_bundle_v0.py"),
+                    "--final-result",
+                    str(project_root / "final_result.json"),
+                    "--task-class",
+                    "bounded_change",
+                    "--output",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--output", payload["path_arg"])
+            self.assertIn("escapes project root", payload["detail"])
+
+    def test_direct_repair_packet_rejects_scenario_proof_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_repair_packet_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "state.json",
+                {
+                    "schema_version": "run_state_v0",
+                    "run_id": "R1",
+                    "task_class": "bounded_change",
+                    "state": "DOCTOR_BLOCKED",
+                    "target_surface": {"identity": "surface", "baseline_relation": "baseline"},
+                    "doctor": {"status": "FAIL", "blocking_failure_classes": [], "override_gates": []},
+                    "proof_bundle": {"status": "MISSING", "artifact_integrity_warning": False},
+                    "closure": {"status": "CLAIMED_NOT_ACCEPTED", "blocking_reason": "DOCTOR_NOT_GREEN", "warnings": []},
+                    "next_safe_step": "repair",
+                },
+            )
+            write_json(artifact_root / "repair_handoff.json", {"required_inputs": []})
+            outside = Path(tmpdir) / "outside.txt"
+            outside.write_text("outside\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_repair_packet_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--artifact-root",
+                    str(artifact_root),
+                    "--output",
+                    str(artifact_root / "repair_packet.json"),
+                    "--repair-handoff-file",
+                    str(artifact_root / "repair_handoff.json"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--execution-surface-identity",
+                    "surface",
+                    "--scenario-proof",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--scenario-proof", payload["path_arg"])
+            self.assertIn("escapes project and artifact roots", payload["detail"])
+
+    def test_direct_repair_packet_rejects_output_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_repair_packet_output_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "state.json",
+                {
+                    "schema_version": "run_state_v0",
+                    "run_id": "R1",
+                    "task_class": "bounded_change",
+                    "state": "DOCTOR_BLOCKED",
+                    "target_surface": {"identity": "surface", "baseline_relation": "baseline"},
+                    "doctor": {"status": "FAIL", "blocking_failure_classes": [], "override_gates": []},
+                    "proof_bundle": {"status": "MISSING", "artifact_integrity_warning": False},
+                    "closure": {"status": "CLAIMED_NOT_ACCEPTED", "blocking_reason": "DOCTOR_NOT_GREEN", "warnings": []},
+                    "next_safe_step": "repair",
+                },
+            )
+            write_json(artifact_root / "repair_handoff.json", {"required_inputs": []})
+            outside = Path(tmpdir) / "outside" / "repair_packet.json"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_repair_packet_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--artifact-root",
+                    str(artifact_root),
+                    "--output",
+                    str(outside),
+                    "--repair-handoff-file",
+                    str(artifact_root / "repair_handoff.json"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--execution-surface-identity",
+                    "surface",
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--output", payload["path_arg"])
+            self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_direct_repair_packet_rejects_coverage_corpus_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_repair_packet_coverage_direct_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "state.json",
+                {
+                    "schema_version": "run_state_v0",
+                    "run_id": "R1",
+                    "task_class": "bounded_change",
+                    "state": "DOCTOR_BLOCKED",
+                    "target_surface": {"identity": "surface", "baseline_relation": "baseline"},
+                    "doctor": {"status": "FAIL", "blocking_failure_classes": [], "override_gates": []},
+                    "proof_bundle": {"status": "MISSING", "artifact_integrity_warning": False},
+                    "closure": {"status": "CLAIMED_NOT_ACCEPTED", "blocking_reason": "DOCTOR_NOT_GREEN", "warnings": []},
+                    "next_safe_step": "repair",
+                },
+            )
+            write_json(artifact_root / "repair_handoff.json", {"required_inputs": []})
+            outside = Path(tmpdir) / "outside_corpus.json"
+            write_json(outside, {"cases": []})
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_repair_packet_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--artifact-root",
+                    str(artifact_root),
+                    "--output",
+                    str(artifact_root / "repair_packet.json"),
+                    "--repair-handoff-file",
+                    str(artifact_root / "repair_handoff.json"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "CORE_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "core_probe",
+                    "--execution-surface-identity",
+                    "surface",
+                    "--coverage-corpus-file",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--coverage-corpus-file", payload["path_arg"])
+            self.assertIn("escapes project root", payload["detail"])
+
+    def test_alpha_repair_packet_rejects_coverage_profile_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_repair_packet_coverage_alpha_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "state.json",
+                {
+                    "schema_version": "run_state_v0",
+                    "run_id": "R1",
+                    "task_class": "bounded_change",
+                    "state": "DOCTOR_BLOCKED",
+                    "target_surface": {"identity": "surface", "baseline_relation": "baseline"},
+                    "doctor": {"status": "FAIL", "blocking_failure_classes": [], "override_gates": []},
+                    "proof_bundle": {"status": "MISSING", "artifact_integrity_warning": False},
+                    "closure": {"status": "CLAIMED_NOT_ACCEPTED", "blocking_reason": "DOCTOR_NOT_GREEN", "warnings": []},
+                    "next_safe_step": "repair",
+                },
+            )
+            write_json(artifact_root / "repair_handoff.json", {"required_inputs": []})
+            outside = Path(tmpdir) / "outside_profile.json"
+            write_json(outside, {"profile": []})
+
+            result = self.run_alpha(
+                "repair-packet",
+                "--state-file",
+                str(artifact_root / "state.json"),
+                "--artifact-root",
+                str(artifact_root),
+                "--output",
+                str(artifact_root / "repair_packet.json"),
+                "--repair-handoff-file",
+                str(artifact_root / "repair_handoff.json"),
+                "--doctor-run-id",
+                "R1",
+                "--doctor-level",
+                "CORE_DOCTOR",
+                "--target-path",
+                str(project_root),
+                "--target-classification",
+                "local",
+                "--baseline-identity",
+                "baseline",
+                "--intended-run-class",
+                "core_probe",
+                "--execution-surface-identity",
+                "surface",
+                "--coverage-profile-file",
+                str(outside),
+                cwd=project_root,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--coverage-profile-file", payload["path_arg"])
+            self.assertIn("escapes project root", payload["detail"])
+
+    def test_direct_second_operator_rejects_run_file_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_second_operator_run_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "state.json",
+                {
+                    "schema_version": "run_state_v0",
+                    "run_id": "R1",
+                    "task_class": "bounded_change",
+                    "state": "REPAIR_READY",
+                },
+            )
+            write_json(artifact_root / "repair_packet.json", {"continuation_core": {}, "continuation_arbiter": {"resolution_status": "RESOLVED", "precedence_order": [], "conflict_count": 0, "ignored_sources": [], "resolved_decision": {"next_safe_step": "resume", "operator_focus": "focus", "packet_replay_ready": True}}})
+            outside = Path(tmpdir) / "outside.json"
+            write_json(outside, {"report": {"result": "OK", "reason": "NONE", "next_safe_step": "resume"}, "repair_packet": {}})
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_second_operator_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--repair-packet-file",
+                    str(artifact_root / "repair_packet.json"),
+                    "--run-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "second_operator.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--run-file", payload["path_arg"])
+            self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_direct_second_operator_rejects_output_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_second_operator_output_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "state.json",
+                {
+                    "schema_version": "run_state_v0",
+                    "run_id": "R1",
+                    "task_class": "bounded_change",
+                    "state": "REPAIR_READY",
+                },
+            )
+            write_json(artifact_root / "repair_packet.json", {"continuation_core": {}, "continuation_arbiter": {"resolution_status": "RESOLVED", "precedence_order": [], "conflict_count": 0, "ignored_sources": [], "resolved_decision": {"next_safe_step": "resume", "operator_focus": "focus", "packet_replay_ready": True}}})
+            write_json(artifact_root / "run.json", {"report": {"result": "OK", "reason": "NONE", "next_safe_step": "resume"}, "repair_packet": {}})
+            outside = Path(tmpdir) / "outside" / "second_operator.json"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_second_operator_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--repair-packet-file",
+                    str(artifact_root / "repair_packet.json"),
+                    "--run-file",
+                    str(artifact_root / "run.json"),
+                    "--output",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--output", payload["path_arg"])
+            self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_direct_operator_brief_rejects_doctor_file_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_operator_brief_doctor_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(artifact_root / "state.json", {"run_id": "R1", "task_class": "bounded_change", "state": "REPAIR_READY"})
+            write_json(artifact_root / "report.json", {"result": "OK", "reason": "NONE", "next_safe_step": "resume"})
+            write_json(artifact_root / "repair_packet.json", {"continuation_core": {}})
+            outside = Path(tmpdir) / "outside_doctor.json"
+            write_json(outside, {"final_verdict": "PASS"})
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_operator_brief_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--report-file",
+                    str(artifact_root / "report.json"),
+                    "--repair-packet-file",
+                    str(artifact_root / "repair_packet.json"),
+                    "--doctor-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "operator_brief.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--doctor-file", payload["path_arg"])
+            self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_direct_operator_brief_rejects_output_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_operator_brief_output_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(artifact_root / "state.json", {"run_id": "R1", "task_class": "bounded_change", "state": "REPAIR_READY"})
+            write_json(artifact_root / "report.json", {"result": "OK", "reason": "NONE", "next_safe_step": "resume"})
+            write_json(artifact_root / "repair_packet.json", {"continuation_core": {}})
+            outside = Path(tmpdir) / "outside" / "operator_brief.json"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_operator_brief_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--report-file",
+                    str(artifact_root / "report.json"),
+                    "--repair-packet-file",
+                    str(artifact_root / "repair_packet.json"),
+                    "--output",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--output", payload["path_arg"])
+            self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_direct_observability_rejects_refresh_file_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_observability_refresh_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(artifact_root / "state.json", {"run_id": "R1", "task_class": "bounded_change", "state": "REPAIR_READY"})
+            write_json(artifact_root / "report.json", {"result": "OK", "stopping_stage": "accepted", "reason": "NONE", "next_safe_step": "NONE"})
+            outside = Path(tmpdir) / "outside_refresh.json"
+            write_json(outside, {"dominant_invalidation": "X"})
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_observability_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--report-file",
+                    str(artifact_root / "report.json"),
+                    "--refresh-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "observability.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--refresh-file", payload["path_arg"])
+            self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_direct_observability_rejects_output_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_observability_output_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(artifact_root / "state.json", {"run_id": "R1", "task_class": "bounded_change", "state": "REPAIR_READY"})
+            write_json(artifact_root / "report.json", {"result": "OK", "stopping_stage": "accepted", "reason": "NONE", "next_safe_step": "NONE"})
+            outside = Path(tmpdir) / "outside" / "observability.json"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_observability_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--report-file",
+                    str(artifact_root / "report.json"),
+                    "--output",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--output", payload["path_arg"])
+            self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_direct_mode_receipt_rejects_recommendation_file_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_mode_receipt_recommendation_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            outside = Path(tmpdir) / "outside" / "recommendation.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            write_json(
+                outside,
+                {
+                    "schema_version": "mode_recommendation_v0",
+                    "recommended_mode": "FULL_GOVERNED_PATH",
+                    "scenario_class": "bounded_change",
+                    "task_class": "bounded_change",
+                    "secondary_exception_mode": "HYBRID_EXCEPTION",
+                    "evidence_summary": {
+                        "avg_operator_minutes_added_if_synrail": 1,
+                        "avg_interventions_added_if_synrail": 1,
+                        "avg_closure_latency_minutes_added_if_synrail": 1,
+                    },
+                    "why": "use the governed path",
+                    "next_safe_step": "emit the receipt",
+                },
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_mode_receipt_v0.py"),
+                    "--recommendation-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "mode_receipt.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--recommendation-file", payload["path_arg"])
+            self.assertIn("escapes project root", payload["detail"])
+
+    def test_direct_mode_receipt_rejects_output_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_mode_receipt_output_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "recommendation.json",
+                {
+                    "schema_version": "mode_recommendation_v0",
+                    "recommended_mode": "FULL_GOVERNED_PATH",
+                    "scenario_class": "bounded_change",
+                    "task_class": "bounded_change",
+                    "secondary_exception_mode": "HYBRID_EXCEPTION",
+                    "evidence_summary": {
+                        "avg_operator_minutes_added_if_synrail": 1,
+                        "avg_interventions_added_if_synrail": 1,
+                        "avg_closure_latency_minutes_added_if_synrail": 1,
+                    },
+                    "why": "use the governed path",
+                    "next_safe_step": "emit the receipt",
+                },
+            )
+            outside = Path(tmpdir) / "outside" / "mode_receipt.json"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_mode_receipt_v0.py"),
+                    "--recommendation-file",
+                    str(artifact_root / "recommendation.json"),
+                    "--output",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--output", payload["path_arg"])
+            self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_direct_preparation_receipt_rejects_bundle_file_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_preparation_receipt_bundle_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            outside = Path(tmpdir) / "outside" / "bundle.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "plan.json",
+                {
+                    "schema_version": "proof_bundle_plan_v0",
+                    "run_id": "R1",
+                    "task_class": "bounded_change",
+                    "required_sections": ["final_result"],
+                },
+            )
+            write_json(
+                outside,
+                {
+                    "schema_version": "proof_bundle_v0",
+                    "run_id": "R1",
+                    "task_class": "bounded_change",
+                    "status": "COMPLETE",
+                    "missing_sections": [],
+                },
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_preparation_receipt_v0.py"),
+                    "--plan-file",
+                    str(artifact_root / "plan.json"),
+                    "--bundle-file",
+                    str(outside),
+                    "--output",
+                    str(artifact_root / "preparation_receipt.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--bundle-file", payload["path_arg"])
+            self.assertIn("escapes artifact root", payload["detail"])
+
+    def test_direct_preparation_receipt_rejects_output_escape_with_bounded_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_preparation_receipt_output_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            write_json(
+                artifact_root / "plan.json",
+                {
+                    "schema_version": "proof_bundle_plan_v0",
+                    "run_id": "R1",
+                    "task_class": "bounded_change",
+                    "required_sections": ["final_result"],
+                },
+            )
+            write_json(
+                artifact_root / "bundle.json",
+                {
+                    "schema_version": "proof_bundle_v0",
+                    "run_id": "R1",
+                    "task_class": "bounded_change",
+                    "status": "COMPLETE",
+                    "missing_sections": [],
+                },
+            )
+            outside = Path(tmpdir) / "outside" / "preparation_receipt.json"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_preparation_receipt_v0.py"),
+                    "--plan-file",
+                    str(artifact_root / "plan.json"),
+                    "--bundle-file",
+                    str(artifact_root / "bundle.json"),
+                    "--output",
+                    str(outside),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--output", payload["path_arg"])
+            self.assertIn("escapes artifact root", payload["detail"])
 
 
 if __name__ == "__main__":

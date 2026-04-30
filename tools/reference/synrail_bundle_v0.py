@@ -16,6 +16,23 @@ try:
 except ImportError:
     from synrail_io_v0 import load_json, load_json_if_valid
 
+try:
+    from .synrail_path_scope_v0 import (
+        ARTIFACT_SCOPE,
+        DUAL_SCOPE,
+        PathScopeValidationError,
+        validate_namespace_paths,
+        validate_root_within_project,
+    )
+except ImportError:
+    from synrail_path_scope_v0 import (
+        ARTIFACT_SCOPE,
+        DUAL_SCOPE,
+        PathScopeValidationError,
+        validate_namespace_paths,
+        validate_root_within_project,
+    )
+
 
 REQUIRED_SECTION_NAMES = [
     "final_result",
@@ -45,6 +62,28 @@ VERIFICATION_RECHECK_ALLOWED_BINARIES = {"grep", "cat", "head", "tail", "git"}
 VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10
 VERIFICATION_RECHECK_STDOUT_LIMIT = 4096
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+BUNDLE_PATH_SCOPES = {
+    "output": ARTIFACT_SCOPE,
+    "state_file": ARTIFACT_SCOPE,
+    "doctor_file": ARTIFACT_SCOPE,
+    "final_result": DUAL_SCOPE,
+    "readback": DUAL_SCOPE,
+    "scenario_proof": DUAL_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_bundle_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=BUNDLE_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
 
 
 def file_sha256(path: Path) -> str:
@@ -92,8 +131,9 @@ def verification_recheck_result(record: object, *, project_root: Path | None = N
         return result
 
     verification_command = non_empty_string(record.get("verification_command", ""))
-    verification_result = string_or_empty(record.get("verification_result", ""))
-    if not (verification_command and verification_result):
+    verification_result_raw = record.get("verification_result", "")
+    verification_result = verification_result_raw if isinstance(verification_result_raw, str) else ""
+    if not (verification_command and verification_result.strip()):
         result["skip_reason"] = "verification_missing"
         return result
 
@@ -151,6 +191,139 @@ def verification_recheck_result(record: object, *, project_root: Path | None = N
     return result
 
 
+def aggregate_verification_recheck_results(results: list[dict]) -> dict:
+    if not results:
+        return {
+            "required": False,
+            "executed": False,
+            "command_allowed": False,
+            "matched": False,
+            "stdout_snippet": "",
+            "skip_reason": "verification_missing",
+        }
+
+    skip_reasons = [
+        reason
+        for result in results
+        for reason in [non_empty_string(result.get("skip_reason", ""))]
+        if reason
+    ]
+    first_stdout_snippet = next(
+        (result.get("stdout_snippet", "") for result in results if result.get("stdout_snippet", "")),
+        "",
+    )
+    return {
+        "required": any(bool(result.get("required")) for result in results),
+        "executed": all(bool(result.get("executed")) for result in results),
+        "command_allowed": all(bool(result.get("command_allowed")) for result in results),
+        "matched": all(bool(result.get("matched")) for result in results),
+        "stdout_snippet": first_stdout_snippet,
+        "skip_reason": skip_reasons[0] if skip_reasons else "",
+        "record_count": len(results),
+    }
+
+
+def diff_provenance_records_from_final_result(final: dict) -> list[dict]:
+    records: list[dict] = []
+    diff_provenance = final.get("diff_provenance", {})
+    if isinstance(diff_provenance, dict):
+        if any(bool(non_empty_string(diff_provenance.get(key, ""))) for key in [
+            "changed_file",
+            "added_line",
+            "removed_line",
+            "observed_line",
+            "verification_command",
+            "verification_result",
+        ]):
+            records.append(diff_provenance)
+    elif isinstance(diff_provenance, list):
+        records.extend(value for value in diff_provenance if isinstance(value, dict))
+
+    for key in ("diff_provenance_records", "per_file_diff_provenance", "per_file_diff_provenance_records"):
+        value = final.get(key, [])
+        if isinstance(value, list):
+            records.extend(item for item in value if isinstance(item, dict))
+    return records
+
+
+def any_diff_provenance_verification_command_present(records: list[dict]) -> bool:
+    return any(bool(non_empty_string(record.get("verification_command", ""))) for record in records)
+
+
+def inferred_diff_provenance_method(records: list[dict], *, change_disposition: str) -> str:
+    for record in records:
+        method = normalized_diff_provenance_method(record, change_disposition=change_disposition)
+        if method:
+            return method
+    return ""
+
+
+def inferred_diff_provenance_method_inferred(records: list[dict], *, change_disposition: str) -> bool:
+    for record in records:
+        method = normalized_diff_provenance_method(record, change_disposition=change_disposition)
+        if not method:
+            continue
+        return not bool(non_empty_string(record.get("method", "")))
+    return False
+
+
+def has_structured_diff_provenance_records(records: list[dict]) -> bool:
+    return bool(records)
+
+
+def primary_diff_provenance_record(records: list[dict]) -> dict:
+    return records[0] if records else {}
+
+
+def structured_diff_provenance_records_are_semantically_sufficient(
+    records: list[dict],
+    modified_files: list[str],
+    *,
+    change_disposition: str,
+) -> bool:
+    if change_disposition == "already_satisfied":
+        return any(
+            structured_diff_provenance_is_semantically_sufficient(
+                record,
+                modified_files,
+                change_disposition=change_disposition,
+            )
+            for record in records
+        )
+    if not modified_files:
+        return False
+    for modified_file in modified_files:
+        if not any(
+            structured_diff_provenance_is_semantically_sufficient(
+                record,
+                [modified_file],
+                change_disposition=change_disposition,
+            )
+            for record in records
+        ):
+            return False
+    return True
+
+
+def attested_surfaces_from_records(modified_files: object, records: list[dict]) -> list[str]:
+    surfaces: list[str] = []
+    if isinstance(modified_files, list):
+        for item in modified_files:
+            if isinstance(item, str) and item.strip():
+                surfaces.append(item.strip())
+    for record in records:
+        changed_file = non_empty_string(record.get("changed_file", ""))
+        if changed_file and changed_file not in surfaces:
+            surfaces.append(changed_file)
+    return surfaces
+
+
+def verification_recheck_results(records: list[dict], *, project_root: Path | None = None) -> dict:
+    return aggregate_verification_recheck_results(
+        [verification_recheck_result(record, project_root=project_root) for record in records]
+    )
+
+
 def file_present(path_str: str | None) -> tuple[bool, str]:
     if not path_str:
         return False, ""
@@ -196,16 +369,7 @@ def references_modified_file(value: str, modified_files: list[str]) -> bool:
 
 
 def attested_surfaces(modified_files: object, record: object) -> list[str]:
-    surfaces: list[str] = []
-    if isinstance(modified_files, list):
-        for item in modified_files:
-            if isinstance(item, str) and item.strip():
-                surfaces.append(item.strip())
-    if isinstance(record, dict):
-        changed_file = non_empty_string(record.get("changed_file", ""))
-        if changed_file and changed_file not in surfaces:
-            surfaces.append(changed_file)
-    return surfaces
+    return attested_surfaces_from_records(modified_files, [record] if isinstance(record, dict) else [])
 
 
 def contains_patch_lines(value: str) -> bool:
@@ -240,12 +404,6 @@ def non_empty_string(value: object) -> str:
     if not isinstance(value, str):
         return ""
     return value.strip()
-
-
-def string_or_empty(value: object) -> str:
-    if not isinstance(value, str):
-        return ""
-    return value
 
 
 def load_json_object_if_present(path: Path) -> dict:
@@ -642,6 +800,60 @@ _VACUOUS_OBSERVATION_PHRASES = [
     "processes correctly",
     "is now present",
     "is present",
+    "present and correct",
+    "available and correct",
+    "verified successfully",
+    "looks correct",
+    "ready for use",
+    "working as designed",
+    "present and valid",
+    "present and available",
+    "exists as expected",
+    "successfully updated",
+    "successfully applied",
+    "appears correct",
+    "appears to be correct",
+    "looks right",
+    "is available now",
+    "is ready",
+    "has been verified",
+    "confirmed ready",
+    "confirmed available",
+    "ready now",
+    "verified and ready",
+    "now available",
+    "now ready",
+    "verification passed",
+    "available to use",
+    "looks available",
+    "ready for verification",
+    "verified as ready",
+    "ready and available",
+    "is verified",
+    "ready to use",
+    "available and ready",
+    "verified and available",
+    "looks ready",
+    "ready to proceed",
+    "safe to proceed",
+    "good to go",
+    "appears ready",
+    "verified in place",
+    "verified on disk",
+    "present on disk",
+    "verified on the filesystem",
+    "verified in file",
+    "present in file",
+    "verified in the file",
+    "present in the file",
+    "verified in the source",
+    "present in the source",
+    "verified in code",
+    "present in code",
+    "verified in the code",
+    "present in the code",
+    "verified in source",
+    "present in source",
     "is in place",
     "change applied",
     "change is applied",
@@ -1450,6 +1662,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
     modified_files = final.get("modified_files", [])
     git_diff = final.get("git_diff", "")
     diff_provenance_record = final.get("diff_provenance", {})
+    diff_provenance_records = diff_provenance_records_from_final_result(final)
     cleanup_record = final.get("cleanup_status", {})
     cleanup_fallback = cleanup_fallback_from_doctor(doctor if doctor_parseable else {})
     explicit_cleanup_present = isinstance(cleanup_record, dict) and bool(cleanup_record)
@@ -1487,23 +1700,32 @@ def build_bundle(args: argparse.Namespace) -> dict:
         else:
             modified_files_semantically_sufficient = len(modified_files) > 0 and all(bool(item.strip()) for item in modified_files)
     diff_has_markers = contains_diff_markers(git_diff)
-    diff_record_semantically_sufficient = structured_diff_provenance_is_semantically_sufficient(
-        diff_provenance_record,
+    diff_record_semantically_sufficient = structured_diff_provenance_records_are_semantically_sufficient(
+        diff_provenance_records,
         modified_files if isinstance(modified_files, list) else [],
         change_disposition=change_disposition,
     )
+    primary_diff_record = primary_diff_provenance_record(diff_provenance_records)
     patch_plus_verification_semantically_sufficient = patch_plus_verification_is_semantically_sufficient(
         git_diff=git_diff,
-        record=diff_provenance_record,
+        record=primary_diff_record,
         modified_files=modified_files if isinstance(modified_files, list) else [],
         change_disposition=change_disposition,
     )
     runtime_verification_semantically_sufficient = (
         diff_record_semantically_sufficient or patch_plus_verification_semantically_sufficient
     )
-    normalized_diff_method = normalized_diff_provenance_method(
-        diff_provenance_record,
+    normalized_diff_method = inferred_diff_provenance_method(
+        diff_provenance_records,
         change_disposition=change_disposition,
+    )
+    diff_provenance_present = "git_diff" in final or bool(diff_provenance_records)
+    diff_provenance_verification_command_present = any_diff_provenance_verification_command_present(diff_provenance_records)
+    diff_provenance_structurally_complete = diff_provenance_present and (
+        "diff_provenance" not in final
+        or not isinstance(diff_provenance_record, dict)
+        or diff_provenance_verification_command_present
+        or bool(diff_provenance_records[1:])
     )
     if change_disposition == "already_satisfied":
         diff_semantically_sufficient = not bool(non_empty_string(git_diff)) and diff_record_semantically_sufficient
@@ -1518,7 +1740,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
             )
             or diff_record_semantically_sufficient
         )
-    surfaces = attested_surfaces(modified_files, diff_provenance_record)
+    surfaces = attested_surfaces_from_records(modified_files, diff_provenance_records)
     artifact_identity_record = final.get("artifact_identity", {})
     baseline_identity = first_non_empty(args.baseline_identity, artifact_identity_record.get("baseline_identity", ""))
     execution_surface_identity = first_non_empty(
@@ -1551,8 +1773,8 @@ def build_bundle(args: argparse.Namespace) -> dict:
         readback_text=readback_text,
         scenario_text=scenario_text,
     )
-    verification_recheck = verification_recheck_result(
-        diff_provenance_record,
+    verification_recheck = verification_recheck_results(
+        diff_provenance_records,
         project_root=state_bound_project_root(getattr(args, "state_file", "")),
     )
     verification_recheck["required"] = bool(runtime_verification_semantically_sufficient)
@@ -1657,12 +1879,18 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "suspicious_classes": suspicious_presentation_classes,
         },
         "diff_provenance": {
-            "present": "git_diff" in final or "diff_provenance" in final,
+            "present": diff_provenance_present,
             "non_empty": bool(git_diff),
             "has_diff_markers": diff_has_markers,
-            "has_structured_record": isinstance(diff_provenance_record, dict),
+            "has_structured_record": has_structured_diff_provenance_records(diff_provenance_records),
+            "record_count": len(diff_provenance_records),
             "normalized_method": normalized_diff_method,
-            "method_inferred": bool(normalized_diff_method) and not bool(non_empty_string(diff_provenance_record.get("method", ""))) if isinstance(diff_provenance_record, dict) else False,
+            "method_inferred": inferred_diff_provenance_method_inferred(
+                diff_provenance_records,
+                change_disposition=change_disposition,
+            ),
+            "verification_command_present": diff_provenance_verification_command_present,
+            "structurally_complete": diff_provenance_structurally_complete,
             "structured_record_sufficient": diff_record_semantically_sufficient,
             "semantically_sufficient": diff_semantically_sufficient,
         },
@@ -1732,7 +1960,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
         missing.append("final_result")
     if not bundle["modified_files"]["present"]:
         missing.append("modified_files")
-    if not bundle["diff_provenance"]["present"]:
+    if not bundle["diff_provenance"]["structurally_complete"]:
         missing.append("diff_provenance")
     if not bundle["readback"]["present"] and not readback_waived_by_runtime_corroboration:
         missing.append("readback")
@@ -1769,11 +1997,15 @@ def build_bundle(args: argparse.Namespace) -> dict:
         structural_trace_entry(
             section="diff_provenance",
             present=bundle["diff_provenance"]["present"],
-            structurally_complete=bundle["diff_provenance"]["present"],
+            structurally_complete=bundle["diff_provenance"]["structurally_complete"],
             why=(
                 "git_diff or structured diff_provenance evidence is present in the final result artifact"
-                if bundle["diff_provenance"]["present"]
-                else "git_diff or structured diff_provenance evidence is missing from the final result artifact"
+                if bundle["diff_provenance"]["structurally_complete"]
+                else (
+                    "structured diff_provenance is present but verification_command is missing from the final result artifact"
+                    if bundle["diff_provenance"]["present"]
+                    else "git_diff or structured diff_provenance evidence is missing from the final result artifact"
+                )
             ),
         ),
         structural_trace_entry(
@@ -2051,11 +2283,26 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    bundle = build_bundle(args)
-    out = Path(args.output)
-    out.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
-    print(json.dumps({"result": "OK", "status": bundle["status"]}, ensure_ascii=True))
-    return 0
+    try:
+        artifact_root = Path(args.output).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "output",
+            args.output,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_bundle_paths(args, artifact_root=artifact_root, project_root=project_root)
+        bundle = build_bundle(args)
+        out = Path(args.output)
+        out.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
+        print(json.dumps({"result": "OK", "status": bundle["status"]}, ensure_ascii=True))
+        return 0
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
 
 
 if __name__ == "__main__":

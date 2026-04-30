@@ -38,72 +38,56 @@ DEPLOY_RECEIPT="$ARTIFACT_ROOT/deploy_receipt.json"
 STATE_FILE="$ARTIFACT_ROOT/state.json"
 TARGET_IDENTITY_FILE="$ARTIFACT_ROOT/target_identity.txt"
 
-JSON_GET_RESULT=""
-STRICT_TEXT_RESULT=""
-
 json_get() {
     local field="$1"
     local file="$2"
     local label="$3"
-    local output
 
-    if ! output=$(python3 - "$field" "$file" "$label" <<'PY'
+    python3 - "$field" "$file" "$label" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 field, file_path, label = sys.argv[1:4]
 path = Path(file_path)
-
 try:
     payload = json.loads(path.read_text())
+except FileNotFoundError:
+    print(f"DEPLOY BLOCKED: could not read {label} JSON at {file_path}: file is missing", file=sys.stderr)
+    raise SystemExit(1)
 except OSError as exc:
-    print(f"DEPLOY BLOCKED: could not read {label} JSON at {path}: {exc}")
+    print(f"DEPLOY BLOCKED: could not read {label} JSON at {file_path}: {exc}", file=sys.stderr)
     raise SystemExit(1)
 except json.JSONDecodeError as exc:
-    print(
-        f"DEPLOY BLOCKED: could not parse {label} JSON at {path}: "
-        f"{exc.msg} (line {exc.lineno} column {exc.colno})"
-    )
+    print(f"DEPLOY BLOCKED: could not parse {label} JSON at {file_path}: {exc.msg}", file=sys.stderr)
     raise SystemExit(1)
-
+if not isinstance(payload, dict):
+    print(f"DEPLOY BLOCKED: could not parse {label} JSON at {file_path}: top-level value is not an object", file=sys.stderr)
+    raise SystemExit(1)
 value = payload.get(field, "")
-if value is None:
-    value = ""
-print(value)
+print(value if isinstance(value, str) else value)
 PY
-); then
-        printf '%s\n' "$output"
-        return 1
-    fi
-
-    JSON_GET_RESULT="$output"
 }
 
-read_strict_text() {
+read_text_file() {
     local file="$1"
     local label="$2"
-    local output
 
-    if ! output=$(python3 - "$file" "$label" <<'PY'
+    python3 - "$file" "$label" <<'PY'
 import sys
 from pathlib import Path
 
 file_path, label = sys.argv[1:3]
 path = Path(file_path)
-
 try:
     print(path.read_text().strip())
+except FileNotFoundError:
+    print(f"DEPLOY BLOCKED: could not read {label} at {file_path}: file is missing", file=sys.stderr)
+    raise SystemExit(1)
 except OSError as exc:
-    print(f"DEPLOY BLOCKED: could not read {label} at {path}: {exc}")
+    print(f"DEPLOY BLOCKED: could not read {label} at {file_path}: {exc}", file=sys.stderr)
     raise SystemExit(1)
 PY
-); then
-        printf '%s\n' "$output"
-        return 1
-    fi
-
-    STRICT_TEXT_RESULT="$output"
 }
 
 # Check 1: deploy receipt must exist
@@ -114,8 +98,10 @@ if [ ! -f "$DEPLOY_RECEIPT" ]; then
 fi
 
 # Check 2: receipt must say DEPLOY_AUTHORIZED
-json_get "result" "$DEPLOY_RECEIPT" "deploy receipt"
-RECEIPT_RESULT="$JSON_GET_RESULT"
+if ! RECEIPT_RESULT=$(json_get "result" "$DEPLOY_RECEIPT" "deploy receipt" 2>&1); then
+    echo "$RECEIPT_RESULT"
+    exit 1
+fi
 if [ "$RECEIPT_RESULT" != "DEPLOY_AUTHORIZED" ]; then
     echo "DEPLOY BLOCKED: deploy receipt exists but result is '$RECEIPT_RESULT', not 'DEPLOY_AUTHORIZED'."
     exit 1
@@ -127,26 +113,34 @@ if [ ! -f "$STATE_FILE" ]; then
     exit 1
 fi
 
-json_get "state" "$STATE_FILE" "run state"
-CURRENT_STATE="$JSON_GET_RESULT"
+if ! CURRENT_STATE=$(json_get "state" "$STATE_FILE" "state" 2>&1); then
+    echo "$CURRENT_STATE"
+    exit 1
+fi
 if [ "$CURRENT_STATE" != "CLOSURE_ACCEPTED" ]; then
     echo "DEPLOY BLOCKED: current state is '$CURRENT_STATE', not 'CLOSURE_ACCEPTED'."
     echo "Re-run Synrail acceptance before any deployment side effect."
     exit 1
 fi
 
-json_get "run_id" "$DEPLOY_RECEIPT" "deploy receipt"
-RECEIPT_RUN_ID="$JSON_GET_RESULT"
-json_get "run_id" "$STATE_FILE" "run state"
-STATE_RUN_ID="$JSON_GET_RESULT"
+if ! RECEIPT_RUN_ID=$(json_get "run_id" "$DEPLOY_RECEIPT" "deploy receipt" 2>&1); then
+    echo "$RECEIPT_RUN_ID"
+    exit 1
+fi
+if ! STATE_RUN_ID=$(json_get "run_id" "$STATE_FILE" "state" 2>&1); then
+    echo "$STATE_RUN_ID"
+    exit 1
+fi
 if [ -n "$RECEIPT_RUN_ID" ] && [ -n "$STATE_RUN_ID" ] && [ "$RECEIPT_RUN_ID" != "$STATE_RUN_ID" ]; then
     echo "DEPLOY BLOCKED: deploy receipt is for run '$RECEIPT_RUN_ID' but current state is run '$STATE_RUN_ID'."
     echo "The receipt is stale. Run 'synrail deploy' for the current accepted run."
     exit 1
 fi
 
-json_get "target_identity" "$DEPLOY_RECEIPT" "deploy receipt"
-RECEIPT_TARGET_IDENTITY="$JSON_GET_RESULT"
+if ! RECEIPT_TARGET_IDENTITY=$(json_get "target_identity" "$DEPLOY_RECEIPT" "deploy receipt" 2>&1); then
+    echo "$RECEIPT_TARGET_IDENTITY"
+    exit 1
+fi
 if [ -z "$RECEIPT_TARGET_IDENTITY" ]; then
     echo "DEPLOY BLOCKED: deploy receipt does not contain a target identity."
     exit 1
@@ -157,8 +151,10 @@ if [ ! -f "$TARGET_IDENTITY_FILE" ]; then
     exit 1
 fi
 
-read_strict_text "$TARGET_IDENTITY_FILE" "current target identity"
-CURRENT_TARGET_IDENTITY="$STRICT_TEXT_RESULT"
+if ! CURRENT_TARGET_IDENTITY=$(read_text_file "$TARGET_IDENTITY_FILE" "current target identity" 2>&1); then
+    echo "$CURRENT_TARGET_IDENTITY"
+    exit 1
+fi
 if [ -z "$CURRENT_TARGET_IDENTITY" ]; then
     echo "DEPLOY BLOCKED: current target identity is empty."
     exit 1

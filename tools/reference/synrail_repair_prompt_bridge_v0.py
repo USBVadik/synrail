@@ -9,6 +9,12 @@ import sys
 from pathlib import Path
 
 try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
+
+try:
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
     from .synrail_repair_focus_v0 import (
         focused_repair_action_instruction,
         focused_repair_summary,
@@ -16,11 +22,33 @@ try:
         proof_target_paths as shared_proof_target_paths,
     )
 except ImportError:
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
     from synrail_repair_focus_v0 import (
         focused_repair_action_instruction,
         focused_repair_summary,
         focused_repair_surface,
         proof_target_paths as shared_proof_target_paths,
+    )
+
+
+REPAIR_PROMPT_BRIDGE_PATH_SCOPES = {
+    "repair_packet_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+    "checkpoint_record_file": ARTIFACT_SCOPE,
+    "doctor_file": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_repair_prompt_bridge_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=REPAIR_PROMPT_BRIDGE_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
     )
 
 
@@ -181,7 +209,7 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
         "- scope: if the task only asked you to add or insert something, do not also rewrite adjacent spacing, classes, or layout just to make room for it",
         "- presentation: if the task only asked for a small added label or subtitle, keep the new surface visually plain and avoid extra emphasis styling unless the task explicitly asked for it",
         "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files when you can produce one; keep it empty for a truthful already_satisfied no-op attestation",
-        "- diff_provenance: if git_diff is unavailable or the file is untracked, record method, changed_file, one exact added_line or removed_line, one stable context_before or context_after anchor, and verification_command plus verification_result",
+        "- diff_provenance: if git_diff is unavailable or a file is untracked, use diff_provenance for a single-file change, or use diff_provenance_records/per_file_diff_provenance with one structured record per modified file for a multi-file change; each record should include method, changed_file, one exact added_line or removed_line, one stable context_before or context_after anchor, and verification_command plus verification_result",
         "- If diff_provenance.method is missing but the rest of the direct-observation record is strong, Synrail can normalize it to direct_file_observation during a normal check; still include it explicitly when you can",
         "- If final_result.json already carries that strong structured verification, do not spend this repair step rewriting readback.txt or scenario_proof.txt unless Synrail explicitly targets them",
         "- diff_provenance for already_satisfied: record changed_file, observed_line, verification_command, verification_result, and provenance_note instead of inventing a patch",
@@ -228,11 +256,12 @@ def final_result_repair_checklist(*, current_step_subsurface_id: str, current_st
             "- modified_files: list each concrete changed file path first, or keep [] only for a truthful already_satisfied no-op attestation",
             "- git_diff: include a real patch with diff --git, ---, +++, @@, and the named changed files when you can produce one; keep it empty for a truthful already_satisfied no-op attestation",
             "- diff_provenance.method: name how you captured the evidence (for example direct_file_observation); if it is omitted but the direct-observation record is otherwise complete, Synrail can infer direct_file_observation during a normal check",
-            "- diff_provenance.changed_file: name one concrete modified file from modified_files",
-            "- diff_provenance.added_line or diff_provenance.removed_line: record the exact changed line for a real edit",
-            "- diff_provenance.context_before or diff_provenance.context_after: copy one stable neighbor line from the same file so the direct observation has a concrete anchor, not just an isolated changed line",
-            "- diff_provenance.observed_line: for already_satisfied, record the concrete line that was already present",
-            "- diff_provenance.verification_command and diff_provenance.verification_result: capture the command and observed output that proved the changed line or observed line; for tiny edits, prefer output that includes the changed line plus a stable neighbor",
+            "- For a single-file change, diff_provenance.changed_file should name the concrete modified file from modified_files",
+            "- For a multi-file change, use diff_provenance_records or per_file_diff_provenance with one structured record per modified file instead of implying one changed_file proves the whole set",
+            "- Each structured provenance record should include one exact added_line or removed_line for a real edit",
+            "- Each structured provenance record should include one stable context_before or context_after anchor from the same file so the direct observation is not isolated",
+            "- For already_satisfied, use an observed_line on the truthful changed_file record instead of inventing a patch",
+            "- Each structured provenance record should include verification_command and verification_result; for tiny edits, prefer output that includes the changed line plus a stable neighbor",
             "- diff_provenance.provenance_note: explain why this is direct observation, especially for already_satisfied or untracked files",
             "- If this direct-observation record is already strong, leave readback.txt and scenario_proof.txt alone unless Synrail later names them as the exact blocker",
             "- Need a canonical shape? run `synrail final-result-template`",
@@ -318,12 +347,8 @@ def final_result_first_guardrails(*, current_step_subsurface_id: str, proof_path
     return lines
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
 def checkpoint_note(checkpoint: dict | None, *, repair_packet: dict) -> str:
@@ -527,11 +552,26 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    record = build_record(
-        repair_packet=load_json(Path(args.repair_packet_file)),
-        checkpoint=load_json(Path(args.checkpoint_record_file)) if args.checkpoint_record_file else None,
-        doctor=load_json(Path(args.doctor_file)) if args.doctor_file else None,
-    )
+    try:
+        artifact_root = Path(args.repair_packet_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "repair_packet_file",
+            args.repair_packet_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_repair_prompt_bridge_paths(args, artifact_root=artifact_root, project_root=project_root)
+        record = build_record(
+            repair_packet=load_json(Path(args.repair_packet_file)),
+            checkpoint=load_json(Path(args.checkpoint_record_file)) if args.checkpoint_record_file else None,
+            doctor=load_json(Path(args.doctor_file)) if args.doctor_file else None,
+        )
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     save_json(Path(args.output), record)
     print(json.dumps({"result": "OK", "current_step_id": record["current_step_id"]}, ensure_ascii=True))
     return 0

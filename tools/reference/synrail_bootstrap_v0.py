@@ -8,6 +8,11 @@ import hashlib
 import json
 from pathlib import Path
 
+try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
+
 
 BOOTSTRAP_SCHEMA_VERSION = "bootstrap_record_v0"
 BOOTSTRAP_VALIDATION_SCHEMA_VERSION = "bootstrap_validation_record_v0"
@@ -30,12 +35,8 @@ def text_sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
 def project_prefers_runtime_evidence(project_root: Path | None) -> bool:
@@ -90,10 +91,9 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                         "summary",
                         "modified_files",
                         "git_diff",
-                        "diff_provenance.method",
-                        "diff_provenance.changed_file",
-                        "diff_provenance.verification_result",
-                        "diff_provenance.verification_command",
+                        "diff_provenance or diff_provenance_records",
+                        "verification_result on each structured provenance record",
+                        "verification_command on each structured provenance record",
                     ],
                     "status_hint": "use PROVEN for an evidenced edit, or ALREADY_SATISFIED when the requested state was already present before any edit",
                     "auto_carried_fields": [
@@ -107,20 +107,20 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
                         "@@",
                         "named changed files",
                     ],
-                    "cleanup_summary_hint": "workspace clean after updating only path/to/changed_file.ext with no unintended changes",
+                    "cleanup_summary_hint": "workspace clean after updating only the intended file or files for this run with no unintended changes",
                     "helper_commands": [
                         "synrail final-result-template",
                     ],
                     "direct_observation_minimum": [
-                        "diff_provenance.changed_file",
-                        "diff_provenance.added_line or diff_provenance.removed_line",
-                        "diff_provenance.context_before or diff_provenance.context_after",
-                        "diff_provenance.verification_command",
-                        "diff_provenance.verification_result",
+                        "for each attested file: changed_file",
+                        "for each attested file: added_line or removed_line",
+                        "for each attested file: context_before or context_after",
+                        "for each attested file: verification_command",
+                        "for each attested file: verification_result",
                     ],
                     "scope_hint": "Keep the implementation inside the requested scope. Do not also tweak adjacent spacing, classes, or layout unless the task explicitly asked for it.",
                     "presentation_hint": "If the task only asked for a simple added subtitle or label, keep the new line plain unless the task explicitly asked for emphasis.",
-                    "diff_provenance_hint": "if git_diff is unavailable, use diff_provenance with changed_file, one exact added_line or removed_line, one stable context_before or context_after line, verification_command, and verification_result. If the requested state was already present before edits, keep git_diff empty and use observed_line plus provenance_note instead of inventing a patch",
+                    "diff_provenance_hint": "if git_diff is unavailable, use diff_provenance for a single-file change, or use diff_provenance_records/per_file_diff_provenance with one structured direct-observation record per modified file for a multi-file change. Each record should carry changed_file, one exact added_line or removed_line, one stable context_before or context_after line, verification_command, and verification_result. If the requested state was already present before edits, keep git_diff empty and use observed_line plus provenance_note instead of inventing a patch",
                     "artifact_identity_hint": "during a normal synrail check, run identity is carried automatically; only fill artifact_identity manually for standalone bundle-check",
                     "cleanup_hint": "during a normal synrail check, leave cleanup_status absent unless Synrail later asks for explicit cleanup attestation",
                     "no_op_hint": "If the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and attest the observed line truthfully through diff_provenance.",

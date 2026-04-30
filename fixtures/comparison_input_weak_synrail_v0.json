@@ -3,6 +3,7 @@
   "system": "synrail",
   "scenario_id": "SCENARIO_WEAK_001",
   "task_class": "honesty_restoration_guard",
+  "data_provenance": "curated_local_estimate",
   "closure_result": "CLAIMED_NOT_ACCEPTED",
   "blocker_to_closure_cycles": 3,
   "false_success_risk": "LOW",

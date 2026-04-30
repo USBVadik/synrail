@@ -9,9 +9,41 @@ import sys
 from pathlib import Path
 
 try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
+
+try:
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
     from .synrail_repair_focus_v0 import focused_repair_action_instruction, focused_repair_summary
 except ImportError:
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
     from synrail_repair_focus_v0 import focused_repair_action_instruction, focused_repair_summary
+
+
+THIN_OUTPUT_PATH_SCOPES = {
+    "state_file": ARTIFACT_SCOPE,
+    "report_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+    "repair_packet_file": ARTIFACT_SCOPE,
+    "doctor_file": ARTIFACT_SCOPE,
+    "checkpoint_record_file": ARTIFACT_SCOPE,
+    "consistency_recovery_file": ARTIFACT_SCOPE,
+    "refresh_file": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_thin_output_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=THIN_OUTPUT_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
 
 
 def humanize_token(value: str) -> str:
@@ -69,12 +101,8 @@ def human_safe_step_text(value: str) -> str:
     return labels.get(value, value)
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
 def checkpoint_restore_available(checkpoint: dict | None, *, state: dict) -> bool:
@@ -770,16 +798,31 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    record = build_record(
-        state=load_json(Path(args.state_file)),
-        report=load_json(Path(args.report_file)),
-        mode=args.mode,
-        repair_packet=load_json(Path(args.repair_packet_file)) if args.repair_packet_file else None,
-        doctor=load_json(Path(args.doctor_file)) if args.doctor_file else None,
-        checkpoint=load_json(Path(args.checkpoint_record_file)) if args.checkpoint_record_file else None,
-        recovery=load_json(Path(args.consistency_recovery_file)) if args.consistency_recovery_file else None,
-        refresh=load_json(Path(args.refresh_file)) if args.refresh_file else None,
-    )
+    try:
+        artifact_root = Path(args.state_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "state_file",
+            args.state_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_thin_output_paths(args, artifact_root=artifact_root, project_root=project_root)
+        record = build_record(
+            state=load_json(Path(args.state_file)),
+            report=load_json(Path(args.report_file)),
+            mode=args.mode,
+            repair_packet=load_json(Path(args.repair_packet_file)) if args.repair_packet_file else None,
+            doctor=load_json(Path(args.doctor_file)) if args.doctor_file else None,
+            checkpoint=load_json(Path(args.checkpoint_record_file)) if args.checkpoint_record_file else None,
+            recovery=load_json(Path(args.consistency_recovery_file)) if args.consistency_recovery_file else None,
+            refresh=load_json(Path(args.refresh_file)) if args.refresh_file else None,
+        )
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     save_json(Path(args.output), record)
     print(json.dumps({"result": "OK", "outcome_class": record["outcome_class"], "restore_available": record["restore_available"]}, ensure_ascii=True))
     return 0

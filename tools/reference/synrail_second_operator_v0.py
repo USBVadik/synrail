@@ -11,9 +11,32 @@ from pathlib import Path
 try:
     from .synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
     from .synrail_io_v0 import load_json, save_json
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
 except ImportError:
     from synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
     from synrail_io_v0 import load_json, save_json
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+
+
+SECOND_OPERATOR_PATH_SCOPES = {
+    "state_file": ARTIFACT_SCOPE,
+    "repair_packet_file": ARTIFACT_SCOPE,
+    "run_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_second_operator_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=SECOND_OPERATOR_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
 
 
 def build_record(*, state: dict, packet: dict, run_artifact: dict) -> dict:
@@ -98,11 +121,26 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    record = build_record(
-        state=load_json(Path(args.state_file)),
-        packet=load_json(Path(args.repair_packet_file)),
-        run_artifact=load_json(Path(args.run_file)),
-    )
+    try:
+        artifact_root = Path(args.state_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "state_file",
+            args.state_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_second_operator_paths(args, artifact_root=artifact_root, project_root=project_root)
+        record = build_record(
+            state=load_json(Path(args.state_file)),
+            packet=load_json(Path(args.repair_packet_file)),
+            run_artifact=load_json(Path(args.run_file)),
+        )
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     save_json(Path(args.output), record)
     print(json.dumps({"result": "OK", "verdict": record["verdict"]}, ensure_ascii=True))
     return 0

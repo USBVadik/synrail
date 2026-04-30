@@ -7,7 +7,42 @@ import argparse
 import json
 import sys
 from pathlib import Path
+
+try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
 from typing import Any
+
+try:
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+except ImportError:
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+
+
+ARTIFACT_CONSISTENCY_PATH_SCOPES = {
+    "state_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+    "report_file": ARTIFACT_SCOPE,
+    "orchestration_file": ARTIFACT_SCOPE,
+    "run_file": ARTIFACT_SCOPE,
+    "repair_packet_file": ARTIFACT_SCOPE,
+    "repair_handoff_file": ARTIFACT_SCOPE,
+    "repair_receipt_file": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_artifact_consistency_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=ARTIFACT_CONSISTENCY_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
 
 
 CONFLICT_PRECEDENCE = [
@@ -19,8 +54,6 @@ CONFLICT_PRECEDENCE = [
 ]
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
 
 
 def load_json_safe(path: Path) -> tuple[dict | None, str]:
@@ -30,8 +63,6 @@ def load_json_safe(path: Path) -> tuple[dict | None, str]:
         return None, str(exc)
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
 def append_unique(values: list[str], value: str) -> None:
@@ -277,29 +308,44 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    state = load_json(Path(args.state_file))
+    try:
+        artifact_root = Path(args.state_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "state_file",
+            args.state_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_artifact_consistency_paths(args, artifact_root=artifact_root, project_root=project_root)
+        state = load_json(Path(args.state_file))
 
-    artifact_errors: dict[str, str] = {}
+        artifact_errors: dict[str, str] = {}
 
-    def optional_artifact(path_value: str | None, artifact_id: str) -> dict | None:
-        if not path_value:
-            return None
-        payload, error = load_json_safe(Path(path_value))
-        if error:
-            artifact_errors[artifact_id] = error
-            return None
-        return payload
+        def optional_artifact(path_value: str | None, artifact_id: str) -> dict | None:
+            if not path_value:
+                return None
+            payload, error = load_json_safe(Path(path_value))
+            if error:
+                artifact_errors[artifact_id] = error
+                return None
+            return payload
 
-    record = build_record(
-        state=state,
-        report=optional_artifact(args.report_file, "report"),
-        orchestration=optional_artifact(args.orchestration_file, "orchestration"),
-        run_artifact=optional_artifact(args.run_file, "run"),
-        repair_packet=optional_artifact(args.repair_packet_file, "repair_packet"),
-        repair_handoff=optional_artifact(args.repair_handoff_file, "repair_handoff"),
-        repair_receipt=optional_artifact(args.repair_receipt_file, "repair_receipt"),
-        artifact_errors=artifact_errors,
-    )
+        record = build_record(
+            state=state,
+            report=optional_artifact(args.report_file, "report"),
+            orchestration=optional_artifact(args.orchestration_file, "orchestration"),
+            run_artifact=optional_artifact(args.run_file, "run"),
+            repair_packet=optional_artifact(args.repair_packet_file, "repair_packet"),
+            repair_handoff=optional_artifact(args.repair_handoff_file, "repair_handoff"),
+            repair_receipt=optional_artifact(args.repair_receipt_file, "repair_receipt"),
+            artifact_errors=artifact_errors,
+        )
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     save_json(Path(args.output), record)
     print(json.dumps({"result": record["result"], "dominant_conflict": record["dominant_conflict"]}, ensure_ascii=True))
     return 0 if record["result"] == "CONSISTENT" else 2

@@ -9,17 +9,42 @@ import sys
 from pathlib import Path
 
 try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
+
+try:
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
     from .synrail_repair_handoff_v0 import build_repair_handoff
 except ImportError:
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
     from synrail_repair_handoff_v0 import build_repair_handoff
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+ARTIFACT_REPAIR_RECEIPT_PATH_SCOPES = {
+    "repair_packet_file": ARTIFACT_SCOPE,
+    "resulting_state_file": ARTIFACT_SCOPE,
+    "report_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+    "previous_receipt_file": ARTIFACT_SCOPE,
+}
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_artifact_repair_receipt_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=ARTIFACT_REPAIR_RECEIPT_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
+
+
+
 
 
 def ids_for_step(packet: dict, step_id: str, *, kind: str) -> list[str]:
@@ -307,11 +332,26 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    packet = load_json(Path(args.repair_packet_file))
-    resulting_state = load_json(Path(args.resulting_state_file))
-    report = load_json(Path(args.report_file))
-    previous_receipt = load_json(Path(args.previous_receipt_file)) if args.previous_receipt_file else None
-    receipt = build_receipt(starting_packet=packet, resulting_state=resulting_state, report=report, previous_receipt=previous_receipt)
+    try:
+        artifact_root = Path(args.repair_packet_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "repair_packet_file",
+            args.repair_packet_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_artifact_repair_receipt_paths(args, artifact_root=artifact_root, project_root=project_root)
+        packet = load_json(Path(args.repair_packet_file))
+        resulting_state = load_json(Path(args.resulting_state_file))
+        report = load_json(Path(args.report_file))
+        previous_receipt = load_json(Path(args.previous_receipt_file)) if args.previous_receipt_file else None
+        receipt = build_receipt(starting_packet=packet, resulting_state=resulting_state, report=report, previous_receipt=previous_receipt)
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     save_json(Path(args.output), receipt)
     print(json.dumps({"result": receipt["result"], "completed_step_id": receipt["completed_step_id"], "next_step_id": receipt["next_step_id"]}, ensure_ascii=True))
     return 0

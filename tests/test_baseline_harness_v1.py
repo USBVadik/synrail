@@ -15,6 +15,7 @@ if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
 from synrail_baseline_harness_v1 import (  # noqa: E402
+    build_record,
     checks_per_accepted_closure,
     compare,
     economics_summary,
@@ -66,6 +67,15 @@ class BaselineHarnessV1Tests(unittest.TestCase):
 
         self.assertEqual(3, checks_per_accepted_closure(accepted))
         self.assertEqual(0, checks_per_accepted_closure(blocked))
+
+    def test_build_record_surfaces_input_data_provenance(self) -> None:
+        baseline = comparison_input(system="baseline", path_id="baseline")
+        synrail = comparison_input(system="synrail", path_id="synrail")
+
+        record = build_record(baseline, synrail)
+
+        self.assertEqual("curated_local_estimate", record["baseline_data_provenance"])
+        self.assertEqual("curated_local_estimate", record["synrail_data_provenance"])
 
     def test_economics_summary_tracks_fixed_control_mass_metrics(self) -> None:
         baseline = comparison_input(system="baseline", path_id="baseline")

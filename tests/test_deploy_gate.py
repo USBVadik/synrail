@@ -345,24 +345,8 @@ class DeployGateTests(unittest.TestCase):
             self.assertEqual(1, guard.returncode)
             self.assertIn("not 'CLOSURE_ACCEPTED'", guard.stdout)
 
-    def test_deploy_guard_blocks_on_corrupted_deploy_receipt_json(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="synrail_deploy_guard_receipt_json_") as tmpdir:
-            project_root = Path(tmpdir) / "project"
-            artifact_root = project_root / ".synrail"
-            project_root.mkdir(parents=True, exist_ok=True)
-            self._start_run(project_root)
-
-            state = load_json(artifact_root / "state.json")
-            state["state"] = "CLOSURE_ACCEPTED"
-            write_json(artifact_root / "state.json", state)
-            (artifact_root / "deploy_receipt.json").write_text("{not valid json\n")
-
-            guard = self.run_guard(".synrail", cwd=project_root)
-            self.assertEqual(1, guard.returncode)
-            self.assertIn("could not parse deploy receipt JSON", guard.stdout)
-
-    def test_deploy_guard_blocks_on_corrupted_state_json(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="synrail_deploy_guard_state_json_") as tmpdir:
+    def test_deploy_guard_blocks_on_corrupted_receipt_json(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_guard_bad_receipt_") as tmpdir:
             project_root = Path(tmpdir) / "project"
             artifact_root = project_root / ".synrail"
             project_root.mkdir(parents=True, exist_ok=True)
@@ -377,11 +361,56 @@ class DeployGateTests(unittest.TestCase):
                 cwd=project_root,
             )
             self.assertEqual(0, deploy.returncode)
-            (artifact_root / "state.json").write_text("{not valid json\n")
+
+            (artifact_root / "deploy_receipt.json").write_text('{"result": "DEPLOY_AUTHORIZED", invalid\n')
 
             guard = self.run_guard(".synrail", cwd=project_root)
             self.assertEqual(1, guard.returncode)
-            self.assertIn("could not parse run state JSON", guard.stdout)
+            self.assertIn("could not parse deploy receipt JSON", guard.stdout + guard.stderr)
+
+    def test_deploy_guard_blocks_on_corrupted_state_json(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_guard_bad_state_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "CLOSURE_ACCEPTED"
+            write_json(artifact_root / "state.json", state)
+
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(0, deploy.returncode)
+
+            (artifact_root / "state.json").write_text('{"state": "CLOSURE_ACCEPTED", invalid\n')
+
+            guard = self.run_guard(".synrail", cwd=project_root)
+            self.assertEqual(1, guard.returncode)
+            self.assertIn("could not parse state JSON", guard.stdout + guard.stderr)
+
+    def test_deploy_guard_passes_with_valid_receipt_and_state(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_deploy_guard_ok_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            self._start_run(project_root)
+
+            state = load_json(artifact_root / "state.json")
+            state["state"] = "CLOSURE_ACCEPTED"
+            write_json(artifact_root / "state.json", state)
+
+            deploy = self.run_alpha(
+                "deploy", "--artifact-root", ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(0, deploy.returncode)
+
+            guard = self.run_guard(".synrail", cwd=project_root)
+            self.assertEqual(0, guard.returncode)
+            self.assertIn("DEPLOY OK: authorized for run", guard.stdout)
 
     def test_guarded_side_effect_blocks_without_authorization(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_guarded_side_effect_block_") as tmpdir:

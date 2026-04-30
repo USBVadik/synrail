@@ -13,9 +13,46 @@ from pathlib import Path
 try:
     from .synrail_bundle_v0 import REQUIRED_SECTION_NAMES
     from .synrail_io_v0 import load_json, save_json
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
 except ImportError:
     from synrail_bundle_v0 import REQUIRED_SECTION_NAMES
     from synrail_io_v0 import load_json, save_json
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+
+
+ACCEPTANCE_BUILD_PATH_SCOPES = {
+    "project_profile_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+}
+
+ACCEPTANCE_VALIDATE_PATH_SCOPES = {
+    "criteria_file": ARTIFACT_SCOPE,
+    "state_file": ARTIFACT_SCOPE,
+    "project_profile_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_acceptance_build_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=ACCEPTANCE_BUILD_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
+
+def validate_acceptance_validate_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=ACCEPTANCE_VALIDATE_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
 
 
 REQUIRED_GATE_IDS = [
@@ -237,17 +274,43 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
 
-    if args.cmd == "build":
-        record = build_record(load_json(Path(args.project_profile_file)), generated_by=args.generated_by)
-        save_json(Path(args.output), record)
-        print(json.dumps({"result": "OK", "criteria_revision_id": record["criteria_revision_id"]}, ensure_ascii=True))
-        return 0
+    try:
+        project_root = current_project_root()
+        if args.cmd == "build":
+            artifact_root = Path(args.project_profile_file).expanduser().resolve().parent
+            validate_root_within_project(
+                "project_profile_file",
+                args.project_profile_file,
+                root=artifact_root,
+                project_root=project_root,
+                artifact_root=artifact_root,
+            )
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            validate_acceptance_build_paths(args, artifact_root=artifact_root, project_root=project_root)
+            record = build_record(load_json(Path(args.project_profile_file)), generated_by=args.generated_by)
+            save_json(Path(args.output), record)
+            print(json.dumps({"result": "OK", "criteria_revision_id": record["criteria_revision_id"]}, ensure_ascii=True))
+            return 0
 
-    validation = validate_record(
-        load_json(Path(args.criteria_file)),
-        state=load_json(Path(args.state_file)),
-        profile=load_json(Path(args.project_profile_file)),
-    )
+        artifact_root = Path(args.criteria_file).expanduser().resolve().parent
+        validate_root_within_project(
+            "criteria_file",
+            args.criteria_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_acceptance_validate_paths(args, artifact_root=artifact_root, project_root=project_root)
+        validation = validate_record(
+            load_json(Path(args.criteria_file)),
+            state=load_json(Path(args.state_file)),
+            profile=load_json(Path(args.project_profile_file)),
+        )
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
+
     save_json(Path(args.output), validation)
     print(json.dumps({"result": "OK", "status": validation["status"], "reason": validation["reason"]}, ensure_ascii=True))
     return 0

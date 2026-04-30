@@ -28,9 +28,11 @@ Check once:
 git --version
 ```
 
-If `git` is missing, Synrail can still run. Do not invent a `git_diff`. In `.synrail/final_result.json`, leave `git_diff` empty and fill structured `diff_provenance` instead:
+If `git` is missing, Synrail can still run. Do not invent a `git_diff`. In `.synrail/final_result.json`, leave `git_diff` empty and use structured provenance instead:
 
-- `changed_file`
+- for a single-file change, use `diff_provenance`
+- for a multi-file change, use `diff_provenance_records` or `per_file_diff_provenance` with one record per modified file
+- in each record, include `changed_file`
 - one exact `added_line`, `removed_line`, or `observed_line`
 - one stable `context_before` or `context_after`
 - `verification_command`
@@ -90,7 +92,7 @@ Make the requested change. Run local verification. Then strengthen `final_result
 
 In `final_result.json`, use a trust-bearing status: `PROVEN` for an evidenced bounded edit, or `ALREADY_SATISFIED` only for a truthful no-op attestation where the requested state was already present before any edit.
 
-If `git` is unavailable in the project environment, leave `git_diff` empty. Use structured `diff_provenance` with repo-relative paths and exact observed lines instead of trying to simulate a patch.
+If `git` is unavailable in the project environment, leave `git_diff` empty. Use `diff_provenance` for a single-file change, or `diff_provenance_records` / `per_file_diff_provenance` with repo-relative paths and exact observed lines for a multi-file change, instead of trying to simulate a patch.
 
 In the normal `synrail check` path, you usually do not need to hand-copy run identity fields or a cleanup summary into `final_result.json` when the current controlled run context and doctor-ready workspace already provide that truth. Focus first on the status, changed files, and diff/provenance. Only spend extra steps on `readback.txt` or `scenario_proof.txt` if `check` still names them after `final_result.json` is already strong.
 

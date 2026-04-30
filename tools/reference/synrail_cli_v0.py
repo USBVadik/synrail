@@ -13,7 +13,36 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
-from typing import Literal
+
+try:
+    from .synrail_agent_adoption_v0 import (
+        preferred_repo_native_alpha_command,
+        preferred_synrail_command,
+        preferred_synrail_fallback_command as preferred_synrail_fallback_command_for_runtime,
+        relative_artifact_root_for_project,
+        render_agent_policy_block,
+        render_agent_policy_markdown,
+        render_claude_policy_markdown,
+        render_gemini_policy_markdown,
+        write_agent_policy_file,
+    )
+except ImportError:
+    from synrail_agent_adoption_v0 import (
+        preferred_repo_native_alpha_command,
+        preferred_synrail_command,
+        preferred_synrail_fallback_command as preferred_synrail_fallback_command_for_runtime,
+        relative_artifact_root_for_project,
+        render_agent_policy_block,
+        render_agent_policy_markdown,
+        render_claude_policy_markdown,
+        render_gemini_policy_markdown,
+        write_agent_policy_file,
+    )
+
+try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
 
 try:
     from .synrail_repair_packet_v0 import build_packet_from_runtime_truth
@@ -71,17 +100,128 @@ except ImportError:
 
 try:
     from .synrail_commands_v0 import (
-        run_bug_packet_command,
+        cmd_apply_bundle as extracted_cmd_apply_bundle,
+        cmd_apply_closure as extracted_cmd_apply_closure,
+        cmd_artifact_consistency as extracted_cmd_artifact_consistency,
+        cmd_bug_packet as extracted_cmd_bug_packet,
+        cmd_bundle_check as extracted_cmd_bundle_check,
+        cmd_checkpoint_operator_reading as extracted_cmd_checkpoint_operator_reading,
+        cmd_closure as extracted_cmd_closure,
+        cmd_compare as extracted_cmd_compare,
+        cmd_consistency_recovery as extracted_cmd_consistency_recovery,
+        cmd_consistency_recovery_prompt as extracted_cmd_consistency_recovery_prompt,
+        cmd_consistency_recovery_prompt_reading as extracted_cmd_consistency_recovery_prompt_reading,
+        cmd_create_checkpoint as extracted_cmd_create_checkpoint,
+        cmd_deploy as extracted_cmd_deploy,
+        cmd_deploy_check as extracted_cmd_deploy_check,
+        cmd_doctor as extracted_cmd_doctor,
+        cmd_externality_pressure as extracted_cmd_externality_pressure,
+        cmd_generate_prompt as extracted_cmd_generate_prompt,
+        cmd_governed_cost as extracted_cmd_governed_cost,
+        cmd_hybrid_status as extracted_cmd_hybrid_status,
+        cmd_observability as extracted_cmd_observability,
+        cmd_operator_brief as extracted_cmd_operator_brief,
+        cmd_operator_brief_chain as extracted_cmd_operator_brief_chain,
+        cmd_operator_reading as extracted_cmd_operator_reading,
+        cmd_operator_render as extracted_cmd_operator_render,
+        cmd_operator_render_adoption as extracted_cmd_operator_render_adoption,
+        cmd_operator_render_adoption_delta as extracted_cmd_operator_render_adoption_delta,
+        cmd_orchestrate as extracted_cmd_orchestrate,
+        cmd_plan_proof as extracted_cmd_plan_proof,
+        cmd_preparation_receipt as extracted_cmd_preparation_receipt,
+        cmd_prompt_followup as extracted_cmd_prompt_followup,
+        cmd_prompt_retry_guard as extracted_cmd_prompt_retry_guard,
+        cmd_recommend_mode as extracted_cmd_recommend_mode,
+        cmd_refresh as extracted_cmd_refresh,
+        cmd_repair_handoff as extracted_cmd_repair_handoff,
+        cmd_repair_packet as extracted_cmd_repair_packet,
+        cmd_reproducibility as extracted_cmd_reproducibility,
+        cmd_restore_checkpoint as extracted_cmd_restore_checkpoint,
+        cmd_resume as extracted_cmd_resume,
+        cmd_save as extracted_cmd_save,
+        cmd_second_operator as extracted_cmd_second_operator,
+        cmd_select_mode as extracted_cmd_select_mode,
+        cmd_session_export as extracted_cmd_session_export,
+        cmd_substitute_pressure as extracted_cmd_substitute_pressure,
+        cmd_telemetry_enable as extracted_cmd_telemetry_enable,
+        cmd_telemetry_export as extracted_cmd_telemetry_export,
+        cmd_thin_output as extracted_cmd_thin_output,
+        cmd_thin_output_reading as extracted_cmd_thin_output_reading,
+        cmd_validate as extracted_cmd_validate,
+        cmd_verify_checkpoint as extracted_cmd_verify_checkpoint,
         run_install_agent_files_command,
-        run_session_export_command,
-        run_telemetry_export_command,
     )
 except ImportError:
     from synrail_commands_v0 import (
-        run_bug_packet_command,
+        cmd_apply_bundle as extracted_cmd_apply_bundle,
+        cmd_apply_closure as extracted_cmd_apply_closure,
+        cmd_artifact_consistency as extracted_cmd_artifact_consistency,
+        cmd_bug_packet as extracted_cmd_bug_packet,
+        cmd_bundle_check as extracted_cmd_bundle_check,
+        cmd_checkpoint_operator_reading as extracted_cmd_checkpoint_operator_reading,
+        cmd_closure as extracted_cmd_closure,
+        cmd_compare as extracted_cmd_compare,
+        cmd_consistency_recovery as extracted_cmd_consistency_recovery,
+        cmd_consistency_recovery_prompt as extracted_cmd_consistency_recovery_prompt,
+        cmd_consistency_recovery_prompt_reading as extracted_cmd_consistency_recovery_prompt_reading,
+        cmd_create_checkpoint as extracted_cmd_create_checkpoint,
+        cmd_deploy as extracted_cmd_deploy,
+        cmd_deploy_check as extracted_cmd_deploy_check,
+        cmd_doctor as extracted_cmd_doctor,
+        cmd_externality_pressure as extracted_cmd_externality_pressure,
+        cmd_generate_prompt as extracted_cmd_generate_prompt,
+        cmd_governed_cost as extracted_cmd_governed_cost,
+        cmd_hybrid_status as extracted_cmd_hybrid_status,
+        cmd_observability as extracted_cmd_observability,
+        cmd_operator_brief as extracted_cmd_operator_brief,
+        cmd_operator_brief_chain as extracted_cmd_operator_brief_chain,
+        cmd_operator_reading as extracted_cmd_operator_reading,
+        cmd_operator_render as extracted_cmd_operator_render,
+        cmd_operator_render_adoption as extracted_cmd_operator_render_adoption,
+        cmd_operator_render_adoption_delta as extracted_cmd_operator_render_adoption_delta,
+        cmd_orchestrate as extracted_cmd_orchestrate,
+        cmd_plan_proof as extracted_cmd_plan_proof,
+        cmd_preparation_receipt as extracted_cmd_preparation_receipt,
+        cmd_prompt_followup as extracted_cmd_prompt_followup,
+        cmd_prompt_retry_guard as extracted_cmd_prompt_retry_guard,
+        cmd_recommend_mode as extracted_cmd_recommend_mode,
+        cmd_refresh as extracted_cmd_refresh,
+        cmd_repair_handoff as extracted_cmd_repair_handoff,
+        cmd_repair_packet as extracted_cmd_repair_packet,
+        cmd_reproducibility as extracted_cmd_reproducibility,
+        cmd_restore_checkpoint as extracted_cmd_restore_checkpoint,
+        cmd_resume as extracted_cmd_resume,
+        cmd_save as extracted_cmd_save,
+        cmd_second_operator as extracted_cmd_second_operator,
+        cmd_select_mode as extracted_cmd_select_mode,
+        cmd_session_export as extracted_cmd_session_export,
+        cmd_substitute_pressure as extracted_cmd_substitute_pressure,
+        cmd_telemetry_enable as extracted_cmd_telemetry_enable,
+        cmd_telemetry_export as extracted_cmd_telemetry_export,
+        cmd_thin_output as extracted_cmd_thin_output,
+        cmd_thin_output_reading as extracted_cmd_thin_output_reading,
+        cmd_validate as extracted_cmd_validate,
+        cmd_verify_checkpoint as extracted_cmd_verify_checkpoint,
         run_install_agent_files_command,
-        run_session_export_command,
-        run_telemetry_export_command,
+    )
+
+try:
+    from .synrail_path_scope_v0 import (
+        ARTIFACT_SCOPE,
+        DUAL_SCOPE,
+        PROJECT_SCOPE,
+        PathScopeValidationError,
+        validate_namespace_paths,
+        validate_root_within_project,
+    )
+except ImportError:
+    from synrail_path_scope_v0 import (
+        ARTIFACT_SCOPE,
+        DUAL_SCOPE,
+        PROJECT_SCOPE,
+        PathScopeValidationError,
+        validate_namespace_paths,
+        validate_root_within_project,
     )
 
 
@@ -186,12 +326,8 @@ def run_python_capture(script: Path, args: list[str]) -> subprocess.CompletedPro
     return subprocess.run(cmd, check=False, capture_output=True, text=True)
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
 def normalize_repo_relative_path(value: str) -> str:
@@ -324,6 +460,8 @@ def observed_changes_within_allowed_scope(changed_files: list[str], allowed_scop
 
 
 def maybe_apply_observed_git_scope_defaults(args: argparse.Namespace, *, state: dict | None = None) -> None:
+    if getattr(args, "clean_surface", False):
+        return
     target_path_text = getattr(args, "target_path", "") or ""
     final_result_text = getattr(args, "final_result", "") or ""
     state_file_text = getattr(args, "state_file", "") or ""
@@ -434,522 +572,11 @@ def save_alpha_target_identity_file(root: Path, *, target_identity: str) -> None
         (root / "target_identity.txt").write_text(text + "\n")
 
 
-def relative_artifact_root_for_project(*, project_root: Path, artifact_root: str) -> str:
-    artifact_path = Path(artifact_root)
-    if artifact_path.is_absolute():
-        try:
-            return str(artifact_path.relative_to(project_root))
-        except ValueError:
-            return str(artifact_path)
-    return str(artifact_path)
-
-
-def policy_command_examples(*, artifact_root: str) -> dict[str, str]:
-    return policy_command_examples_for_binary(artifact_root=artifact_root, command="synrail")
-
-
-def preferred_synrail_command() -> str:
-    return "synrail"
-
-
 def preferred_synrail_fallback_command() -> str | None:
-    argv0 = Path(sys.argv[0]).expanduser()
-    if argv0.name != "synrail":
-        sibling = Path(sys.executable).expanduser().with_name("synrail")
-        if sibling.exists():
-            return shlex.quote(str(sibling.resolve()))
-        return None
-    # Keep repo policy portable-first, but surface the exact local binary as an
-    # escape hatch when this machine resolves a different entrypoint.
-    return shlex.quote(str(argv0.resolve()))
-
-
-def preferred_repo_native_alpha_command(*, project_root: Path) -> str | None:
-    alpha_entry = project_root / "alpha.py"
-    if not alpha_entry.exists():
-        return None
-    return "python3 alpha.py"
-
-
-def policy_command_examples_for_binary(*, artifact_root: str, command: str) -> dict[str, str]:
-    quoted_root = shlex.quote(artifact_root)
-    if artifact_root == DEFAULT_ALPHA_ARTIFACT_ROOT:
-        return {
-            "status": command,
-            "start": f'{command} start "Describe the bounded local change."',
-            "check": f"{command} check",
-            "repair": f"{command} repair-step",
-        }
-    return {
-        "status": f"{command} status --artifact-root {quoted_root}",
-        "start": f'{command} start --artifact-root {quoted_root} "Describe the bounded local change."',
-        "check": f"{command} check --artifact-root {quoted_root}",
-        "repair": f"{command} repair-step --artifact-root {quoted_root}",
-    }
-
-
-def policy_workspace_note_lines(*, workspace_isolation_note: str, prefer_runtime_helper: bool, command: str) -> list[str]:
-    lines: list[str] = []
-    if workspace_isolation_note:
-        lines.append(f"- {workspace_isolation_note}")
-    if prefer_runtime_helper:
-        lines.append(
-            f"- For UI or rendered-output tasks, prefer `{command} runtime-helper` and a simple curl or template-render check before browser automation."
-        )
-    return lines
-
-
-def policy_portability_note_lines(
-    *,
-    fallback_command: str | None,
-    repo_native_alpha_command: str | None,
-) -> list[str]:
-    lines = [
-        "- Keep repo instructions portable: prefer `synrail` in commands and committed docs.",
-    ]
-    lines.extend(
-        [
-            "- If `synrail` from PATH is unavailable in this checkout, try a local wrapper like `./.venv/bin/synrail` before assuming the control tool is missing.",
-        ]
+    return preferred_synrail_fallback_command_for_runtime(
+        argv0=sys.argv[0],
+        python_executable=sys.executable,
     )
-    if repo_native_alpha_command:
-        lines.extend(
-            [
-                f"- If this repo exposes a local alpha entrypoint at `alpha.py`, prefer `{repo_native_alpha_command}` as the repo-local fallback instead of reverse-engineering the entrypoint from setup metadata.",
-                f"- If a checkout-local wrapper path itself triggers an agent approval or permission wall, switch immediately to the exact repo-local commands below before concluding Synrail cannot run on this host.",
-            ]
-        )
-    if fallback_command:
-        lines.append(
-            f"- If this machine cannot resolve the right Synrail binary from PATH, use `{fallback_command}` as the local fallback for this checkout."
-        )
-    return lines
-
-
-def policy_non_accepted_status_lines(check_command: str) -> list[str]:
-    return [
-        "## Non-Accepted Status Rule",
-        "",
-        "Only `Status: Accepted` means the task may be reported as complete.",
-        f"If `{check_command}` prints `Proof Invalid`, `Proof Incomplete`, `Proof Too Thin To Trust`, `Workspace Not Ready`, `Workspace Not Trusted`, `Needs Review`, or any other non-green status, do not send a final success/completion answer.",
-        "Do not say the task is functionally complete, 100% done, fully done, or all requirements met while Synrail is non-green.",
-        "Instead report the exact Synrail status, follow only the named next command or repair target, and rerun Synrail until `Status: Accepted` appears.",
-        "",
-    ]
-
-
-def policy_no_git_proof_line(artifact_root: str) -> str:
-    return (
-        f"If `git` is unavailable on this host, do not invent `git_diff`; leave it empty in `{artifact_root}/final_result.json` "
-        "and fill structured `diff_provenance` with `changed_file`, one exact changed or observed line, a stable context anchor, "
-        "`verification_command`, and `verification_result`."
-    )
-
-
-def render_policy_markdown(
-    agent_type: Literal["agents", "gemini", "claude"],
-    *,
-    artifact_root: str,
-    command: str = "synrail",
-    fallback_command: str | None = None,
-    repo_native_alpha_command: str | None = None,
-    workspace_isolation_note: str = "",
-    prefer_runtime_helper: bool = False,
-) -> str:
-    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
-    note_lines = policy_workspace_note_lines(
-        workspace_isolation_note=workspace_isolation_note,
-        prefer_runtime_helper=prefer_runtime_helper,
-        command=command,
-    )
-    portability_lines = policy_portability_note_lines(
-        fallback_command=fallback_command,
-        repo_native_alpha_command=repo_native_alpha_command,
-    )
-    orientation_lines = policy_orientation_lines(commands["status"])
-    repo_native_commands = (
-        policy_command_examples_for_binary(artifact_root=artifact_root, command=repo_native_alpha_command)
-        if repo_native_alpha_command
-        else None
-    )
-
-    if agent_type == "agents":
-        lines = [
-            "# Agent Workflow",
-            "",
-            "This repo uses Synrail to keep one bounded local change inside one controlled run.",
-            "",
-            "## First Step On Every New Task",
-            "",
-            "Run Synrail before deciding what to do next. It is a CLI control kernel, not a background daemon.",
-            "```bash",
-            commands["status"],
-            "```",
-            "",
-        ]
-        lines.extend(orientation_lines)
-        if repo_native_commands:
-            lines.extend(
-                [
-                    "## Repo-Local Fallback",
-                    "",
-                    "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
-                    "",
-                    "```bash",
-                    repo_native_commands["status"],
-                    repo_native_commands["start"],
-                    repo_native_commands["check"],
-                    "```",
-                    "",
-                    "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
-                    "",
-                ]
-            )
-        lines.extend([
-            "## Before You Edit",
-            "",
-            "1. If Synrail shows that no controlled run is active, start one before mutating code:",
-            "```bash",
-            commands["start"],
-            "```",
-            "",
-            "2. Keep the change local and bounded to the stated task.",
-            f"3. Run the local commands needed to verify the change honestly, then edit `{artifact_root}/final_result.json` in place as the work becomes real. Only materialize readback or scenario proof if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
-            "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
-            f"5. {policy_no_git_proof_line(artifact_root)}",
-            "",
-            "## Before You Claim Success",
-            "",
-            "```bash",
-            commands["check"],
-            "```",
-            "",
-            "If Synrail is non-green, fix only what check tells you to fix, then rerun:",
-            "",
-            "```bash",
-            commands["check"],
-            "```",
-            "",
-            *policy_non_accepted_status_lines(commands["check"]),
-            "## Important",
-            "",
-            "- Do not skip Synrail and try to legalize edits afterward.",
-            "- Do not claim success without real local verification.",
-            "- If `synrail` is unavailable from PATH here, try the checkout-local fallbacks first instead of reverse-engineering the entrypoint.",
-            "- Only report the control tool missing after the local checkout fallbacks fail too.",
-            "",
-        ])
-    else:
-        title = "Gemini" if agent_type == "gemini" else "Claude"
-        lines = [
-            f"# {title} Workflow",
-            "",
-            "Use Synrail as the default local control path for this repo.",
-            "",
-            "## First Command",
-            "",
-            "For every new user task, run Synrail first so you can see the current governed state:",
-            "",
-            "```bash",
-            commands["status"],
-            "```",
-            "",
-            "Synrail is a CLI control kernel, not a background daemon.",
-            "",
-        ]
-        lines.extend(orientation_lines)
-        if agent_type == "gemini":
-            lines.extend(policy_gemini_orientation_lines())
-        if repo_native_commands:
-            lines.extend(
-                [
-                    "## Repo-Local Fallback",
-                    "",
-                    "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
-                    "",
-                    "```bash",
-                    repo_native_commands["status"],
-                    repo_native_commands["start"],
-                    repo_native_commands["check"],
-                    "```",
-                    "",
-                    "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
-                    "",
-                ]
-            )
-        lines.extend([
-            "## Start",
-            "",
-            "If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
-            "",
-            "```bash",
-            commands["start"],
-            "```",
-            "",
-            "## Work",
-            "",
-            f"- Keep edits bounded and local to this repo.",
-            f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
-            "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
-            f"- {policy_no_git_proof_line(artifact_root)}",
-            "",
-            "## Finish",
-            "",
-            "```bash",
-            commands["check"],
-            "```",
-            "",
-            f"If non-green, fix only what check tells you to fix, then rerun `{commands['check']}`.",
-            "",
-            "Do not bypass Synrail and do not claim success without real local verification.",
-            "",
-            *policy_non_accepted_status_lines(commands["check"]),
-        ])
-
-    lines.extend(portability_lines)
-    lines.extend(note_lines)
-    if portability_lines or note_lines:
-        lines.append("")
-    return "\n".join(lines)
-
-
-def render_agent_policy_markdown(
-    *,
-    artifact_root: str,
-    command: str = "synrail",
-    fallback_command: str | None = None,
-    repo_native_alpha_command: str | None = None,
-    workspace_isolation_note: str = "",
-    prefer_runtime_helper: bool = False,
-) -> str:
-    return render_policy_markdown(
-        "agents",
-        artifact_root=artifact_root,
-        command=command,
-        fallback_command=fallback_command,
-        repo_native_alpha_command=repo_native_alpha_command,
-        workspace_isolation_note=workspace_isolation_note,
-        prefer_runtime_helper=prefer_runtime_helper,
-    )
-
-
-def render_gemini_policy_markdown(
-    *,
-    artifact_root: str,
-    command: str = "synrail",
-    fallback_command: str | None = None,
-    repo_native_alpha_command: str | None = None,
-    workspace_isolation_note: str = "",
-    prefer_runtime_helper: bool = False,
-) -> str:
-    return render_policy_markdown(
-        "gemini",
-        artifact_root=artifact_root,
-        command=command,
-        fallback_command=fallback_command,
-        repo_native_alpha_command=repo_native_alpha_command,
-        workspace_isolation_note=workspace_isolation_note,
-        prefer_runtime_helper=prefer_runtime_helper,
-    )
-
-
-def render_claude_policy_markdown(
-    *,
-    artifact_root: str,
-    command: str = "synrail",
-    fallback_command: str | None = None,
-    repo_native_alpha_command: str | None = None,
-    workspace_isolation_note: str = "",
-    prefer_runtime_helper: bool = False,
-) -> str:
-    return render_policy_markdown(
-        "claude",
-        artifact_root=artifact_root,
-        command=command,
-        fallback_command=fallback_command,
-        repo_native_alpha_command=repo_native_alpha_command,
-        workspace_isolation_note=workspace_isolation_note,
-        prefer_runtime_helper=prefer_runtime_helper,
-    )
-
-
-def render_agent_policy_block(
-    *,
-    title: str,
-    intro: str,
-    artifact_root: str,
-    command: str = "synrail",
-    fallback_command: str | None = None,
-    repo_native_alpha_command: str | None = None,
-    workspace_isolation_note: str = "",
-    prefer_runtime_helper: bool = False,
-) -> str:
-    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
-    note_lines = policy_workspace_note_lines(
-        workspace_isolation_note=workspace_isolation_note,
-        prefer_runtime_helper=prefer_runtime_helper,
-        command=command,
-    )
-    portability_lines = policy_portability_note_lines(
-        fallback_command=fallback_command,
-        repo_native_alpha_command=repo_native_alpha_command,
-    )
-    orientation_lines = policy_orientation_lines(commands["status"])
-    repo_native_commands = (
-        policy_command_examples_for_binary(artifact_root=artifact_root, command=repo_native_alpha_command)
-        if repo_native_alpha_command
-        else None
-    )
-    lines = [
-        f"## {title}",
-        "",
-        intro,
-        "",
-        "First command for every new task:",
-        "",
-        "```bash",
-        commands["status"],
-        "```",
-        "",
-    ]
-    lines.extend(orientation_lines)
-    if repo_native_commands:
-        lines.extend(
-            [
-                "## Repo-Local Fallback",
-                "",
-                "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
-                "",
-                "```bash",
-                repo_native_commands["status"],
-                repo_native_commands["start"],
-                repo_native_commands["check"],
-                "```",
-                "",
-                "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
-                "",
-            ]
-        )
-    lines.extend([
-        "## Start",
-        "",
-        "If Synrail shows that no controlled run is active, start one:",
-        "",
-        "```bash",
-        commands["start"],
-        "```",
-        "",
-        "## Work",
-        "",
-        f"- Keep edits bounded and local to this repo.",
-        f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
-        "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
-        f"- {policy_no_git_proof_line(artifact_root)}",
-        "",
-        "## Finish",
-        "",
-        "Before claiming success, run:",
-        "",
-        "```bash",
-        commands["check"],
-        "```",
-        "",
-        f"If non-green, fix only what check tells you to fix, then rerun `{commands['check']}`.",
-        "",
-        "Do not bypass Synrail and do not claim success without real local verification.",
-        "",
-        *policy_non_accepted_status_lines(commands["check"]),
-    ])
-    lines.extend(portability_lines)
-    lines.extend(note_lines)
-    return "\n".join(lines)
-
-
-def policy_orientation_lines(status_command: str) -> list[str]:
-    return [
-        "## Project Orientation",
-        "",
-        "If the user asks what this project is, where work stopped, or what the current status is, treat that as a Synrail-guided orientation task too.",
-        "",
-        f"- Start with `{status_command}` before broader repo search.",
-        "- Stay inside this project root and prefer read-only inspection first.",
-        "- Summarize the governed state before exploring older files, sibling probes, or unrelated surfaces.",
-        "- Do not turn project recall into repo archaeology.",
-        "- Do not create helper scripts or make edits for an orientation-only question.",
-        "",
-    ]
-
-
-def policy_gemini_orientation_lines() -> list[str]:
-    return [
-        "### Gemini Orientation Rule",
-        "",
-        "- After Synrail shows the current state, answer from the governed state first and stop once you can answer the user's question.",
-        "- Do not inspect database schema, templates, or app internals for a simple orientation prompt unless Synrail state is genuinely insufficient.",
-        "- Do not turn project recall into repo archaeology.",
-        "",
-    ]
-
-
-def managed_policy_markers(path: Path) -> tuple[str, str]:
-    stem = path.stem.upper().replace(".", "_")
-    return (f"<!-- SYNRAIL_{stem}_START -->", f"<!-- SYNRAIL_{stem}_END -->")
-
-
-def wrap_managed_policy_block(path: Path, body: str) -> str:
-    start_marker, end_marker = managed_policy_markers(path)
-    return f"{start_marker}\n{body.rstrip()}\n{end_marker}\n"
-
-
-def upsert_managed_policy_block(current: str, *, path: Path, block: str) -> tuple[str, str]:
-    start_marker, end_marker = managed_policy_markers(path)
-    current_text = current or ""
-    managed_block = wrap_managed_policy_block(path, block)
-    if start_marker in current_text and end_marker in current_text:
-        prefix, rest = current_text.split(start_marker, 1)
-        _, suffix = rest.split(end_marker, 1)
-        updated = prefix.rstrip() + "\n\n" + managed_block + suffix.lstrip("\n")
-        state = "updated"
-    elif current_text.strip():
-        updated = current_text.rstrip() + "\n\n" + managed_block
-        state = "appended"
-    else:
-        updated = managed_block
-        state = "written"
-    if updated == current_text:
-        return current_text, "unchanged"
-    return updated, state
-
-
-def backup_existing_policy_file(path: Path) -> Path:
-    timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    backup_path = path.with_name(f"{path.name}.synrail.bak.{timestamp}")
-    backup_path.write_text(path.read_text())
-    return backup_path
-
-
-def write_agent_policy_file(
-    path: Path,
-    full_content: str,
-    *,
-    managed_block: str,
-    force: bool,
-) -> tuple[bool, str, Path | None]:
-    if path.exists():
-        current = path.read_text()
-        if current == full_content:
-            return False, "unchanged", None
-        if force:
-            backup_path = backup_existing_policy_file(path)
-            path.write_text(full_content)
-            return True, "written", backup_path
-        updated, state = upsert_managed_policy_block(current, path=path, block=managed_block)
-        if state == "unchanged":
-            return False, state, None
-        path.write_text(updated)
-        return True, state, None
-    path.write_text(full_content)
-    return True, "written", None
 
 
 def cmd_install_agent_files(args: argparse.Namespace) -> int:
@@ -1272,6 +899,77 @@ def maybe_capture_alpha_telemetry(
     append_command_event(root, event)
 
 
+CHECK_PATH_SCOPES = {
+    "state_file": ARTIFACT_SCOPE,
+    "report_file": ARTIFACT_SCOPE,
+    "doctor_file": ARTIFACT_SCOPE,
+    "repair_packet_file": ARTIFACT_SCOPE,
+    "repair_handoff_file": ARTIFACT_SCOPE,
+    "repair_handoff_output": ARTIFACT_SCOPE,
+    "repair_packet_output": ARTIFACT_SCOPE,
+    "repair_receipt_file": ARTIFACT_SCOPE,
+    "repair_receipt_output": ARTIFACT_SCOPE,
+    "mode_selection_receipt": ARTIFACT_SCOPE,
+    "consistency_recovery_file": ARTIFACT_SCOPE,
+    "checkpoint_record_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+    "plan_output": ARTIFACT_SCOPE,
+    "preparation_receipt_output": ARTIFACT_SCOPE,
+    "refresh_output": ARTIFACT_SCOPE,
+    "observability_output": ARTIFACT_SCOPE,
+    "artifact_consistency_output": ARTIFACT_SCOPE,
+    "worked_artifact_output": ARTIFACT_SCOPE,
+    "run_artifact_output": ARTIFACT_SCOPE,
+    "acceptance_criteria_file": ARTIFACT_SCOPE,
+    "acceptance_validation_output": ARTIFACT_SCOPE,
+    "project_profile_file": ARTIFACT_SCOPE,
+    "target_path": PROJECT_SCOPE,
+    "baseline_file": ARTIFACT_SCOPE,
+    "synrail_file": ARTIFACT_SCOPE,
+    "comparison_output": ARTIFACT_SCOPE,
+    "artifact_path": DUAL_SCOPE,
+    "helper_path": PROJECT_SCOPE,
+    "prompt_identity_file": ARTIFACT_SCOPE,
+    "target_identity_file": DUAL_SCOPE,
+    "final_result": DUAL_SCOPE,
+    "readback": DUAL_SCOPE,
+    "scenario_proof": DUAL_SCOPE,
+}
+
+REPAIR_PACKET_PATH_SCOPES = {
+    "state_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+    "previous_packet_file": ARTIFACT_SCOPE,
+    "repair_handoff_file": ARTIFACT_SCOPE,
+    "mode_selection_receipt": ARTIFACT_SCOPE,
+    "preparation_receipt_file": ARTIFACT_SCOPE,
+    "repair_receipt_file": ARTIFACT_SCOPE,
+    "report_file": ARTIFACT_SCOPE,
+    "target_path": PROJECT_SCOPE,
+    "final_result": DUAL_SCOPE,
+    "readback": DUAL_SCOPE,
+    "scenario_proof": DUAL_SCOPE,
+    "target_identity_file": DUAL_SCOPE,
+    "artifact_path": DUAL_SCOPE,
+    "helper_path": PROJECT_SCOPE,
+    "coverage_profile_file": PROJECT_SCOPE,
+    "coverage_corpus_file": PROJECT_SCOPE,
+    "refresh_output": ARTIFACT_SCOPE,
+}
+
+DOCTOR_PATH_SCOPES = {
+    "output": ARTIFACT_SCOPE,
+    "state_file": ARTIFACT_SCOPE,
+    "target_path": PROJECT_SCOPE,
+    "artifact_path": DUAL_SCOPE,
+    "helper_path": PROJECT_SCOPE,
+    "prompt_identity_file": ARTIFACT_SCOPE,
+    "target_identity_file": DUAL_SCOPE,
+    "coverage_profile_file": PROJECT_SCOPE,
+    "coverage_corpus_file": PROJECT_SCOPE,
+}
+
+
 def alpha_root_from_args(args: argparse.Namespace, *, ensure: bool = False) -> Path | None:
     value = getattr(args, "artifact_root", None)
     if not value:
@@ -1280,6 +978,45 @@ def alpha_root_from_args(args: argparse.Namespace, *, ensure: bool = False) -> P
     if ensure:
         root.mkdir(parents=True, exist_ok=True)
     return root
+
+
+def project_root_from_profile(root: Path | None) -> Path | None:
+    profile = load_project_profile(root)
+    project_root_text = (profile or {}).get("project_root", "")
+    if not project_root_text:
+        return None
+    return Path(project_root_text).expanduser().resolve()
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_check_like_paths(args: argparse.Namespace, *, artifact_root: Path | None, project_root: Path | None) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=CHECK_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
+
+def validate_repair_packet_paths(args: argparse.Namespace, *, artifact_root: Path | None, project_root: Path | None) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=REPAIR_PACKET_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
+
+def validate_doctor_paths(args: argparse.Namespace, *, artifact_root: Path | None, project_root: Path | None) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=DOCTOR_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
 
 
 def alpha_file(root: Path, file_id: str) -> Path:
@@ -1735,79 +1472,22 @@ def print_thin_output_summary(output_file: Path) -> None:
     print("\n".join(line for line in lines if line))
 
 
+def maybe_print_doctor_override_warning(doctor_file: Path | None, *, file = sys.stdout) -> None:
+    if doctor_file is None or not doctor_file.exists():
+        return
+    record = load_json(doctor_file)
+    override_summary = (record.get("override_summary", "") or "").strip()
+    if not override_summary:
+        return
+    lines = [f"Warning: {override_summary}"]
+    for item in record.get("override_warnings", []):
+        if item:
+            lines.append(f"- {item}")
+    print("\n".join(lines), file=file)
+
+
 def print_prompt_summary(output_file: Path) -> None:
     print_prompt_summary_compact(output_file, include_prompt=True)
-
-
-def doctor_output_path(args: argparse.Namespace) -> Path | None:
-    output = getattr(args, "output", None) or getattr(args, "doctor_output", None)
-    if not output:
-        return None
-    return Path(output)
-
-
-def expected_doctor_target_identity(args: argparse.Namespace) -> str:
-    return getattr(args, "expected_target_identity", None) or getattr(args, "execution_surface_identity", None) or ""
-
-
-def doctor_forwarded_args(args: argparse.Namespace) -> list[str]:
-    output_path = doctor_output_path(args)
-    forwarded = [
-        "--doctor-run-id", args.doctor_run_id,
-        "--doctor-level", args.doctor_level,
-        "--target-path", args.target_path,
-        "--target-classification", args.target_classification,
-        "--baseline-identity", args.baseline_identity,
-        "--intended-run-class", args.intended_run_class,
-        "--output", str(output_path) if output_path else "",
-    ]
-    if getattr(args, "state_file", None):
-        forwarded.extend(["--state-file", args.state_file])
-    if getattr(args, "update_state", False):
-        forwarded.append("--update-state")
-    if getattr(args, "clean_surface", False):
-        forwarded.append("--clean-surface")
-    if getattr(args, "artifact_viable", False):
-        forwarded.append("--artifact-viable")
-    if getattr(args, "helper_ok", False):
-        forwarded.append("--helper-ok")
-    if getattr(args, "credentials_ok", False):
-        forwarded.append("--credentials-ok")
-    if getattr(args, "prompt_identity_ok", False):
-        forwarded.append("--prompt-identity-ok")
-    optional_pairs = [
-        ("--artifact-path", getattr(args, "artifact_path", None)),
-        ("--helper-path", getattr(args, "helper_path", None)),
-        ("--prompt-identity-file", getattr(args, "prompt_identity_file", None)),
-        ("--expected-task-identity", getattr(args, "expected_task_identity", None)),
-        ("--target-identity-file", getattr(args, "target_identity_file", None)),
-        ("--expected-target-identity", expected_doctor_target_identity(args)),
-    ]
-    for flag, value in optional_pairs:
-        if value:
-            forwarded.extend([flag, value])
-    for changed_file in getattr(args, "changed_file", []):
-        forwarded.extend(["--changed-file", changed_file])
-    for allowed_scope_path in getattr(args, "allowed_scope_path", []):
-        forwarded.extend(["--allowed-scope-path", allowed_scope_path])
-    for env_name in getattr(args, "credential_env", []):
-        forwarded.extend(["--credential-env", env_name])
-    return forwarded
-
-
-def load_doctor_record_from_args(args: argparse.Namespace) -> dict:
-    output_path = doctor_output_path(args)
-    if not output_path or not output_path.exists():
-        return {}
-    return load_json(output_path)
-
-
-def print_doctor_override_warning(record: dict, *, file = sys.stdout) -> None:
-    warning = record.get("override_warning", "")
-    if not warning:
-        return
-    print(f"WARNING: {warning}", file=file)
-    print("Closure will reject override-backed readiness until you rerun without overrides.", file=file)
 
 
 def print_prompt_summary_compact(output_file: Path, *, include_prompt: bool = False) -> None:
@@ -2037,7 +1717,7 @@ def final_result_template_payload(*, root: Path | None) -> dict:
     execution_surface_identity = (profile.get("execution_surface_identity", "") or "").strip()
     changed_file = "path/to/changed_file.ext"
     notes = [
-        "Replace the sample changed file path with the actual file paths for this run.",
+        "Replace the sample changed file path with the actual file paths for this run; use diff_provenance for a single-file change, or diff_provenance_records/per_file_diff_provenance with one changed_file-backed record per modified file for a multi-file change.",
         "Set status to PROVEN when this run made and verified a real bounded edit.",
         "Set status to ALREADY_SATISFIED only when the requested state was already present before any edit and the no-op attestation is truthful.",
         "Set change_disposition to already_satisfied only when the requested state was already present before any edit.",
@@ -2045,7 +1725,7 @@ def final_result_template_payload(*, root: Path | None) -> dict:
         "If the task only asked for a simple subtitle or label, keep the new line visually plain and avoid extra emphasis styling unless the task explicitly asked for it.",
         "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers when you can produce one.",
         "If git is not installed, do not invent git_diff; leave git_diff empty and use structured diff_provenance instead.",
-        "If git_diff is unavailable, keep diff_provenance explicit with method, changed_file, one exact added_line or removed_line, one stable context_before or context_after anchor, and verification command plus result. If method is omitted but the direct-observation record is otherwise complete, Synrail can normalize it to direct_file_observation during a normal check.",
+        "If git_diff is unavailable, keep structured provenance explicit: use diff_provenance for a single-file change, or diff_provenance_records/per_file_diff_provenance with one direct-observation record per modified file for a multi-file change. Each record should include method, changed_file, one exact added_line or removed_line, one stable context_before or context_after anchor, and verification command plus result. If method is omitted but the direct-observation record is otherwise complete, Synrail can normalize it to direct_file_observation during a normal check.",
         "For tiny edits, do not leave the exact changed line and its stable neighbor only in readback or scenario_proof; copy those anchors into diff_provenance too.",
         "For an already_satisfied no-op, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.",
         "In the normal synrail check path, run identity is already carried from the current controlled context; only fill artifact_identity manually when you are doing a standalone bundle check without that context.",
@@ -2288,7 +1968,7 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
             if gap["recommended_action"]:
                 lines.append(f"  What to do: {gap['recommended_action']}")
             if gap["section"] == "diff_provenance":
-                lines.append("  Concrete fix: keep git_diff patch-shaped with diff --git, ---, +++, @@, and the named changed files, or add diff_provenance with changed_file, one exact added or removed line, one stable context anchor, and verification command plus result.")
+                lines.append("  Concrete fix: keep git_diff patch-shaped with diff --git, ---, +++, @@, and the named changed files, or add structured provenance. Use diff_provenance for a single-file change, or diff_provenance_records/per_file_diff_provenance with one changed_file-backed record per modified file for a multi-file change.")
                 lines.append("  No-op fix: if the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.")
             if gap["section"] == "artifact_identity":
                 lines.append("  Concrete fix: ensure baseline_identity, execution_surface_identity, prompt_identity, and task_identity are all non-empty for this run.")
@@ -2316,7 +1996,7 @@ def print_proof_explanation(explanation: dict, *, root: Path | None) -> None:
             if gap["recommended_action"]:
                 lines.append(f"  What to do: {gap['recommended_action']}")
             if gap["section"] == "diff_provenance":
-                lines.append("  Concrete fix: keep git_diff patch-shaped with diff --git, ---, +++, @@, and the named changed files, or add diff_provenance with changed_file, one exact added or removed line, one stable context anchor, and verification command plus result.")
+                lines.append("  Concrete fix: keep git_diff patch-shaped with diff --git, ---, +++, @@, and the named changed files, or add structured provenance. Use diff_provenance for a single-file change, or diff_provenance_records/per_file_diff_provenance with one changed_file-backed record per modified file for a multi-file change.")
                 lines.append("  No-op fix: if the requested state was already present before any edit, set change_disposition to already_satisfied, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.")
             if gap["section"] == "artifact_identity":
                 lines.append("  Concrete fix: ensure baseline_identity, execution_surface_identity, prompt_identity, and task_identity are all non-empty for this run.")
@@ -2682,28 +2362,30 @@ def cmd_start(args: argparse.Namespace) -> int:
         args.output = str(alpha_file(root, "state"))
 
     existing_state_path = Path(args.output)
-    try:
-        existing_state = load_json(existing_state_path) if existing_state_path.exists() else None
-    except (OSError, json.JSONDecodeError):
-        if args.mode == "dev":
-            print(
-                json.dumps(
-                    {
-                        "result": "ERROR",
-                        "reason": "CONTROLLED_START_STATE_UNREADABLE",
-                        "state_file": str(existing_state_path),
-                        "next_safe_step": f"move the corrupted artifact root aside or repair {root} before retrying controlled start",
-                    },
-                    ensure_ascii=True,
+    existing_state = None
+    if existing_state_path.exists():
+        try:
+            existing_state = load_json(existing_state_path)
+        except (OSError, json.JSONDecodeError):
+            if args.mode == "dev":
+                print(
+                    json.dumps(
+                        {
+                            "result": "ERROR",
+                            "reason": "CONTROLLED_START_STATE_UNREADABLE",
+                            "state_file": str(existing_state_path),
+                            "next_safe_step": "move the corrupted artifact root aside or restore a verified checkpoint before retrying",
+                        },
+                        ensure_ascii=True,
+                    )
                 )
-            )
-        else:
-            print("Synrail could not start this run yet.")
-            print(f"What happened: run state is unreadable at {existing_state_path}.")
-            print(
-                f"What to do next: move the corrupted artifact root `{root}` aside or repair that state with a future recover command, then retry controlled start."
-            )
-        return 2
+            else:
+                print("Synrail could not start this run in controlled mode yet.")
+                print("What happened: the current run state artifact is unreadable.")
+                print(
+                    "What to do next: move the corrupted artifact root aside or restore a verified checkpoint before retrying."
+                )
+            return 2
     if not getattr(args, "run_id", None):
         args.run_id = default_alpha_run_id()
     if not getattr(args, "task_class", None):
@@ -2849,14 +2531,15 @@ def cmd_refresh_acceptance(args: argparse.Namespace) -> int:
 
 
 def cmd_telemetry_enable(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args, ensure=True)
-    config = enable_telemetry(root, args.tester_id)
-    print(json.dumps({"result": "OK", "telemetry_session_id": config["telemetry_session_id"]}, ensure_ascii=True))
-    return 0
+    return extracted_cmd_telemetry_enable(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        enable_telemetry=enable_telemetry,
+    )
 
 
 def cmd_telemetry_export(args: argparse.Namespace) -> int:
-    return run_telemetry_export_command(
+    return extracted_cmd_telemetry_export(
         args,
         alpha_root_from_args=alpha_root_from_args,
         default_session_replay_file=default_session_replay_file,
@@ -2866,471 +2549,180 @@ def cmd_telemetry_export(args: argparse.Namespace) -> int:
 
 
 def cmd_bundle_check(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--final-result", args.final_result,
-        "--task-class", args.task_class,
-        "--output", args.output,
-    ]
-    optional_pairs = [
-        ("--run-id", args.run_id),
-        ("--readback", args.readback),
-        ("--scenario-proof", args.scenario_proof),
-        ("--baseline-identity", args.baseline_identity),
-        ("--execution-surface-identity", args.execution_surface_identity),
-        ("--prompt-identity", args.prompt_identity),
-        ("--task-identity", args.task_identity),
-        ("--doctor-file", args.doctor_file),
-        ("--state-file", getattr(args, "state_file", None)),
-    ]
-    for flag, value in optional_pairs:
-        if value:
-            forwarded.extend([flag, value])
-    return run_python(BUNDLE, forwarded)
+    return extracted_cmd_bundle_check(
+        args,
+        run_python=run_python,
+        bundle_script=BUNDLE,
+    )
 
 
 def cmd_apply_bundle(args: argparse.Namespace) -> int:
-    return run_python(SPINE, ["apply-bundle", args.state_file, args.bundle_file])
+    return extracted_cmd_apply_bundle(
+        args,
+        run_python=run_python,
+        spine_script=SPINE,
+    )
 
 
 def cmd_closure(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--state-file", args.state_file,
-        "--bundle-file", args.bundle_file,
-        "--output", args.output,
-    ]
-    if args.update_state:
-        forwarded.append("--update-state")
-    return run_python(CLOSURE, forwarded)
+    return extracted_cmd_closure(
+        args,
+        run_python=run_python,
+        closure_script=CLOSURE,
+    )
 
 
 def cmd_apply_closure(args: argparse.Namespace) -> int:
-    return run_python(SPINE, ["apply-closure", args.state_file, args.closure_file])
+    return extracted_cmd_apply_closure(
+        args,
+        run_python=run_python,
+        spine_script=SPINE,
+    )
 
 
 def cmd_refresh(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--state-file", args.state_file,
-        "--event-type", args.event_type,
-        "--output", args.output,
-    ]
-    optional_pairs = [
-        ("--doctor-status", args.doctor_status),
-        ("--bundle-file", args.bundle_file),
-        ("--closure-file", args.closure_file),
-        ("--recovery-status", args.recovery_status),
-    ]
-    for flag, value in optional_pairs:
-        if value:
-            forwarded.extend([flag, value])
-    if args.reverification_complete:
-        forwarded.append("--reverification-complete")
-    if args.update_state:
-        forwarded.append("--update-state")
-    return run_python(REFRESH, forwarded)
+    return extracted_cmd_refresh(
+        args,
+        run_python=run_python,
+        refresh_script=REFRESH,
+    )
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--schema", args.schema,
-        "--document", args.document,
-    ]
-    return run_python(VALIDATE, forwarded)
+    return extracted_cmd_validate(
+        args,
+        run_python=run_python,
+        validate_script=VALIDATE,
+    )
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
-    completed = run_python_capture(DOCTOR, doctor_forwarded_args(args))
-    if completed.returncode != 0:
-        if completed.stderr.strip():
-            print(completed.stderr.strip(), file=sys.stderr)
-        if completed.stdout.strip():
-            print(completed.stdout.strip())
-        return completed.returncode
-    print_doctor_override_warning(load_doctor_record_from_args(args), file=sys.stderr)
-    if completed.stderr.strip():
-        print(completed.stderr.strip(), file=sys.stderr)
-    if completed.stdout.strip():
-        print(completed.stdout.strip())
-    return completed.returncode
+    result = extracted_cmd_doctor(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        current_project_root=current_project_root,
+        validate_root_within_project=validate_root_within_project,
+        validate_doctor_paths=validate_doctor_paths,
+        run_python=run_python,
+        doctor_script=DOCTOR,
+    )
+    if result == 0:
+        maybe_print_doctor_override_warning(Path(args.output), file=sys.stderr)
+    return result
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
-    try:
-        baseline = load_json(Path(args.baseline_file))
-        harness = comparison_harness_for_inputs(args.baseline_file, args.synrail_file)
-    except ValueError as exc:
-        print(json.dumps({"result": "ERROR", "reason": "COMPARISON_INPUT_SCHEMA_MISMATCH", "detail": str(exc)}, ensure_ascii=True))
-        return 2
-    if baseline.get("schema_version") == "comparison_input_v2":
-        forwarded = [
-            "--substitute-file", args.baseline_file,
-            "--synrail-file", args.synrail_file,
-            "--output", args.output,
-        ]
-    else:
-        forwarded = [
-            "--baseline-file", args.baseline_file,
-            "--synrail-file", args.synrail_file,
-            "--output", args.output,
-        ]
-    return run_python(harness, forwarded)
+    return extracted_cmd_compare(
+        args,
+        load_json=load_json,
+        comparison_harness_for_inputs=comparison_harness_for_inputs,
+        run_python=run_python,
+    )
 
 
 def cmd_substitute_pressure(args: argparse.Namespace) -> int:
-    forwarded: list[str] = []
-    for record in args.record:
-        forwarded.extend(["--record", record])
-    forwarded.extend(["--output", args.output])
-    return run_python(SUBSTITUTE_PRESSURE, forwarded)
+    return extracted_cmd_substitute_pressure(
+        args,
+        run_python=run_python,
+        substitute_pressure_script=SUBSTITUTE_PRESSURE,
+    )
 
 
 def cmd_hybrid_status(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--cost-record", args.cost_record,
-        "--output", args.output,
-    ]
-    for hybrid_record in args.hybrid_record:
-        forwarded.extend(["--hybrid-record", hybrid_record])
-    return run_python(HYBRID_STATUS, forwarded)
+    return extracted_cmd_hybrid_status(
+        args,
+        run_python=run_python,
+        hybrid_status_script=HYBRID_STATUS,
+    )
 
 
 def cmd_recommend_mode(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--cost-record", args.cost_record,
-        "--scenario-class", args.scenario_class,
-        "--task-class", args.task_class,
-        "--false-success-risk", args.false_success_risk,
-        "--recovery-cost", args.recovery_cost,
-        "--output", args.output,
-    ]
-    if args.hybrid_status:
-        forwarded.extend(["--hybrid-status", args.hybrid_status])
-    if args.governed_cost_delta:
-        forwarded.extend(["--governed-cost-delta", args.governed_cost_delta])
-    if args.execution_surface_ambiguous:
-        forwarded.append("--execution-surface-ambiguous")
-    if args.artifact_truth_nontrivial:
-        forwarded.append("--artifact-truth-nontrivial")
-    if args.explicit_hybrid_ambiguity:
-        forwarded.extend(["--explicit-hybrid-ambiguity", args.explicit_hybrid_ambiguity])
-    return run_python(MODE_SELECTOR, forwarded)
+    return extracted_cmd_recommend_mode(
+        args,
+        run_python=run_python,
+        mode_selector_script=MODE_SELECTOR,
+    )
 
 
 def cmd_select_mode(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--recommendation-file", args.recommendation_file,
-        "--output", args.output,
-    ]
-    if args.selected_mode:
-        forwarded.extend(["--selected-mode", args.selected_mode])
-    if args.selected_with_preparation:
-        forwarded.append("--selected-with-preparation")
-    return run_python(MODE_RECEIPT, forwarded)
+    return extracted_cmd_select_mode(
+        args,
+        run_python=run_python,
+        mode_receipt_script=MODE_RECEIPT,
+    )
 
 
 def cmd_plan_proof(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--run-id", args.run_id,
-        "--task-class", args.task_class,
-        "--artifact-root", args.artifact_root,
-        "--baseline-identity", args.baseline_identity,
-        "--execution-surface-identity", args.execution_surface_identity,
-        "--prompt-identity", args.prompt_identity,
-        "--task-identity", args.task_identity,
-        "--output", args.output,
-    ]
-    return run_python(PROOF_PLAN, forwarded)
+    return extracted_cmd_plan_proof(
+        args,
+        run_python=run_python,
+        proof_plan_script=PROOF_PLAN,
+    )
 
 
 def cmd_preparation_receipt(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--plan-file", args.plan_file,
-        "--bundle-file", args.bundle_file,
-        "--output", args.output,
-    ]
-    return run_python(PREPARATION_RECEIPT, forwarded)
+    return extracted_cmd_preparation_receipt(
+        args,
+        run_python=run_python,
+        preparation_receipt_script=PREPARATION_RECEIPT,
+    )
 
 
 def cmd_governed_cost(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--unprepared-file", args.unprepared_file,
-        "--prepared-file", args.prepared_file,
-        "--output", args.output,
-    ]
-    return run_python(GOVERNED_COST, forwarded)
+    return extracted_cmd_governed_cost(
+        args,
+        run_python=run_python,
+        governed_cost_script=GOVERNED_COST,
+    )
 
 
 def cmd_create_checkpoint(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args, ensure=True)
-    if root and not getattr(args, "checkpoint_id", None):
-        args.checkpoint_id = "working"
-    if root and not getattr(args, "checkpoint_root", None):
-        args.checkpoint_root = str(checkpoint_root(root, args.checkpoint_id))
-    if root and not getattr(args, "state_file", None):
-        args.state_file = str(alpha_file(root, "state"))
-    if root and not getattr(args, "output", None):
-        args.output = str(checkpoint_record_file(root, args.checkpoint_id))
-    if root:
-        for attr, file_id in [
-            ("report_file", "report"),
-            ("orchestration_file", "orchestration"),
-            ("bundle_file", "bundle"),
-            ("closure_file", "closure"),
-            ("refresh_file", "refresh"),
-            ("selection_file", "selection_receipt"),
-            ("preparation_file", "preparation_receipt"),
-            ("repair_packet_file", "repair_packet"),
-            ("repair_handoff_file", "repair_handoff"),
-            ("repair_receipt_file", "repair_receipt"),
-        ]:
-            if not getattr(args, attr, None):
-                existing = maybe_existing_alpha_file(root, file_id)
-                if existing:
-                    setattr(args, attr, existing)
-    forwarded = [
-        "create",
-        "--checkpoint-id", args.checkpoint_id,
-        "--checkpoint-root", args.checkpoint_root,
-        "--state-file", args.state_file,
-        "--output", args.output,
-    ]
-    optional_pairs = [
-        ("--report-file", args.report_file),
-        ("--orchestration-file", args.orchestration_file),
-        ("--bundle-file", args.bundle_file),
-        ("--closure-file", args.closure_file),
-        ("--refresh-file", args.refresh_file),
-        ("--selection-file", args.selection_file),
-        ("--preparation-file", args.preparation_file),
-        ("--repair-packet-file", args.repair_packet_file),
-        ("--repair-handoff-file", args.repair_handoff_file),
-        ("--repair-receipt-file", args.repair_receipt_file),
-    ]
-    for flag, value in optional_pairs:
-        if value:
-            forwarded.extend([flag, value])
-    if args.mode == "dev":
-        return run_python(CHECKPOINT, forwarded)
-    completed = run_python_capture(CHECKPOINT, forwarded)
-    if completed.returncode != 0:
-        if completed.stderr.strip():
-            print(completed.stderr.strip(), file=sys.stderr)
-        if completed.stdout.strip():
-            print(completed.stdout.strip())
-        return completed.returncode
-    print_checkpoint_summary(Path(args.output), action="create", root=root)
-    return 0
+    return extracted_cmd_create_checkpoint(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        checkpoint_root=checkpoint_root,
+        alpha_file=alpha_file,
+        checkpoint_record_file=checkpoint_record_file,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        run_python=run_python,
+        run_python_capture=run_python_capture,
+        print_checkpoint_summary=print_checkpoint_summary,
+        checkpoint_script=CHECKPOINT,
+    )
 
 
 def cmd_save(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args, ensure=True)
     if args.mode == "dev":
         return cmd_create_checkpoint(args)
-    checkpoint_id = getattr(args, "checkpoint_id", None) or "working"
-    record_output = Path(getattr(args, "output", "") or checkpoint_record_file(root, checkpoint_id))
-    record_root = Path(getattr(args, "checkpoint_root", "") or checkpoint_root(root, checkpoint_id))
-    state_file = Path(getattr(args, "state_file", "") or alpha_file(root, "state"))
-    project_root = Path(getattr(args, "project_root", "") or ".").resolve()
-    create_forwarded = [
-        "create",
-        "--checkpoint-id", checkpoint_id,
-        "--checkpoint-root", str(record_root),
-        "--state-file", str(state_file),
-        "--project-root", str(project_root),
-        "--output", str(record_output),
-    ]
-    for attr, flag in [
-        ("report_file", "--report-file"),
-        ("orchestration_file", "--orchestration-file"),
-        ("bundle_file", "--bundle-file"),
-        ("closure_file", "--closure-file"),
-        ("refresh_file", "--refresh-file"),
-        ("selection_file", "--selection-file"),
-        ("preparation_file", "--preparation-file"),
-        ("repair_packet_file", "--repair-packet-file"),
-        ("repair_handoff_file", "--repair-handoff-file"),
-        ("repair_receipt_file", "--repair-receipt-file"),
-    ]:
-        value = getattr(args, attr, None)
-        if not value and root:
-            file_id = {
-                "report_file": "report",
-                "orchestration_file": "orchestration",
-                "bundle_file": "bundle",
-                "closure_file": "closure",
-                "refresh_file": "refresh",
-                "selection_file": "selection_receipt",
-                "preparation_file": "preparation_receipt",
-                "repair_packet_file": "repair_packet",
-                "repair_handoff_file": "repair_handoff",
-                "repair_receipt_file": "repair_receipt",
-            }[attr]
-            value = maybe_existing_alpha_file(root, file_id)
-        if value:
-            create_forwarded.extend([flag, value])
-    created = run_python_capture(CHECKPOINT, create_forwarded)
-    if created.returncode != 0:
-        if created.stderr.strip():
-            print(created.stderr.strip(), file=sys.stderr)
-        if created.stdout.strip():
-            print(created.stdout.strip())
-        return created.returncode
-    verify_output = Path(checkpoint_verify_file(root, checkpoint_id))
-    verified = run_python_capture(
-        CHECKPOINT,
-        [
-            "verify",
-            "--checkpoint-record-file", str(record_output),
-            "--output", str(verify_output),
-        ],
+    return extracted_cmd_save(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        checkpoint_record_file=checkpoint_record_file,
+        checkpoint_root=checkpoint_root,
+        alpha_file=alpha_file,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        checkpoint_verify_file=checkpoint_verify_file,
+        run_python_capture=run_python_capture,
+        print_checkpoint_summary=print_checkpoint_summary,
+        print_save_summary=print_save_summary,
+        checkpoint_script=CHECKPOINT,
     )
-    if verified.returncode != 0:
-        if verified.stderr.strip():
-            print(verified.stderr.strip(), file=sys.stderr)
-        if verified.stdout.strip():
-            print(verified.stdout.strip())
-        print_checkpoint_summary(record_output, action="create", root=root)
-        return verified.returncode
-    print_save_summary(record_output, verify_output, root=root)
-    return 0
-
-
-def cmd_verify_checkpoint(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args)
-    if root and not getattr(args, "checkpoint_record_file", None):
-        discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
-        if discovered:
-            args.checkpoint_record_file = discovered
-    if root and not getattr(args, "output", None):
-        checkpoint_id = getattr(args, "checkpoint_id", None) or (Path(args.checkpoint_record_file).parent.name if getattr(args, "checkpoint_record_file", None) else "working")
-        args.output = str(checkpoint_verify_file(root, checkpoint_id))
-    if not getattr(args, "checkpoint_record_file", None):
-        if args.mode == "dev":
-            print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
-        else:
-            print("Synrail could not find a restore point to confirm.")
-            if root:
-                print("What to do next: create one while the project is in a verified working state.")
-                print("Next command: " + shell_command(root, "save"))
-        return 2
-    if not getattr(args, "output", None):
-        print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_VERIFY_OUTPUT_REQUIRED"}, ensure_ascii=True))
-        return 2
-    forwarded = [
-        "verify",
-        "--checkpoint-record-file", args.checkpoint_record_file,
-        "--output", args.output,
-    ]
-    if args.mode == "dev":
-        return run_python(CHECKPOINT, forwarded)
-    completed = run_python_capture(CHECKPOINT, forwarded)
-    if completed.returncode != 0:
-        if completed.stderr.strip():
-            print(completed.stderr.strip(), file=sys.stderr)
-        if completed.stdout.strip():
-            print(completed.stdout.strip())
-        return completed.returncode
-    print_checkpoint_summary(Path(args.output), action="verify", root=root)
-    return 0
 
 
 def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args, ensure=True)
-    if root and not getattr(args, "checkpoint_record_file", None):
-        discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
-        if discovered:
-            args.checkpoint_record_file = discovered
-    if root and not getattr(args, "target_root", None):
-        args.target_root = str(root)
-    if root and not getattr(args, "output", None):
-        output_file_id = "checkpoint_restore_preview" if getattr(args, "preview", False) else "checkpoint_restore"
-        args.output = str(alpha_file(root, output_file_id))
-    if not root and not getattr(args, "output", None):
-        print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_OUTPUT_REQUIRED"}, ensure_ascii=True))
-        return 2
-    if getattr(args, "preview", False):
-        if not getattr(args, "checkpoint_record_file", None):
-            if args.mode == "dev":
-                print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
-            else:
-                print("Synrail could not find a restore point to preview.")
-                if root:
-                    print("What to do next: create one before relying on restore semantics.")
-                    print("Next command: " + shell_command(root, "save"))
-            return 2
-        forwarded = [
-            "preview",
-            "--checkpoint-record-file", args.checkpoint_record_file,
-            "--target-root", args.target_root,
-            "--output", args.output,
-        ]
-        if args.mode == "dev":
-            return run_python(CHECKPOINT, forwarded)
-        completed = run_python_capture(CHECKPOINT, forwarded)
-        if completed.returncode != 0:
-            if completed.stderr.strip():
-                print(completed.stderr.strip(), file=sys.stderr)
-            if completed.stdout.strip():
-                print(completed.stdout.strip())
-            return completed.returncode
-        print_checkpoint_summary(Path(args.output), action="preview", root=root)
-        return 0
-    if not getattr(args, "checkpoint_record_file", None):
-        if args.mode == "dev":
-            print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
-        else:
-            print("Synrail could not find a verified restore point to restore.")
-            if root:
-                print("What to do next: create one while the project is in a verified working state.")
-                print("Next command: " + shell_command(root, "save"))
-        return 2
-    if not getattr(args, "confirm", False):
-        preview_output = Path(args.output).with_name("checkpoint_restore_preview.json")
-        forwarded = [
-            "preview",
-            "--checkpoint-record-file", args.checkpoint_record_file,
-            "--target-root", args.target_root,
-            "--output", str(preview_output),
-        ]
-        completed = run_python_capture(CHECKPOINT, forwarded)
-        if completed.returncode != 0:
-            if completed.stderr.strip():
-                print(completed.stderr.strip(), file=sys.stderr)
-            if completed.stdout.strip():
-                print(completed.stdout.strip())
-            return completed.returncode
-        preview_payload = load_json(preview_output)
-        if preview_payload.get("workspace_restore_destructive", False):
-            if args.mode == "dev":
-                print(json.dumps({"result": "ERROR", "reason": "RESTORE_CONFIRM_REQUIRED"}, ensure_ascii=True))
-            else:
-                print("Synrail will not run this destructive restore without explicit confirmation.")
-                print("What happened: this restore would modify project workspace files on the saved project root.")
-                print("What to do next: preview the restore carefully, then rerun with --confirm if you want to proceed.")
-                print("Preview command: " + shell_command(root, "restore") + " --preview")
-                print("Next command: " + shell_command(root, "restore") + " --confirm")
-            return 2
-    forwarded = [
-        "restore",
-        "--checkpoint-record-file", args.checkpoint_record_file,
-        "--target-root", args.target_root,
-        "--output", args.output,
-    ]
-    if args.mode == "dev":
-        code = run_python(CHECKPOINT, forwarded)
-    else:
-        completed = run_python_capture(CHECKPOINT, forwarded)
-        if completed.returncode != 0:
-            if completed.stderr.strip():
-                print(completed.stderr.strip(), file=sys.stderr)
-            if completed.stdout.strip():
-                print(completed.stdout.strip())
-            return completed.returncode
-        code = 0
-    if code == 0:
-        sync_restored_checkpoint_artifacts(Path(args.target_root))
-        if args.mode != "dev":
-            print_checkpoint_summary(Path(args.output), action="restore", root=root)
-    return code
+    return extracted_cmd_restore_checkpoint(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        discover_checkpoint_record=discover_checkpoint_record,
+        alpha_file=alpha_file,
+        load_json=load_json,
+        run_python=run_python,
+        run_python_capture=run_python_capture,
+        print_checkpoint_summary=print_checkpoint_summary,
+        shell_command=shell_command,
+        sync_restored_checkpoint_artifacts=sync_restored_checkpoint_artifacts,
+        checkpoint_script=CHECKPOINT,
+    )
 
 
 def cmd_restore(args: argparse.Namespace) -> int:
@@ -3338,163 +2730,311 @@ def cmd_restore(args: argparse.Namespace) -> int:
 
 
 def cmd_artifact_consistency(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args)
-    if root and not getattr(args, "state_file", None):
-        args.state_file = str(alpha_file(root, "state"))
-    if root and not getattr(args, "output", None):
-        args.output = str(alpha_file(root, "artifact_consistency"))
-    if root:
-        for attr, file_id in [
-            ("report_file", "report"),
-            ("orchestration_file", "orchestration"),
-            ("run_file", "run"),
-            ("repair_packet_file", "repair_packet"),
-            ("repair_handoff_file", "repair_handoff"),
-            ("repair_receipt_file", "repair_receipt"),
-        ]:
-            if not getattr(args, attr, None):
-                existing = maybe_existing_alpha_file(root, file_id)
-                if existing:
-                    setattr(args, attr, existing)
-    forwarded = [
-        "--state-file", args.state_file,
-        "--output", args.output,
-    ]
-    for flag, value in [
-        ("--report-file", args.report_file),
-        ("--orchestration-file", args.orchestration_file),
-        ("--run-file", args.run_file),
-        ("--repair-packet-file", args.repair_packet_file),
-        ("--repair-handoff-file", args.repair_handoff_file),
-        ("--repair-receipt-file", args.repair_receipt_file),
-    ]:
-        if value:
-            forwarded.extend([flag, value])
-    return run_python(ARTIFACT_CONSISTENCY, forwarded)
+    return extracted_cmd_artifact_consistency(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        alpha_file=alpha_file,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        run_python=run_python,
+        artifact_consistency_script=ARTIFACT_CONSISTENCY,
+    )
 
 
 def cmd_thin_output(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args)
-    if root and not getattr(args, "state_file", None):
-        args.state_file = str(alpha_file(root, "state"))
-    if root and not getattr(args, "report_file", None):
-        args.report_file = str(alpha_file(root, "report"))
-    if root and not getattr(args, "output", None):
-        args.output = str(alpha_file(root, "thin_output"))
-    if root and not getattr(args, "repair_packet_file", None):
-        existing = maybe_existing_alpha_file(root, "repair_packet")
-        if existing:
-            args.repair_packet_file = existing
-    if root and not getattr(args, "doctor_file", None):
-        existing = maybe_existing_alpha_file(root, "doctor")
-        if existing:
-            args.doctor_file = existing
-    if root and not getattr(args, "consistency_recovery_file", None):
-        existing = maybe_existing_alpha_file(root, "consistency_recovery")
-        if existing:
-            args.consistency_recovery_file = existing
-    if root and not getattr(args, "refresh_file", None):
-        existing = maybe_existing_alpha_file(root, "refresh")
-        if existing:
-            args.refresh_file = existing
-    if root and not getattr(args, "checkpoint_record_file", None):
-        discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
-        if discovered:
-            args.checkpoint_record_file = discovered
-    forwarded = [
-        "--state-file", args.state_file,
-        "--report-file", args.report_file,
-        "--mode", args.mode,
-        "--output", args.output,
-    ]
-    for flag, value in [
-        ("--repair-packet-file", args.repair_packet_file),
-        ("--doctor-file", args.doctor_file),
-        ("--checkpoint-record-file", args.checkpoint_record_file),
-        ("--consistency-recovery-file", args.consistency_recovery_file),
-        ("--refresh-file", getattr(args, "refresh_file", None)),
-    ]:
-        if value:
-            forwarded.extend([flag, value])
-    if args.mode == "dev":
-        return run_python(THIN_OUTPUT, forwarded)
-    completed = run_python_capture(THIN_OUTPUT, forwarded)
-    if completed.returncode != 0:
-        if completed.stderr.strip():
-            print(completed.stderr.strip(), file=sys.stderr)
-        if completed.stdout.strip():
-            print(completed.stdout.strip())
-    elif not getattr(args, "_suppress_summary", False):
-        print_thin_output_summary(Path(args.output))
-    return completed.returncode
+    return extracted_cmd_thin_output(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        alpha_file=alpha_file,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        discover_checkpoint_record=discover_checkpoint_record,
+        run_python=run_python,
+        run_python_capture=run_python_capture,
+        print_thin_output_summary=print_thin_output_summary,
+        thin_output_script=THIN_OUTPUT,
+    )
 
 
 def cmd_generate_prompt(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args)
-    if root and not getattr(args, "state_file", None):
-        args.state_file = str(alpha_file(root, "state"))
-    if root and not getattr(args, "report_file", None):
-        existing = maybe_existing_alpha_file(root, "report")
-        if existing:
-            args.report_file = existing
-    if root and not getattr(args, "repair_packet_file", None):
-        args.repair_packet_file = str(alpha_file(root, "repair_packet"))
-    if root and not getattr(args, "doctor_file", None):
-        existing = maybe_existing_alpha_file(root, "doctor")
-        if existing:
-            args.doctor_file = existing
-    if root and not getattr(args, "output", None):
-        args.output = str(alpha_file(root, "prompt"))
-    if root and not getattr(args, "checkpoint_record_file", None):
-        discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
-        if discovered:
-            args.checkpoint_record_file = discovered
-    if not args.repair_packet_file or not Path(args.repair_packet_file).exists():
-        state_file = getattr(args, "state_file", None)
-        if root and state_file and Path(state_file).expanduser().resolve().exists():
-            state = load_json(Path(state_file).expanduser().resolve())
-            apply_resume_output_defaults(args, state)
-            ensure_repair_packet_synthesis_defaults(args)
-            synthesize_repair_packet(args, state)
-        if not args.repair_packet_file or not Path(args.repair_packet_file).exists():
-            if args.mode == "dev":
-                print(json.dumps({"result": "ERROR", "reason": "REPAIR_PACKET_REQUIRED"}, ensure_ascii=True))
-                return 2
-            else:
-                print("Synrail does not have the next bounded repair instruction yet.")
-                if root:
-                    print("What to do next: run one check first so Synrail can build the bounded next step.")
-                    print("Next command: " + shell_command(root, "check"))
-                return 2
-    forwarded = [
-        "--repair-packet-file", args.repair_packet_file,
-        "--output", args.output,
-    ]
-    if args.checkpoint_record_file:
-        forwarded.extend(["--checkpoint-record-file", args.checkpoint_record_file])
-    if getattr(args, "doctor_file", None):
-        forwarded.extend(["--doctor-file", args.doctor_file])
-    if args.mode == "dev":
-        return run_python(PROMPT_BRIDGE, forwarded)
-    completed = run_python_capture(PROMPT_BRIDGE, forwarded)
-    if completed.returncode != 0:
-        if completed.stderr.strip():
-            print(completed.stderr.strip(), file=sys.stderr)
-        if completed.stdout.strip():
-            print(completed.stdout.strip())
-        return completed.returncode
-    created_fallback = maybe_materialize_requested_fallback_surface(root=root, prompt_file=Path(args.output))
-    if created_fallback:
-        print(f"Prepared fallback surface: {created_fallback}")
-    print_prompt_summary(Path(args.output))
-    return 0
+    return extracted_cmd_generate_prompt(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        alpha_file=alpha_file,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        discover_checkpoint_record=discover_checkpoint_record,
+        load_json=load_json,
+        apply_resume_output_defaults=apply_resume_output_defaults,
+        ensure_repair_packet_synthesis_defaults=ensure_repair_packet_synthesis_defaults,
+        synthesize_repair_packet=synthesize_repair_packet,
+        run_python=run_python,
+        run_python_capture=run_python_capture,
+        maybe_materialize_requested_fallback_surface=maybe_materialize_requested_fallback_surface,
+        print_prompt_summary=print_prompt_summary,
+        load_project_profile=load_project_profile,
+        plain_shell_command=plain_shell_command,
+        prompt_bridge_script=PROMPT_BRIDGE,
+    )
+
+
+def cmd_thin_output_reading(args: argparse.Namespace) -> int:
+    return extracted_cmd_thin_output_reading(
+        args,
+        run_python=run_python,
+        thin_output_reading_script=THIN_OUTPUT_READING,
+    )
+
+
+def cmd_prompt_followup(args: argparse.Namespace) -> int:
+    return extracted_cmd_prompt_followup(
+        args,
+        run_python=run_python,
+        prompt_followup_script=PROMPT_FOLLOWUP,
+    )
+
+
+def cmd_prompt_retry_guard(args: argparse.Namespace) -> int:
+    return extracted_cmd_prompt_retry_guard(
+        args,
+        run_python=run_python,
+        prompt_retry_guard_script=PROMPT_RETRY_GUARD,
+    )
+
+
+def cmd_consistency_recovery(args: argparse.Namespace) -> int:
+    return extracted_cmd_consistency_recovery(
+        args,
+        run_python=run_python,
+        consistency_recovery_script=CONSISTENCY_RECOVERY,
+    )
+
+
+def cmd_checkpoint_operator_reading(args: argparse.Namespace) -> int:
+    return extracted_cmd_checkpoint_operator_reading(
+        args,
+        run_python=run_python,
+        checkpoint_operator_reading_script=CHECKPOINT_OPERATOR_READING,
+    )
+
+
+def cmd_consistency_recovery_prompt(args: argparse.Namespace) -> int:
+    return extracted_cmd_consistency_recovery_prompt(
+        args,
+        run_python=run_python,
+        consistency_recovery_prompt_script=CONSISTENCY_RECOVERY_PROMPT,
+    )
+
+
+def cmd_consistency_recovery_prompt_reading(args: argparse.Namespace) -> int:
+    return extracted_cmd_consistency_recovery_prompt_reading(
+        args,
+        run_python=run_python,
+        consistency_recovery_prompt_reading_script=CONSISTENCY_RECOVERY_PROMPT_READING,
+    )
+
+
+def cmd_observability(args: argparse.Namespace) -> int:
+    return extracted_cmd_observability(
+        args,
+        run_python=run_python,
+        observability_script=OBSERVABILITY,
+    )
+
+
+def cmd_deploy(args: argparse.Namespace) -> int:
+    return extracted_cmd_deploy(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        alpha_file=alpha_file,
+        load_json=load_json,
+        expected_target_identity_for_root=expected_target_identity_for_root,
+        save_json=save_json,
+        display_path=display_path,
+    )
+
+
+def cmd_deploy_check(args: argparse.Namespace) -> int:
+    return extracted_cmd_deploy_check(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        alpha_file=alpha_file,
+        load_json=load_json,
+        expected_target_identity_for_root=expected_target_identity_for_root,
+    )
+
+
+def cmd_bug_packet(args: argparse.Namespace) -> int:
+    return extracted_cmd_bug_packet(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        alpha_file=alpha_file,
+        run_python=run_python,
+        bug_packet_script=BUG_PACKET,
+    )
+
+
+def cmd_reproducibility(args: argparse.Namespace) -> int:
+    return extracted_cmd_reproducibility(
+        args,
+        run_python=run_python,
+        reproducibility_script=REPRODUCIBILITY,
+    )
+
+
+def cmd_second_operator(args: argparse.Namespace) -> int:
+    return extracted_cmd_second_operator(
+        args,
+        run_python=run_python,
+        second_operator_script=SECOND_OPERATOR,
+    )
+
+
+def cmd_operator_brief(args: argparse.Namespace) -> int:
+    return extracted_cmd_operator_brief(
+        args,
+        run_python=run_python,
+        operator_brief_script=OPERATOR_BRIEF,
+    )
+
+
+def cmd_operator_brief_chain(args: argparse.Namespace) -> int:
+    return extracted_cmd_operator_brief_chain(
+        args,
+        run_python=run_python,
+        operator_brief_chain_script=OPERATOR_BRIEF_CHAIN,
+    )
+
+
+def cmd_operator_render(args: argparse.Namespace) -> int:
+    return extracted_cmd_operator_render(
+        args,
+        run_python=run_python,
+        operator_render_script=OPERATOR_RENDER,
+    )
+
+
+def cmd_operator_render_adoption(args: argparse.Namespace) -> int:
+    return extracted_cmd_operator_render_adoption(
+        args,
+        run_python=run_python,
+        operator_render_adoption_script=OPERATOR_RENDER_ADOPTION,
+    )
+
+
+def cmd_operator_render_adoption_delta(args: argparse.Namespace) -> int:
+    return extracted_cmd_operator_render_adoption_delta(
+        args,
+        run_python=run_python,
+        operator_render_adoption_delta_script=OPERATOR_RENDER_ADOPTION_DELTA,
+    )
+
+
+def cmd_operator_reading(args: argparse.Namespace) -> int:
+    return extracted_cmd_operator_reading(
+        args,
+        run_python=run_python,
+        operator_reading_script=OPERATOR_READING,
+    )
+
+
+def cmd_externality_pressure(args: argparse.Namespace) -> int:
+    return extracted_cmd_externality_pressure(
+        args,
+        run_python=run_python,
+        externality_pressure_script=EXTERNALITY_PRESSURE,
+    )
+
+
+def cmd_repair_handoff(args: argparse.Namespace) -> int:
+    return extracted_cmd_repair_handoff(
+        args,
+        run_python=run_python,
+        repair_handoff_script=REPAIR_HANDOFF,
+    )
+
+
+def cmd_repair_packet(args: argparse.Namespace) -> int:
+    return extracted_cmd_repair_packet(
+        args,
+        current_project_root=current_project_root,
+        validate_root_within_project=validate_root_within_project,
+        validate_repair_packet_paths=validate_repair_packet_paths,
+        run_python=run_python,
+        repair_packet_script=REPAIR_PACKET,
+    )
+
+
+def cmd_session_export(args: argparse.Namespace) -> int:
+    return extracted_cmd_session_export(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        alpha_file=alpha_file,
+        cmd_observability=cmd_observability,
+    )
+
+
+def cmd_verify_checkpoint(args: argparse.Namespace) -> int:
+    return extracted_cmd_verify_checkpoint(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        discover_checkpoint_record=discover_checkpoint_record,
+        checkpoint_verify_file=checkpoint_verify_file,
+        run_python=run_python,
+        run_python_capture=run_python_capture,
+        print_checkpoint_summary=print_checkpoint_summary,
+        shell_command=shell_command,
+        checkpoint_script=CHECKPOINT,
+    )
+
+
+def cmd_orchestrate(args: argparse.Namespace) -> int:
+    return extracted_cmd_orchestrate(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        current_project_root=current_project_root,
+        validate_root_within_project=validate_root_within_project,
+        apply_alpha_runtime_file_defaults=apply_alpha_runtime_file_defaults,
+        project_root_from_profile=project_root_from_profile,
+        validate_check_like_paths=validate_check_like_paths,
+        run_python=run_python,
+        run_python_capture=run_python_capture,
+        spine_script=SPINE,
+    )
+
+
+def cmd_resume(args: argparse.Namespace) -> int:
+    return extracted_cmd_resume(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        current_project_root=current_project_root,
+        validate_root_within_project=validate_root_within_project,
+        apply_alpha_runtime_file_defaults=apply_alpha_runtime_file_defaults,
+        project_root_from_profile=project_root_from_profile,
+        validate_check_like_paths=validate_check_like_paths,
+        load_json=load_json,
+        ensure_run_state_extensions=ensure_run_state_extensions,
+        apply_bootstrap_defaults=apply_bootstrap_defaults,
+        apply_resume_output_defaults=apply_resume_output_defaults,
+        maybe_apply_repair_packet=maybe_apply_repair_packet,
+        cmd_orchestrate=cmd_orchestrate,
+        cmd_thin_output=cmd_thin_output,
+        print_thin_output_summary=print_thin_output_summary,
+        alpha_file=alpha_file,
+    )
 
 
 def cmd_check(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args, ensure=True)
-    project_profile = load_project_profile(root) or {} if root else {}
-    project_root_text = (project_profile.get("project_root", "") or "").strip()
-    project_root = Path(project_root_text).resolve() if project_root_text else Path.cwd().resolve()
+    root = alpha_root_from_args(args)
+    project_root = current_project_root()
+    if root:
+        validate_root_within_project(
+            "artifact_root",
+            getattr(args, "artifact_root", "") or DEFAULT_ALPHA_ARTIFACT_ROOT,
+            root=root,
+            project_root=project_root,
+            artifact_root=root,
+        )
+        root.mkdir(parents=True, exist_ok=True)
     if root and not getattr(args, "state_file", None):
         args.state_file = str(alpha_file(root, "state"))
     if root and getattr(args, "state_file", None):
@@ -3531,6 +3071,11 @@ def cmd_check(args: argparse.Namespace) -> int:
         existing_criteria = maybe_existing_alpha_file(root, "acceptance_criteria")
         if existing_criteria:
             args.acceptance_criteria_file = existing_criteria
+
+    project_profile = load_project_profile(root) or {} if root else {}
+    project_root_text = (project_profile.get("project_root", "") or "").strip()
+    project_root = Path(project_root_text).resolve() if project_root_text else project_root
+    validate_check_like_paths(args, artifact_root=root, project_root=project_root)
 
     if (
         root
@@ -3619,20 +3164,12 @@ def cmd_check(args: argparse.Namespace) -> int:
             credential_env=list(getattr(args, "credential_env", [])),
             prompt_identity_file=getattr(args, "prompt_identity_file", None),
             target_identity_file=getattr(args, "target_identity_file", None),
+            coverage_profile_file=getattr(args, "coverage_profile_file", None),
+            coverage_corpus_file=getattr(args, "coverage_corpus_file", None),
             changed_file=list(getattr(args, "changed_file", [])),
             allowed_scope_path=list(getattr(args, "allowed_scope_path", [])),
             _capture_output=(args.mode == "default"),
         )
-        apply_alpha_runtime_file_defaults(orchestrate_args)
-        doctor_completed = run_python_capture(DOCTOR, doctor_forwarded_args(orchestrate_args))
-        if doctor_completed.returncode != 0:
-            if doctor_completed.stderr.strip():
-                print(doctor_completed.stderr.strip(), file=sys.stderr)
-            if doctor_completed.stdout.strip():
-                print(doctor_completed.stdout.strip())
-            return doctor_completed.returncode
-        if args.mode == "default":
-            print_doctor_override_warning(load_doctor_record_from_args(orchestrate_args))
         orchestrate_code = cmd_orchestrate(orchestrate_args)
         if orchestrate_code != 0 and not Path(args.report_file).exists():
             return orchestrate_code
@@ -3673,6 +3210,13 @@ def cmd_check(args: argparse.Namespace) -> int:
 
     report_path = Path(args.report_file)
     report_payload = load_json(report_path) if report_path.exists() else {}
+    doctor_path = None
+    if root:
+        doctor_path = alpha_file(root, "doctor")
+    elif getattr(args, "doctor_output", None):
+        doctor_path = Path(args.doctor_output)
+    if args.mode == "default":
+        maybe_print_doctor_override_warning(doctor_path)
     if root and report_payload.get("result", "") == "OK":
         update_last_known_final_result_hash(
             Path(args.state_file),
@@ -3710,456 +3254,6 @@ def cmd_check(args: argparse.Namespace) -> int:
                 print("What to fix:")
                 print_prompt_summary_compact(Path(prompt_output), include_prompt=False)
     return thin_code
-
-
-def cmd_thin_output_reading(args: argparse.Namespace) -> int:
-    return run_python(
-        THIN_OUTPUT_READING,
-        [
-            "--thin-output-file", args.thin_output_file,
-            "--prompt-bridge-file", args.prompt_bridge_file,
-            "--report-file", args.report_file,
-            "--repair-packet-file", args.repair_packet_file,
-            "--output", args.output,
-        ],
-    )
-
-
-def cmd_prompt_followup(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--repair-packet-file", args.repair_packet_file,
-        "--prompt-bridge-file", args.prompt_bridge_file,
-        "--output", args.output,
-    ]
-    if args.thin_output_file:
-        forwarded.extend(["--thin-output-file", args.thin_output_file])
-    return run_python(PROMPT_FOLLOWUP, forwarded)
-
-
-def cmd_prompt_retry_guard(args: argparse.Namespace) -> int:
-    return run_python(
-        PROMPT_RETRY_GUARD,
-        [
-            "--packet-a-file", args.packet_a_file,
-            "--prompt-a-file", args.prompt_a_file,
-            "--packet-b-file", args.packet_b_file,
-            "--prompt-b-file", args.prompt_b_file,
-            "--output", args.output,
-        ],
-    )
-
-
-def cmd_consistency_recovery(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--consistency-file", args.consistency_file,
-        "--output", args.output,
-    ]
-    if args.checkpoint_record_file:
-        forwarded.extend(["--checkpoint-record-file", args.checkpoint_record_file])
-    return run_python(CONSISTENCY_RECOVERY, forwarded)
-
-
-def cmd_checkpoint_operator_reading(args: argparse.Namespace) -> int:
-    return run_python(
-        CHECKPOINT_OPERATOR_READING,
-        [
-            "--second-operator-file", args.second_operator_file,
-            "--thin-output-file", args.thin_output_file,
-            "--repair-packet-file", args.repair_packet_file,
-            "--output", args.output,
-        ],
-    )
-
-
-def cmd_consistency_recovery_prompt(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--consistency-recovery-file", args.consistency_recovery_file,
-        "--output", args.output,
-    ]
-    if args.thin_output_file:
-        forwarded.extend(["--thin-output-file", args.thin_output_file])
-    return run_python(CONSISTENCY_RECOVERY_PROMPT, forwarded)
-
-
-def cmd_consistency_recovery_prompt_reading(args: argparse.Namespace) -> int:
-    return run_python(
-        CONSISTENCY_RECOVERY_PROMPT_READING,
-        [
-            "--consistency-recovery-file", args.consistency_recovery_file,
-            "--prompt-file", args.prompt_file,
-            "--output", args.output,
-        ],
-    )
-
-
-def cmd_observability(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--state-file", args.state_file,
-        "--report-file", args.report_file,
-        "--output", args.output,
-    ]
-    for flag, value in [
-        ("--repair-packet-file", args.repair_packet_file),
-        ("--repair-receipt-file", args.repair_receipt_file),
-        ("--refresh-file", args.refresh_file),
-    ]:
-        if value:
-            forwarded.extend([flag, value])
-    return run_python(OBSERVABILITY, forwarded)
-
-
-def cmd_session_export(args: argparse.Namespace) -> int:
-    return run_session_export_command(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        maybe_existing_alpha_file=maybe_existing_alpha_file,
-        alpha_file=alpha_file,
-        cmd_observability=cmd_observability,
-    )
-
-
-def cmd_deploy(args: argparse.Namespace) -> int:
-    """Gate deployment side effects behind accepted closure."""
-    root = alpha_root_from_args(args)
-    if not root:
-        print(json.dumps({"result": "ERROR", "reason": "ARTIFACT_ROOT_REQUIRED"}, ensure_ascii=True))
-        return 2
-
-    state_file = Path(getattr(args, "state_file", "") or str(alpha_file(root, "state")))
-    if not state_file.exists():
-        if getattr(args, "mode", "default") == "dev":
-            print(json.dumps({"result": "ERROR", "reason": "NO_STATE_FILE"}, ensure_ascii=True))
-        else:
-            print("Synrail deploy blocked.")
-            print("What happened: no run state found. Start a controlled run first.")
-            print("What to do next: synrail start")
-        return 2
-
-    state = load_json(state_file)
-    run_id = state.get("run_id", "")
-    current_state = state.get("state", "")
-
-    # Gate 1: state must be CLOSURE_ACCEPTED
-    if current_state != "CLOSURE_ACCEPTED":
-        if getattr(args, "mode", "default") == "dev":
-            print(json.dumps({
-                "result": "BLOCKED",
-                "reason": "DEPLOY_REQUIRES_ACCEPTED_CLOSURE",
-                "current_state": current_state,
-                "run_id": run_id,
-            }, ensure_ascii=True))
-        else:
-            print("Synrail deploy blocked.")
-            print(f"What happened: the current run is in state '{current_state}', not 'CLOSURE_ACCEPTED'.")
-            print("Deployment is only allowed after Synrail has accepted the proof bundle.")
-            if current_state in ("CLOSURE_REJECTED",):
-                print("What to do next: fix the issues identified in the proof bundle, then rerun synrail check.")
-            else:
-                print("What to do next: complete the proof cycle (synrail check) until the run is accepted.")
-        return 2
-
-    # Gate 2: verify run_id matches if provided
-    deploy_run_id = getattr(args, "deploy_run_id", "") or ""
-    if deploy_run_id and deploy_run_id != run_id:
-        if getattr(args, "mode", "default") == "dev":
-            print(json.dumps({
-                "result": "BLOCKED",
-                "reason": "DEPLOY_RUN_ID_MISMATCH",
-                "expected_run_id": deploy_run_id,
-                "actual_run_id": run_id,
-            }, ensure_ascii=True))
-        else:
-            print("Synrail deploy blocked.")
-            print(f"What happened: deploy requested for run '{deploy_run_id}' but accepted run is '{run_id}'.")
-            print("What to do next: verify you are deploying the correct run.")
-        return 2
-
-    # Gate 3: verify stable target identity binding
-    expected_target_identity = expected_target_identity_for_root(root)
-    if not expected_target_identity:
-        if getattr(args, "mode", "default") == "dev":
-            print(json.dumps({
-                "result": "BLOCKED",
-                "reason": "DEPLOY_TARGET_IDENTITY_MISSING",
-                "run_id": run_id,
-            }, ensure_ascii=True))
-        else:
-            print("Synrail deploy blocked.")
-            print("What happened: this run does not have a stable target identity record.")
-            print("What to do next: restart the controlled run and keep the target identity attested before deployment.")
-        return 2
-
-    deploy_target = (getattr(args, "deploy_target", "") or "").strip()
-    if deploy_target and deploy_target != expected_target_identity:
-        if getattr(args, "mode", "default") == "dev":
-            print(json.dumps({
-                "result": "BLOCKED",
-                "reason": "DEPLOY_TARGET_MISMATCH",
-                "deploy_target": deploy_target,
-                "expected_target_identity": expected_target_identity,
-            }, ensure_ascii=True))
-        else:
-            print("Synrail deploy blocked.")
-            print(f"What happened: deploy target '{deploy_target}' does not match the attested target identity '{expected_target_identity}'.")
-            print("What to do next: verify you are deploying to the correct target.")
-        return 2
-
-    # All gates passed — record the deploy receipt
-    deploy_receipt = {
-        "schema_version": "deploy_receipt_v0",
-        "result": "DEPLOY_AUTHORIZED",
-        "run_id": run_id,
-        "task_class": state.get("task_class", ""),
-        "closure_state": current_state,
-        "target_identity": expected_target_identity,
-        "deploy_target": deploy_target,
-        "deploy_time_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "deploy_authorized_by": "synrail deploy gate",
-    }
-
-    receipt_path = alpha_file(root, "deploy_receipt")
-    save_json(receipt_path, deploy_receipt)
-
-    if getattr(args, "mode", "default") == "dev":
-        print(json.dumps(deploy_receipt, ensure_ascii=True))
-    else:
-        print("Synrail deploy authorized.")
-        print(f"Run: {run_id}")
-        print(f"State: {current_state}")
-        print(f"Target identity: {expected_target_identity}")
-        print(f"Receipt: {display_path(receipt_path)}")
-        print("You may now proceed with the deployment side effect.")
-
-    return 0
-
-
-def cmd_deploy_check(args: argparse.Namespace) -> int:
-    """Check whether a valid deploy receipt exists (for use by external guards)."""
-    root = alpha_root_from_args(args)
-    if not root:
-        print(json.dumps({"result": "BLOCKED", "reason": "ARTIFACT_ROOT_REQUIRED"}, ensure_ascii=True))
-        return 2
-
-    receipt_path = alpha_file(root, "deploy_receipt")
-    if not receipt_path.exists():
-        print(json.dumps({"result": "BLOCKED", "reason": "NO_DEPLOY_RECEIPT"}, ensure_ascii=True))
-        return 2
-
-    receipt = load_json(receipt_path)
-    if receipt.get("result") != "DEPLOY_AUTHORIZED":
-        print(json.dumps({"result": "BLOCKED", "reason": "DEPLOY_NOT_AUTHORIZED", "receipt": receipt}, ensure_ascii=True))
-        return 2
-
-    # Cross-check against current state
-    state_file = Path(getattr(args, "state_file", "") or str(alpha_file(root, "state")))
-    if not state_file.exists():
-        print(json.dumps({"result": "BLOCKED", "reason": "NO_STATE_FILE"}, ensure_ascii=True))
-        return 2
-
-    state = load_json(state_file)
-    if state.get("state", "") != "CLOSURE_ACCEPTED":
-        print(json.dumps({
-            "result": "BLOCKED",
-            "reason": "DEPLOY_CURRENT_STATE_NOT_ACCEPTED",
-            "current_state": state.get("state", ""),
-        }, ensure_ascii=True))
-        return 2
-    if state.get("run_id", "") != receipt.get("run_id", ""):
-        print(json.dumps({
-            "result": "BLOCKED",
-            "reason": "DEPLOY_RECEIPT_RUN_ID_STALE",
-            "receipt_run_id": receipt.get("run_id", ""),
-            "current_run_id": state.get("run_id", ""),
-        }, ensure_ascii=True))
-        return 2
-
-    expected_target_identity = expected_target_identity_for_root(root)
-    receipt_target_identity = (receipt.get("target_identity", "") or "").strip()
-    if not receipt_target_identity:
-        print(json.dumps({"result": "BLOCKED", "reason": "DEPLOY_RECEIPT_TARGET_IDENTITY_MISSING"}, ensure_ascii=True))
-        return 2
-    if not expected_target_identity:
-        print(json.dumps({"result": "BLOCKED", "reason": "DEPLOY_TARGET_IDENTITY_MISSING"}, ensure_ascii=True))
-        return 2
-    if receipt_target_identity != expected_target_identity:
-        print(json.dumps({
-            "result": "BLOCKED",
-            "reason": "DEPLOY_RECEIPT_TARGET_IDENTITY_STALE",
-            "receipt_target_identity": receipt_target_identity,
-            "current_target_identity": expected_target_identity,
-        }, ensure_ascii=True))
-        return 2
-
-    print(json.dumps({"result": "OK", "deploy_receipt": receipt}, ensure_ascii=True))
-    return 0
-
-
-def cmd_bug_packet(args: argparse.Namespace) -> int:
-    return run_bug_packet_command(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        maybe_existing_alpha_file=maybe_existing_alpha_file,
-        alpha_file=alpha_file,
-        run_python=run_python,
-        bug_packet_script=BUG_PACKET,
-    )
-
-
-def cmd_reproducibility(args: argparse.Namespace) -> int:
-    return run_python(
-        REPRODUCIBILITY,
-        [
-            "--run-a", args.run_a,
-            "--run-b", args.run_b,
-            "--output", args.output,
-        ],
-    )
-
-
-def cmd_second_operator(args: argparse.Namespace) -> int:
-    return run_python(
-        SECOND_OPERATOR,
-        [
-            "--state-file", args.state_file,
-            "--repair-packet-file", args.repair_packet_file,
-            "--run-file", args.run_file,
-            "--output", args.output,
-        ],
-    )
-
-
-def cmd_operator_brief(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--state-file", args.state_file,
-        "--report-file", args.report_file,
-        "--repair-packet-file", args.repair_packet_file,
-        "--output", args.output,
-    ]
-    if args.doctor_file:
-        forwarded.extend(["--doctor-file", args.doctor_file])
-    return run_python(OPERATOR_BRIEF, forwarded)
-
-
-def cmd_operator_brief_chain(args: argparse.Namespace) -> int:
-    forwarded: list[str] = []
-    for brief in args.brief:
-        forwarded.extend(["--brief", brief])
-    forwarded.extend(["--output", args.output])
-    return run_python(OPERATOR_BRIEF_CHAIN, forwarded)
-
-
-def cmd_operator_render(args: argparse.Namespace) -> int:
-    forwarded = ["--output", args.output]
-    if args.brief_file:
-        forwarded.extend(["--brief-file", args.brief_file])
-    if args.chain_file:
-        forwarded.extend(["--chain-file", args.chain_file])
-    return run_python(OPERATOR_RENDER, forwarded)
-
-
-def cmd_operator_render_adoption(args: argparse.Namespace) -> int:
-    return run_python(
-        OPERATOR_RENDER_ADOPTION,
-        [
-            "--source", args.source,
-            "--render", args.render,
-            "--label", args.label,
-            "--output", args.output,
-        ],
-    )
-
-
-def cmd_operator_render_adoption_delta(args: argparse.Namespace) -> int:
-    forwarded: list[str] = []
-    for record in args.record:
-        forwarded.extend(["--record", record])
-    forwarded.extend(["--output", args.output])
-    return run_python(OPERATOR_RENDER_ADOPTION_DELTA, forwarded)
-
-
-def cmd_operator_reading(args: argparse.Namespace) -> int:
-    return run_python(
-        OPERATOR_READING,
-        [
-            "--second-operator-file", args.second_operator_file,
-            "--brief-file", args.brief_file,
-            "--render-file", args.render_file,
-            "--label", args.label,
-            "--output", args.output,
-        ],
-    )
-
-
-def cmd_externality_pressure(args: argparse.Namespace) -> int:
-    return run_python(
-        EXTERNALITY_PRESSURE,
-        [
-            "--reproducibility-file", args.reproducibility_file,
-            "--second-operator-file", args.second_operator_file,
-            "--operator-reading-file", args.operator_reading_file,
-            "--label", args.label,
-            "--output", args.output,
-        ],
-    )
-
-
-def cmd_repair_handoff(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--state-file", args.state_file,
-        "--output", args.output,
-    ]
-    return run_python(REPAIR_HANDOFF, forwarded)
-
-
-def cmd_repair_packet(args: argparse.Namespace) -> int:
-    forwarded = [
-        "--state-file", args.state_file,
-        "--artifact-root", args.artifact_root,
-        "--output", args.output,
-    ]
-    for flag, value in [
-        ("--doctor-run-id", getattr(args, "doctor_run_id", None)),
-        ("--doctor-level", getattr(args, "doctor_level", None)),
-        ("--target-path", getattr(args, "target_path", None)),
-        ("--target-classification", getattr(args, "target_classification", None)),
-        ("--baseline-identity", getattr(args, "baseline_identity", None)),
-        ("--intended-run-class", getattr(args, "intended_run_class", None)),
-        ("--execution-surface-identity", getattr(args, "execution_surface_identity", None)),
-        ("--final-result", getattr(args, "final_result", None)),
-        ("--prompt-identity", getattr(args, "prompt_identity", None)),
-        ("--task-identity", getattr(args, "task_identity", None)),
-        ("--previous-packet-file", getattr(args, "previous_packet_file", None)),
-        ("--repair-handoff-file", args.repair_handoff_file),
-        ("--mode-selection-receipt", args.mode_selection_receipt),
-        ("--preparation-receipt-file", args.preparation_receipt_file),
-        ("--repair-receipt-file", getattr(args, "repair_receipt_file", None)),
-        ("--report-file", getattr(args, "report_file", None)),
-        ("--readback", args.readback),
-        ("--scenario-proof", args.scenario_proof),
-        ("--target-identity-file", args.target_identity_file),
-        ("--artifact-path", args.artifact_path),
-        ("--helper-path", args.helper_path),
-        ("--refresh-output", args.refresh_output),
-        ("--refresh-event-type", args.refresh_event_type),
-        ("--refresh-recovery-status", args.refresh_recovery_status),
-    ]:
-        if value:
-            forwarded.extend([flag, value])
-    for enabled, flag in [
-        (args.prompt_identity_ok, "--prompt-identity-ok"),
-        (args.clean_surface, "--clean-surface"),
-        (args.artifact_viable, "--artifact-viable"),
-        (args.helper_ok, "--helper-ok"),
-        (args.credentials_ok, "--credentials-ok"),
-        (args.refresh_reverification_complete, "--refresh-reverification-complete"),
-        (args.refresh_use_bundle, "--refresh-use-bundle"),
-        (args.refresh_use_closure, "--refresh-use-closure"),
-    ]:
-        if enabled:
-            forwarded.append(flag)
-    for env_name in args.credential_env:
-        forwarded.extend(["--credential-env", env_name])
-    return run_python(REPAIR_PACKET, forwarded)
 
 
 def load_repair_packet(path: Path) -> dict:
@@ -4583,168 +3677,6 @@ def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> list[str
     return temp_files
 
 
-def cmd_orchestrate(args: argparse.Namespace) -> int:
-    apply_alpha_runtime_file_defaults(args)
-    if not getattr(args, "state_file", None):
-        print(json.dumps({"result": "ERROR", "reason": "STATE_FILE_REQUIRED"}, ensure_ascii=True))
-        return 2
-    forwarded = [
-        "--state-file", args.state_file,
-        "--doctor-run-id", args.doctor_run_id,
-        "--doctor-level", args.doctor_level,
-        "--target-path", args.target_path,
-        "--target-classification", args.target_classification,
-        "--baseline-identity", args.baseline_identity,
-        "--intended-run-class", args.intended_run_class,
-        "--doctor-output", args.doctor_output,
-        "--final-result", args.final_result,
-        "--task-class", args.task_class,
-        "--bundle-output", args.bundle_output,
-        "--closure-output", args.closure_output,
-        "--report-output", args.report_output,
-        "--execution-surface-identity", args.execution_surface_identity,
-        "--prompt-identity", args.prompt_identity,
-        "--task-identity", args.task_identity,
-    ]
-    if getattr(args, "resume_from_state", None):
-        forwarded.extend(["--resume-from-state", args.resume_from_state])
-    if args.repair_handoff_file:
-        forwarded.extend(["--repair-handoff-file", args.repair_handoff_file])
-    if args.repair_packet_file:
-        forwarded.extend(["--repair-packet-file", args.repair_packet_file])
-    if args.mode_selection_receipt:
-        forwarded.extend(["--mode-selection-receipt", args.mode_selection_receipt])
-    for flag, value in [
-        ("--repair-handoff-output", args.repair_handoff_output),
-        ("--repair-packet-output", args.repair_packet_output),
-        ("--repair-receipt-output", args.repair_receipt_output),
-        ("--readback", args.readback),
-        ("--scenario-proof", args.scenario_proof),
-        ("--plan-output", args.plan_output),
-        ("--preparation-receipt-output", args.preparation_receipt_output),
-        ("--preparation-artifact-root", args.preparation_artifact_root),
-        ("--refresh-output", args.refresh_output),
-        ("--observability-output", args.observability_output),
-        ("--artifact-consistency-output", args.artifact_consistency_output),
-        ("--refresh-event-type", args.refresh_event_type),
-        ("--refresh-doctor-status", args.refresh_doctor_status),
-        ("--refresh-recovery-status", args.refresh_recovery_status),
-        ("--baseline-file", args.baseline_file),
-        ("--synrail-file", args.synrail_file),
-        ("--comparison-output", args.comparison_output),
-        ("--worked-artifact-output", args.worked_artifact_output),
-        ("--run-artifact-output", args.run_artifact_output),
-        ("--artifact-path", args.artifact_path),
-        ("--helper-path", args.helper_path),
-        ("--prompt-identity-file", args.prompt_identity_file),
-        ("--target-identity-file", args.target_identity_file),
-        ("--expected-target-identity", args.execution_surface_identity),
-        ("--acceptance-criteria-file", getattr(args, "acceptance_criteria_file", None)),
-        ("--acceptance-validation-output", getattr(args, "acceptance_validation_output", None)),
-        ("--project-profile-file", getattr(args, "project_profile_file", None)),
-        ("--bootstrap-provenance-reason", getattr(args, "bootstrap_provenance_reason", None)),
-    ]:
-        if value:
-            forwarded.extend([flag, value])
-    for enabled, flag in [
-        (getattr(args, "bootstrap_provenance_ok", False), "--bootstrap-provenance-ok"),
-        (args.refresh_reverification_complete, "--refresh-reverification-complete"),
-        (args.refresh_use_bundle, "--refresh-use-bundle"),
-        (args.refresh_use_closure, "--refresh-use-closure"),
-        (args.clean_surface, "--clean-surface"),
-        (args.artifact_viable, "--artifact-viable"),
-        (args.helper_ok, "--helper-ok"),
-        (args.credentials_ok, "--credentials-ok"),
-        (args.prompt_identity_ok, "--prompt-identity-ok"),
-    ]:
-        if enabled:
-            forwarded.append(flag)
-    for changed_file in getattr(args, "changed_file", []):
-        forwarded.extend(["--changed-file", changed_file])
-    for allowed_scope_path in getattr(args, "allowed_scope_path", []):
-        forwarded.extend(["--allowed-scope-path", allowed_scope_path])
-    for env_name in args.credential_env:
-        forwarded.extend(["--credential-env", env_name])
-    if getattr(args, "_capture_output", False):
-        completed = run_python_capture(SPINE, ["orchestrate", *forwarded])
-        if completed.returncode != 0:
-            if completed.stderr.strip():
-                print(completed.stderr.strip(), file=sys.stderr)
-            if completed.stdout.strip():
-                print(completed.stdout.strip())
-        return completed.returncode
-    return run_python(SPINE, ["orchestrate", *forwarded])
-
-
-def cmd_resume(args: argparse.Namespace) -> int:
-    apply_alpha_runtime_file_defaults(args)
-    if not getattr(args, "state_file", None):
-        print(json.dumps({"result": "ERROR", "reason": "STATE_FILE_REQUIRED"}, ensure_ascii=True))
-        return 2
-    state_path = Path(args.state_file)
-    state = ensure_run_state_extensions(load_json(state_path))
-    apply_bootstrap_defaults(args, root=state_path.parent)
-    args.resume_from_state = state["state"]
-    apply_resume_output_defaults(args, state)
-    temp_runtime_files: list[str] = []
-    try:
-        temp_runtime_files = maybe_apply_repair_packet(args, state)
-    except ValueError as exc:
-        print(json.dumps({"result": "ERROR", "reason": "INVALID_REPAIR_PACKET", "detail": str(exc)}, ensure_ascii=True))
-        return 2
-
-    for attr in [
-        "doctor_run_id",
-        "doctor_level",
-        "target_path",
-        "target_classification",
-        "baseline_identity",
-        "intended_run_class",
-        "doctor_output",
-        "task_class",
-        "bundle_output",
-        "closure_output",
-        "report_output",
-        "execution_surface_identity",
-    ]:
-        if not getattr(args, attr, None):
-            print(json.dumps({"result": "ERROR", "reason": "RESUME_CONTEXT_INCOMPLETE", "missing_field": attr}, ensure_ascii=True))
-            return 2
-
-    try:
-        args._capture_output = args.mode == "default"
-        code = cmd_orchestrate(args)
-        if code == 0 and args.mode == "default":
-            root = alpha_root_from_args(args)
-            if getattr(args, "output", None):
-                thin_output_path = str(Path(args.output))
-            elif root:
-                thin_output_path = str(alpha_file(root, "thin_output"))
-            else:
-                thin_output_path = str(Path(args.report_output).with_name("thin_output.json"))
-            thin_args = argparse.Namespace(
-                artifact_root=args.artifact_root,
-                state_file=args.state_file,
-                report_file=args.report_output,
-                mode="default",
-                output=thin_output_path,
-                repair_packet_file=getattr(args, "repair_packet_file", None),
-                doctor_file=getattr(args, "doctor_output", None),
-                checkpoint_id=getattr(args, "checkpoint_id", None),
-                checkpoint_record_file=getattr(args, "checkpoint_record_file", None),
-                consistency_recovery_file=getattr(args, "consistency_recovery_file", None),
-                _suppress_summary=True,
-            )
-            thin_code = cmd_thin_output(thin_args)
-            if thin_code == 0:
-                print_thin_output_summary(Path(thin_args.output))
-            return thin_code
-        return code
-    finally:
-        for temp_path in temp_runtime_files:
-            Path(temp_path).unlink(missing_ok=True)
-
-
 def add_orchestration_args(
     parser: argparse.ArgumentParser,
     *,
@@ -4808,6 +3740,8 @@ def add_orchestration_args(
     parser.add_argument("--allowed-scope-path", action="append", default=[])
     parser.add_argument("--prompt-identity-file")
     parser.add_argument("--target-identity-file")
+    parser.add_argument("--coverage-profile-file")
+    parser.add_argument("--coverage-corpus-file")
     parser.add_argument("--bootstrap-provenance-ok", action="store_true")
     parser.add_argument("--bootstrap-provenance-reason", default="")
     parser.add_argument("--acceptance-criteria-file")
@@ -4944,6 +3878,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_check.add_argument("--allowed-scope-path", action="append", default=[])
     p_check.add_argument("--prompt-identity-file")
     p_check.add_argument("--target-identity-file")
+    p_check.add_argument("--coverage-profile-file")
+    p_check.add_argument("--coverage-corpus-file")
     p_check.set_defaults(func=cmd_check)
 
     p_status = sub.add_parser("status", aliases=["dashboard"], help="Show current run state")
@@ -5049,6 +3985,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_doctor.add_argument("--expected-task-identity")
     p_doctor.add_argument("--target-identity-file")
     p_doctor.add_argument("--expected-target-identity")
+    p_doctor.add_argument("--coverage-profile-file")
+    p_doctor.add_argument("--coverage-corpus-file")
     p_doctor.add_argument("--changed-file", action="append", default=[])
     p_doctor.add_argument("--allowed-scope-path", action="append", default=[])
     p_doctor.set_defaults(func=cmd_doctor)
@@ -5462,6 +4400,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_repair_packet.add_argument("--credentials-ok", action="store_true", default=None)
     p_repair_packet.add_argument("--artifact-path")
     p_repair_packet.add_argument("--helper-path")
+    p_repair_packet.add_argument("--coverage-profile-file")
+    p_repair_packet.add_argument("--coverage-corpus-file")
     p_repair_packet.add_argument("--credential-env", action="append", default=[])
     p_repair_packet.add_argument("--refresh-output")
     p_repair_packet.add_argument("--refresh-event-type")
@@ -5518,6 +4458,9 @@ def main(argv: list[str] | None = None) -> int:
         )
     except Exception:
         pass
+    if isinstance(caught, PathScopeValidationError):
+        print(json.dumps(caught.as_payload(), ensure_ascii=True))
+        return 2
     if caught is not None:
         raise caught
     return exit_code

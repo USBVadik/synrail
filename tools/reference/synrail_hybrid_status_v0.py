@@ -10,8 +10,39 @@ from pathlib import Path
 
 try:
     from .synrail_io_v0 import load_json, save_json
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_path_value, validate_root_within_project
 except ImportError:
     from synrail_io_v0 import load_json, save_json
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_path_value, validate_root_within_project
+
+
+HYBRID_STATUS_PATH_SCOPES = {
+    "cost_record": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_hybrid_status_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    for field, scope in HYBRID_STATUS_PATH_SCOPES.items():
+        validate_path_value(
+            field,
+            str(getattr(args, field)),
+            scope=scope,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+    for hybrid_record in args.hybrid_record:
+        validate_path_value(
+            "hybrid_record",
+            str(hybrid_record),
+            scope=ARTIFACT_SCOPE,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
 
 
 def derive_status(verdicts: list[str]) -> tuple[str, str, str, str]:
@@ -86,7 +117,21 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
+        artifact_root = Path(args.cost_record).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "cost_record",
+            args.cost_record,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_hybrid_status_paths(args, artifact_root=artifact_root, project_root=project_root)
         record = build_record(Path(args.cost_record), [Path(path) for path in args.hybrid_record])
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     except ValueError as exc:
         print(json.dumps({"result": "ERROR", "reason": str(exc)}, ensure_ascii=True))
         return 2

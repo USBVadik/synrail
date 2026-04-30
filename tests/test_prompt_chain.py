@@ -297,6 +297,7 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertEqual("final_result_payload", record["current_step_subsurface_id"])
         self.assertIn("final_result_payload", record["allowed_scope"])
         self.assertIn("Checklist for /tmp/synrail/final_result.json:", record["prompt"])
+        self.assertIn("use diff_provenance_records/per_file_diff_provenance with one structured record per modified file for a multi-file change", record["prompt"])
         self.assertIn("final_result.status", record["prompt"])
         self.assertIn("change_disposition", record["prompt"])
         self.assertIn("artifact_identity", record["prompt"])
@@ -426,6 +427,7 @@ class TestBuildPromptBridge(unittest.TestCase):
         self.assertEqual("/tmp/synrail/final_result.json", record["current_step_target_path"])
         self.assertIn("record diff provenance in /tmp/synrail/final_result.json", record["current_step_focus_summary"])
         self.assertIn("Checklist for /tmp/synrail/final_result.json:", record["prompt"])
+        self.assertIn("For a multi-file change, use diff_provenance_records or per_file_diff_provenance with one structured record per modified file", record["prompt"])
 
     def test_focus_helper_routes_final_result_subsurface_even_from_missing_sections_step(self) -> None:
         focus = focused_repair_surface(

@@ -9,6 +9,7 @@
     "system",
     "scenario_id",
     "task_class",
+    "data_provenance",
     "closure_result",
     "blocker_to_closure_cycles",
     "false_success_risk",
@@ -30,6 +31,10 @@
     },
     "task_class": {
       "type": "string"
+    },
+    "data_provenance": {
+      "type": "string",
+      "enum": ["curated_local_estimate", "pressure_synthetic", "external_empirical"]
     },
     "closure_result": {
       "type": "string",

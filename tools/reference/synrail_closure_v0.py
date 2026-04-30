@@ -8,6 +8,37 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
+
+try:
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+except ImportError:
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+
+
+CLOSURE_PATH_SCOPES = {
+    "state_file": ARTIFACT_SCOPE,
+    "bundle_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+    "acceptance_validation_file": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_closure_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=CLOSURE_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
 
 MISSING_SECTION_STEPS = {
     "readback": "collect readback from changed sections on the attested surface",
@@ -30,12 +61,8 @@ SEMANTIC_SECTION_STEPS = {
 }
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
 def first_missing_step(missing_sections: list[str]) -> str:
@@ -186,13 +213,6 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         verdict["narrow_next_safe_step"] = "rebuild the final result artifact and proof bundle on the current surface"
         return verdict
 
-    if doctor_overrides:
-        verdict["closure_status"] = "REJECTED"
-        verdict["blocking_reason"] = "DOCTOR_OVERRIDE_PRESENT"
-        verdict["next_allowed_transition"] = "DOCTOR_READINESS"
-        verdict["narrow_next_safe_step"] = "rerun doctor without override gates before trusting closure"
-        return verdict
-
     verdict["closure_status"] = "ACCEPTED"
     verdict["blocking_reason"] = ""
     verdict["next_allowed_transition"] = "NONE"
@@ -249,17 +269,31 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
 
-    state_path = Path(args.state_file)
-    bundle_path = Path(args.bundle_file)
-    output_path = Path(args.output)
-
-    state = load_json(state_path)
-    bundle = load_json(bundle_path)
-    verdict = build_verdict(
-        state,
-        bundle,
-        load_json(Path(args.acceptance_validation_file)) if args.acceptance_validation_file else None,
-    )
+    try:
+        artifact_root = Path(args.state_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "state_file",
+            args.state_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_closure_paths(args, artifact_root=artifact_root, project_root=project_root)
+        state_path = Path(args.state_file)
+        bundle_path = Path(args.bundle_file)
+        output_path = Path(args.output)
+        state = load_json(state_path)
+        bundle = load_json(bundle_path)
+        verdict = build_verdict(
+            state,
+            bundle,
+            load_json(Path(args.acceptance_validation_file)) if args.acceptance_validation_file else None,
+        )
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     save_json(output_path, verdict)
 
     if args.update_state:

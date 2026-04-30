@@ -8,13 +8,39 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+try:
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+except ImportError:
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
 
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
+CONSISTENCY_RECOVERY_PATH_SCOPES = {
+    "consistency_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+    "checkpoint_record_file": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_consistency_recovery_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=CONSISTENCY_RECOVERY_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
+
+
+
 
 
 def checkpoint_matches(consistency: dict, checkpoint: dict | None) -> bool:
@@ -103,10 +129,25 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    record = build_record(
-        consistency=load_json(Path(args.consistency_file)),
-        checkpoint=load_json(Path(args.checkpoint_record_file)) if args.checkpoint_record_file else None,
-    )
+    try:
+        artifact_root = Path(args.consistency_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "consistency_file",
+            args.consistency_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_consistency_recovery_paths(args, artifact_root=artifact_root, project_root=project_root)
+        record = build_record(
+            consistency=load_json(Path(args.consistency_file)),
+            checkpoint=load_json(Path(args.checkpoint_record_file)) if args.checkpoint_record_file else None,
+        )
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     save_json(Path(args.output), record)
     print(json.dumps({"result": "OK", "primary_action": record["primary_action"]}, ensure_ascii=True))
     return 0

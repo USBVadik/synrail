@@ -9,6 +9,19 @@ import sys
 from pathlib import Path
 
 try:
+    from .synrail_io_v0 import load_json, save_json
+except ImportError:
+    from synrail_io_v0 import load_json, save_json
+
+try:
+    from .synrail_path_scope_v0 import (
+        ARTIFACT_SCOPE,
+        DUAL_SCOPE,
+        PROJECT_SCOPE,
+        PathScopeValidationError,
+        validate_namespace_paths,
+        validate_root_within_project,
+    )
     from .synrail_repair_handoff_v0 import (
         DOCTOR_FAILURE_INPUTS,
         build_repair_handoff,
@@ -19,6 +32,14 @@ try:
     from .synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
     from .synrail_repair_focus_v0 import focused_repair_surface, focused_repair_summary
 except ImportError:
+    from synrail_path_scope_v0 import (
+        ARTIFACT_SCOPE,
+        DUAL_SCOPE,
+        PROJECT_SCOPE,
+        PathScopeValidationError,
+        validate_namespace_paths,
+        validate_root_within_project,
+    )
     from synrail_repair_handoff_v0 import (
         DOCTOR_FAILURE_INPUTS,
         build_repair_handoff,
@@ -38,13 +59,43 @@ SOURCE_OF_TRUTH_PRECEDENCE = [
     "repair_history_chain",
 ]
 
+REPAIR_PACKET_PATH_SCOPES = {
+    "state_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+    "previous_packet_file": ARTIFACT_SCOPE,
+    "repair_handoff_file": ARTIFACT_SCOPE,
+    "mode_selection_receipt": ARTIFACT_SCOPE,
+    "preparation_receipt_file": ARTIFACT_SCOPE,
+    "repair_receipt_file": ARTIFACT_SCOPE,
+    "report_file": ARTIFACT_SCOPE,
+    "target_path": PROJECT_SCOPE,
+    "final_result": DUAL_SCOPE,
+    "readback": DUAL_SCOPE,
+    "scenario_proof": DUAL_SCOPE,
+    "target_identity_file": DUAL_SCOPE,
+    "artifact_path": DUAL_SCOPE,
+    "helper_path": PROJECT_SCOPE,
+    "coverage_profile_file": PROJECT_SCOPE,
+    "coverage_corpus_file": PROJECT_SCOPE,
+    "refresh_output": ARTIFACT_SCOPE,
+}
 
-def save_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_repair_packet_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=REPAIR_PACKET_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
 
 
 def scalar_arg(current: str | None, fallback: str) -> str:
@@ -221,6 +272,7 @@ def build_selection_context(selection_receipt: dict | None) -> dict:
             "governed_preparation_recommended": False,
             "selected_with_preparation": False,
             "heavier_contour_entered": False,
+            "selection_evidence_provenance_mix": [],
             "estimated_avoided_operator_minutes": 0,
             "estimated_avoided_interventions": 0,
             "estimated_avoided_closure_latency_minutes": 0,
@@ -234,6 +286,7 @@ def build_selection_context(selection_receipt: dict | None) -> dict:
         "governed_preparation_recommended": selection_receipt.get("governed_preparation_recommended", False),
         "selected_with_preparation": selection_receipt.get("selected_with_preparation", False),
         "heavier_contour_entered": selection_receipt.get("heavier_contour_entered", False),
+        "selection_evidence_provenance_mix": list(selection_receipt.get("selection_evidence_provenance_mix", [])),
         "estimated_avoided_operator_minutes": selection_receipt.get("estimated_avoided_operator_minutes", 0),
         "estimated_avoided_interventions": selection_receipt.get("estimated_avoided_interventions", 0),
         "estimated_avoided_closure_latency_minutes": selection_receipt.get("estimated_avoided_closure_latency_minutes", 0),
@@ -819,6 +872,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--credentials-ok", action="store_true", default=None)
     parser.add_argument("--artifact-path")
     parser.add_argument("--helper-path")
+    parser.add_argument("--coverage-profile-file")
+    parser.add_argument("--coverage-corpus-file")
     parser.add_argument("--credential-env", action="append", default=[])
     parser.add_argument("--refresh-output")
     parser.add_argument("--refresh-event-type")
@@ -833,7 +888,21 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     try:
+        artifact_root = Path(args.artifact_root).expanduser().resolve()
+        project_root = current_project_root()
+        validate_root_within_project(
+            "artifact_root",
+            args.artifact_root,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_repair_packet_paths(args, artifact_root=artifact_root, project_root=project_root)
         packet = build_packet(args)
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     except ValueError as exc:
         print(json.dumps({"result": "ERROR", "reason": "INVALID_REPAIR_PACKET_CONTEXT", "detail": str(exc)}, ensure_ascii=True))
         return 2

@@ -78,6 +78,12 @@
         "hybrid_status": {
           "type": "string"
         },
+        "provenance_mix": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "avg_operator_minutes_added_if_synrail": {
           "type": "integer"
         },

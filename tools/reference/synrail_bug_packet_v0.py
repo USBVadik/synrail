@@ -10,8 +10,36 @@ from pathlib import Path
 
 try:
     from .synrail_io_v0 import load_json, save_json_safe
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
 except ImportError:
     from synrail_io_v0 import load_json, save_json_safe
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+
+
+BUG_PACKET_PATH_SCOPES = {
+    "state_file": ARTIFACT_SCOPE,
+    "report_file": ARTIFACT_SCOPE,
+    "output": ARTIFACT_SCOPE,
+    "doctor_file": ARTIFACT_SCOPE,
+    "acceptance_validation_file": ARTIFACT_SCOPE,
+    "repair_packet_file": ARTIFACT_SCOPE,
+    "observability_file": ARTIFACT_SCOPE,
+    "thin_output_file": ARTIFACT_SCOPE,
+    "issue_output": ARTIFACT_SCOPE,
+}
+
+
+def current_project_root() -> Path:
+    return Path.cwd().resolve()
+
+
+def validate_bug_packet_paths(args: argparse.Namespace, *, artifact_root: Path, project_root: Path) -> None:
+    validate_namespace_paths(
+        args,
+        field_scopes=BUG_PACKET_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
 
 
 def load_json_if_exists(path: Path | None) -> dict | None:
@@ -214,25 +242,40 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    files = {
-        "state": Path(args.state_file),
-        "report": Path(args.report_file),
-        "doctor": Path(args.doctor_file) if args.doctor_file else None,
-        "acceptance_validation": Path(args.acceptance_validation_file) if args.acceptance_validation_file else None,
-        "repair_packet": Path(args.repair_packet_file) if args.repair_packet_file else None,
-        "observability": Path(args.observability_file) if args.observability_file else None,
-        "thin_output": Path(args.thin_output_file) if args.thin_output_file else None,
-    }
-    record = build_record(
-        state=load_json(files["state"]),
-        report=load_json(files["report"]),
-        doctor=load_json_if_exists(files["doctor"]),
-        acceptance_validation=load_json_if_exists(files["acceptance_validation"]),
-        repair_packet=load_json_if_exists(files["repair_packet"]),
-        observability=load_json_if_exists(files["observability"]),
-        thin_output=load_json_if_exists(files["thin_output"]),
-        files=files,
-    )
+    try:
+        artifact_root = Path(args.state_file).expanduser().resolve().parent
+        project_root = current_project_root()
+        validate_root_within_project(
+            "state_file",
+            args.state_file,
+            root=artifact_root,
+            project_root=project_root,
+            artifact_root=artifact_root,
+        )
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        validate_bug_packet_paths(args, artifact_root=artifact_root, project_root=project_root)
+        files = {
+            "state": Path(args.state_file),
+            "report": Path(args.report_file),
+            "doctor": Path(args.doctor_file) if args.doctor_file else None,
+            "acceptance_validation": Path(args.acceptance_validation_file) if args.acceptance_validation_file else None,
+            "repair_packet": Path(args.repair_packet_file) if args.repair_packet_file else None,
+            "observability": Path(args.observability_file) if args.observability_file else None,
+            "thin_output": Path(args.thin_output_file) if args.thin_output_file else None,
+        }
+        record = build_record(
+            state=load_json(files["state"]),
+            report=load_json(files["report"]),
+            doctor=load_json_if_exists(files["doctor"]),
+            acceptance_validation=load_json_if_exists(files["acceptance_validation"]),
+            repair_packet=load_json_if_exists(files["repair_packet"]),
+            observability=load_json_if_exists(files["observability"]),
+            thin_output=load_json_if_exists(files["thin_output"]),
+            files=files,
+        )
+    except PathScopeValidationError as exc:
+        print(json.dumps(exc.as_payload(), ensure_ascii=True))
+        return 2
     save_json(Path(args.output), record)
     if args.issue_output:
         save_text(Path(args.issue_output), record["issue_body"])
