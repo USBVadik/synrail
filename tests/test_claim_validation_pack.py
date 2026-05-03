@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import json
 import sys
 import unittest
 from pathlib import Path
@@ -16,10 +15,7 @@ if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
 from synrail_alpha_evidence_ownership_v0 import build_record, summarize_roadmap_evidence  # noqa: E402
-
-
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
+from synrail_io_v0 import load_json  # noqa: E402
 
 
 def load_text(path: Path) -> str:
@@ -192,8 +188,12 @@ class ClaimValidationPackTests(unittest.TestCase):
 
         self.assertIn("exact repository snapshot at the explicitly selected target commit", send)
         self.assertIn("drifting local working tree", send)
+        self.assertIn("FEEDBACK_INTAKE_001.md", send)
+        self.assertIn("ALPHA_SIGNAL_SCORECARD_001.md", send)
         self.assertIn("exact repository snapshot selected for review", checklist)
         self.assertIn("drifting local working tree", checklist)
+        self.assertIn("docs/review/FEEDBACK_INTAKE_001.md", checklist)
+        self.assertIn("docs/review/ALPHA_SIGNAL_SCORECARD_001.md", checklist)
         self.assertIn("exact selected repository snapshot at the commit you want reviewed", critique_pack)
         self.assertIn("drifting local working tree", critique_pack)
         self.assertIn("Reviewed snapshot: exact selected repository snapshot prepared for critic handoff", critic_brief)
@@ -210,12 +210,71 @@ class ClaimValidationPackTests(unittest.TestCase):
             self.assertIn("small_template_text_fix_behavior_pressure_pack_001.json", text)
             self.assertIn("cost_of_control_small_template_text_fix_behavior_pressure_001.json", text)
 
+    def test_alpha_test_pack_docs_surface_runtime_helper_as_optional_ui_verification_path(self) -> None:
+        alpha_pack = load_text(REPO_ROOT / "docs" / "core" / "ALPHA_TEST_PACK_001.md")
+
+        self.assertIn("if you need a small UI/runtime verification path for a rendered or route-facing change", alpha_pack)
+        self.assertIn("# synrail runtime-helper", alpha_pack)
+        self.assertIn("# optional standalone bounded prompt after a non-green check:", alpha_pack)
+
+    def test_technical_map_lists_runtime_helper_in_current_tester_pack_contour(self) -> None:
+        technical_map = load_text(REPO_ROOT / "docs" / "review" / "TECHNICAL_MAP_001.md")
+
+        self.assertIn("Covers the current outside-facing first-run contour plus bounded helper and review surfaces:", technical_map)
+        self.assertIn("- `runtime-helper`", technical_map)
+        self.assertIn("- `repair-step`", technical_map)
+
+    def test_one_pager_surfaces_runtime_helper_in_current_alpha_lane(self) -> None:
+        one_pager = load_text(REPO_ROOT / "docs" / "review" / "ONE_PAGER_001.md")
+
+        self.assertIn("if you need a small UI/runtime verification path for a rendered or route-facing change: `synrail runtime-helper`", one_pager)
+        self.assertIn("if a standalone bounded repair prompt helps: `synrail repair-step`", one_pager)
+
+    def test_product_memo_surfaces_runtime_helper_in_current_alpha_lane(self) -> None:
+        product_memo = load_text(REPO_ROOT / "docs" / "review" / "PRODUCT_MEMO_001.md")
+
+        self.assertIn("if the change affects rendered UI, a page template, or a server-side route handler, run `synrail runtime-helper`", product_memo)
+        self.assertIn("rerun `synrail check`; resolve non-green runtime-helper outcomes locally", product_memo)
+
+    def test_external_full_review_surfaces_runtime_helper_in_current_user_contour(self) -> None:
+        full_review = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_FULL_REVIEW_2026-04-21.md")
+
+        self.assertIn("if you need a small UI/runtime verification path for a rendered or route-facing change: `synrail runtime-helper`", full_review)
+        self.assertIn("use `synrail repair-step` only if a standalone bounded repair prompt is actually useful", full_review)
+
+    def test_external_critique_pack_surfaces_runtime_helper_as_optional_review_surface(self) -> None:
+        critique_pack = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_CRITIQUE_PACK_001.md")
+
+        self.assertIn("if you need a small UI/runtime verification path for a rendered or route-facing change, use `synrail runtime-helper`", critique_pack)
+        self.assertIn("optional helper surface, not a default mandatory hop", critique_pack)
+
+    def test_external_alpha_send_surfaces_runtime_helper_as_optional_reviewer_guidance(self) -> None:
+        external_send = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_ALPHA_SEND_001.md")
+
+        self.assertIn("if they need a small UI/runtime verification path for a rendered or route-facing change, point them to `synrail runtime-helper`", external_send)
+        self.assertIn("optional reviewer guidance rather than a default mandatory step", external_send)
+
+    def test_critic_review_brief_surfaces_runtime_helper_in_current_product_contour(self) -> None:
+        critic_brief = load_text(REPO_ROOT / "docs" / "review" / "CRITIC_REVIEW_BRIEF_2026-04-19.md")
+
+        self.assertIn("if you need a small UI/runtime verification path for a rendered or route-facing change, run `synrail runtime-helper`", critic_brief)
+        self.assertIn("`synrail runtime-helper` is a guidance-only helper", critic_brief)
+        self.assertIn("use `synrail repair-step` only when a standalone bounded repair prompt is actually helpful", critic_brief)
+
     def test_external_critique_pack_preserves_current_economics_truth_boundary(self) -> None:
         critique_pack = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_CRITIQUE_PACK_001.md")
 
         self.assertIn("`BASELINE_GOOD_ENOUGH`", critique_pack)
         self.assertIn("`FOCUSED_CLASS_BEHAVIOR_NOT_YET_CHEAP_BY_DEFAULT`", critique_pack)
         self.assertIn("behavior cheapness is not fully independent", critique_pack)
+
+    def test_alpha_signal_scorecard_spells_out_post_review_decision_rule(self) -> None:
+        scorecard = load_text(REPO_ROOT / "docs" / "review" / "ALPHA_SIGNAL_SCORECARD_001.md")
+
+        self.assertIn("## First Fresh Outside Pass Decision", scorecard)
+        self.assertIn("broaden packaging only if the review returns `strong wedge signal`", scorecard)
+        self.assertIn("if the review is `mixed signal`, do not broaden packaging yet", scorecard)
+        self.assertIn("One fresh outside pass should change the roadmap decision", scorecard)
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 ARTIFACT_SCOPE = "artifact_root"
@@ -63,6 +64,99 @@ def path_in_root(candidate: Path, root: Path) -> bool:
 
 def _resolved_path(value: str) -> Path:
     return Path(value).expanduser().resolve()
+
+
+def resolved_path_for_value(value: str) -> Path:
+    return Path(value).expanduser().resolve()
+
+
+def path_within_scope(path_value: str, *, scope: str, project_root: Path | None, artifact_root: Path | None) -> bool:
+    resolved = resolved_path_for_value(path_value)
+    if scope == PROJECT_SCOPE:
+        return bool(project_root is not None and path_in_root(resolved, project_root))
+    if scope == ARTIFACT_SCOPE:
+        return bool(artifact_root is not None and path_in_root(resolved, artifact_root))
+    if scope == DUAL_SCOPE:
+        allowed_roots = [root for root in [project_root, artifact_root] if root is not None]
+        return any(path_in_root(resolved, root) for root in allowed_roots)
+    raise ValueError(f"unsupported path scope: {scope}")
+
+
+def symlinked_ancestor_within(path: Path, *, stop_at: Path) -> Path | None:
+    resolved_stop = stop_at.resolve()
+    for candidate in [path, *path.parents]:
+        try:
+            candidate_resolved = candidate.resolve()
+        except OSError:
+            candidate_resolved = candidate
+        if candidate.is_symlink():
+            return candidate
+        if candidate == stop_at or candidate_resolved == resolved_stop:
+            return None
+    return None
+
+
+def path_surface_violation(
+    path_value: str,
+    *,
+    field: str,
+    scope: str,
+    surface_label: str,
+    expected_surface: str,
+    stop_at: Path,
+    project_root: Path | None,
+    artifact_root: Path | None,
+) -> PathScopeValidationError | None:
+    candidate = Path(path_value).expanduser()
+    if candidate.is_symlink():
+        detail = f"{surface_label} is a symlink, expected {expected_surface}"
+        resolved_path = candidate.resolve()
+    elif candidate.parent.is_symlink():
+        detail = f"{surface_label} parent is a symlink, expected {expected_surface}"
+        resolved_path = candidate.parent.resolve()
+    else:
+        ancestor = symlinked_ancestor_within(candidate.parent, stop_at=stop_at)
+        if ancestor is not None:
+            detail = f"{surface_label} ancestor is a symlink, expected {expected_surface}"
+            resolved_path = ancestor.resolve()
+        else:
+            return None
+    return PathScopeValidationError(
+        field=field,
+        value=path_value,
+        resolved_path=resolved_path,
+        scope=scope,
+        detail=detail,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
+
+def reject_path_surface(
+    path_value: str,
+    *,
+    field: str,
+    scope: str,
+    surface_label: str,
+    expected_surface: str,
+    stop_at: Path,
+    project_root: Path | None,
+    artifact_root: Path | None,
+) -> int | None:
+    violation = path_surface_violation(
+        path_value,
+        field=field,
+        scope=scope,
+        surface_label=surface_label,
+        expected_surface=expected_surface,
+        stop_at=stop_at,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+    if violation is None:
+        return None
+    print(json.dumps(violation.as_payload(), ensure_ascii=True))
+    return 2
 
 
 def validate_root_within_project(

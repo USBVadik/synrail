@@ -143,6 +143,7 @@ class InstallSmokeTests(unittest.TestCase):
             self.assertIn("Repo-native status: `python3 alpha.py`", result.stdout)
             self.assertIn('Repo-native start: `python3 alpha.py start "Describe the bounded local change."`', result.stdout)
             self.assertIn("Repo-native check: `python3 alpha.py check`", result.stdout)
+            self.assertIn("Repo-native runtime helper: `python3 alpha.py runtime-helper`", result.stdout)
             self.assertTrue((project_root / "AGENTS.md").exists())
             self.assertTrue((project_root / "CLAUDE.md").exists())
             gemini = (project_root / "GEMINI.md").read_text()
@@ -173,6 +174,10 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("for a multi-file change, use `diff_provenance_records` or `per_file_diff_provenance`", first_run_guide)
         self.assertIn('python3 alpha.py start "Describe the bounded local change."', first_run_guide)
         self.assertIn("python3 alpha.py check", first_run_guide)
+        self.assertIn("Repeat until `synrail check` prints `Status: Accepted`.", first_run_guide)
+        self.assertIn("`Status: Accepted` means the proof bundle is complete", first_run_guide)
+        self.assertIn("`Proof Too Thin To Trust` -- structure is there but evidence is thin.", first_run_guide)
+        self.assertIn("`Cannot Continue This Run` -- this run reached a terminal rejected state.", first_run_guide)
 
         self.assertIn("strengthen final_result.json first", reference_readme)
         self.assertIn("leave readback/scenario_proof untouched unless synrail check later names them", reference_readme)

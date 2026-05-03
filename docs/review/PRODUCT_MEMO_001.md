@@ -109,11 +109,12 @@ Current first-run alpha lane:
 2. do the bounded change and strengthen `.synrail/final_result.json` first
 3. leave `readback.txt` and `scenario_proof.txt` untouched unless `synrail check` later names one as needed fallback
 4. `synrail check`
-5. if non-green: fix only the named blocker; when refresh invalidation is known, the default summary now points only at the stale obligation class
-6. `synrail check`
-7. if a standalone bounded prompt helps: `synrail repair-step`
-8. if a trusted fallback exists: `synrail restore`
-9. if needed: `synrail telemetry export` or `synrail bug-packet`
+5. if the change affects rendered UI, a page template, or a server-side route handler, run `synrail runtime-helper` for lightweight local runtime verification, for example after modifying a React component or `/api` route
+6. rerun `synrail check`; resolve non-green runtime-helper outcomes locally before moving into the normal non-green blocker flow
+7. `synrail check`
+8. if a standalone bounded prompt helps: `synrail repair-step`
+9. if a trusted fallback exists: `synrail restore`
+10. if needed: `synrail telemetry export` or `synrail bug-packet`
 
 Current restore-capable lane:
 
@@ -136,6 +137,7 @@ What is already real:
 - explicit acceptance criteria
 - measured doctor coverage gate
 - executable continuation arbiter
+- direct restore-target path trust checks that block indirect target surfaces before mutation and recheck again before restore and rollback writes
 - shadow observation guard recording for wider observation-only pressure
 - focused readback hardening against numeric thin self-descriptions without literal evidence
 - regression suite on truth-critical failures

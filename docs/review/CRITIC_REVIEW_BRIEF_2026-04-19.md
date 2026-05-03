@@ -56,12 +56,15 @@ At the user level the intended local contour is now:
 1. `synrail`
 2. `synrail start "Describe the bounded change"`
 3. do the work
-4. strengthen `.synrail/final_result.json` first, keep `readback.txt` plus `scenario_proof.txt` fallback-only unless `synrail check` explicitly names one, and leave `cleanup_status` absent unless Synrail explicitly asks for cleanup attestation
-5. `synrail check`
-6. if blocked: fix only the named gap from `synrail check`; when refresh invalidation is known, the default summary now points only at the stale obligation class
-7. use `synrail repair-step` only when a standalone bounded repair prompt is actually helpful
-8. use `synrail restore` only when the current contour explicitly calls for it
-9. stop only at accepted closure
+4. if you need a small UI/runtime verification path for a rendered or route-facing change, run `synrail runtime-helper` during the work loop to get concrete local verification guidance
+5. strengthen `.synrail/final_result.json` first, keep `readback.txt` plus `scenario_proof.txt` fallback-only unless `synrail check` explicitly names one, and leave `cleanup_status` absent unless Synrail explicitly asks for cleanup attestation
+6. `synrail check`
+7. if blocked: fix only the named gap from `synrail check`; when refresh invalidation is known, the default summary now points only at the stale obligation class
+8. use `synrail repair-step` only when a standalone bounded repair prompt is actually helpful
+9. use `synrail restore --preview`, then `synrail restore` only when the current contour explicitly calls for it
+10. stop only at accepted closure
+
+`synrail runtime-helper` is a guidance-only helper. It prints or writes a small local verification path, such as a `curl`, rendered-response, or template-render check, for manual runtime evidence. Do not paste those helper commands into `diff_provenance.verification_command`; closure recheck intentionally stays on the direct file-observation allowlist. Instead, cite the observed runtime output in the appropriate proof narrative or observation fields before `synrail check`. Success means the operator has concrete runtime output to cite in `.synrail/final_result.json`; failure means the run should not claim runtime proof and should let `synrail check` name the next bounded repair instead of jumping directly to acceptance.
 
 Important change from earlier branches:
 

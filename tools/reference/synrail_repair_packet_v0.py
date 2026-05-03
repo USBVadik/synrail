@@ -211,6 +211,7 @@ def default_output_paths(root: Path) -> dict:
         "doctor_output": str(root / "doctor.json"),
         "bundle_output": str(root / "bundle.json"),
         "closure_output": str(root / "closure.json"),
+        "closure_certificate_output": str(root / "closure_certificate.json"),
         "refresh_output": str(root / "refresh.json"),
         "report_output": str(root / "report.json"),
         "worked_artifact_output": str(root / "orchestration.json"),

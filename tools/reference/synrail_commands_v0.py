@@ -37,6 +37,38 @@ def emit_completed_capture(completed: object) -> None:
         print(stdout.strip())
 
 
+def build_agent_policy_context(
+    args: argparse.Namespace,
+    *,
+    relative_artifact_root_for_project: Callable[..., str],
+    preferred_synrail_command: Callable[[], str],
+    preferred_synrail_fallback_command: Callable[[], str | None],
+    preferred_repo_native_alpha_command: Callable[..., str | None],
+    workspace_git_context: Callable[[Path], dict],
+    project_prefers_runtime_evidence: Callable[[Path], bool],
+) -> dict[str, object]:
+    project_root = Path(args.project_root or ".").resolve()
+    artifact_root = relative_artifact_root_for_project(
+        project_root=project_root,
+        artifact_root=args.artifact_root,
+    )
+    command = preferred_synrail_command()
+    fallback_command = preferred_synrail_fallback_command()
+    repo_native_alpha_command = preferred_repo_native_alpha_command(project_root=project_root)
+    git_context = workspace_git_context(project_root)
+    workspace_isolation_note = git_context.get("workspace_isolation_note", "")
+    prefer_runtime_helper = project_prefers_runtime_evidence(project_root)
+    return {
+        "project_root": project_root,
+        "artifact_root": artifact_root,
+        "command": command,
+        "fallback_command": fallback_command,
+        "repo_native_alpha_command": repo_native_alpha_command,
+        "workspace_isolation_note": workspace_isolation_note,
+        "prefer_runtime_helper": prefer_runtime_helper,
+    }
+
+
 def run_install_agent_files_command(
     args: argparse.Namespace,
     *,
@@ -49,20 +81,27 @@ def run_install_agent_files_command(
     render_agent_policy_markdown: Callable[..., str],
     render_gemini_policy_markdown: Callable[..., str],
     render_claude_policy_markdown: Callable[..., str],
-    render_agent_policy_block: Callable[..., str],
+    render_agents_policy_block: Callable[..., str],
+    render_gemini_policy_block: Callable[..., str],
+    render_claude_policy_block: Callable[..., str],
     write_agent_policy_file: PolicyWriter,
 ) -> int:
-    project_root = Path(args.project_root or ".").resolve()
-    artifact_root = relative_artifact_root_for_project(
-        project_root=project_root,
-        artifact_root=args.artifact_root,
+    context = build_agent_policy_context(
+        args,
+        relative_artifact_root_for_project=relative_artifact_root_for_project,
+        preferred_synrail_command=preferred_synrail_command,
+        preferred_synrail_fallback_command=preferred_synrail_fallback_command,
+        preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
+        workspace_git_context=workspace_git_context,
+        project_prefers_runtime_evidence=project_prefers_runtime_evidence,
     )
-    command = preferred_synrail_command()
-    fallback_command = preferred_synrail_fallback_command()
-    repo_native_alpha_command = preferred_repo_native_alpha_command(project_root=project_root)
-    git_context = workspace_git_context(project_root)
-    workspace_isolation_note = git_context.get("workspace_isolation_note", "")
-    prefer_runtime_helper = project_prefers_runtime_evidence(project_root)
+    project_root = context["project_root"]
+    artifact_root = context["artifact_root"]
+    command = context["command"]
+    fallback_command = context["fallback_command"]
+    repo_native_alpha_command = context["repo_native_alpha_command"]
+    workspace_isolation_note = context["workspace_isolation_note"]
+    prefer_runtime_helper = context["prefer_runtime_helper"]
     agents_path = project_root / "AGENTS.md"
     gemini_path = project_root / "GEMINI.md"
     claude_path = project_root / "CLAUDE.md"
@@ -91,9 +130,7 @@ def run_install_agent_files_command(
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
-    agents_block = render_agent_policy_block(
-        title="Synrail Local Workflow",
-        intro="This repo uses Synrail to keep one bounded local change inside one controlled run.",
+    agents_block = render_agents_policy_block(
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
@@ -101,9 +138,7 @@ def run_install_agent_files_command(
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
-    gemini_block = render_agent_policy_block(
-        title="Synrail Local Workflow",
-        intro="Use Synrail as the default local control path for this repo.",
+    gemini_block = render_gemini_policy_block(
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
@@ -111,9 +146,7 @@ def run_install_agent_files_command(
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
-    claude_block = render_agent_policy_block(
-        title="Synrail Local Workflow",
-        intro="Use Synrail as the default local control path for this repo.",
+    claude_block = render_claude_policy_block(
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
@@ -170,6 +203,240 @@ def run_install_agent_files_command(
         print("What to do next: run `synrail` in this repo. Commit these files if you want local agents to keep discovering Synrail before editing.")
     else:
         print("What to do next: run `synrail` in this repo. Keep these files committed so local agents continue discovering the same Synrail entrypoint.")
+    return 0
+
+
+def cmd_install_agent_files(
+    args: argparse.Namespace,
+    *,
+    relative_artifact_root_for_project: Callable[..., str],
+    preferred_synrail_command: Callable[[], str],
+    preferred_synrail_fallback_command: Callable[[], str | None],
+    preferred_repo_native_alpha_command: Callable[..., str | None],
+    workspace_git_context: Callable[[Path], dict],
+    project_prefers_runtime_evidence: Callable[[Path], bool],
+    render_agent_policy_markdown: Callable[..., str],
+    render_gemini_policy_markdown: Callable[..., str],
+    render_claude_policy_markdown: Callable[..., str],
+    render_agents_policy_block: Callable[..., str],
+    render_gemini_policy_block: Callable[..., str],
+    render_claude_policy_block: Callable[..., str],
+    write_agent_policy_file: PolicyWriter,
+) -> int:
+    return run_install_agent_files_command(
+        args,
+        relative_artifact_root_for_project=relative_artifact_root_for_project,
+        preferred_synrail_command=preferred_synrail_command,
+        preferred_synrail_fallback_command=preferred_synrail_fallback_command,
+        preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
+        workspace_git_context=workspace_git_context,
+        project_prefers_runtime_evidence=project_prefers_runtime_evidence,
+        render_agent_policy_markdown=render_agent_policy_markdown,
+        render_gemini_policy_markdown=render_gemini_policy_markdown,
+        render_claude_policy_markdown=render_claude_policy_markdown,
+        render_agents_policy_block=render_agents_policy_block,
+        render_gemini_policy_block=render_gemini_policy_block,
+        render_claude_policy_block=render_claude_policy_block,
+        write_agent_policy_file=write_agent_policy_file,
+    )
+
+
+def cmd_init_agent(
+    args: argparse.Namespace,
+    *,
+    relative_artifact_root_for_project: Callable[..., str],
+    preferred_synrail_command: Callable[[], str],
+    preferred_synrail_fallback_command: Callable[[], str | None],
+    preferred_repo_native_alpha_command: Callable[..., str | None],
+    workspace_git_context: Callable[[Path], dict],
+    project_prefers_runtime_evidence: Callable[[Path], bool],
+    render_agent_policy_markdown: Callable[..., str],
+    render_gemini_policy_markdown: Callable[..., str],
+    render_claude_policy_markdown: Callable[..., str],
+    render_agents_policy_block: Callable[..., str],
+    render_gemini_policy_block: Callable[..., str],
+    render_claude_policy_block: Callable[..., str],
+    write_agent_policy_file: PolicyWriter,
+) -> int:
+    agent = (getattr(args, "agent", "") or "").strip().lower()
+    if agent in {"codex", "cursor"}:
+        return run_install_agent_files_command(
+            args,
+            relative_artifact_root_for_project=relative_artifact_root_for_project,
+            preferred_synrail_command=preferred_synrail_command,
+            preferred_synrail_fallback_command=preferred_synrail_fallback_command,
+            preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
+            workspace_git_context=workspace_git_context,
+            project_prefers_runtime_evidence=project_prefers_runtime_evidence,
+            render_agent_policy_markdown=render_agent_policy_markdown,
+            render_gemini_policy_markdown=render_gemini_policy_markdown,
+            render_claude_policy_markdown=render_claude_policy_markdown,
+            render_agents_policy_block=render_agents_policy_block,
+            render_gemini_policy_block=render_gemini_policy_block,
+            render_claude_policy_block=render_claude_policy_block,
+            write_agent_policy_file=write_agent_policy_file,
+        )
+
+    context = build_agent_policy_context(
+        args,
+        relative_artifact_root_for_project=relative_artifact_root_for_project,
+        preferred_synrail_command=preferred_synrail_command,
+        preferred_synrail_fallback_command=preferred_synrail_fallback_command,
+        preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
+        workspace_git_context=workspace_git_context,
+        project_prefers_runtime_evidence=project_prefers_runtime_evidence,
+    )
+    project_root = context["project_root"]
+    artifact_root = context["artifact_root"]
+    command = context["command"]
+    fallback_command = context["fallback_command"]
+    repo_native_alpha_command = context["repo_native_alpha_command"]
+    workspace_isolation_note = context["workspace_isolation_note"]
+    prefer_runtime_helper = context["prefer_runtime_helper"]
+
+    file_name = "CLAUDE.md" if agent == "claude" else "GEMINI.md"
+    path = project_root / file_name
+    if agent == "claude":
+        full_content = render_claude_policy_markdown(
+            artifact_root=artifact_root,
+            command=command,
+            fallback_command=fallback_command,
+            repo_native_alpha_command=repo_native_alpha_command,
+            workspace_isolation_note=workspace_isolation_note,
+            prefer_runtime_helper=prefer_runtime_helper,
+        )
+        managed_block = render_claude_policy_block(
+            artifact_root=artifact_root,
+            command=command,
+            fallback_command=fallback_command,
+            repo_native_alpha_command=repo_native_alpha_command,
+            workspace_isolation_note=workspace_isolation_note,
+            prefer_runtime_helper=prefer_runtime_helper,
+        )
+    else:
+        full_content = render_gemini_policy_markdown(
+            artifact_root=artifact_root,
+            command=command,
+            fallback_command=fallback_command,
+            repo_native_alpha_command=repo_native_alpha_command,
+            workspace_isolation_note=workspace_isolation_note,
+            prefer_runtime_helper=prefer_runtime_helper,
+        )
+        managed_block = render_gemini_policy_block(
+            artifact_root=artifact_root,
+            command=command,
+            fallback_command=fallback_command,
+            repo_native_alpha_command=repo_native_alpha_command,
+            workspace_isolation_note=workspace_isolation_note,
+            prefer_runtime_helper=prefer_runtime_helper,
+        )
+
+    written, state, backup = write_agent_policy_file(
+        path,
+        full_content,
+        managed_block=managed_block,
+        force=args.force,
+    )
+
+    print(f"Agent onboarding is ready for {agent}.")
+    print(f"Project root: {project_root}")
+    print(f"Artifact root hint: {artifact_root}")
+    print(f"Synrail command: {command}")
+    if fallback_command:
+        print(f"Synrail fallback for this machine: {fallback_command}")
+    if workspace_isolation_note:
+        print(f"Workspace note: {workspace_isolation_note}")
+    if prefer_runtime_helper:
+        print(f"Runtime note: use `{command} runtime-helper` for a small curl or template-render verification path.")
+    print(f"{file_name}: {state}")
+    if backup:
+        print(f"{file_name} backup: {backup}")
+    if state in {"appended", "updated"}:
+        print(f"What to do next: run `synrail` in this repo so the dashboard can show the current state, then review and commit the managed Synrail block in {file_name} if the wording fits the repo.")
+    elif written:
+        print(f"What to do next: run `synrail` in this repo. Commit {file_name} if you want local {agent} runs to keep discovering Synrail before editing.")
+    else:
+        print(f"What to do next: run `synrail` in this repo. Keep {file_name} committed so local {agent} runs continue discovering the same Synrail entrypoint.")
+    return 0
+
+
+def render_github_action_ci_adapter(*, artifact_root: str, invocation_command: str) -> str:
+    return "\n".join(
+        [
+            "name: Synrail check",
+            "description: Run Synrail check through a bounded repo-local adapter path",
+            "inputs:",
+            "  artifact-root:",
+            "    description: Artifact root passed to Synrail check",
+            "    required: false",
+            f"    default: {artifact_root}",
+            "runs:",
+            "  using: composite",
+            "  steps:",
+            "    - name: Run Synrail check",
+            "      shell: bash",
+            "      run: |",
+            f"        {invocation_command} check --artifact-root \"${{{{ inputs.artifact-root }}}}\"",
+        ]
+    ) + "\n"
+
+
+def write_ci_adapter_file(path: Path, content: str, *, force: bool) -> tuple[bool, str, Path | None]:
+    if path.exists():
+        current = path.read_text()
+        if current == content:
+            return False, "unchanged", None
+        if not force:
+            return False, "blocked", None
+        timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        backup_path = path.with_name(f"{path.name}.synrail.bak.{timestamp}")
+        backup_path.write_text(current)
+        path.write_text(content)
+        return True, "updated", backup_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content)
+    return True, "written", None
+
+
+def cmd_init_ci(
+    args: argparse.Namespace,
+    *,
+    relative_artifact_root_for_project: Callable[..., str],
+    preferred_repo_native_alpha_command: Callable[..., str | None],
+) -> int:
+    project_root = Path(args.project_root or ".").resolve()
+    artifact_root = relative_artifact_root_for_project(
+        project_root=project_root,
+        artifact_root=args.artifact_root,
+    )
+    invocation_command = preferred_repo_native_alpha_command(project_root=project_root) or "synrail"
+    adapter_path = project_root / ".github" / "actions" / "synrail-check" / "action.yml"
+    content = render_github_action_ci_adapter(
+        artifact_root=artifact_root,
+        invocation_command=invocation_command,
+    )
+    written, state, backup = write_ci_adapter_file(adapter_path, content, force=args.force)
+    if state == "blocked":
+        print("GitHub Action CI adapter already exists with different contents.")
+        print(f"Adapter path: {adapter_path}")
+        print("What to do next: review the existing adapter and rerun with --force if you want Synrail to replace it with the bounded check adapter.")
+        return 2
+
+    print("GitHub Action CI adapter is ready.")
+    print(f"Project root: {project_root}")
+    print(f"Adapter path: {adapter_path}")
+    print("Adapter scope: bounded check-only GitHub composite action")
+    print(f"Artifact root default: {artifact_root}")
+    print(f"Invocation path: {invocation_command} check --artifact-root \"${{{{ inputs.artifact-root }}}}\"")
+    print("Workflow call site: uses: ./.github/actions/synrail-check")
+    if backup:
+        print(f"Adapter backup: {backup}")
+    if state == "updated":
+        print("What to do next: commit the refreshed adapter and call it from a workflow with `uses: ./.github/actions/synrail-check`.")
+    elif written:
+        print("What to do next: commit the adapter and call it from a workflow with `uses: ./.github/actions/synrail-check`.")
+    else:
+        print("What to do next: call the existing adapter from a workflow with `uses: ./.github/actions/synrail-check`.")
     return 0
 
 
@@ -1077,11 +1344,14 @@ def cmd_artifact_consistency(
         args.state_file = str(alpha_file(root, "state"))
     if root and not getattr(args, "output", None):
         args.output = str(alpha_file(root, "artifact_consistency"))
+    if root and not getattr(args, "bundle_file", None):
+        args.bundle_file = str(alpha_file(root, "bundle"))
     if root:
         for attr, file_id in [
             ("report_file", "report"),
             ("orchestration_file", "orchestration"),
             ("run_file", "run"),
+            ("closure_certificate_file", "closure_certificate"),
             ("repair_packet_file", "repair_packet"),
             ("repair_handoff_file", "repair_handoff"),
             ("repair_receipt_file", "repair_receipt"),
@@ -1094,10 +1364,13 @@ def cmd_artifact_consistency(
         "--state-file", args.state_file,
         "--output", args.output,
     ]
+    if getattr(args, "bundle_file", None):
+        forwarded.extend(["--bundle-file", args.bundle_file])
     for flag, value in [
         ("--report-file", args.report_file),
         ("--orchestration-file", args.orchestration_file),
         ("--run-file", args.run_file),
+        ("--closure-certificate-file", args.closure_certificate_file),
         ("--repair-packet-file", args.repair_packet_file),
         ("--repair-handoff-file", args.repair_handoff_file),
         ("--repair-receipt-file", args.repair_receipt_file),
@@ -1665,6 +1938,7 @@ def cmd_orchestrate(
         "--task-class", args.task_class,
         "--bundle-output", args.bundle_output,
         "--closure-output", args.closure_output,
+        "--closure-certificate-output", args.closure_certificate_output,
         "--report-output", args.report_output,
         "--execution-surface-identity", args.execution_surface_identity,
         "--prompt-identity", args.prompt_identity,

@@ -16,8 +16,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ALPHA_ENTRY = REPO_ROOT / "alpha.py"
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+if str(REPO_ROOT / "tools" / "reference") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "tools" / "reference"))
+
+from synrail_io_v0 import load_json  # noqa: E402
 
 
 class AlphaTestPackSmokeTests(unittest.TestCase):

@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -23,6 +25,7 @@ CLOSURE_PATH_SCOPES = {
     "state_file": ARTIFACT_SCOPE,
     "bundle_file": ARTIFACT_SCOPE,
     "output": ARTIFACT_SCOPE,
+    "certificate_output": ARTIFACT_SCOPE,
     "acceptance_validation_file": ARTIFACT_SCOPE,
 }
 
@@ -77,6 +80,137 @@ def first_semantic_step(semantically_insufficient_sections: list[str]) -> str:
         if section in SEMANTIC_SECTION_STEPS:
             return SEMANTIC_SECTION_STEPS[section]
     return "strengthen the semantic proof evidence before trusting closure"
+
+
+def now_iso() -> str:
+    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def evaluate_closure_freshness_binding(binding: object, *, live_recheck: bool) -> dict:
+    artifacts = []
+    all_required_present = True
+    all_hashes_match = True
+    if not isinstance(binding, dict):
+        return {
+            "present": False,
+            "schema_version": "",
+            "bound_at_utc": "",
+            "all_required_present": False,
+            "all_hashes_match": False,
+            "artifacts": [],
+        }
+    for item in binding.get("artifacts", []):
+        if not isinstance(item, dict):
+            continue
+        artifact_id = (item.get("artifact_id", "") or "").strip()
+        path_text = (item.get("path", "") or "").strip()
+        required = bool(item.get("required", False))
+        expected_sha = (item.get("sha256", "") or "").strip()
+        bound_present = bool(item.get("present", False))
+        current_sha = ""
+        present = bound_present
+        hashes_match = bool(bound_present and expected_sha)
+        if live_recheck and path_text:
+            candidate = Path(path_text)
+            present = candidate.exists() and candidate.is_file()
+            if present:
+                current_sha = file_sha256(candidate)
+                hashes_match = bool(expected_sha and current_sha == expected_sha)
+            else:
+                hashes_match = False
+        if required and not present:
+            all_required_present = False
+        if present and expected_sha and not hashes_match:
+            all_hashes_match = False
+        artifacts.append({
+            "artifact_id": artifact_id,
+            "path": path_text,
+            "required": required,
+            "present": present,
+            "expected_sha256": expected_sha,
+            "current_sha256": current_sha,
+            "hashes_match": hashes_match,
+            "live_recheck": live_recheck,
+        })
+    return {
+        "present": True,
+        "schema_version": (binding.get("schema_version", "") or "").strip(),
+        "bound_at_utc": (binding.get("bound_at_utc", "") or "").strip(),
+        "all_required_present": all_required_present,
+        "all_hashes_match": all_hashes_match,
+        "artifacts": artifacts,
+        "live_recheck": live_recheck,
+    }
+
+
+def build_closure_certificate(*, state: dict, bundle: dict, verdict: dict, criteria_validation: dict | None = None) -> dict:
+    criteria_validation = criteria_validation or {}
+    freshness = evaluate_closure_freshness_binding(
+        bundle.get("closure_freshness_binding", {}),
+        live_recheck=bool(state.get("_state_file") and bundle.get("_bundle_file")),
+    )
+    artifact_identity = dict(bundle.get("artifact_identity", {})) if isinstance(bundle.get("artifact_identity", {}), dict) else {}
+    final_result = dict(bundle.get("final_result", {})) if isinstance(bundle.get("final_result", {}), dict) else {}
+    return {
+        "schema_version": "closure_certificate_v0",
+        "run_id": state.get("run_id", bundle.get("run_id", "")),
+        "task_class": state.get("task_class", bundle.get("task_class", "")),
+        "task_identity": artifact_identity.get("task_identity", ""),
+        "prompt_identity": artifact_identity.get("prompt_identity", ""),
+        "issued_at_utc": now_iso(),
+        "start_timestamp_utc": state.get("start_timestamp_utc", ""),
+        "check_count": int(state.get("check_count", 0) or 0),
+        "closure_timestamp_utc": state.get("closure_timestamp_utc", "") or now_iso(),
+        "closure_status": verdict.get("closure_status", ""),
+        "repair_attempt_count": int(((bundle.get("repair_packet", {}) or {}).get("repair_attempt_count", 0) or 0)),
+        "repair_max_attempts": int(((bundle.get("repair_packet", {}) or {}).get("repair_max_attempts", 0) or 0)),
+        "blocking_reason": verdict.get("blocking_reason", ""),
+        "bundle_sha256": file_sha256(Path(bundle["_bundle_file"])) if bundle.get("_bundle_file") else "",
+        "state_sha256": file_sha256(Path(state["_state_file"])) if state.get("_state_file") else "",
+        "final_result_sha256": next(
+            (
+                artifact.get("expected_sha256", "")
+                for artifact in freshness.get("artifacts", [])
+                if artifact.get("artifact_id") == "final_result"
+            ),
+            "",
+        ),
+        "final_result_request_id": final_result.get("request_id", ""),
+        "acceptance_criteria_status": criteria_validation.get("status", ""),
+        "verification_recheck": dict(bundle.get("verification_recheck", {})),
+        "closure_freshness_binding": freshness,
+    }
+
+
+
+def persist_closure_certificate(
+    output_path: Path,
+    *,
+    state: dict,
+    state_path: Path | None,
+    bundle: dict,
+    bundle_path: Path | None,
+    verdict: dict,
+    criteria_validation: dict | None = None,
+) -> dict:
+    certificate_state = dict(state)
+    certificate_bundle = dict(bundle)
+    if state_path is not None:
+        certificate_state["_state_file"] = str(state_path)
+    if bundle_path is not None:
+        certificate_bundle["_bundle_file"] = str(bundle_path)
+    certificate = build_closure_certificate(
+        state=certificate_state,
+        bundle=certificate_bundle,
+        verdict=verdict,
+        criteria_validation=criteria_validation,
+    )
+    save_json(output_path, certificate)
+    return certificate
 
 
 def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = None) -> dict:
@@ -213,6 +347,24 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         verdict["narrow_next_safe_step"] = "rebuild the final result artifact and proof bundle on the current surface"
         return verdict
 
+    freshness = evaluate_closure_freshness_binding(
+        bundle.get("closure_freshness_binding", {}),
+        live_recheck=bool(state.get("_state_file") and bundle.get("_bundle_file")),
+    )
+    if not freshness.get("present", False):
+        verdict["closure_status"] = "REJECTED"
+        verdict["blocking_reason"] = "CLOSURE_FRESHNESS_BINDING_MISSING"
+        verdict["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
+        verdict["narrow_next_safe_step"] = "rebuild the proof bundle so closure can bind a fresh verified artifact set"
+        return verdict
+    if not freshness.get("all_required_present", False) or not freshness.get("all_hashes_match", False):
+        verdict["closure_warnings"].append("closure_freshness_binding_mismatch")
+        verdict["closure_status"] = "REJECTED"
+        verdict["blocking_reason"] = "CLOSURE_FRESHNESS_FAILED"
+        verdict["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
+        verdict["narrow_next_safe_step"] = "rebuild the final result artifact and proof bundle on the current surface"
+        return verdict
+
     verdict["closure_status"] = "ACCEPTED"
     verdict["blocking_reason"] = ""
     verdict["next_allowed_transition"] = "NONE"
@@ -260,6 +412,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--state-file", required=True)
     parser.add_argument("--bundle-file", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--certificate-output")
     parser.add_argument("--acceptance-validation-file")
     parser.add_argument("--update-state", action="store_true")
     return parser
@@ -286,19 +439,34 @@ def main() -> int:
         output_path = Path(args.output)
         state = load_json(state_path)
         bundle = load_json(bundle_path)
+        state["_state_file"] = str(state_path)
+        bundle["_bundle_file"] = str(bundle_path)
+        criteria_validation = load_json(Path(args.acceptance_validation_file)) if args.acceptance_validation_file else None
         verdict = build_verdict(
             state,
             bundle,
-            load_json(Path(args.acceptance_validation_file)) if args.acceptance_validation_file else None,
+            criteria_validation,
         )
     except PathScopeValidationError as exc:
         print(json.dumps(exc.as_payload(), ensure_ascii=True))
         return 2
     save_json(output_path, verdict)
 
+    updated_state = state
     if args.update_state:
         updated_state = apply_verdict_to_state(state, bundle, verdict)
         save_json(state_path, updated_state)
+
+    if args.certificate_output:
+        persist_closure_certificate(
+            Path(args.certificate_output),
+            state=updated_state,
+            state_path=state_path,
+            bundle=bundle,
+            bundle_path=bundle_path,
+            verdict=verdict,
+            criteria_validation=criteria_validation,
+        )
 
     print(json.dumps({"result": "OK", "closure_status": verdict["closure_status"]}, ensure_ascii=True))
     return 0

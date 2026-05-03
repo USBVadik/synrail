@@ -1597,8 +1597,10 @@ class TestRestoreWorkspaceFamilies(unittest.TestCase):
             preview = restore_preview(record, project / ".synrail")
 
         self.assertEqual("clean_commit", record["workspace_snapshot"]["workspace_family"])
+        self.assertEqual(record["workspace_snapshot"]["head_ref"], record["workspace_snapshot"]["commit_sha"])
         self.assertEqual("clean_commit", preview["workspace_family"])
         self.assertEqual("git", preview["workspace_restore_mode"])
+        self.assertTrue(any(note.startswith("Saved commit: ") for note in preview["notes"]))
 
     def test_dirty_untracked_family_uses_file_copy_and_restores_untracked_file(self) -> None:
         import tempfile

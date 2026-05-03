@@ -2,9 +2,9 @@
 
 Status date: 2026-04-18
 Repo: `synrail`
-Current branch: `codex/first-extraction-pr`
-Current reviewed commit: `c60854f`
-Current regression status: `409 tests OK`
+Reviewed snapshot: earlier selected repository snapshot from the 2026-04-18 outside-pass brief
+Current send surface: `docs/review/CRITIC_REVIEW_BRIEF_2026-04-19.md`
+Use this file as historical review context, not as the current critic handoff brief.
 
 ## Why this document exists
 

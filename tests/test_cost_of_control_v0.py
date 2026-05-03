@@ -130,7 +130,7 @@ class CostOfControlV0Tests(unittest.TestCase):
         )
 
         self.assertEqual(3, pressure_fixture["scenario_count"])
-        self.assertEqual(["curated_local_estimate"], pressure_fixture["provenance_mix"])
+        self.assertEqual(["pressure_synthetic"], pressure_fixture["provenance_mix"])
         self.assertEqual("SYNRAIL_BETTER", pressure_fixture["reading"]["focus_task_class_verdict"])
         self.assertEqual("LOW_VARIANCE_REPEATABLE", pressure_fixture["reading"]["focus_task_class_stability"])
         self.assertEqual("FOCUSED_CLASS_CHEAP_ENOUGH", pressure_fixture["reading"]["focus_task_class_priority_one_status"])
@@ -148,6 +148,38 @@ class CostOfControlV0Tests(unittest.TestCase):
             "FOCUSED_CLASS_SPREAD_SKIPPABLE_VISIBLE_SURFACES_TOO_HIGH",
             pressure_fixture["reading"]["focus_task_class_behavior_cheapness_barrier"],
         )
+
+    def test_pressure_benchmark_pack_surfaces_pressure_synthetic_provenance_mix(self) -> None:
+        pack = json.loads((REPO_ROOT / "fixtures" / "small_template_text_fix_behavior_pressure_pack_001.json").read_text())
+        self.assertEqual(
+            {"pressure_synthetic"},
+            {
+                task[side]["data_provenance"]
+                for task in pack["tasks"]
+                for side in ("baseline", "synrail")
+            },
+        )
+
+        records = [build_record(task["baseline"], task["synrail"]) for task in pack["tasks"]]
+        cost_record = build_cost_record_from_records(
+            records,
+            source_paths=[f"pack:{task['scenario_id']}" for task in pack["tasks"]],
+        )
+
+        self.assertEqual(["pressure_synthetic"], cost_record["provenance_mix"])
+
+    def test_benchmark_packs_do_not_claim_external_empirical_without_real_external_runs(self) -> None:
+        benchmark_pack_paths = [
+            REPO_ROOT / "fixtures" / "repeatable_everyday_benchmark_pack_001.json",
+            REPO_ROOT / "fixtures" / "small_template_text_fix_benchmark_pack_001.json",
+            REPO_ROOT / "fixtures" / "small_template_text_fix_behavior_pressure_pack_001.json",
+        ]
+
+        for path in benchmark_pack_paths:
+            pack = json.loads(path.read_text())
+            for task in pack["tasks"]:
+                for side in ("baseline", "synrail"):
+                    self.assertNotEqual("external_empirical", task[side]["data_provenance"], path.name)
 
     def test_hotspot_returns_empty_dict_for_empty_records(self) -> None:
         self.assertEqual({}, hotspot([], "avg_total_control_burden_added"))

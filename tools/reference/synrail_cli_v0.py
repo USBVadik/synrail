@@ -22,7 +22,10 @@ try:
         relative_artifact_root_for_project,
         render_agent_policy_block,
         render_agent_policy_markdown,
+        render_agents_policy_block,
+        render_claude_policy_block,
         render_claude_policy_markdown,
+        render_gemini_policy_block,
         render_gemini_policy_markdown,
         write_agent_policy_file,
     )
@@ -34,7 +37,10 @@ except ImportError:
         relative_artifact_root_for_project,
         render_agent_policy_block,
         render_agent_policy_markdown,
+        render_agents_policy_block,
+        render_claude_policy_block,
         render_claude_policy_markdown,
+        render_gemini_policy_block,
         render_gemini_policy_markdown,
         write_agent_policy_file,
     )
@@ -119,6 +125,9 @@ try:
         cmd_generate_prompt as extracted_cmd_generate_prompt,
         cmd_governed_cost as extracted_cmd_governed_cost,
         cmd_hybrid_status as extracted_cmd_hybrid_status,
+        cmd_init_agent as extracted_cmd_init_agent,
+        cmd_init_ci as extracted_cmd_init_ci,
+        cmd_install_agent_files as extracted_cmd_install_agent_files,
         cmd_observability as extracted_cmd_observability,
         cmd_operator_brief as extracted_cmd_operator_brief,
         cmd_operator_brief_chain as extracted_cmd_operator_brief_chain,
@@ -151,6 +160,19 @@ try:
         cmd_verify_checkpoint as extracted_cmd_verify_checkpoint,
         run_install_agent_files_command,
     )
+    from .synrail_controlled_start_shell_v0 import (
+        cmd_init as extracted_cmd_init,
+        cmd_refresh_acceptance as extracted_cmd_refresh_acceptance,
+        cmd_start as extracted_cmd_start,
+    )
+    from .synrail_public_shell_v0 import (
+        cmd_explain_proof as extracted_cmd_explain_proof,
+        cmd_final_result_template as extracted_cmd_final_result_template,
+        cmd_readback_template as extracted_cmd_readback_template,
+        cmd_runtime_helper as extracted_cmd_runtime_helper,
+        cmd_scenario_proof_template as extracted_cmd_scenario_proof_template,
+        cmd_status as extracted_cmd_status,
+    )
 except ImportError:
     from synrail_commands_v0 import (
         cmd_apply_bundle as extracted_cmd_apply_bundle,
@@ -172,6 +194,9 @@ except ImportError:
         cmd_generate_prompt as extracted_cmd_generate_prompt,
         cmd_governed_cost as extracted_cmd_governed_cost,
         cmd_hybrid_status as extracted_cmd_hybrid_status,
+        cmd_init_agent as extracted_cmd_init_agent,
+        cmd_init_ci as extracted_cmd_init_ci,
+        cmd_install_agent_files as extracted_cmd_install_agent_files,
         cmd_observability as extracted_cmd_observability,
         cmd_operator_brief as extracted_cmd_operator_brief,
         cmd_operator_brief_chain as extracted_cmd_operator_brief_chain,
@@ -203,6 +228,19 @@ except ImportError:
         cmd_validate as extracted_cmd_validate,
         cmd_verify_checkpoint as extracted_cmd_verify_checkpoint,
         run_install_agent_files_command,
+    )
+    from synrail_controlled_start_shell_v0 import (
+        cmd_init as extracted_cmd_init,
+        cmd_refresh_acceptance as extracted_cmd_refresh_acceptance,
+        cmd_start as extracted_cmd_start,
+    )
+    from synrail_public_shell_v0 import (
+        cmd_explain_proof as extracted_cmd_explain_proof,
+        cmd_final_result_template as extracted_cmd_final_result_template,
+        cmd_readback_template as extracted_cmd_readback_template,
+        cmd_runtime_helper as extracted_cmd_runtime_helper,
+        cmd_scenario_proof_template as extracted_cmd_scenario_proof_template,
+        cmd_status as extracted_cmd_status,
     )
 
 try:
@@ -284,6 +322,7 @@ ALPHA_FILE_NAMES = {
     "doctor": "doctor.json",
     "bundle": "bundle.json",
     "closure": "closure.json",
+    "closure_certificate": "closure_certificate.json",
     "refresh": "refresh.json",
     "report": "report.json",
     "orchestration": "orchestration.json",
@@ -580,7 +619,7 @@ def preferred_synrail_fallback_command() -> str | None:
 
 
 def cmd_install_agent_files(args: argparse.Namespace) -> int:
-    return run_install_agent_files_command(
+    return extracted_cmd_install_agent_files(
         args,
         relative_artifact_root_for_project=relative_artifact_root_for_project,
         preferred_synrail_command=preferred_synrail_command,
@@ -591,8 +630,37 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
         render_agent_policy_markdown=render_agent_policy_markdown,
         render_gemini_policy_markdown=render_gemini_policy_markdown,
         render_claude_policy_markdown=render_claude_policy_markdown,
-        render_agent_policy_block=render_agent_policy_block,
+        render_agents_policy_block=render_agents_policy_block,
+        render_gemini_policy_block=render_gemini_policy_block,
+        render_claude_policy_block=render_claude_policy_block,
         write_agent_policy_file=write_agent_policy_file,
+    )
+
+
+def cmd_init_agent(args: argparse.Namespace) -> int:
+    return extracted_cmd_init_agent(
+        args,
+        relative_artifact_root_for_project=relative_artifact_root_for_project,
+        preferred_synrail_command=preferred_synrail_command,
+        preferred_synrail_fallback_command=preferred_synrail_fallback_command,
+        preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
+        workspace_git_context=workspace_git_context,
+        project_prefers_runtime_evidence=project_prefers_runtime_evidence,
+        render_agent_policy_markdown=render_agent_policy_markdown,
+        render_gemini_policy_markdown=render_gemini_policy_markdown,
+        render_claude_policy_markdown=render_claude_policy_markdown,
+        render_agents_policy_block=render_agents_policy_block,
+        render_gemini_policy_block=render_gemini_policy_block,
+        render_claude_policy_block=render_claude_policy_block,
+        write_agent_policy_file=write_agent_policy_file,
+    )
+
+
+def cmd_init_ci(args: argparse.Namespace) -> int:
+    return extracted_cmd_init_ci(
+        args,
+        relative_artifact_root_for_project=relative_artifact_root_for_project,
+        preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
     )
 
 
@@ -1142,6 +1210,7 @@ def apply_alpha_runtime_file_defaults(args: argparse.Namespace) -> None:
         ("doctor_output", "doctor"),
         ("bundle_output", "bundle"),
         ("closure_output", "closure"),
+        ("closure_certificate_output", "closure_certificate"),
         ("refresh_output", "refresh"),
         ("report_output", "report"),
         ("worked_artifact_output", "orchestration"),
@@ -1578,6 +1647,7 @@ def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Pa
     state = load_json(state_file)
     proof_request = load_bootstrap_json(alpha_file(root, "proof_request")) if alpha_file(root, "proof_request").exists() else {}
     preferred = proof_request.get("preferred_artifacts", {})
+    profile = load_project_profile(root) or {}
     lines = [
         "Synrail already has a controlled run in progress.",
         "What happened: this artifact root still points at the current untouched run, so Synrail did not start a second one.",
@@ -1589,6 +1659,8 @@ def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Pa
         "Need a canonical final_result shape? run " + plain_shell_command("final-result-template", project_root=project_root),
         "Next command: " + shell_command(root, "check", project_root=project_root),
     ]
+    if profile.get("prefers_runtime_evidence", False):
+        lines.append("Runtime helper: " + plain_shell_command("runtime-helper", project_root=project_root))
     print("\n".join(lines))
 
 
@@ -1792,7 +1864,7 @@ def runtime_helper_text(*, root: Path | None) -> str:
             [
                 "This repo does not look render-first.",
                 "Use the smallest local verification you already trust for this task.",
-                "If you still need UI or rendered-output evidence, prefer curl or direct template render before browser automation.",
+                "If you still need UI or rendered-output evidence, prefer a local request or direct template render as manual runtime evidence before browser automation.",
             ]
         )
         return "\n".join(lines) + "\n"
@@ -1800,9 +1872,11 @@ def runtime_helper_text(*, root: Path | None) -> str:
     lines.extend(
         [
             "For UI, route, or rendered-output tasks, prefer a small local response/render check before browser automation.",
+            "Treat the suggestions below as manual runtime evidence, not as verification_command candidates for bundle recheck.",
+            "If you need bundle recheck evidence, keep verification_command to the direct file-observation allowlist instead of copying these runtime examples into final_result.json.",
             "Try one of these paths first:",
             "1. HTTP path (if the local app is already running):",
-            "   curl -s http://localhost:8000/ | grep -C 2 'needle'",
+            "   curl -s http://localhost:8000/  # then inspect the local response for the expected fragment",
         ]
     )
     template_root = project_root / "templates"
@@ -1810,7 +1884,12 @@ def runtime_helper_text(*, root: Path | None) -> str:
         lines.extend(
             [
                 "2. Template/render path (no browser required):",
-                "   python3 -c \"from jinja2 import Environment, FileSystemLoader; env = Environment(loader=FileSystemLoader('templates')); html = env.get_template('index.html').render(); print('needle' in html)\"",
+                "   python3 - <<'PY'",
+                "   from jinja2 import Environment, FileSystemLoader",
+                "   env = Environment(loader=FileSystemLoader('templates'))",
+                "   html = env.get_template('index.html').render()",
+                "   print(html)",
+                "   PY",
             ]
         )
     if project_type == "python":
@@ -2198,336 +2277,128 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
 
 
 def cmd_status(args: argparse.Namespace) -> int:
-    project_root = Path.cwd().resolve()
-    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=project_root)
-    state_path: Path | None = None
-    if getattr(args, "state_file", None):
-        state_path = Path(args.state_file).expanduser().resolve()
-        default_state_path = alpha_file(root, "state")
-        if state_path != default_state_path.resolve():
-            root = state_path.parent
-    summary = build_workspace_status(root, project_root=project_root, state_path=state_path)
-    state_path = (state_path or alpha_file(root, "state")).resolve()
-    if state_path.exists():
-        state = ensure_run_state_extensions(load_json(state_path))
-        summary.update(
-            {
-                "run_id": state.get("run_id", ""),
-                "task_class": state.get("task_class", ""),
-                "state": state.get("state", ""),
-                "target_surface": state.get("target_surface", {}).get("status", ""),
-                "doctor": state.get("doctor", {}).get("status", ""),
-                "proof_bundle": state.get("proof_bundle", {}).get("status", ""),
-                "closure": state.get("closure", {}).get("status", ""),
-                "next_safe_step": state.get("next_safe_step", ""),
-            }
-        )
-    if getattr(args, "json", False):
-        print(json.dumps(summary, indent=2, ensure_ascii=True))
-    else:
-        print_workspace_dashboard(summary)
-    return 0
+    return extracted_cmd_status(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        default_workspace_artifact_root=default_workspace_artifact_root,
+        alpha_file=alpha_file,
+        ensure_run_state_extensions=ensure_run_state_extensions,
+        load_json=load_json,
+        build_workspace_status=build_workspace_status,
+        print_workspace_dashboard=print_workspace_dashboard,
+    )
 
 
 def cmd_explain_proof(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
-    bundle_file = Path(getattr(args, "bundle_file", "") or alpha_file(root, "bundle")).expanduser().resolve()
-    if not bundle_file.exists():
-        if getattr(args, "json", False):
-            print(json.dumps({"result": "ERROR", "reason": "BUNDLE_FILE_REQUIRED", "next_command": "synrail check"}, ensure_ascii=True))
-        else:
-            print("Synrail does not have a proof explanation yet.")
-            print("What is missing: bundle.json has not been generated for this run.")
-            print("What to do next: run synrail check first so Synrail can evaluate the current proof bundle.")
-        return 2
-    bundle = load_json(bundle_file)
-    explanation = build_proof_explanation(bundle, root=root)
-    if getattr(args, "json", False):
-        print(json.dumps(explanation, indent=2, ensure_ascii=True))
-    else:
-        print_proof_explanation(explanation, root=root)
-    return 0
+    return extracted_cmd_explain_proof(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        default_workspace_artifact_root=default_workspace_artifact_root,
+        alpha_file=alpha_file,
+        load_json=load_json,
+        build_proof_explanation=build_proof_explanation,
+        print_proof_explanation=print_proof_explanation,
+    )
 
 
 def cmd_final_result_template(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
-    payload = final_result_template_payload(root=root if root.exists() else None)
-    text = json.dumps(payload, indent=2, ensure_ascii=True) + "\n"
-    if getattr(args, "output", None):
-        target = Path(args.output).expanduser().resolve()
-        target.write_text(text)
-        print(f"Wrote canonical final_result template to {display_path(target)}")
-    else:
-        print(text, end="")
-    return 0
+    return extracted_cmd_final_result_template(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        default_workspace_artifact_root=default_workspace_artifact_root,
+        final_result_template_payload=final_result_template_payload,
+        display_path=display_path,
+    )
 
 
 def cmd_scenario_proof_template(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
-    text = scenario_proof_template_text(root=root if root.exists() else None)
-    if getattr(args, "output", None):
-        target = Path(args.output).expanduser().resolve()
-        target.write_text(text)
-        print(f"Wrote canonical scenario_proof template to {display_path(target)}")
-    else:
-        print(text, end="")
-    return 0
+    return extracted_cmd_scenario_proof_template(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        default_workspace_artifact_root=default_workspace_artifact_root,
+        scenario_proof_template_text=scenario_proof_template_text,
+        display_path=display_path,
+    )
 
 
 def cmd_readback_template(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
-    text = readback_template_text(root=root if root.exists() else None)
-    if getattr(args, "output", None):
-        target = Path(args.output).expanduser().resolve()
-        target.write_text(text)
-        print(f"Wrote canonical readback template to {display_path(target)}")
-    else:
-        print(text, end="")
-    return 0
+    return extracted_cmd_readback_template(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        default_workspace_artifact_root=default_workspace_artifact_root,
+        readback_template_text=readback_template_text,
+        display_path=display_path,
+    )
 
 
 def cmd_runtime_helper(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args) or default_workspace_artifact_root(project_root=Path.cwd().resolve())
-    text = runtime_helper_text(root=root if root.exists() else None)
-    if getattr(args, "output", None):
-        target = Path(args.output).expanduser().resolve()
-        target.write_text(text)
-        print(f"Wrote runtime helper guidance to {display_path(target)}")
-    else:
-        print(text, end="")
-    return 0
+    return extracted_cmd_runtime_helper(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        default_workspace_artifact_root=default_workspace_artifact_root,
+        runtime_helper_text=runtime_helper_text,
+        display_path=display_path,
+    )
 
 
 def cmd_init(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args, ensure=True)
-    project_root = Path(getattr(args, "project_root", "") or Path.cwd()).resolve()
-    if not getattr(args, "run_id", None):
-        args.run_id = default_alpha_run_id()
-    if not getattr(args, "task_class", None):
-        args.task_class = DEFAULT_ALPHA_TASK_CLASS
-    if not getattr(args, "output", None):
-        if not root:
-            raise ValueError("output or artifact root is required")
-        args.output = str(alpha_file(root, "state"))
-    forwarded = [
-        "init",
-        "--run-id", args.run_id,
-        "--task-class", args.task_class,
-        "--output", args.output,
-    ]
-    if args.mode == "dev":
-        code = run_python(SPINE, forwarded)
-        if code == 0 and root:
-            save_project_profile(root, build_project_profile(project_root=project_root, root=root, task_class=args.task_class))
-            save_alpha_identity_files(
-                root,
-                task_identity=getattr(args, "task_identity", ""),
-                prompt_identity=getattr(args, "prompt_identity", ""),
-            )
-            criteria_completed = write_acceptance_criteria(root, generated_by="synrail init")
-            if criteria_completed.returncode != 0:
-                return criteria_completed.returncode
-        return code
-    completed = run_python_capture(SPINE, forwarded)
-    if completed.returncode != 0:
-        if completed.stderr.strip():
-            print(completed.stderr.strip(), file=sys.stderr)
-        if completed.stdout.strip():
-            print(completed.stdout.strip())
-        return completed.returncode
-    if root:
-        save_project_profile(root, build_project_profile(project_root=project_root, root=root, task_class=args.task_class))
-        save_alpha_identity_files(
-            root,
-            task_identity=getattr(args, "task_identity", ""),
-            prompt_identity=getattr(args, "prompt_identity", ""),
-        )
-        criteria_completed = write_acceptance_criteria(root, generated_by="synrail init")
-        if criteria_completed.returncode != 0:
-            if criteria_completed.stderr.strip():
-                print(criteria_completed.stderr.strip(), file=sys.stderr)
-            if criteria_completed.stdout.strip():
-                print(criteria_completed.stdout.strip())
-            return criteria_completed.returncode
-        print_init_summary(root=root, state_file=Path(args.output))
-    return 0
+    return extracted_cmd_init(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        default_alpha_run_id=default_alpha_run_id,
+        alpha_file=alpha_file,
+        default_task_class=DEFAULT_ALPHA_TASK_CLASS,
+        spine_script=SPINE,
+        run_python=run_python,
+        run_python_capture=run_python_capture,
+        save_project_profile=save_project_profile,
+        build_project_profile=build_project_profile,
+        save_alpha_identity_files=save_alpha_identity_files,
+        write_acceptance_criteria=write_acceptance_criteria,
+        print_init_summary=print_init_summary,
+    )
 
 
 def cmd_start(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args, ensure=True)
-    project_root = Path(getattr(args, "project_root", "") or Path.cwd()).resolve()
-    if not getattr(args, "output", None):
-        if not root:
-            raise ValueError("output or artifact root is required")
-        args.output = str(alpha_file(root, "state"))
-
-    existing_state_path = Path(args.output)
-    existing_state = None
-    if existing_state_path.exists():
-        try:
-            existing_state = load_json(existing_state_path)
-        except (OSError, json.JSONDecodeError):
-            if args.mode == "dev":
-                print(
-                    json.dumps(
-                        {
-                            "result": "ERROR",
-                            "reason": "CONTROLLED_START_STATE_UNREADABLE",
-                            "state_file": str(existing_state_path),
-                            "next_safe_step": "move the corrupted artifact root aside or restore a verified checkpoint before retrying",
-                        },
-                        ensure_ascii=True,
-                    )
-                )
-            else:
-                print("Synrail could not start this run in controlled mode yet.")
-                print("What happened: the current run state artifact is unreadable.")
-                print(
-                    "What to do next: move the corrupted artifact root aside or restore a verified checkpoint before retrying."
-                )
-            return 2
-    if not getattr(args, "run_id", None):
-        args.run_id = default_alpha_run_id()
-    if not getattr(args, "task_class", None):
-        args.task_class = existing_state.get("task_class", DEFAULT_ALPHA_TASK_CLASS) if existing_state else DEFAULT_ALPHA_TASK_CLASS
-
-    task_identity, prompt_identity = resolve_start_identities(args, root=root)
-    if not task_identity:
-        if args.mode == "dev":
-            print(json.dumps({"result": "ERROR", "reason": "TASK_IDENTITY_REQUIRED_FOR_CONTROLLED_START"}, ensure_ascii=True))
-        else:
-            print("Synrail could not start a controlled run yet.")
-            print("What is missing: the original task request for this run.")
-            print(
-                "What to do next: run `"
-                + plain_shell_command("start", "Describe the bounded local change.", project_root=project_root)
-                + "` or pass --task-identity, then retry."
-            )
-        return 2
-
-    existing_proof = existing_preferred_proof_artifacts(root)
-    previous_state = existing_state.get("state", "") if existing_state else ""
-    active_bootstrap = alpha_file(root, "bootstrap").exists()
-    if existing_state and active_bootstrap and previous_state and previous_state not in TERMINAL_RUN_STATES and not existing_proof:
-        if args.mode == "dev":
-            print(
-                json.dumps(
-                    {
-                        "result": "OK",
-                        "reason": "CONTROLLED_RUN_ALREADY_ACTIVE",
-                        "reused_existing_run": True,
-                        "run_id": existing_state.get("run_id", ""),
-                        "next_command": shell_command(root, "check", project_root=project_root),
-                    },
-                    ensure_ascii=True,
-                )
-            )
-        else:
-            print_existing_run_summary(root=root, state_file=existing_state_path, project_root=project_root)
-        return 0
-    if existing_proof:
-        if previous_state in ("CLOSURE_ACCEPTED", "CLOSURE_REJECTED"):
-            for _aid, path in preferred_proof_artifact_paths(root).items():
-                path.unlink(missing_ok=True)
-            proof_request_path = alpha_file(root, "proof_request")
-            proof_request_path.unlink(missing_ok=True)
-            existing_proof = []
-        if existing_proof:
-            if args.mode == "dev":
-                print(json.dumps({"result": "ERROR", "reason": "CONTROLLED_START_REQUIRES_CLEAN_PROOF_SURFACE", "existing_proof_artifacts": existing_proof}, ensure_ascii=True))
-            else:
-                print("Synrail could not start this run in controlled mode yet.")
-                print("What happened: proof artifacts already exist, so this looks like a post-hoc run instead of a controlled start.")
-                print("What to do next: clear those proof artifacts or begin a fresh run before trusting Synrail acceptance.")
-            return 2
-
-    forwarded = [
-        "init",
-        "--run-id", args.run_id,
-        "--task-class", args.task_class,
-        "--output", args.output,
-    ]
-    completed = run_python_capture(SPINE, forwarded)
-    if completed.returncode != 0:
-        if completed.stderr.strip():
-            print(completed.stderr.strip(), file=sys.stderr)
-        if completed.stdout.strip():
-            print(completed.stdout.strip())
-        return completed.returncode
-
-    profile = build_project_profile(project_root=project_root, root=root, task_class=args.task_class)
-    save_project_profile(root, profile)
-    clear_runtime_artifacts_for_start(root)
-    save_alpha_identity_files(root, task_identity=task_identity, prompt_identity=prompt_identity)
-    write_controlled_start_artifacts(
-        root,
-        project_root=project_root,
-        run_id=args.run_id,
-        task_class=args.task_class,
-        task_identity=task_identity,
-        prompt_identity=prompt_identity,
-        profile=profile,
-        started_via="synrail start",
+    return extracted_cmd_start(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        alpha_file=alpha_file,
+        load_json=load_json,
+        default_alpha_run_id=default_alpha_run_id,
+        default_task_class=DEFAULT_ALPHA_TASK_CLASS,
+        resolve_start_identities=resolve_start_identities,
+        plain_shell_command=plain_shell_command,
+        existing_preferred_proof_artifacts=existing_preferred_proof_artifacts,
+        terminal_run_states=TERMINAL_RUN_STATES,
+        shell_command=shell_command,
+        print_existing_run_summary=print_existing_run_summary,
+        run_python_capture=run_python_capture,
+        spine_script=SPINE,
+        build_project_profile=build_project_profile,
+        save_project_profile=save_project_profile,
+        clear_runtime_artifacts_for_start=clear_runtime_artifacts_for_start,
+        save_alpha_identity_files=save_alpha_identity_files,
+        write_controlled_start_artifacts=write_controlled_start_artifacts,
+        write_acceptance_criteria=write_acceptance_criteria,
+        apply_bootstrap_defaults=apply_bootstrap_defaults,
+        save_bootstrap_json=save_bootstrap_json,
+        update_last_known_final_result_hash=update_last_known_final_result_hash,
+        preferred_proof_artifact_paths=preferred_proof_artifact_paths,
+        print_start_summary=print_start_summary,
     )
-    criteria_completed = write_acceptance_criteria(root, generated_by="synrail start")
-    if criteria_completed.returncode != 0:
-        if criteria_completed.stderr.strip():
-            print(criteria_completed.stderr.strip(), file=sys.stderr)
-        if criteria_completed.stdout.strip():
-            print(criteria_completed.stdout.strip())
-        return criteria_completed.returncode
-    validation = apply_bootstrap_defaults(args, root=root)
-    if validation:
-        save_bootstrap_json(alpha_file(root, "bootstrap_validation"), validation)
-    update_last_known_final_result_hash(
-        Path(args.output),
-        preferred_proof_artifact_paths(root)["final_result"],
-    )
-    print_start_summary(root=root, state_file=Path(args.output), project_root=project_root)
-    return 0
 
 
 def cmd_refresh_acceptance(args: argparse.Namespace) -> int:
-    root = alpha_root_from_args(args, ensure=True)
-    if not root:
-        print(json.dumps({"result": "ERROR", "reason": "ARTIFACT_ROOT_REQUIRED"}, ensure_ascii=True))
-        return 2
-    profile = project_profile_file(root)
-    if not profile.exists():
-        if args.mode == "dev":
-            print(json.dumps({"result": "ERROR", "reason": "PROJECT_PROFILE_REQUIRED"}, ensure_ascii=True))
-        else:
-            print("Synrail could not refresh the acceptance rules yet.")
-            print("What to do next: run synrail start first so Synrail can capture the controlled project profile.")
-        return 2
-    completed = write_acceptance_criteria(root, generated_by="synrail refresh-acceptance")
-    if completed.returncode != 0:
-        if completed.stderr.strip():
-            print(completed.stderr.strip(), file=sys.stderr)
-        if completed.stdout.strip():
-            print(completed.stdout.strip())
-        return completed.returncode
-    state_file = alpha_file(root, "state")
-    if state_file.exists():
-        validation_completed = write_acceptance_validation(root, criteria_file=alpha_file(root, "acceptance_criteria"), state_file=state_file)
-        if validation_completed.returncode != 0:
-            if validation_completed.stderr.strip():
-                print(validation_completed.stderr.strip(), file=sys.stderr)
-            if validation_completed.stdout.strip():
-                print(validation_completed.stdout.strip())
-            return validation_completed.returncode
-    if args.mode == "dev":
-        print(json.dumps(
-            {
-                "criteria": load_json(alpha_file(root, "acceptance_criteria")),
-                "validation": load_json(alpha_file(root, "acceptance_validation")) if alpha_file(root, "acceptance_validation").exists() else None,
-            },
-            indent=2,
-            ensure_ascii=True,
-        ))
-    else:
-        print_acceptance_refresh_summary(root=root)
-    return 0
+    return extracted_cmd_refresh_acceptance(
+        args,
+        alpha_root_from_args=alpha_root_from_args,
+        load_json=load_json,
+        alpha_file=alpha_file,
+        write_acceptance_criteria=write_acceptance_criteria,
+        write_acceptance_validation=write_acceptance_validation,
+        print_acceptance_refresh_summary=print_acceptance_refresh_summary,
+    )
 
 
 def cmd_telemetry_enable(args: argparse.Namespace) -> int:
@@ -3064,6 +2935,7 @@ def cmd_check(args: argparse.Namespace) -> int:
         if discovered:
             args.checkpoint_record_file = discovered
     apply_alpha_profile_defaults(args, root=root)
+    apply_alpha_runtime_file_defaults(args)
     bootstrap_validation = apply_bootstrap_defaults(args, root=root) if root else None
     if root and project_profile_file(root).exists():
         args.acceptance_validation_output = str(alpha_file(root, "acceptance_validation"))
@@ -3129,6 +3001,7 @@ def cmd_check(args: argparse.Namespace) -> int:
             task_class=state["task_class"],
             bundle_output=getattr(args, "bundle_output", None),
             closure_output=getattr(args, "closure_output", None),
+            closure_certificate_output=getattr(args, "closure_certificate_output", None),
             report_output=args.report_file,
             execution_surface_identity=args.execution_surface_identity,
             prompt_identity=args.prompt_identity or "",
@@ -3256,11 +3129,56 @@ def cmd_check(args: argparse.Namespace) -> int:
     return thin_code
 
 
+def normalize_repair_packet(packet: dict) -> dict:
+    normalized = dict(packet)
+    if normalized.get("schema_version") != "repair_packet_v0":
+        raise ValueError("repair packet must use repair_packet_v0")
+    handoff = dict(normalized.get("repair_handoff", {})) if isinstance(normalized.get("repair_handoff", {}), dict) else {}
+    repair_policy = dict(normalized.get("repair_policy", {})) if isinstance(normalized.get("repair_policy", {}), dict) else {}
+    continuation_core = dict(normalized.get("continuation_core", {})) if isinstance(normalized.get("continuation_core", {}), dict) else {}
+    artifact_quality_summary = dict(normalized.get("artifact_quality_summary", {})) if isinstance(normalized.get("artifact_quality_summary", {}), dict) else {}
+    resumability = dict(normalized.get("resumability", {})) if isinstance(normalized.get("resumability", {}), dict) else {}
+    missing_inputs = list(normalized.get("missing_inputs", [])) if isinstance(normalized.get("missing_inputs", []), list) else []
+
+    if not continuation_core:
+        next_step_id = continuation_core.get("current_step_id", "") or repair_policy.get("next_step_id", "")
+        continuation_core = {
+            "contract_version": "continuation_core_v0",
+            "entrypoint": normalized.get("continuation_entrypoint", "resume"),
+            "ready_for_resume": bool(normalized.get("ready_for_resume", False)),
+            "resumability_status": resumability.get("status", ""),
+            "resumability_family": resumability.get("family", ""),
+            "current_step_id": next_step_id,
+            "current_step_subsurface_id": "",
+            "current_step_target_path": "",
+            "required_inputs": [
+                item.get("input_id", "")
+                for item in handoff.get("required_inputs", [])
+                if isinstance(item, dict) and item.get("input_id", "")
+            ],
+            "missing_inputs": missing_inputs,
+            "next_step_required_inputs": list(missing_inputs),
+            "next_step_subsurface_ids": list(artifact_quality_summary.get("stale_subsurface_ids", [])),
+            "operator_focus": normalized.get("next_safe_step", ""),
+            "next_safe_step": normalized.get("next_safe_step", ""),
+            "history_chain_length": 0,
+            "selection_applied": bool((normalized.get("selection_context", {}) or {}).get("applied", False)),
+            "selected_with_preparation": bool((normalized.get("selection_context", {}) or {}).get("selected_with_preparation", False)),
+            "packet_supplies_resume_context": bool(normalized.get("resume_context", {})),
+            "packet_supplies_repair_inputs": bool(normalized.get("repair_inputs", {})),
+            "packet_supplies_output_defaults": bool(normalized.get("output_defaults", {})),
+            "requires_sibling_discovery": False,
+            "authoritative_entry_artifacts": ["repair_packet"],
+            "source_of_truth_precedence": ["repair_packet", "repair_handoff", "state"],
+            "packet_replay_ready": True,
+        }
+    normalized["continuation_core"] = continuation_core
+    return normalized
+
+
 def load_repair_packet(path: Path) -> dict:
     packet = load_json(path)
-    if packet.get("schema_version") != "repair_packet_v0":
-        raise ValueError("repair packet must use repair_packet_v0")
-    return packet
+    return normalize_repair_packet(packet)
 
 
 def apply_resume_input_overrides(args: argparse.Namespace, path: Path) -> None:
@@ -3496,6 +3414,7 @@ def apply_resume_output_defaults(args: argparse.Namespace, state: dict) -> None:
         "doctor_output": str(root / runtime_name("doctor.json")),
         "bundle_output": str(root / runtime_name("bundle.json")),
         "closure_output": str(root / runtime_name("closure.json")),
+        "closure_certificate_output": str(root / runtime_name("closure_certificate.json")),
         "refresh_output": str(root / runtime_name("refresh.json")),
         "observability_output": str(root / runtime_name("observability.json")),
         "report_output": str(root / runtime_name("report.json")),
@@ -3634,6 +3553,7 @@ def maybe_apply_repair_packet(args: argparse.Namespace, state: dict) -> list[str
         ("doctor_output", output_defaults["doctor_output"]),
         ("bundle_output", output_defaults["bundle_output"]),
         ("closure_output", output_defaults["closure_output"]),
+        ("closure_certificate_output", output_defaults.get("closure_certificate_output", str(Path(output_defaults["closure_output"]).with_name("closure_certificate.json")))),
         ("refresh_output", output_defaults["refresh_output"]),
         ("report_output", output_defaults["report_output"]),
         ("worked_artifact_output", output_defaults["worked_artifact_output"]),
@@ -3808,6 +3728,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_start.add_argument("--output")
     p_start.add_argument("task_request", nargs="?")
     p_start.set_defaults(func=cmd_start)
+
+    p_init_agent = sub.add_parser("init-agent", help="Write agent onboarding files for one supported agent")
+    p_init_agent.add_argument("--agent", required=True, choices=["claude", "gemini", "codex", "cursor"])
+    p_init_agent.add_argument("--project-root", default=".")
+    p_init_agent.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_init_agent.add_argument("--force", action="store_true")
+    p_init_agent.set_defaults(func=cmd_init_agent)
+
+    p_init_ci = sub.add_parser("init-ci", help="Write a bounded GitHub Action adapter for Synrail check")
+    p_init_ci.add_argument("--project-root", default=".")
+    p_init_ci.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_init_ci.add_argument("--force", action="store_true")
+    p_init_ci.set_defaults(func=cmd_init_ci)
 
     p_install_agent_files = sub.add_parser("install-agent-files", help=argparse.SUPPRESS)
     p_install_agent_files.add_argument("--project-root", default=".")
@@ -4179,10 +4112,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_artifact_consistency = sub.add_parser("artifact-consistency", help=argparse.SUPPRESS)
     p_artifact_consistency.add_argument("--artifact-root")
     p_artifact_consistency.add_argument("--state-file")
+    p_artifact_consistency.add_argument("--bundle-file")
     p_artifact_consistency.add_argument("--output")
     p_artifact_consistency.add_argument("--report-file")
     p_artifact_consistency.add_argument("--orchestration-file")
     p_artifact_consistency.add_argument("--run-file")
+    p_artifact_consistency.add_argument("--closure-certificate-file")
     p_artifact_consistency.add_argument("--repair-packet-file")
     p_artifact_consistency.add_argument("--repair-handoff-file")
     p_artifact_consistency.add_argument("--repair-receipt-file")

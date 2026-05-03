@@ -13,9 +13,9 @@ from importlib import metadata as importlib_metadata
 from pathlib import Path
 
 try:
-    from .synrail_io_v0 import load_json, save_json_safe
+    from .synrail_io_v0 import load_json, save_json_safe as save_json
 except ImportError:
-    from synrail_io_v0 import load_json, save_json_safe
+    from synrail_io_v0 import load_json, save_json_safe as save_json
 
 CONFIG_BASENAME = "config.json"
 COMMAND_SEQUENCE_BASENAME = "command_sequence.jsonl"
@@ -26,9 +26,6 @@ DEFAULT_ISSUE_BODY_BASENAME = "github_issue.md"
 def now_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
-
-def save_json(path: Path, payload: dict) -> None:
-    save_json_safe(path, payload)
 
 
 def save_text(path: Path, text: str) -> None:

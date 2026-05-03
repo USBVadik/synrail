@@ -19,8 +19,10 @@ GUARDED_SIDE_EFFECT = REPO_ROOT / "tools" / "reference" / "synrail_guarded_side_
 DEPLOY_EXAMPLES = REPO_ROOT / "examples" / "deploy_guard"
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+if str(REPO_ROOT / "tools" / "reference") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "tools" / "reference"))
+
+from synrail_io_v0 import load_json  # noqa: E402
 
 
 def write_json(path: Path, payload: dict) -> None:

@@ -18,11 +18,11 @@ except ImportError:
     from synrail_io_v0 import load_json, save_json_safe as save_json
 
 try:
-    from .synrail_path_scope_v0 import PROJECT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+    from .synrail_path_scope_v0 import PROJECT_SCOPE, PathScopeValidationError, path_in_root, symlinked_ancestor_within, validate_namespace_paths, validate_root_within_project
     from .synrail_repair_handoff_v0 import build_resumability
     from .synrail_validate_v0 import load_json as load_json_document, validate_document
 except ImportError:
-    from synrail_path_scope_v0 import PROJECT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+    from synrail_path_scope_v0 import PROJECT_SCOPE, PathScopeValidationError, path_in_root, symlinked_ancestor_within, validate_namespace_paths, validate_root_within_project
     from synrail_repair_handoff_v0 import build_resumability
     from synrail_validate_v0 import load_json as load_json_document, validate_document
 
@@ -481,6 +481,7 @@ def restore_contract(record: dict) -> dict:
                 "notes": [
                     "This restore modifies project files in the saved project root.",
                     "Workspace family: clean_commit.",
+                    ("Saved commit: " + workspace_snapshot.get("commit_sha", workspace_snapshot.get("head_ref", ""))) if workspace_snapshot.get("commit_sha", workspace_snapshot.get("head_ref", "")) else "Saved commit is recorded in the checkpoint.",
                     ("Saved project root: " + project_root) if project_root else "Saved project root is recorded in the checkpoint.",
                 ],
                 "next_safe_step": "preview this restore carefully, then run restore only if you want to return to the saved pre-run workspace",
@@ -515,6 +516,7 @@ def restore_contract(record: dict) -> dict:
                 "notes": [
                     "This restore modifies project files in the saved project root.",
                     "Workspace family: dirty_tracked.",
+                    ("Saved commit: " + workspace_snapshot.get("commit_sha", workspace_snapshot.get("head_ref", ""))) if workspace_snapshot.get("commit_sha", workspace_snapshot.get("head_ref", "")) else "Saved commit is recorded in the checkpoint.",
                     ("Saved project root: " + project_root) if project_root else "Saved project root is recorded in the checkpoint.",
                 ],
                 "next_safe_step": "preview this restore carefully, then run restore only if you want to recover the saved tracked git workspace state",
@@ -575,8 +577,9 @@ def restore_contract(record: dict) -> dict:
 def restore_preview(record: dict, target_root: Path) -> dict:
     verified = verify_record(record)
     contract = restore_contract(record)
+    target_path_errors = restore_target_path_errors(record, target_root.resolve())
     verification_ok = verified["result"] == "OK"
-    restore_supported = verification_ok and contract["restore_supported"]
+    restore_supported = verification_ok and contract["restore_supported"] and not target_path_errors
     restore_status = "READY"
     summary = contract["summary"]
     notes = list(contract["notes"])
@@ -588,6 +591,12 @@ def restore_preview(record: dict, target_root: Path) -> dict:
         failure_reasons = list(verified["verification"].get("failure_reasons", []))
         notes = failure_reasons or ["Checkpoint verification must pass before restore is allowed."]
         next_safe_step = "verify checkpoint successfully before attempting restore"
+    elif target_path_errors:
+        restore_status = "BLOCKED"
+        summary = "Restore is not safe to run because the target surface is not a direct in-scope restore path."
+        failure_reasons = list(target_path_errors)
+        notes = failure_reasons
+        next_safe_step = "repair the restore target path before attempting restore"
     elif not contract["restore_supported"]:
         restore_status = "UNSUPPORTED"
         failure_reasons = [contract["summary"]]
@@ -708,6 +717,7 @@ def create_record(args: argparse.Namespace) -> dict:
                         "workspace_family": "dirty_tracked" if has_uncommitted else "clean_commit",
                         "project_root": str(project_root),
                         "head_ref": head_ref,
+                        "commit_sha": head_ref,
                         "stash_ref": stash_ref,
                         "has_uncommitted": has_uncommitted,
                         "has_untracked": False,
@@ -802,6 +812,25 @@ def normalized_manifest_document(artifact: dict, document: object) -> object:
     return payload
 
 
+def checkpoint_record_path_errors(record: dict, *, root_override: Path | None = None) -> list[str]:
+    effective_root = (root_override or Path(record["checkpoint_root"])).resolve()
+    checkpoint_root = Path(record["checkpoint_root"]).resolve()
+    errors: list[str] = []
+    for artifact in record.get("artifact_manifest", []):
+        artifact_path = effective_root / str(artifact.get("path", ""))
+        if not path_in_root(artifact_path.resolve(), effective_root):
+            errors.append(f"artifact path escapes checkpoint root: {artifact.get('artifact_id', '')}")
+    workspace_snapshot = record.get("workspace_snapshot", {})
+    if not isinstance(workspace_snapshot, dict):
+        return errors
+    snapshot_dir = workspace_snapshot.get("snapshot_dir", "")
+    if isinstance(snapshot_dir, str) and snapshot_dir.strip():
+        snapshot_dir_path = Path(snapshot_dir).expanduser().resolve()
+        if not path_in_root(snapshot_dir_path, checkpoint_root):
+            errors.append("workspace snapshot directory escapes checkpoint root")
+    return errors
+
+
 def validate_manifest_artifacts(record: dict, *, root_override: Path | None = None) -> tuple[list[str], list[str]]:
     checkpoint_root = root_override or Path(record["checkpoint_root"])
     schema_errors: list[str] = []
@@ -869,10 +898,13 @@ def state_consistency_errors(record: dict, *, root_override: Path | None = None)
 
 
 def verify_record(record: dict, *, root_override: Path | None = None) -> dict:
+    path_errors = checkpoint_record_path_errors(record, root_override=root_override)
     missing, schema_errors = validate_manifest_artifacts(record, root_override=root_override)
-    consistency_errors = [] if missing else state_consistency_errors(record, root_override=root_override)
+    consistency_errors = [] if (missing or path_errors) else state_consistency_errors(record, root_override=root_override)
     unexpected_paths = unexpected_artifact_paths(record, root_override=root_override)
     failure_reasons = []
+    if path_errors:
+        failure_reasons.append("checkpoint record path validation failed")
     if missing:
         failure_reasons.append("required checkpoint artifacts missing")
     if schema_errors:
@@ -883,15 +915,15 @@ def verify_record(record: dict, *, root_override: Path | None = None) -> dict:
         failure_reasons.append("unexpected checkpoint artifacts present")
     verified = dict(record)
     verified["event_type"] = "VERIFY"
-    verified["result"] = "OK" if not (missing or schema_errors or consistency_errors or unexpected_paths) else "BLOCKED"
+    verified["result"] = "OK" if not (path_errors or missing or schema_errors or consistency_errors or unexpected_paths) else "BLOCKED"
     verified["verification"] = {
-        "status": "PASSED" if not (missing or schema_errors or consistency_errors or unexpected_paths) else "FAILED",
-        "safe_point_eligible": record.get("safe_point_eligible", False) and not consistency_errors,
+        "status": "PASSED" if not (path_errors or missing or schema_errors or consistency_errors or unexpected_paths) else "FAILED",
+        "safe_point_eligible": record.get("safe_point_eligible", False) and not (path_errors or consistency_errors),
         "required_artifacts_present": not missing,
         "schema_validation_passed": not schema_errors,
         "state_consistency_passed": not consistency_errors,
         "stale_artifacts_detected": unexpected_paths,
-        "failure_reasons": failure_reasons + missing + schema_errors + consistency_errors + unexpected_paths,
+        "failure_reasons": failure_reasons + path_errors + missing + schema_errors + consistency_errors + unexpected_paths,
     }
     verified["next_safe_step"] = (
         "checkpoint verified; restore is now allowed"
@@ -902,6 +934,7 @@ def verify_record(record: dict, *, root_override: Path | None = None) -> dict:
 
 
 def backup_target_artifacts(record: dict, target_root: Path) -> tuple[Path, list[str]]:
+    assert_direct_restore_target_paths(record, target_root)
     backup_root = Path(tempfile.mkdtemp(prefix=f"synrail_checkpoint_backup_{record['checkpoint_id']}_"))
     backed_up_ids: list[str] = []
     for artifact in record.get("artifact_manifest", []):
@@ -915,7 +948,55 @@ def backup_target_artifacts(record: dict, target_root: Path) -> tuple[Path, list
     return backup_root, backed_up_ids
 
 
+def restore_runtime_failures(record: dict, target_root: Path) -> list[str]:
+    try:
+        assert_direct_restore_target_paths(record, target_root)
+    except RuntimeError as exc:
+        return [str(exc)]
+    return []
+
+
+def checkpoint_owned_project_root(checkpoint_root: Path) -> Path | None:
+    resolved_checkpoint_root = checkpoint_root.resolve()
+    for candidate in [resolved_checkpoint_root, *resolved_checkpoint_root.parents]:
+        if candidate.name != ".synrail":
+            continue
+        try:
+            relative = resolved_checkpoint_root.relative_to(candidate)
+        except ValueError:
+            continue
+        if relative.parts and relative.parts[0] == "checkpoints":
+            return candidate.parent.resolve()
+    return None
+
+
+
+def restore_target_path_errors(record: dict, target_root: Path) -> list[str]:
+    errors: list[str] = []
+    resolved_target_root = target_root.resolve()
+    for artifact in record.get("artifact_manifest", []):
+        target_path = target_root / artifact["path"]
+        if target_path.is_symlink():
+            errors.append(f"restore target path is a symlink: {artifact.get('artifact_id', '')}")
+            continue
+        parent = target_path.parent
+        if parent.is_symlink():
+            errors.append(f"restore target path parent is a symlink: {artifact.get('artifact_id', '')}")
+            continue
+        ancestor = symlinked_ancestor_within(parent, stop_at=resolved_target_root)
+        if ancestor is not None:
+            errors.append(f"restore target path ancestor is a symlink: {artifact.get('artifact_id', '')}")
+    return errors
+
+
+def assert_direct_restore_target_paths(record: dict, target_root: Path) -> None:
+    target_path_errors = restore_target_path_errors(record, target_root)
+    if target_path_errors:
+        raise RuntimeError(target_path_errors[0])
+
+
 def restore_manifest(record: dict, target_root: Path) -> list[str]:
+    assert_direct_restore_target_paths(record, target_root)
     restored_ids: list[str] = []
     checkpoint_root = Path(record["checkpoint_root"])
     for artifact in record.get("artifact_manifest", []):
@@ -935,6 +1016,7 @@ def rollback_from_backup(record: dict, target_root: Path, backup_root: Path, bac
     failures: list[str] = []
     rolled_back_ids: list[str] = []
     try:
+        assert_direct_restore_target_paths(record, target_root)
         for artifact in record.get("artifact_manifest", []):
             target_path = target_root / artifact["path"]
             backup_path = backup_root / artifact["path"]
@@ -982,7 +1064,17 @@ def restore_record(record: dict, target_root: Path) -> dict:
     workspace_snapshot = record.get("workspace_snapshot", {})
     workspace_restored = False
     workspace_error = ""
-    if workspace_snapshot.get("type") == "git" and workspace_snapshot.get("head_ref"):
+    requested_target_root = target_root.resolve()
+    target_path_errors = restore_target_path_errors(record, requested_target_root)
+    snapshot_project_root = Path(workspace_snapshot.get("project_root", "")).expanduser().resolve() if workspace_snapshot.get("project_root") else None
+    checkpoint_project_root = checkpoint_owned_project_root(Path(record["checkpoint_root"]))
+    if target_path_errors:
+        workspace_error = target_path_errors[0]
+    elif snapshot_project_root is not None and checkpoint_project_root is None:
+        workspace_error = "workspace snapshot project_root is present but checkpoint_root is not inside a checkpoint-owned artifact root"
+    elif snapshot_project_root is not None and snapshot_project_root != checkpoint_project_root:
+        workspace_error = "workspace snapshot project_root does not match checkpoint-owned project_root"
+    elif workspace_snapshot.get("type") == "git" and workspace_snapshot.get("head_ref"):
         project_root = Path(workspace_snapshot["project_root"])
         ok, err = _git_restore_snapshot(
             project_root,
@@ -1006,6 +1098,21 @@ def restore_record(record: dict, target_root: Path) -> dict:
     restored = dict(record)
     restored["restore"] = restore_template()
     restored["rollback"] = rollback_template()
+    runtime_target_failures = restore_runtime_failures(record, requested_target_root)
+    if runtime_target_failures:
+        restored["event_type"] = "RESTORE"
+        restored["result"] = "BLOCKED"
+        restored["restore"] = {
+            "status": "RESTORE_FAILED",
+            "target_root": str(target_root),
+            "restore_verification_required": True,
+            "restored_artifact_ids": [],
+            "failure_reasons": runtime_target_failures,
+            "workspace_restored": False,
+        }
+        restored["rollback"] = rollback_template()
+        restored["next_safe_step"] = "repair the restore target path before attempting restore"
+        return restored
     backup_root, backed_up_ids = backup_target_artifacts(record, target_root)
     restored_ids = restore_manifest(record, target_root)
     verify_after_restore = verify_record(record, root_override=target_root)
@@ -1018,7 +1125,11 @@ def restore_record(record: dict, target_root: Path) -> dict:
     restore_failures = []
     if not artifact_ok:
         restore_failures.extend(list(verify_after_restore["verification"].get("failure_reasons", [])))
+    if target_path_errors:
+        restore_failures.extend(target_path_errors)
     if workspace_snapshot and not workspace_restored:
+        restore_failures.append(f"workspace restore failed: {workspace_error}")
+    elif target_path_errors:
         restore_failures.append(f"workspace restore failed: {workspace_error}")
 
     restored["restore"] = {

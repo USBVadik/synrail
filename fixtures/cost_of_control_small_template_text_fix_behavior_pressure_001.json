@@ -22,7 +22,7 @@
     }
   ],
   "provenance_mix": [
-    "curated_local_estimate"
+    "pressure_synthetic"
   ],
   "verdict_counts": {
     "SYNRAIL_BETTER": 3,

@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import json
 import shlex
+import stat as stat_module
 import subprocess
 import sys
 from pathlib import Path
@@ -21,6 +23,8 @@ try:
         ARTIFACT_SCOPE,
         DUAL_SCOPE,
         PathScopeValidationError,
+        path_surface_violation,
+        path_within_scope,
         validate_namespace_paths,
         validate_root_within_project,
     )
@@ -29,6 +33,8 @@ except ImportError:
         ARTIFACT_SCOPE,
         DUAL_SCOPE,
         PathScopeValidationError,
+        path_surface_violation,
+        path_within_scope,
         validate_namespace_paths,
         validate_root_within_project,
     )
@@ -86,8 +92,58 @@ def validate_bundle_paths(args: argparse.Namespace, *, artifact_root: Path, proj
     )
 
 
+def now_iso() -> str:
+    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
 def file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def direct_file_fingerprint(path: Path) -> tuple[int, int, int, int] | None:
+    try:
+        stat_result = path.stat(follow_symlinks=False)
+    except OSError:
+        return None
+    if not stat_module.S_ISREG(stat_result.st_mode):
+        return None
+    return (
+        stat_result.st_dev,
+        stat_result.st_ino,
+        stat_result.st_size,
+        stat_result.st_mtime_ns,
+    )
+
+
+def artifact_binding_entry(*, artifact_id: str, path: Path | None, required: bool) -> dict:
+    present = bool(path and path.is_file())
+    resolved_path = str(path.resolve()) if present else ""
+    return {
+        "artifact_id": artifact_id,
+        "path": resolved_path,
+        "required": required,
+        "present": present,
+        "sha256": file_sha256(path) if present else "",
+    }
+
+
+def build_closure_freshness_binding(
+    *,
+    final_path: Path | None,
+    readback_path: Path | None,
+    scenario_path: Path | None,
+    doctor_path: Path | None,
+) -> dict:
+    return {
+        "schema_version": "closure_freshness_binding_v0",
+        "bound_at_utc": now_iso(),
+        "artifacts": [
+            artifact_binding_entry(artifact_id="final_result", path=final_path, required=True),
+            artifact_binding_entry(artifact_id="readback", path=readback_path, required=False),
+            artifact_binding_entry(artifact_id="scenario_proof", path=scenario_path, required=False),
+            artifact_binding_entry(artifact_id="doctor", path=doctor_path, required=False),
+        ],
+    }
 
 
 def starter_final_result_replacement_is_sanctioned(
@@ -154,13 +210,33 @@ def verification_recheck_result(record: object, *, project_root: Path | None = N
 
     result["command_allowed"] = True
     changed_file = non_empty_string(record.get("changed_file", ""))
+    verified_changed_path: Path | None = None
+    initial_changed_binding: tuple[int, int, int, int] | None = None
     if changed_file:
         changed_path = Path(changed_file)
         if not changed_path.is_absolute():
             changed_path = recheck_root / changed_path
-        if not changed_path.exists():
+        if not path_within_scope(str(changed_path), scope=DUAL_SCOPE, project_root=recheck_root, artifact_root=recheck_root / ".synrail"):
+            result["skip_reason"] = "changed_file_out_of_scope"
+            return result
+        violation = path_surface_violation(
+            str(changed_path),
+            field="final_result",
+            scope=DUAL_SCOPE,
+            surface_label="verification recheck changed file",
+            expected_surface="a direct in-scope verification surface",
+            stop_at=recheck_root,
+            project_root=recheck_root,
+            artifact_root=recheck_root / ".synrail",
+        )
+        if violation is not None:
+            result["skip_reason"] = "changed_file_symlink_surface"
+            return result
+        initial_changed_binding = direct_file_fingerprint(changed_path)
+        if initial_changed_binding is None:
             result["skip_reason"] = "changed_file_missing"
             return result
+        verified_changed_path = changed_path.resolve(strict=True)
 
     result["executed"] = True
 
@@ -173,6 +249,9 @@ def verification_recheck_result(record: object, *, project_root: Path | None = N
             cwd=recheck_root,
             timeout=VERIFICATION_RECHECK_TIMEOUT_SECONDS,
         )
+    except FileNotFoundError:
+        result["skip_reason"] = "command_missing"
+        return result
     except subprocess.TimeoutExpired as exc:
         stdout = exc.stdout or ""
         if isinstance(stdout, bytes):
@@ -182,9 +261,31 @@ def verification_recheck_result(record: object, *, project_root: Path | None = N
         return result
 
     stdout = completed.stdout or ""
-    result["stdout_snippet"] = stdout[:VERIFICATION_RECHECK_STDOUT_LIMIT]
     normalized_stdout = normalize_verification_recheck_text(stdout, executable=executable)
+    result["stdout_snippet"] = normalized_stdout[:VERIFICATION_RECHECK_STDOUT_LIMIT]
+
     normalized_expected = normalize_verification_recheck_text(verification_result, executable=executable)
+    if verified_changed_path is not None and initial_changed_binding is not None:
+        if not verified_changed_path.exists() or verified_changed_path.is_symlink():
+            result["matched"] = False
+            result["stdout_snippet"] = f"{normalized_expected}\n"[:VERIFICATION_RECHECK_STDOUT_LIMIT] if normalized_expected else ""
+            result["skip_reason"] = "changed_file_changed_during_recheck"
+            return result
+        violation = path_surface_violation(
+            str(verified_changed_path),
+            field="final_result",
+            scope=DUAL_SCOPE,
+            surface_label="verification recheck changed file",
+            expected_surface="a direct in-scope verification surface",
+            stop_at=recheck_root,
+            project_root=recheck_root,
+            artifact_root=recheck_root / ".synrail",
+        )
+        if violation is not None or direct_file_fingerprint(verified_changed_path) != initial_changed_binding:
+            result["matched"] = False
+            result["stdout_snippet"] = f"{normalized_expected}\n"[:VERIFICATION_RECHECK_STDOUT_LIMIT] if normalized_expected else ""
+            result["skip_reason"] = "changed_file_changed_during_recheck"
+            return result
     result["matched"] = normalized_stdout == normalized_expected
     if not result["matched"] and completed.returncode != 0:
         result["skip_reason"] = f"exit_code_{completed.returncode}"
@@ -366,6 +467,55 @@ def references_modified_file(value: str, modified_files: list[str]) -> bool:
         if normalized in lowered or basename in lowered:
             return True
     return False
+
+
+def normalize_diff_path(value: str) -> str:
+    path = value.strip().strip('"')
+    if path in {"", "/dev/null"}:
+        return ""
+    if path.startswith(("a/", "b/")):
+        path = path[2:]
+    if path.startswith("./"):
+        path = path[2:]
+    return path
+
+
+def normalized_modified_file_path(value: str) -> str:
+    return normalize_diff_path(value)
+
+
+def git_diff_patch_paths(value: str) -> list[str]:
+    paths: list[str] = []
+    for raw_line in value.splitlines():
+        line = raw_line.strip()
+        candidates: list[str] = []
+        if line.startswith("diff --git "):
+            try:
+                parts = shlex.split(line)
+            except ValueError:
+                parts = line.split()
+            candidates.extend(parts[2:4])
+        elif line.startswith("--- ") or line.startswith("+++ "):
+            candidates.append(line[4:].strip())
+        for candidate in candidates:
+            normalized = normalize_diff_path(candidate)
+            if normalized and normalized not in paths:
+                paths.append(normalized)
+    return paths
+
+
+def git_diff_covers_modified_files(value: str, modified_files: list[str]) -> bool:
+    expected_paths = [
+        normalized_modified_file_path(path)
+        for path in modified_files
+        if isinstance(path, str) and normalized_modified_file_path(path)
+    ]
+    if not expected_paths:
+        return False
+    patch_paths = set(git_diff_patch_paths(value))
+    if not patch_paths:
+        return False
+    return all(path in patch_paths for path in expected_paths)
 
 
 def attested_surfaces(modified_files: object, record: object) -> list[str]:
@@ -649,7 +799,7 @@ def structured_diff_provenance_is_semantically_sufficient(
     changed_file_matches = references_modified_file(changed_file, modified_files) if modified_files else bool(changed_file)
     has_verification = bool(verification_command and verification_result)
     if change_disposition == "already_satisfied":
-        has_observation = bool(observed_line or verification_result)
+        has_observation = bool(observed_line)
         return bool(method and changed_file and changed_file_matches and has_verification and has_observation and provenance_note)
     has_patch_context = any([added_line, removed_line, context_before, context_after])
     return bool(method and changed_file and changed_file_matches and has_patch_context and has_verification)
@@ -671,7 +821,7 @@ def patch_plus_verification_is_semantically_sufficient(
         and "diff --git" in git_diff
         and "@@" in git_diff
         and contains_patch_lines(git_diff)
-        and diff_mentions_modified_files(git_diff, modified_files)
+        and git_diff_covers_modified_files(git_diff, modified_files)
     ):
         return False
     changed_file = non_empty_string(record.get("changed_file", ""))
@@ -1689,6 +1839,12 @@ def build_bundle(args: argparse.Namespace) -> dict:
 
     readback_present, readback_path = file_present(args.readback)
     scenario_present, scenario_path = file_present(args.scenario_proof)
+    closure_freshness_binding = build_closure_freshness_binding(
+        final_path=final_path,
+        readback_path=Path(readback_path) if readback_present and readback_path else None,
+        scenario_path=Path(scenario_path) if scenario_present and scenario_path else None,
+        doctor_path=doctor_path if doctor_present and doctor_parseable else None,
+    )
 
     modified_files_semantically_sufficient = False
     if isinstance(modified_files, list) and all(isinstance(item, str) for item in modified_files):
@@ -1700,6 +1856,11 @@ def build_bundle(args: argparse.Namespace) -> dict:
         else:
             modified_files_semantically_sufficient = len(modified_files) > 0 and all(bool(item.strip()) for item in modified_files)
     diff_has_markers = contains_diff_markers(git_diff)
+    git_diff_patch_paths_list = git_diff_patch_paths(git_diff)
+    git_diff_covers_all_modified_files = git_diff_covers_modified_files(
+        git_diff,
+        modified_files if isinstance(modified_files, list) else [],
+    )
     diff_record_semantically_sufficient = structured_diff_provenance_records_are_semantically_sufficient(
         diff_provenance_records,
         modified_files if isinstance(modified_files, list) else [],
@@ -1736,7 +1897,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
                 and "diff --git" in git_diff
                 and "@@" in git_diff
                 and contains_patch_lines(git_diff)
-                and diff_mentions_modified_files(git_diff, modified_files if isinstance(modified_files, list) else [])
+                and git_diff_covers_all_modified_files
             )
             or diff_record_semantically_sufficient
         )
@@ -1884,6 +2045,8 @@ def build_bundle(args: argparse.Namespace) -> dict:
             "has_diff_markers": diff_has_markers,
             "has_structured_record": has_structured_diff_provenance_records(diff_provenance_records),
             "record_count": len(diff_provenance_records),
+            "patch_paths": git_diff_patch_paths_list,
+            "patch_covers_modified_files": git_diff_covers_all_modified_files,
             "normalized_method": normalized_diff_method,
             "method_inferred": inferred_diff_provenance_method_inferred(
                 diff_provenance_records,
@@ -1905,6 +2068,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
         "shadow_observation_guard_results": shadow_observation_guard,
         "verification_recheck": verification_recheck,
         "artifact_integrity_warning": artifact_integrity_warning,
+        "closure_freshness_binding": closure_freshness_binding,
         "readback": {
             "present": readback_present,
             "path": readback_path,

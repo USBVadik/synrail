@@ -21,12 +21,16 @@ except ImportError:
 try:
     from .synrail_artifact_consistency_v0 import build_record as build_artifact_consistency_record
     from .synrail_artifact_repair_receipt_v0 import build_receipt as build_artifact_repair_receipt
+    from .synrail_bundle_v0 import build_bundle
+    from .synrail_closure_v0 import apply_verdict_to_state, build_closure_certificate, build_verdict, persist_closure_certificate
     from .synrail_observability_v0 import build_record as build_observability_record
     from .synrail_repair_handoff_v0 import build_repair_handoff, build_resumability
     from .synrail_repair_packet_v0 import build_packet_from_runtime_truth
 except ImportError:
     from synrail_artifact_consistency_v0 import build_record as build_artifact_consistency_record
     from synrail_artifact_repair_receipt_v0 import build_receipt as build_artifact_repair_receipt
+    from synrail_bundle_v0 import build_bundle
+    from synrail_closure_v0 import apply_verdict_to_state, build_closure_certificate, build_verdict, persist_closure_certificate
     from synrail_observability_v0 import build_record as build_observability_record
     from synrail_repair_handoff_v0 import build_repair_handoff, build_resumability
     from synrail_repair_packet_v0 import build_packet_from_runtime_truth
@@ -57,6 +61,7 @@ SPINE_PATH_SCOPES = {
     "bundle_file": ARTIFACT_SCOPE,
     "doctor_file": ARTIFACT_SCOPE,
     "closure_file": ARTIFACT_SCOPE,
+    "closure_certificate_output": ARTIFACT_SCOPE,
     "repair_handoff_file": ARTIFACT_SCOPE,
     "repair_handoff_output": ARTIFACT_SCOPE,
     "repair_packet_file": ARTIFACT_SCOPE,
@@ -276,11 +281,56 @@ def load_repair_handoff(path: Path) -> dict:
     return handoff
 
 
+def normalize_repair_packet(packet: dict) -> dict:
+    normalized = dict(packet)
+    if normalized.get("schema_version") != "repair_packet_v0":
+        raise ValueError("repair packet must use repair_packet_v0")
+    handoff = dict(normalized.get("repair_handoff", {})) if isinstance(normalized.get("repair_handoff", {}), dict) else {}
+    repair_policy = dict(normalized.get("repair_policy", {})) if isinstance(normalized.get("repair_policy", {}), dict) else {}
+    continuation_core = dict(normalized.get("continuation_core", {})) if isinstance(normalized.get("continuation_core", {}), dict) else {}
+    artifact_quality_summary = dict(normalized.get("artifact_quality_summary", {})) if isinstance(normalized.get("artifact_quality_summary", {}), dict) else {}
+    resumability = dict(normalized.get("resumability", {})) if isinstance(normalized.get("resumability", {}), dict) else {}
+    missing_inputs = list(normalized.get("missing_inputs", [])) if isinstance(normalized.get("missing_inputs", []), list) else []
+
+    if not continuation_core:
+        next_step_id = continuation_core.get("current_step_id", "") or repair_policy.get("next_step_id", "")
+        continuation_core = {
+            "contract_version": "continuation_core_v0",
+            "entrypoint": normalized.get("continuation_entrypoint", "resume"),
+            "ready_for_resume": bool(normalized.get("ready_for_resume", False)),
+            "resumability_status": resumability.get("status", ""),
+            "resumability_family": resumability.get("family", ""),
+            "current_step_id": next_step_id,
+            "current_step_subsurface_id": "",
+            "current_step_target_path": "",
+            "required_inputs": [
+                item.get("input_id", "")
+                for item in handoff.get("required_inputs", [])
+                if isinstance(item, dict) and item.get("input_id", "")
+            ],
+            "missing_inputs": missing_inputs,
+            "next_step_required_inputs": list(missing_inputs),
+            "next_step_subsurface_ids": list(artifact_quality_summary.get("stale_subsurface_ids", [])),
+            "operator_focus": normalized.get("next_safe_step", ""),
+            "next_safe_step": normalized.get("next_safe_step", ""),
+            "history_chain_length": 0,
+            "selection_applied": bool((normalized.get("selection_context", {}) or {}).get("applied", False)),
+            "selected_with_preparation": bool((normalized.get("selection_context", {}) or {}).get("selected_with_preparation", False)),
+            "packet_supplies_resume_context": bool(normalized.get("resume_context", {})),
+            "packet_supplies_repair_inputs": bool(normalized.get("repair_inputs", {})),
+            "packet_supplies_output_defaults": bool(normalized.get("output_defaults", {})),
+            "requires_sibling_discovery": False,
+            "authoritative_entry_artifacts": ["repair_packet"],
+            "source_of_truth_precedence": ["repair_packet", "repair_handoff", "state"],
+            "packet_replay_ready": True,
+        }
+    normalized["continuation_core"] = continuation_core
+    return normalized
+
+
 def load_repair_packet(path: Path) -> dict:
     packet = load_json(path)
-    if packet.get("schema_version") != "repair_packet_v0":
-        raise ValueError("repair packet must use repair_packet_v0")
-    return packet
+    return normalize_repair_packet(packet)
 
 
 def load_repair_receipt(path: Path) -> dict:
@@ -623,6 +673,7 @@ def packet_output_defaults(args: argparse.Namespace, packet_output: Path) -> dic
         "doctor_output": getattr(args, "doctor_output", ""),
         "bundle_output": getattr(args, "bundle_output", ""),
         "closure_output": getattr(args, "closure_output", ""),
+        "closure_certificate_output": getattr(args, "closure_certificate_output", ""),
         "refresh_output": getattr(args, "refresh_output", ""),
         "report_output": getattr(args, "report_output", ""),
         "worked_artifact_output": getattr(args, "worked_artifact_output", ""),
@@ -1347,6 +1398,59 @@ def build_blocked_report(state: dict, doctor_record: dict) -> dict:
     }
 
 
+def enforce_atomic_closure_freshness(
+    *,
+    state: dict,
+    state_path: Path,
+    bundle: dict,
+    bundle_path: Path,
+    verdict: dict,
+    criteria_validation: dict | None,
+) -> tuple[dict, dict, dict | None]:
+    bound_state = dict(state)
+    bound_state["_state_file"] = str(state_path)
+    bound_bundle = dict(bundle)
+    bound_bundle["_bundle_file"] = str(bundle_path)
+    certificate = build_closure_certificate(
+        state=bound_state,
+        bundle=bound_bundle,
+        verdict=verdict,
+        criteria_validation=criteria_validation,
+    )
+    freshness = certificate.get("closure_freshness_binding", {})
+    if verdict.get("closure_status") != "ACCEPTED":
+        return verdict, certificate, None
+    if freshness.get("all_required_present", False) and freshness.get("all_hashes_match", False):
+        return verdict, certificate, None
+
+    rejected_verdict = dict(verdict)
+    warnings = list(rejected_verdict.get("closure_warnings", []))
+    if "closure_freshness_binding_mismatch" not in warnings:
+        warnings.append("closure_freshness_binding_mismatch")
+    rejected_verdict.update({
+        "closure_status": "REJECTED",
+        "blocking_reason": "CLOSURE_FRESHNESS_FAILED",
+        "next_allowed_transition": "PROOF_BUNDLE_REPAIR",
+        "narrow_next_safe_step": "rebuild the final result artifact and proof bundle on the current surface",
+        "closure_warnings": warnings,
+    })
+    block_report = {
+        "target": "CLOSURE_ACCEPTED",
+        "allowed": False,
+        "dominant_blocker": "CLOSURE_FRESHNESS_FAILED",
+        "blocking_reasons": ["CLOSURE_FRESHNESS_FAILED"],
+        "blockers": ["CLOSURE_FRESHNESS_FAILED"],
+        "narrow_next_safe_step": rejected_verdict["narrow_next_safe_step"],
+    }
+    rebound_certificate = build_closure_certificate(
+        state=bound_state,
+        bundle=bound_bundle,
+        verdict=rejected_verdict,
+        criteria_validation=criteria_validation,
+    )
+    return rejected_verdict, rebound_certificate, block_report
+
+
 def build_transition_blocked_report(
     state: dict,
     *,
@@ -1441,7 +1545,14 @@ def build_repair_handoff_blocked_report(
     }
 
 
-def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict, repair_packet: dict | None) -> dict:
+def build_canonical_run_artifact(
+    *,
+    state: dict,
+    report: dict,
+    worked: dict,
+    repair_packet: dict | None,
+    closure_certificate: dict | None,
+) -> dict:
     return {
         "schema_version": "canonical_run_artifact_v0",
         "run_id": state["run_id"],
@@ -1492,6 +1603,7 @@ def build_canonical_run_artifact(*, state: dict, report: dict, worked: dict, rep
             "current_closure_status": worked["current_closure_status"],
             "next_safe_step": worked["next_safe_step"],
         },
+        "closure_certificate": dict(closure_certificate or {}),
         "repair_packet": repair_packet_summary(repair_packet, state),
         "repair_history": repair_history_summary(repair_packet, state),
         "resumability": {
@@ -1526,6 +1638,7 @@ def emit_requested_artifacts(
     closure: dict | None = None,
     refresh_report: dict | None = None,
     comparison: dict | None = None,
+    closure_certificate: dict | None = None,
 ) -> None:
     worked = build_worked_orchestration_artifact(
         state=state,
@@ -1542,7 +1655,13 @@ def emit_requested_artifacts(
         refresh_report=refresh_report,
         comparison=comparison,
     )
-    canonical = build_canonical_run_artifact(state=state, report=report, worked=worked, repair_packet=repair_packet)
+    canonical = build_canonical_run_artifact(
+        state=state,
+        report=report,
+        worked=worked,
+        repair_packet=repair_packet,
+        closure_certificate=closure_certificate,
+    )
     if args.worked_artifact_output:
         save_json(Path(args.worked_artifact_output), worked)
     if args.run_artifact_output:
@@ -1550,9 +1669,13 @@ def emit_requested_artifacts(
     if getattr(args, "artifact_consistency_output", None):
         consistency = build_artifact_consistency_record(
             state=state,
+            state_file=Path(args.state_file),
+            bundle_file=Path(args.bundle_output) if getattr(args, "bundle_output", None) else None,
+            bundle=bundle,
             report=report,
             orchestration=worked,
             run_artifact=canonical,
+            closure_certificate=closure_certificate,
             repair_packet=repair_packet,
             repair_handoff=repair_handoff,
         )
@@ -1577,6 +1700,7 @@ def finalize_runtime_outputs(
     closure: dict | None = None,
     refresh_report: dict | None = None,
     comparison: dict | None = None,
+    closure_certificate: dict | None = None,
 ) -> None:
     if starting_repair_packet is None and getattr(args, "repair_packet_file", None):
         try:
@@ -1592,6 +1716,10 @@ def finalize_runtime_outputs(
         current_handoff = repair_handoff
     else:
         current_handoff = maybe_emit_repair_handoff(args, state)
+    if closure_certificate is None and getattr(args, "closure_certificate_output", None):
+        certificate_path = Path(args.closure_certificate_output)
+        if certificate_path.exists():
+            closure_certificate = load_json(certificate_path)
     if current_handoff and getattr(args, "repair_handoff_output", None):
         save_json(Path(args.repair_handoff_output), current_handoff)
     report.update(report_resumability_fields(state, current_handoff))
@@ -1630,6 +1758,7 @@ def finalize_runtime_outputs(
         closure=closure,
         refresh_report=refresh_report,
         comparison=comparison,
+        closure_certificate=closure_certificate,
     )
     if getattr(args, "observability_output", None):
         output_files = {
@@ -2493,6 +2622,8 @@ def _phase_execution_and_proof(ctx: OrchestrationContext, args: argparse.Namespa
 def _phase_closure(ctx: OrchestrationContext, args: argparse.Namespace) -> int | None:
     """Acceptance validation + closure application."""
     closure_args = ["--state-file", args.state_file, "--bundle-file", args.bundle_output, "--output", args.closure_output]
+    if getattr(args, "closure_certificate_output", None):
+        closure_args.extend(["--certificate-output", args.closure_certificate_output])
     if args.acceptance_validation_output and args.project_profile_file:
         if args.acceptance_criteria_file and Path(args.acceptance_criteria_file).exists():
             code, _ = run_python_capture(
@@ -2515,10 +2646,43 @@ def _phase_closure(ctx: OrchestrationContext, args: argparse.Namespace) -> int |
     if code != 0:
         return code
 
-    ctx.closure = load_json(Path(args.closure_output))
+    criteria_validation = load_json(Path(args.acceptance_validation_output)) if args.acceptance_validation_output and Path(args.acceptance_validation_output).exists() else None
+    closure_state = load_state(ctx.state_path)
+    live_bundle = build_bundle(
+        argparse.Namespace(
+            final_result=getattr(args, "final_result", ""),
+            task_class=getattr(args, "task_class", closure_state.get("task_class", "")),
+            run_id=getattr(args, "run_id", "") or closure_state.get("run_id", ""),
+            readback=getattr(args, "readback", ""),
+            scenario_proof=getattr(args, "scenario_proof", ""),
+            baseline_identity=getattr(args, "baseline_identity", ""),
+            execution_surface_identity=getattr(args, "execution_surface_identity", ""),
+            prompt_identity=getattr(args, "prompt_identity", ""),
+            task_identity=getattr(args, "task_identity", ""),
+            doctor_file=getattr(args, "doctor_output", ""),
+            state_file=args.state_file,
+            output=args.bundle_output,
+        )
+    )
+    live_bundle["_bundle_file"] = str(Path(args.bundle_output))
+    closure_state["_state_file"] = str(ctx.state_path)
+    ctx.bundle = live_bundle
+    ctx.closure = build_verdict(closure_state, live_bundle, criteria_validation)
     code, ctx.state, block_report = apply_closure(load_state(ctx.state_path), ctx.closure)
     if code != 0:
+        save_json(Path(args.bundle_output), live_bundle)
+        save_json(Path(args.closure_output), ctx.closure)
         save_state(ctx.state_path, ctx.state)
+        if getattr(args, "closure_certificate_output", None):
+            persist_closure_certificate(
+                Path(args.closure_certificate_output),
+                state=ctx.state,
+                state_path=ctx.state_path,
+                bundle=ctx.bundle,
+                bundle_path=Path(args.bundle_output),
+                verdict=ctx.closure,
+                criteria_validation=criteria_validation,
+            )
         report = build_transition_blocked_report(
             ctx.state,
             stopping_stage="closure_transition",
@@ -2548,13 +2712,87 @@ def _phase_closure(ctx: OrchestrationContext, args: argparse.Namespace) -> int |
             preparation_receipt=ctx.preparation_receipt,
             bundle=ctx.bundle,
             closure=ctx.closure,
+            closure_certificate=load_json(Path(args.closure_certificate_output)) if getattr(args, "closure_certificate_output", None) and Path(args.closure_certificate_output).exists() else None,
             starting_repair_packet=ctx.starting_repair_packet,
             previous_repair_receipt=ctx.previous_repair_receipt,
         )
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "closure_transition", "reason": block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
-    save_state(ctx.state_path, ctx.state)
 
+    save_json(Path(args.bundle_output), live_bundle)
+    save_state(ctx.state_path, ctx.state)
+    ctx.state = load_state(ctx.state_path)
+    rebound_closure, _, rebound_block_report = enforce_atomic_closure_freshness(
+        state=ctx.state,
+        state_path=ctx.state_path,
+        bundle=ctx.bundle,
+        bundle_path=Path(args.bundle_output),
+        verdict=ctx.closure,
+        criteria_validation=criteria_validation,
+    )
+    if rebound_block_report is not None:
+        ctx.closure = rebound_closure
+        ctx.state = apply_verdict_to_state(ctx.state, ctx.bundle, ctx.closure)
+        ctx.state["closure_timestamp_utc"] = ""
+        save_json(Path(args.closure_output), ctx.closure)
+        save_state(ctx.state_path, ctx.state)
+        if getattr(args, "closure_certificate_output", None):
+            persist_closure_certificate(
+                Path(args.closure_certificate_output),
+                state=ctx.state,
+                state_path=ctx.state_path,
+                bundle=ctx.bundle,
+                bundle_path=Path(args.bundle_output),
+                verdict=ctx.closure,
+                criteria_validation=criteria_validation,
+            )
+        report = build_transition_blocked_report(
+            ctx.state,
+            stopping_stage="closure_transition",
+            doctor_verdict=ctx.doctor_record["final_verdict"],
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_applied=ctx.selection_applied,
+            selected_mode=ctx.selected_mode,
+            selected_with_preparation=ctx.selected_with_preparation,
+            preparation_applied=ctx.preparation_applied,
+            preparation_ready_for_closure=ctx.preparation_ready_for_closure,
+            block_report=rebound_block_report,
+        )
+        save_json(Path(args.report_output), report)
+        finalize_runtime_outputs(
+            args,
+            state=ctx.state,
+            report=report,
+            doctor_record=ctx.doctor_record,
+            resume_applied=ctx.resume_applied,
+            resume_from_state=ctx.resume_from_state,
+            repair_handoff=ctx.repair_handoff,
+            missing_continuation_inputs=ctx.continuation_missing_inputs,
+            selection_receipt=ctx.selection_receipt,
+            preparation_receipt=ctx.preparation_receipt,
+            bundle=ctx.bundle,
+            closure=ctx.closure,
+            closure_certificate=load_json(Path(args.closure_certificate_output)) if getattr(args, "closure_certificate_output", None) and Path(args.closure_certificate_output).exists() else None,
+            starting_repair_packet=ctx.starting_repair_packet,
+            previous_repair_receipt=ctx.previous_repair_receipt,
+        )
+        print(json.dumps({"result": "BLOCKED", "stopping_stage": "closure_transition", "reason": rebound_block_report["dominant_blocker"]}, ensure_ascii=True))
+        return 0
+
+    save_json(Path(args.closure_output), ctx.closure)
+    if getattr(args, "closure_certificate_output", None):
+        persist_closure_certificate(
+            Path(args.closure_certificate_output),
+            state=ctx.state,
+            state_path=ctx.state_path,
+            bundle=ctx.bundle,
+            bundle_path=Path(args.bundle_output),
+            verdict=ctx.closure,
+            criteria_validation=criteria_validation,
+        )
     return None
 
 
@@ -2675,6 +2913,7 @@ def inferred_spine_artifact_root(args: argparse.Namespace) -> Path | None:
         "doctor_output",
         "bundle_output",
         "closure_output",
+        "closure_certificate_output",
     ]:
         value = getattr(args, field, None)
         if value:
@@ -2689,7 +2928,7 @@ def validate_spine_paths(args: argparse.Namespace) -> None:
         anchor_field = "state_file"
         anchor_value = getattr(args, "state_file", None)
         if not anchor_value:
-            for field in ["output", "report_output", "doctor_output", "bundle_output", "closure_output"]:
+            for field in ["output", "report_output", "doctor_output", "bundle_output", "closure_output", "closure_certificate_output"]:
                 value = getattr(args, field, None)
                 if value:
                     anchor_field = field
@@ -2790,6 +3029,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_orchestrate.add_argument("--task-class", required=True)
     p_orchestrate.add_argument("--bundle-output", required=True)
     p_orchestrate.add_argument("--closure-output", required=True)
+    p_orchestrate.add_argument("--closure-certificate-output")
     p_orchestrate.add_argument("--report-output", required=True)
     p_orchestrate.add_argument("--execution-surface-identity", required=True)
     p_orchestrate.add_argument("--prompt-identity", required=True)

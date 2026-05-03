@@ -53,6 +53,7 @@ from synrail_repair_packet_v0 import (
     provided_input_ids,
     scalar_arg,
 )
+from synrail_cli_v0 import apply_resume_output_defaults
 
 # --- refresh imports ---
 from synrail_refresh_v0 import (
@@ -652,6 +653,51 @@ class TestMergePreviousPacketContext(unittest.TestCase):
         self.assertEqual("D2", merged.doctor_run_id)
         # Explicit False overrides previous True
         self.assertFalse(merged.clean_surface)
+
+    def test_old_packet_without_closure_certificate_output_still_sets_default(self) -> None:
+        args = argparse.Namespace(
+            state_file="/tmp/.synrail/state.json",
+            doctor_output="",
+            bundle_output="",
+            closure_output="",
+            closure_certificate_output="",
+            refresh_output="",
+            observability_output="",
+            report_output="",
+            worked_artifact_output="",
+            run_artifact_output="",
+            repair_packet_output="",
+            plan_output="",
+            preparation_receipt_output="",
+        )
+        state = {"run_id": "R1", "task_class": "bounded_change"}
+        apply_resume_output_defaults(args, state)
+
+        output_defaults = {
+            "doctor_output": args.doctor_output,
+            "bundle_output": args.bundle_output,
+            "closure_output": args.closure_output,
+            "refresh_output": args.refresh_output,
+            "report_output": args.report_output,
+            "worked_artifact_output": args.worked_artifact_output,
+            "run_artifact_output": args.run_artifact_output,
+            "repair_handoff_output": "/tmp/.synrail/repair_handoff.json",
+            "repair_packet_output": args.repair_packet_output,
+            "plan_output": args.plan_output,
+            "preparation_receipt_output": args.preparation_receipt_output,
+            "artifact_root": "/tmp/.synrail",
+        }
+        args.closure_certificate_output = ""
+
+        for attr, value in [
+            ("closure_output", output_defaults["closure_output"]),
+            ("closure_certificate_output", output_defaults.get("closure_certificate_output", str(Path(output_defaults["closure_output"]).with_name("closure_certificate.json")))),
+        ]:
+            current = getattr(args, attr, None)
+            if current in {None, ""} and value is not None:
+                setattr(args, attr, value)
+
+        self.assertTrue(str(args.closure_certificate_output).endswith("/closure_certificate.json"))
 
 
 class TestMissingInputIds(unittest.TestCase):

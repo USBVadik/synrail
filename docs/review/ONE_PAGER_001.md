@@ -52,10 +52,11 @@ Current alpha lane:
 1. `synrail start`
 2. strengthen `.synrail/final_result.json` first and keep `.synrail/readback.txt` plus `.synrail/scenario_proof.txt` fallback-only unless `synrail check` later names one
 3. `synrail check`
-4. if non-green: fix only the named gap and rerun `synrail check`; when refresh invalidation is known, the default summary now points only at the stale obligation class
-5. if a standalone bounded repair prompt helps: `synrail repair-step`
-6. if safer to return: `synrail restore`
-7. if feedback is needed: `synrail telemetry export` or `synrail bug-packet`
+4. if you need a small UI/runtime verification path for a rendered or route-facing change: `synrail runtime-helper`
+5. if non-green: fix only the named gap and rerun `synrail check`; when refresh invalidation is known, the default summary now points only at the stale obligation class
+6. if a standalone bounded repair prompt helps: `synrail repair-step`
+7. if safer to return: `synrail restore --preview`, then `synrail restore` if it is still the right move
+8. if feedback is needed: `synrail telemetry export` or `synrail bug-packet`
 
 ## Why it could matter
 
@@ -69,9 +70,10 @@ Current alpha lane:
 ## What is already real
 
 - proof/closure separation
-- acceptance criteria with explicit validation
+- acceptance criteria with explicit validation plus allowlisted verification recheck on the recorded local commands
 - measured doctor coverage gate
 - executable continuation arbiter
+- path-trust-hardened restore preview and restore flow on the current narrow local matrix
 - truth-critical regression suite
 - one cheap first-run alpha pack plus claim-validation pack for second-operator followability and evidence ownership discipline
 
@@ -80,6 +82,7 @@ Current alpha lane:
 - semantic proof is still narrow, not domain-complete
 - measured doctor coverage is still corpus-bounded
 - continuation arbitration is stronger, but still scoped
+- the strongest everyday-economics signal is still the focused `small_template_text_fix` family; the broader everyday lane remains baseline-favorable overall
 - shell cost is much lower now, but still must earn itself outside
 
 ## What we want from critics

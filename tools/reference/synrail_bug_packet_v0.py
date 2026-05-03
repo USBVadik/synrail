@@ -9,10 +9,10 @@ import sys
 from pathlib import Path
 
 try:
-    from .synrail_io_v0 import load_json, save_json_safe
+    from .synrail_io_v0 import load_json, save_json_safe as save_json
     from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
 except ImportError:
-    from synrail_io_v0 import load_json, save_json_safe
+    from synrail_io_v0 import load_json, save_json_safe as save_json
     from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
 
 
@@ -47,9 +47,6 @@ def load_json_if_exists(path: Path | None) -> dict | None:
         return None
     return load_json(path)
 
-
-def save_json(path: Path, payload: dict) -> None:
-    save_json_safe(path, payload)
 
 
 def save_text(path: Path, text: str) -> None:

@@ -145,3 +145,13 @@ Outside alpha should count as genuinely promising only if most reviews say:
 If those do not show up, the correct move is not expansion.
 
 It is cut, simplify, or narrow further.
+
+## First Fresh Outside Pass Decision
+
+After the first fresh outside review on the current branch:
+
+- broaden packaging only if the review returns `strong wedge signal`, the expansion gate above is satisfied, and the adoption read is not worse than `would test again after one more pass`
+- harden further if the review returns `weak wedge signal` or `no wedge signal`, if shell honesty is called fake, or if the gate fails on cheapness, false-success value, restore/re-entry value, or next-step clarity
+- if the review is `mixed signal`, do not broaden packaging yet; use the strongest doubt plus the lowest-scoring signal area to choose the next hardening slice
+
+One fresh outside pass should change the roadmap decision, not just generate more free-form commentary.

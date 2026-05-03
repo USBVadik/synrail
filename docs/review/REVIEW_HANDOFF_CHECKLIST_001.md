@@ -50,10 +50,12 @@ Do not send the pack out yet if any of these are false:
 2. the 10-minute quickstart works on a clean machine without author memory
 3. every visible shell verb is justified by a real user loss without it
 4. the two wow scenarios are both runnable and clearly explain the saved loss
-5. default shell wording stays honest about bounded doctor coverage, current proof rules, and unresolved continuation boundaries
+5. default shell wording stays honest about bounded doctor coverage, current proof rules, unresolved continuation boundaries, and the current narrow restore/path-trust boundary
 6. telemetry export or bug-packet actually reduce feedback effort for an outside tester
 7. second-operator handoff does not require us to explain internal grammar out loud
-8. the docs, tests, fixtures, and message all match the exact selected snapshot rather than a drifting local working tree
+8. the docs, tests, fixtures, message, and reviewer return templates all match the exact selected snapshot rather than a drifting local working tree
+9. restore wording stays exact: path-trust-hardened on a narrow local matrix, with direct target-path rechecks before restore and rollback writes, not broad restore maturity
+10. the outgoing packet includes `docs/review/FEEDBACK_INTAKE_001.md` and `docs/review/ALPHA_SIGNAL_SCORECARD_001.md` so the first outside signal comes back in one explicit shape
 
 ## What not to promise
 

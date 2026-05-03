@@ -8,6 +8,7 @@ import ast
 import importlib.util
 import json
 import os
+import stat as stat_module
 import subprocess
 import sys
 from pathlib import Path
@@ -42,6 +43,11 @@ try:
         DUAL_SCOPE,
         PROJECT_SCOPE,
         PathScopeValidationError,
+        path_surface_violation,
+        path_within_scope,
+        reject_path_surface,
+        resolved_path_for_value,
+        symlinked_ancestor_within,
         validate_namespace_paths,
         validate_root_within_project,
     )
@@ -51,6 +57,11 @@ except ImportError:
         DUAL_SCOPE,
         PROJECT_SCOPE,
         PathScopeValidationError,
+        path_surface_violation,
+        path_within_scope,
+        reject_path_surface,
+        resolved_path_for_value,
+        symlinked_ancestor_within,
         validate_namespace_paths,
         validate_root_within_project,
     )
@@ -155,9 +166,11 @@ def effective_coverage_path(value: str, *, base: Path) -> Path:
     if candidate.is_absolute():
         return candidate
     local = base.parent / candidate
-    if local.exists():
+    try:
+        local.stat()
         return local
-    return DOCTOR_COVERAGE_REPO_ROOT / candidate
+    except FileNotFoundError:
+        return DOCTOR_COVERAGE_REPO_ROOT / candidate
 
 
 def build_override_surface(gates: dict[str, dict], override_gates: list[str]) -> tuple[str, list[str]]:
@@ -175,9 +188,12 @@ def non_empty_identity(value: str) -> bool:
 
 
 def read_non_empty_text(path: Path) -> str:
-    if not path.exists():
+    try:
+        return path.read_text().strip()
+    except FileNotFoundError:
         return ""
-    return path.read_text().strip()
+    except IsADirectoryError:
+        return ""
 
 
 def normalize_scope_path(value: str) -> str:
@@ -233,11 +249,49 @@ def env_value_is_placeholder(value: str) -> bool:
     return normalized in placeholders
 
 
+def direct_file_fingerprint(path: Path) -> tuple[int, int, int, int] | None:
+    try:
+        stat_result = path.stat(follow_symlinks=False)
+    except OSError:
+        return None
+    if not stat_module.S_ISREG(stat_result.st_mode):
+        return None
+    return (
+        stat_result.st_dev,
+        stat_result.st_ino,
+        stat_result.st_size,
+        stat_result.st_mtime_ns,
+    )
+
+
+def read_stable_non_empty_text(path: Path) -> tuple[str, str]:
+    initial_fingerprint = direct_file_fingerprint(path)
+    if initial_fingerprint is None:
+        return "", "missing"
+    contents = read_non_empty_text(path)
+    if direct_file_fingerprint(path) != initial_fingerprint:
+        return "", "changed"
+    return contents, ""
+
+
+def load_stable_json_document(path: Path) -> tuple[dict | None, str]:
+    initial_fingerprint = direct_file_fingerprint(path)
+    if initial_fingerprint is None:
+        return None, "missing"
+    try:
+        payload = load_json(path)
+    except json.JSONDecodeError:
+        return None, "invalid"
+    if direct_file_fingerprint(path) != initial_fingerprint:
+        return None, "changed"
+    return payload, ""
+
+
 def probe_baseline_identity(args: argparse.Namespace) -> tuple[dict, str, str]:
     if not non_empty_identity(args.baseline_identity):
         return gate("FAIL", "trusted baseline identity is missing"), "", args.expected_target_identity or ""
 
-    target_contour_root = Path(args.target_path).expanduser().parent
+    target_contour_root = target_contour_root_for(args)
     observed_target_identity = ""
     if args.target_identity_file:
         target_identity_file = Path(args.target_identity_file)
@@ -248,7 +302,9 @@ def probe_baseline_identity(args: argparse.Namespace) -> tuple[dict, str, str]:
         ancestor = symlinked_ancestor_within(target_identity_file.parent, stop_at=target_contour_root)
         if ancestor is not None:
             return gate("FAIL", "target identity artifact ancestor is a symlink, expected a direct identity surface"), "", args.expected_target_identity or ""
-        observed_target_identity = read_non_empty_text(target_identity_file)
+        observed_target_identity, read_error = read_stable_non_empty_text(target_identity_file)
+        if read_error == "changed":
+            return gate("FAIL", "target identity artifact changed during validation; rerun doctor on a stable direct identity surface"), "", args.expected_target_identity or ""
         if not observed_target_identity:
             return gate("FAIL", "target identity artifact is missing or empty"), "", args.expected_target_identity or ""
 
@@ -337,7 +393,12 @@ def probe_artifact_viability(args: argparse.Namespace) -> dict:
     if not args.artifact_path:
         return gate("FAIL", "artifact path is not specified")
 
-    target_contour_root = Path(args.target_path).expanduser().parent
+    project_root = Path(args.target_path).expanduser().resolve().parent
+    artifact_root = Path(args.artifact_path).expanduser().resolve().parent
+    if not path_within_scope(args.artifact_path, scope=DUAL_SCOPE, project_root=project_root, artifact_root=artifact_root):
+        return gate("FAIL", "artifact path escapes the trusted target contour")
+
+    target_contour_root = target_contour_root_for(args)
     artifact = Path(args.artifact_path)
     if artifact.is_symlink():
         return gate("FAIL", "artifact path is a symlink, expected a direct machine-readable artifact surface")
@@ -367,7 +428,11 @@ def probe_helper_integrity(args: argparse.Namespace) -> dict:
     if not args.helper_path:
         return gate("FAIL", "helper path is not specified")
 
-    target_contour_root = Path(args.target_path).expanduser().parent
+    project_root = Path(args.target_path).expanduser().resolve().parent
+    if not path_within_scope(args.helper_path, scope=PROJECT_SCOPE, project_root=project_root, artifact_root=None):
+        return gate("FAIL", "helper entrypoint escapes the trusted target contour")
+
+    target_contour_root = target_contour_root_for(args)
     helper = Path(args.helper_path)
     if helper.is_symlink():
         return gate("FAIL", "helper entrypoint is a symlink, expected a direct helper surface")
@@ -376,10 +441,12 @@ def probe_helper_integrity(args: argparse.Namespace) -> dict:
     ancestor = symlinked_ancestor_within(helper.parent, stop_at=target_contour_root)
     if ancestor is not None:
         return gate("FAIL", "helper entrypoint ancestor is a symlink, expected a direct helper surface")
-    if helper.exists() and helper.is_file():
+    initial_helper_fingerprint = direct_file_fingerprint(helper)
+    if initial_helper_fingerprint:
+        helper_execution_path = helper.resolve(strict=True)
         if helper.suffix == ".py":
             completed = subprocess.run(
-                ["python3", "-m", "py_compile", str(helper)],
+                ["python3", "-m", "py_compile", str(helper_execution_path)],
                 check=False,
                 capture_output=True,
                 text=True,
@@ -392,13 +459,15 @@ def probe_helper_integrity(args: argparse.Namespace) -> dict:
                 return gate("FAIL", import_failure)
         elif helper.suffix in {".sh", ""}:
             completed = subprocess.run(
-                ["bash", "-n", str(helper)],
+                ["bash", "-n", str(helper_execution_path)],
                 check=False,
                 capture_output=True,
                 text=True,
             )
             if completed.returncode != 0:
                 return gate("FAIL", "helper entrypoint exists but shell syntax is invalid")
+        if direct_file_fingerprint(helper) != initial_helper_fingerprint:
+            return gate("FAIL", "helper entrypoint changed during validation; rerun doctor on a stable direct helper surface")
         return gate("PASS", "helper entrypoint exists and parses successfully")
     return gate("FAIL", "helper entrypoint is missing")
 
@@ -469,6 +538,7 @@ def probe_credential_surface(args: argparse.Namespace) -> dict:
     if not args.credential_env:
         return gate("FAIL", "required credential env names are not specified")
 
+    project_root = Path(args.target_path).expanduser().resolve().parent
     missing = [name for name in args.credential_env if not os.environ.get(name)]
     if missing:
         return gate("FAIL", f"missing credential env: {', '.join(missing)}")
@@ -477,13 +547,16 @@ def probe_credential_surface(args: argparse.Namespace) -> dict:
     if placeholder_values:
         return gate("FAIL", f"credential env still uses placeholder values: {', '.join(placeholder_values)}")
 
-    target_contour_root = Path(args.target_path).expanduser().parent
+    target_contour_root = target_contour_root_for(args)
     invalid_paths = []
     for name in args.credential_env:
         value = os.environ.get(name, "")
         if not env_value_looks_path_like(name, value):
             continue
         candidate = Path(value).expanduser()
+        if not path_within_scope(str(candidate), scope=PROJECT_SCOPE, project_root=project_root, artifact_root=None):
+            invalid_paths.append(f"{name} -> {candidate} escapes the trusted target contour")
+            continue
         if not candidate.exists():
             invalid_paths.append(f"{name} -> {candidate}")
             continue
@@ -502,9 +575,11 @@ def probe_credential_surface(args: argparse.Namespace) -> dict:
             invalid_paths.append(f"{name} -> {candidate} is a directory, expected a file")
             continue
         if candidate.suffix == ".json" and candidate.is_file():
-            try:
-                json.loads(candidate.read_text())
-            except json.JSONDecodeError:
+            payload, read_error = load_stable_json_document(candidate)
+            if read_error == "changed":
+                invalid_paths.append(f"{name} -> {candidate} changed during validation")
+                continue
+            if payload is None:
                 invalid_paths.append(f"{name} -> {candidate} contains invalid json")
     if invalid_paths:
         return gate("FAIL", f"credential env points to an invalid credential surface: {', '.join(invalid_paths)}")
@@ -527,7 +602,7 @@ def probe_prompt_task_identity(args: argparse.Namespace) -> dict:
     if not args.prompt_identity_file:
         return gate("FAIL", "exact prompt identity file is not specified")
 
-    target_contour_root = Path(args.target_path).expanduser().parent
+    target_contour_root = target_contour_root_for(args)
     prompt_file = Path(args.prompt_identity_file)
     if prompt_file.is_symlink():
         return gate("FAIL", "exact prompt identity artifact is a symlink, expected a direct identity surface")
@@ -536,8 +611,14 @@ def probe_prompt_task_identity(args: argparse.Namespace) -> dict:
     ancestor = symlinked_ancestor_within(prompt_file.parent, stop_at=target_contour_root)
     if ancestor is not None:
         return gate("FAIL", "exact prompt identity artifact ancestor is a symlink, expected a direct identity surface")
+    project_root = Path(args.target_path).expanduser().resolve().parent
+    artifact_root = Path(args.artifact_path).expanduser().resolve().parent if args.artifact_path else None
+    if not path_within_scope(args.prompt_identity_file, scope=ARTIFACT_SCOPE, project_root=project_root, artifact_root=artifact_root):
+        return gate("FAIL", "exact prompt identity artifact escapes the trusted target contour")
     if prompt_file.exists():
-        contents = prompt_file.read_text().strip()
+        contents, read_error = read_stable_non_empty_text(prompt_file)
+        if read_error == "changed":
+            return gate("FAIL", "exact prompt identity artifact changed during validation; rerun doctor on a stable direct identity surface")
         if not contents:
             return gate("FAIL", "exact prompt or task identity artifact is empty")
         if args.expected_task_identity and args.expected_task_identity not in contents:
@@ -558,42 +639,63 @@ def build_record(args: argparse.Namespace) -> dict:
         "prompt_task_identity": probe_prompt_task_identity(args),
     }
     coverage_profile_file = Path(args.coverage_profile_file) if args.coverage_profile_file else DEFAULT_DOCTOR_COVERAGE_PROFILE
-    target_contour_root = Path(args.target_path).expanduser().parent
-    if coverage_profile_file.is_symlink():
+    target_contour_root = target_contour_root_for(args)
+    project_root = Path(args.target_path).expanduser().resolve().parent
+    artifact_root = Path(args.artifact_path).expanduser().resolve().parent if args.artifact_path else None
+    if args.coverage_profile_file and not path_within_scope(str(coverage_profile_file), scope=PROJECT_SCOPE, project_root=project_root, artifact_root=None):
+        coverage = blocked_coverage_record("DOCTOR_COVERAGE_PROFILE_OUT_OF_SCOPE", deployment_context=deployment_context)
+    elif coverage_profile_file.is_symlink():
         coverage = blocked_coverage_record("DOCTOR_COVERAGE_PROFILE_SYMLINK_SURFACE", deployment_context=deployment_context)
     elif coverage_profile_file.parent.is_symlink():
         coverage = blocked_coverage_record("DOCTOR_COVERAGE_PROFILE_PARENT_SYMLINK_SURFACE", deployment_context=deployment_context)
     elif symlinked_ancestor_within(coverage_profile_file.parent, stop_at=target_contour_root) is not None:
         coverage = blocked_coverage_record("DOCTOR_COVERAGE_PROFILE_ANCESTOR_SYMLINK_SURFACE", deployment_context=deployment_context)
     else:
-        coverage_profile = load_coverage_profile(coverage_profile_file)
-        if args.coverage_corpus_file:
-            coverage_corpus_input = Path(args.coverage_corpus_file)
+        profile_fingerprint = direct_file_fingerprint(coverage_profile_file)
+        if profile_fingerprint is None:
+            coverage = blocked_coverage_record("DOCTOR_COVERAGE_PROFILE_MISSING", deployment_context=deployment_context)
         else:
-            profile_corpus = coverage_profile.get("measured_corpus_file", "")
-            coverage_corpus_input = (
-                effective_coverage_path(profile_corpus, base=coverage_profile_file)
-                if profile_corpus
-                else DEFAULT_DOCTOR_COVERAGE_CORPUS
-            )
-        if coverage_corpus_input.is_symlink():
-            coverage = blocked_coverage_record("DOCTOR_COVERAGE_CORPUS_SYMLINK_SURFACE", deployment_context=deployment_context)
-        elif coverage_corpus_input.parent.is_symlink():
-            coverage = blocked_coverage_record("DOCTOR_COVERAGE_CORPUS_PARENT_SYMLINK_SURFACE", deployment_context=deployment_context)
-        elif symlinked_ancestor_within(coverage_corpus_input.parent, stop_at=target_contour_root) is not None:
-            coverage = blocked_coverage_record("DOCTOR_COVERAGE_CORPUS_ANCESTOR_SYMLINK_SURFACE", deployment_context=deployment_context)
-        else:
-            coverage_corpus, coverage_corpus_file = load_coverage_corpus(
-                Path(args.coverage_corpus_file) if args.coverage_corpus_file else None,
-                profile=coverage_profile,
-                profile_file=coverage_profile_file,
-            )
-            coverage = build_coverage_record(
-                coverage_profile,
-                coverage_corpus,
-                corpus_file=coverage_corpus_file,
-                deployment_context=deployment_context,
-            )
+            coverage_profile = load_coverage_profile(coverage_profile_file)
+            if direct_file_fingerprint(coverage_profile_file) != profile_fingerprint:
+                coverage = blocked_coverage_record("DOCTOR_COVERAGE_PROFILE_CHANGED_DURING_VALIDATION", deployment_context=deployment_context)
+            else:
+                if args.coverage_corpus_file:
+                    coverage_corpus_input = Path(args.coverage_corpus_file)
+                else:
+                    profile_corpus = coverage_profile.get("measured_corpus_file", "")
+                    coverage_corpus_input = (
+                        effective_coverage_path(profile_corpus, base=coverage_profile_file)
+                        if profile_corpus
+                        else DEFAULT_DOCTOR_COVERAGE_CORPUS
+                    )
+                coverage_corpus_requires_scope_validation = bool(args.coverage_corpus_file or args.coverage_profile_file)
+                if coverage_corpus_requires_scope_validation and not path_within_scope(str(coverage_corpus_input), scope=PROJECT_SCOPE, project_root=project_root, artifact_root=None):
+                    coverage = blocked_coverage_record("DOCTOR_COVERAGE_CORPUS_OUT_OF_SCOPE", deployment_context=deployment_context)
+                elif coverage_corpus_input.is_symlink():
+                    coverage = blocked_coverage_record("DOCTOR_COVERAGE_CORPUS_SYMLINK_SURFACE", deployment_context=deployment_context)
+                elif coverage_corpus_input.parent.is_symlink():
+                    coverage = blocked_coverage_record("DOCTOR_COVERAGE_CORPUS_PARENT_SYMLINK_SURFACE", deployment_context=deployment_context)
+                elif symlinked_ancestor_within(coverage_corpus_input.parent, stop_at=target_contour_root) is not None:
+                    coverage = blocked_coverage_record("DOCTOR_COVERAGE_CORPUS_ANCESTOR_SYMLINK_SURFACE", deployment_context=deployment_context)
+                else:
+                    corpus_fingerprint = direct_file_fingerprint(coverage_corpus_input)
+                    if corpus_fingerprint is None:
+                        coverage = blocked_coverage_record("DOCTOR_COVERAGE_CORPUS_MISSING", deployment_context=deployment_context)
+                    else:
+                        coverage_corpus, coverage_corpus_file = load_coverage_corpus(
+                            Path(args.coverage_corpus_file) if args.coverage_corpus_file else None,
+                            profile=coverage_profile,
+                            profile_file=coverage_profile_file,
+                        )
+                        if direct_file_fingerprint(coverage_corpus_file) != corpus_fingerprint:
+                            coverage = blocked_coverage_record("DOCTOR_COVERAGE_CORPUS_CHANGED_DURING_VALIDATION", deployment_context=deployment_context)
+                        else:
+                            coverage = build_coverage_record(
+                                coverage_profile,
+                                coverage_corpus,
+                                corpus_file=coverage_corpus_file,
+                                deployment_context=deployment_context,
+                            )
 
     blocking_failure_classes = []
     final_verdict = PASS_VERDICT[args.doctor_level]
@@ -661,50 +763,15 @@ def current_project_root() -> Path:
     return Path.cwd().resolve()
 
 
+def target_contour_root_for(args: argparse.Namespace) -> Path:
+    return Path(args.target_path).expanduser().parent.resolve()
+
+
 def symlinked_ancestor(path: Path) -> Path | None:
     for candidate in path.parents:
         if candidate.is_symlink():
             return candidate
     return None
-
-
-def symlinked_ancestor_within(path: Path, *, stop_at: Path) -> Path | None:
-    if path == stop_at:
-        return None
-    if stop_at not in path.parents:
-        return None
-    for candidate in path.parents:
-        if candidate.is_symlink():
-            return candidate
-        if candidate == stop_at:
-            break
-    return None
-
-
-def reject_symlink_surface(
-    path_value: str,
-    *,
-    path_arg: str,
-    scope: str,
-    surface_label: str,
-    expected_surface: str,
-    stop_at: Path,
-) -> int | None:
-    candidate = Path(path_value).expanduser()
-    if candidate.is_symlink():
-        detail = f"{surface_label} is a symlink, expected {expected_surface}"
-        resolved_path = candidate.resolve()
-    elif candidate.parent.is_symlink():
-        detail = f"{surface_label} parent is a symlink, expected {expected_surface}"
-        resolved_path = candidate.parent.resolve()
-    else:
-        ancestor = symlinked_ancestor_within(candidate.parent, stop_at=stop_at)
-        if ancestor is None:
-            return None
-        detail = f"{surface_label} ancestor is a symlink, expected {expected_surface}"
-        resolved_path = ancestor.resolve()
-    print(json.dumps({"result": "ERROR", "reason": "PATH_SCOPE_VIOLATION", "path_arg": path_arg, "path": path_value, "resolved_path": str(resolved_path), "scope": scope, "detail": detail}, ensure_ascii=True))
-    return 2
 
 
 def validate_doctor_paths(args: argparse.Namespace, *, artifact_root: Path | None, project_root: Path | None) -> None:
@@ -752,48 +819,68 @@ def main() -> int:
     args = parser.parse_args()
     try:
         output_path = Path(args.output).expanduser()
-        target_contour_root = Path(args.target_path).expanduser().parent
-        preflight_block = reject_symlink_surface(
+        target_contour_root = target_contour_root_for(args)
+        artifact_root_for_errors = resolved_path_for_value(args.output).parent
+        preflight_block = reject_path_surface(
             args.output,
-            path_arg="--output",
+            field="output",
             scope=ARTIFACT_SCOPE,
             surface_label="output path",
             expected_surface="a direct machine-readable artifact surface",
             stop_at=target_contour_root,
+            project_root=current_project_root(),
+            artifact_root=artifact_root_for_errors,
         )
         if preflight_block is not None:
             return preflight_block
         if args.update_state and args.state_file:
-            preflight_block = reject_symlink_surface(
+            preflight_block = reject_path_surface(
                 args.state_file,
-                path_arg="--state-file",
+                field="state_file",
                 scope=ARTIFACT_SCOPE,
                 surface_label="state update path",
                 expected_surface="a direct machine-readable state surface",
                 stop_at=target_contour_root,
+                project_root=current_project_root(),
+                artifact_root=artifact_root_for_errors,
             )
             if preflight_block is not None:
                 return preflight_block
-        for path_value, path_arg, scope, surface_label, expected_surface in [
-            (args.artifact_path, "--artifact-path", DUAL_SCOPE, "artifact path", "a direct machine-readable artifact surface"),
-            (args.helper_path, "--helper-path", PROJECT_SCOPE, "helper entrypoint", "a direct helper surface"),
-            (args.prompt_identity_file, "--prompt-identity-file", ARTIFACT_SCOPE, "exact prompt identity artifact", "a direct identity surface"),
-            (args.target_identity_file, "--target-identity-file", DUAL_SCOPE, "target identity artifact", "a direct identity surface"),
-            (args.coverage_profile_file, "--coverage-profile-file", PROJECT_SCOPE, "coverage profile path", "a direct coverage surface"),
-            (args.coverage_corpus_file, "--coverage-corpus-file", PROJECT_SCOPE, "coverage corpus path", "a direct coverage surface"),
+        for path_value, field, scope, surface_label, expected_surface in [
+            (args.artifact_path, "artifact_path", DUAL_SCOPE, "artifact path", "a direct machine-readable artifact surface"),
+            (args.helper_path, "helper_path", PROJECT_SCOPE, "helper entrypoint", "a direct helper surface"),
+            (args.prompt_identity_file, "prompt_identity_file", ARTIFACT_SCOPE, "exact prompt identity artifact", "a direct identity surface"),
+            (args.target_identity_file, "target_identity_file", DUAL_SCOPE, "target identity artifact", "a direct identity surface"),
+            (args.coverage_profile_file, "coverage_profile_file", PROJECT_SCOPE, "coverage profile path", "a direct coverage surface"),
+            (args.coverage_corpus_file, "coverage_corpus_file", PROJECT_SCOPE, "coverage corpus path", "a direct coverage surface"),
         ]:
             if not path_value:
                 continue
-            preflight_block = reject_symlink_surface(
+            preflight_block = reject_path_surface(
                 path_value,
-                path_arg=path_arg,
+                field=field,
                 scope=scope,
                 surface_label=surface_label,
                 expected_surface=expected_surface,
                 stop_at=target_contour_root,
+                project_root=current_project_root(),
+                artifact_root=artifact_root_for_errors,
             )
             if preflight_block is not None:
                 return preflight_block
+        write_violation = path_surface_violation(
+            args.output,
+            field="output",
+            scope=ARTIFACT_SCOPE,
+            surface_label="output path",
+            expected_surface="a direct machine-readable artifact surface",
+            stop_at=target_contour_root,
+            project_root=current_project_root(),
+            artifact_root=artifact_root_for_errors,
+        )
+        if write_violation is not None:
+            print(json.dumps(write_violation.as_payload(), ensure_ascii=True))
+            return 2
         artifact_root = output_path.resolve().parent
         project_root = current_project_root()
         validate_root_within_project(
@@ -811,6 +898,19 @@ def main() -> int:
         if args.update_state:
             if not args.state_file:
                 print(json.dumps({"result": "ERROR", "reason": "STATE_FILE_REQUIRED_FOR_UPDATE"}, ensure_ascii=True))
+                return 2
+            state_write_violation = path_surface_violation(
+                args.state_file,
+                field="state_file",
+                scope=ARTIFACT_SCOPE,
+                surface_label="state update path",
+                expected_surface="a direct machine-readable state surface",
+                stop_at=target_contour_root,
+                project_root=project_root,
+                artifact_root=artifact_root,
+            )
+            if state_write_violation is not None:
+                print(json.dumps(state_write_violation.as_payload(), ensure_ascii=True))
                 return 2
             state_path = Path(args.state_file)
             state = load_json(state_path)

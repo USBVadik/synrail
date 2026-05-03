@@ -131,20 +131,21 @@ If you need a clearer breakdown of a proof gap, run:
 synrail explain-proof
 ```
 
-Repeat until you see `CLOSURE_ACCEPTED`.
+Repeat until `synrail check` prints `Status: Accepted`.
 
 ## What non-green means
 
-- `DOCTOR_NOT_GREEN` -- readiness check failed. Read the blocking failure class.
-- `MISSING_PROOF_SECTIONS` -- proof bundle is incomplete. Fill in the named sections.
-- `SEMANTIC_PROOF_INSUFFICIENT` -- structure is there but evidence is thin. Strengthen the named sections.
-- `CONTROLLED_BOOTSTRAP_NOT_CONFIRMED` -- you need to use `synrail start`, not plain init.
+- `Controlled Run Required` -- you need to use `synrail start`, not plain init.
+- `Proof Incomplete` -- the proof bundle is incomplete. Fill in the named sections.
+- `Proof Too Thin To Trust` -- structure is there but evidence is thin. Strengthen the named sections.
+- `Workspace Not Ready` or `Workspace Not Trusted` -- readiness or trust failed. Read the blocking repair target.
+- `Cannot Continue This Run` -- this run reached a terminal rejected state. Start a new bounded run or restore a verified point before trying again.
 
 Non-green is the normal first state. It means the system is working.
 
 ## When you are done
 
-`CLOSURE_ACCEPTED` means the proof bundle is complete, the doctor passed, and closure is honest. You can now:
+`Status: Accepted` means the proof bundle is complete, the doctor passed, and closure is honest. You can now:
 
 ```bash
 synrail session-export --artifact-root .synrail

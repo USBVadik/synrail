@@ -14,6 +14,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -25,16 +26,20 @@ if str(TOOLS_ROOT) not in sys.path:
 
 from synrail_acceptance_criteria_v0 import build_record as build_acceptance_criteria
 from synrail_acceptance_criteria_v0 import validate_record as validate_acceptance_criteria
-from synrail_bundle_v0 import build_bundle
-from synrail_checkpoint_v0 import restore_record, verify_record
-from synrail_closure_v0 import build_verdict
+from synrail_artifact_consistency_v0 import build_record as build_artifact_consistency_record
+from synrail_io_v0 import load_json
+from synrail_bundle_v0 import artifact_binding_entry, build_bundle
+from synrail_checkpoint_v0 import restore_preview, restore_record, restore_target_path_errors, verify_record
+from synrail_closure_v0 import build_closure_certificate, build_verdict, persist_closure_certificate
 from synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
 from synrail_doctor_v1 import build_record as build_doctor_record
 from synrail_second_operator_v0 import build_record as build_second_operator
+from synrail_spine_v0 import OrchestrationContext, _phase_closure, build_canonical_run_artifact
+from synrail_cli_v0 import load_repair_packet as load_cli_repair_packet
+from synrail_spine_v0 import load_repair_packet as load_spine_repair_packet
+import synrail_doctor_v1
+import synrail_spine_v0
 
-
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
 
 
 def controlled_state(state: dict) -> dict:
@@ -162,6 +167,32 @@ def doctor_args(*, corpus_file: Path, target_path: Path, artifact_path: Path) ->
 
 
 class TruthRegressionTests(unittest.TestCase):
+    def test_legacy_repair_packet_loaders_synthesize_continuation_core(self) -> None:
+        packet_path = FIXTURES_ROOT / "repair_packet_run_001" / "packet.json"
+
+        cli_packet = load_cli_repair_packet(packet_path)
+        spine_packet = load_spine_repair_packet(packet_path)
+
+        for packet in (cli_packet, spine_packet):
+            self.assertEqual("repair_packet_v0", packet["schema_version"])
+            self.assertIn("continuation_core", packet)
+            self.assertEqual("continuation_core_v0", packet["continuation_core"]["contract_version"])
+            self.assertEqual(packet["missing_inputs"], packet["continuation_core"]["next_step_required_inputs"])
+            self.assertEqual(packet["next_safe_step"], packet["continuation_core"]["next_safe_step"])
+            self.assertTrue(packet["continuation_core"]["packet_replay_ready"])
+
+    def test_artifact_binding_entry_treats_directories_as_absent_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_binding_directory_") as tmpdir:
+            entry = artifact_binding_entry(
+                artifact_id="final_result",
+                path=Path(tmpdir),
+                required=True,
+            )
+
+        self.assertFalse(entry["present"])
+        self.assertEqual("", entry["path"])
+        self.assertEqual("", entry["sha256"])
+
     def test_false_reject_valid_contour_stays_accepted(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
         bundle = build_bundle(
@@ -252,6 +283,252 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("OK", post_verify["result"])
         self.assertEqual("PASSED", post_verify["verification"]["status"])
 
+    def test_checkpoint_verify_blocks_manifest_path_escape(self) -> None:
+        record = load_json(FIXTURES_ROOT / "checkpoint_scope_violation_run_001" / "checkpoint_verify.json")
+        source_checkpoint_root = (REPO_ROOT / record["checkpoint_root"]).resolve()
+
+        with tempfile.TemporaryDirectory(prefix="synrail_checkpoint_manifest_escape_") as tmpdir:
+            checkpoint_root = Path(tmpdir) / "checkpoint"
+            shutil.copytree(source_checkpoint_root, checkpoint_root)
+            state_path = checkpoint_root / "artifacts" / "state.json"
+            state_path.write_text(json.dumps(controlled_state(load_json(state_path)), indent=2, ensure_ascii=True) + "\n")
+            record["checkpoint_root"] = str(checkpoint_root)
+            record["artifact_manifest"][0]["path"] = "../escaped/state.json"
+
+            verified = verify_record(record)
+
+        self.assertEqual("BLOCKED", verified["result"])
+        self.assertEqual("FAILED", verified["verification"]["status"])
+        self.assertIn("checkpoint record path validation failed", verified["verification"]["failure_reasons"])
+        self.assertIn("artifact path escapes checkpoint root: state", verified["verification"]["failure_reasons"])
+
+    def test_checkpoint_restore_blocks_workspace_target_retarget(self) -> None:
+        record = load_json(FIXTURES_ROOT / "checkpoint_scope_violation_run_001" / "checkpoint_verify.json")
+        source_checkpoint_root = (REPO_ROOT / record["checkpoint_root"]).resolve()
+
+        with tempfile.TemporaryDirectory(prefix="synrail_checkpoint_workspace_retarget_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "restore_target"
+            target_root.mkdir(parents=True, exist_ok=True)
+            checkpoint_root = tmp / "checkpoint"
+            shutil.copytree(source_checkpoint_root, checkpoint_root)
+            state_path = checkpoint_root / "artifacts" / "state.json"
+            state_path.write_text(json.dumps(controlled_state(load_json(state_path)), indent=2, ensure_ascii=True) + "\n")
+            record["checkpoint_root"] = str(checkpoint_root)
+            record["workspace_snapshot"] = {
+                "type": "git",
+                "workspace_family": "clean_commit",
+                "project_root": str(tmp / "other_project"),
+                "head_ref": "deadbeef",
+                "has_uncommitted": False,
+                "has_untracked": False,
+            }
+
+            restored = restore_record(copy.deepcopy(record), target_root)
+
+        self.assertEqual("BLOCKED", restored["result"])
+        self.assertEqual("RESTORE_FAILED", restored["restore"]["status"])
+        self.assertIn(
+            "workspace restore failed: workspace snapshot project_root is present but checkpoint_root is not inside a checkpoint-owned artifact root",
+            restored["restore"]["failure_reasons"],
+        )
+        self.assertEqual("ROLLED_BACK", restored["rollback"]["status"])
+        self.assertEqual("RESTORE_VERIFICATION_FAILED", restored["rollback"]["trigger"])
+
+    def test_checkpoint_verify_blocks_snapshot_dir_escape(self) -> None:
+        record = load_json(FIXTURES_ROOT / "checkpoint_scope_violation_run_001" / "checkpoint_verify.json")
+        source_checkpoint_root = (REPO_ROOT / record["checkpoint_root"]).resolve()
+
+        with tempfile.TemporaryDirectory(prefix="synrail_checkpoint_snapshot_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            checkpoint_root = tmp / "checkpoint"
+            shutil.copytree(source_checkpoint_root, checkpoint_root)
+            state_path = checkpoint_root / "artifacts" / "state.json"
+            state_path.write_text(json.dumps(controlled_state(load_json(state_path)), indent=2, ensure_ascii=True) + "\n")
+            record["checkpoint_root"] = str(checkpoint_root)
+            record["workspace_snapshot"] = {
+                "type": "file_copy",
+                "workspace_family": "file_copy",
+                "project_root": str(tmp),
+                "snapshot_dir": str(tmp / "outside_snapshot"),
+                "file_count": 1,
+            }
+
+            verified = verify_record(record)
+
+        self.assertEqual("BLOCKED", verified["result"])
+        self.assertIn("workspace snapshot directory escapes checkpoint root", verified["verification"]["failure_reasons"])
+        self.assertIn("checkpoint record path validation failed", verified["verification"]["failure_reasons"])
+
+    def test_checkpoint_restore_blocks_symlinked_target_artifact_parent(self) -> None:
+        record = load_json(FIXTURES_ROOT / "checkpoint_scope_violation_run_001" / "checkpoint_verify.json")
+        source_checkpoint_root = (REPO_ROOT / record["checkpoint_root"]).resolve()
+
+        with tempfile.TemporaryDirectory(prefix="synrail_checkpoint_target_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "restore_target"
+            outside_root = tmp / "outside"
+            checkpoint_root = tmp / "checkpoint"
+            target_root.mkdir(parents=True, exist_ok=True)
+            outside_root.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(source_checkpoint_root, checkpoint_root)
+            state_path = checkpoint_root / "artifacts" / "state.json"
+            state_path.write_text(json.dumps(controlled_state(load_json(state_path)), indent=2, ensure_ascii=True) + "\n")
+            record["checkpoint_root"] = str(checkpoint_root)
+            record["workspace_snapshot"] = {"type": "none", "reason": "no workspace snapshot available"}
+            artifact_relpath = Path(record["artifact_manifest"][0]["path"])
+            symlink_parent = target_root / artifact_relpath.parent
+            symlink_parent.parent.mkdir(parents=True, exist_ok=True)
+            symlink_parent.symlink_to(outside_root, target_is_directory=True)
+            escaped_target = outside_root / artifact_relpath.name
+
+            restored = restore_record(copy.deepcopy(record), target_root)
+
+        self.assertEqual("BLOCKED", restored["result"])
+        self.assertEqual("RESTORE_FAILED", restored["restore"]["status"])
+        self.assertIn(
+            "restore target path parent is a symlink: state",
+            restored["restore"]["failure_reasons"],
+        )
+        self.assertFalse(escaped_target.exists())
+        self.assertEqual("NOT_NEEDED", restored["rollback"]["status"])
+        self.assertEqual("NONE", restored["rollback"]["trigger"])
+
+    def test_checkpoint_restore_blocks_symlinked_target_artifact_file(self) -> None:
+        record = load_json(FIXTURES_ROOT / "checkpoint_scope_violation_run_001" / "checkpoint_verify.json")
+        source_checkpoint_root = (REPO_ROOT / record["checkpoint_root"]).resolve()
+
+        with tempfile.TemporaryDirectory(prefix="synrail_checkpoint_target_file_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "restore_target"
+            outside_root = tmp / "outside"
+            checkpoint_root = tmp / "checkpoint"
+            target_root.mkdir(parents=True, exist_ok=True)
+            outside_root.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(source_checkpoint_root, checkpoint_root)
+            state_path = checkpoint_root / "artifacts" / "state.json"
+            state_path.write_text(json.dumps(controlled_state(load_json(state_path)), indent=2, ensure_ascii=True) + "\n")
+            record["checkpoint_root"] = str(checkpoint_root)
+            record["workspace_snapshot"] = {"type": "none", "reason": "no workspace snapshot available"}
+            artifact_relpath = Path(record["artifact_manifest"][0]["path"])
+            target_path = target_root / artifact_relpath
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            escaped_target = outside_root / artifact_relpath.name
+            target_path.symlink_to(escaped_target)
+
+            restored = restore_record(copy.deepcopy(record), target_root)
+
+        self.assertEqual("BLOCKED", restored["result"])
+        self.assertEqual("RESTORE_FAILED", restored["restore"]["status"])
+        self.assertIn(
+            "restore target path is a symlink: state",
+            restored["restore"]["failure_reasons"],
+        )
+        self.assertFalse(escaped_target.exists())
+        self.assertEqual("NOT_NEEDED", restored["rollback"]["status"])
+        self.assertEqual("NONE", restored["rollback"]["trigger"])
+
+    def test_checkpoint_restore_rechecks_target_path_after_preview(self) -> None:
+        record = load_json(FIXTURES_ROOT / "checkpoint_scope_violation_run_001" / "checkpoint_verify.json")
+        source_checkpoint_root = (REPO_ROOT / record["checkpoint_root"]).resolve()
+
+        with tempfile.TemporaryDirectory(prefix="synrail_checkpoint_target_toctou_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "restore_target"
+            outside_root = tmp / "outside"
+            checkpoint_root = tmp / "checkpoint"
+            target_root.mkdir(parents=True, exist_ok=True)
+            outside_root.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(source_checkpoint_root, checkpoint_root)
+            state_path = checkpoint_root / "artifacts" / "state.json"
+            state_path.write_text(json.dumps(controlled_state(load_json(state_path)), indent=2, ensure_ascii=True) + "\n")
+            record["checkpoint_root"] = str(checkpoint_root)
+            record["workspace_snapshot"] = {"type": "none", "reason": "no workspace snapshot available"}
+            artifact_relpath = Path(record["artifact_manifest"][0]["path"])
+            target_path = target_root / artifact_relpath
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            escaped_target = outside_root / artifact_relpath.name
+
+            original_restore_preview = restore_preview
+            preview_count = {"value": 0}
+
+            def flip_after_preview(current_record: dict, current_target_root: Path) -> dict:
+                preview = original_restore_preview(current_record, current_target_root)
+                preview_count["value"] += 1
+                if preview_count["value"] == 1:
+                    target_path.symlink_to(escaped_target)
+                return preview
+
+            with patch("synrail_checkpoint_v0.restore_preview", side_effect=flip_after_preview):
+                restored = restore_record(copy.deepcopy(record), target_root)
+
+        self.assertEqual("BLOCKED", restored["result"])
+        self.assertEqual("RESTORE_FAILED", restored["restore"]["status"])
+        self.assertIn(
+            "restore target path is a symlink: state",
+            restored["restore"]["failure_reasons"],
+        )
+        self.assertFalse(escaped_target.exists())
+        self.assertEqual("NOT_NEEDED", restored["rollback"]["status"])
+        self.assertEqual("NONE", restored["rollback"]["trigger"])
+
+    def test_checkpoint_restore_rechecks_target_path_before_rollback(self) -> None:
+        record = load_json(FIXTURES_ROOT / "checkpoint_scope_violation_run_001" / "checkpoint_verify.json")
+        source_checkpoint_root = (REPO_ROOT / record["checkpoint_root"]).resolve()
+
+        with tempfile.TemporaryDirectory(prefix="synrail_checkpoint_rollback_toctou_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "restore_target"
+            outside_root = tmp / "outside"
+            checkpoint_root = tmp / "checkpoint"
+            target_root.mkdir(parents=True, exist_ok=True)
+            outside_root.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(source_checkpoint_root, checkpoint_root)
+            state_path = checkpoint_root / "artifacts" / "state.json"
+            state_path.write_text(json.dumps(controlled_state(load_json(state_path)), indent=2, ensure_ascii=True) + "\n")
+            record["checkpoint_root"] = str(checkpoint_root)
+            record["workspace_snapshot"] = {
+                "type": "git",
+                "workspace_family": "clean_commit",
+                "project_root": str(tmp / "other_project"),
+                "head_ref": "deadbeef",
+                "has_uncommitted": False,
+                "has_untracked": False,
+            }
+            artifact_relpath = Path(record["artifact_manifest"][0]["path"])
+            target_path = target_root / artifact_relpath
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            escaped_target = outside_root / artifact_relpath.name
+            backup_source = target_path.parent / "original-state.json"
+            backup_source.write_text('{"baseline": true}\n', encoding="utf-8")
+            shutil.copy2(backup_source, target_path)
+
+            original_verify_record = verify_record
+            verify_count = {"value": 0}
+
+            def flip_before_rollback(current_record: dict, root_override: Path | None = None) -> dict:
+                verified = original_verify_record(current_record, root_override=root_override)
+                if root_override is not None:
+                    verify_count["value"] += 1
+                    if verify_count["value"] == 1:
+                        target_path.unlink()
+                        target_path.symlink_to(escaped_target)
+                return verified
+
+            with patch("synrail_checkpoint_v0.verify_record", side_effect=flip_before_rollback):
+                restored = restore_record(copy.deepcopy(record), target_root)
+
+        self.assertEqual("ERROR", restored["result"])
+        self.assertEqual("RESTORE_FAILED", restored["restore"]["status"])
+        self.assertEqual("ROLLBACK_FAILED", restored["rollback"]["status"])
+        self.assertEqual("RESTORE_VERIFICATION_FAILED", restored["rollback"]["trigger"])
+        self.assertIn(
+            "restore target path is a symlink: state",
+            restored["rollback"]["failure_reasons"],
+        )
+        self.assertFalse(escaped_target.exists())
+        self.assertFalse(target_path.exists())
+
     def test_packet_state_conflict_requires_author_intuition(self) -> None:
         state = load_json(FIXTURES_ROOT / "continuation_arbiter_conflict_run_001" / "state.json")
         packet = load_json(FIXTURES_ROOT / "continuation_arbiter_conflict_run_001" / "repair_packet.json")
@@ -301,6 +578,85 @@ class TruthRegressionTests(unittest.TestCase):
             "helper_entrypoint_missing",
             record["coverage"]["critical_modes_without_measured_evidence"],
         )
+
+    def test_doctor_rejects_coverage_profile_escape_outside_target_contour(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_coverage_profile_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            target_root = project_root / "target_surface"
+            artifact_path = project_root / "artifacts" / "final_result.json"
+            outside = tmp / "outside" / "profile.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            target_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "artifacts").mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text(json.dumps(load_json(TOOLS_ROOT / "doctor_coverage_profile_v0.json"), indent=2, ensure_ascii=True) + "\n")
+            corpus_path = project_root / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.coverage_profile_file = str(outside)
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_DOCTOR_COVERAGE", record["final_verdict"])
+        self.assertFalse(record["coverage"]["threshold_met"])
+        self.assertEqual("BLOCKED", record["coverage"]["gate_status"])
+        self.assertEqual("DOCTOR_COVERAGE_PROFILE_OUT_OF_SCOPE", record["coverage"]["gate_reason"])
+
+    def test_doctor_rejects_coverage_corpus_escape_outside_target_contour(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_coverage_corpus_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            target_root = project_root / "target_surface"
+            artifact_path = project_root / "artifacts" / "final_result.json"
+            outside = tmp / "outside" / "corpus.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            target_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "artifacts").mkdir(parents=True, exist_ok=True)
+            outside.parent.mkdir(parents=True, exist_ok=True)
+            outside.write_text(json.dumps(load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json"), indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=outside, target_path=target_root, artifact_path=artifact_path)
+            args.coverage_corpus_file = str(outside)
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_DOCTOR_COVERAGE", record["final_verdict"])
+        self.assertFalse(record["coverage"]["threshold_met"])
+        self.assertEqual("BLOCKED", record["coverage"]["gate_status"])
+        self.assertEqual("DOCTOR_COVERAGE_CORPUS_OUT_OF_SCOPE", record["coverage"]["gate_reason"])
+
+    def test_doctor_rejects_profile_derived_coverage_corpus_escape(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_profile_corpus_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            target_root = project_root / "target_surface"
+            artifact_path = project_root / "artifacts" / "final_result.json"
+            outside_corpus = tmp / "outside" / "corpus.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            target_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "artifacts").mkdir(parents=True, exist_ok=True)
+            outside_corpus.parent.mkdir(parents=True, exist_ok=True)
+            outside_corpus.write_text(json.dumps(load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json"), indent=2, ensure_ascii=True) + "\n")
+            profile = load_json(TOOLS_ROOT / "doctor_coverage_profile_v0.json")
+            profile["measured_corpus_file"] = str(outside_corpus)
+            profile_path = project_root / "doctor_coverage_profile.json"
+            profile_path.write_text(json.dumps(profile, indent=2, ensure_ascii=True) + "\n")
+            fallback_corpus = project_root / "fallback_corpus.json"
+            fallback_corpus.write_text(json.dumps(load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json"), indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=fallback_corpus, target_path=target_root, artifact_path=artifact_path)
+            args.coverage_profile_file = str(profile_path)
+            args.coverage_corpus_file = None
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_DOCTOR_COVERAGE", record["final_verdict"])
+        self.assertFalse(record["coverage"]["threshold_met"])
+        self.assertEqual("BLOCKED", record["coverage"]["gate_status"])
+        self.assertEqual("DOCTOR_COVERAGE_CORPUS_OUT_OF_SCOPE", record["coverage"]["gate_reason"])
 
     def test_doctor_rejects_symlinked_coverage_profile_surface(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_doctor_coverage_profile_symlink_") as tmpdir:
@@ -932,7 +1288,7 @@ class TruthRegressionTests(unittest.TestCase):
             corpus_path = project_root / "corpus.json"
             corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
             corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
-            prompt_dir = project_root / "prompts"
+            prompt_dir = artifact_root / "prompts"
             prompt_dir.mkdir(parents=True, exist_ok=True)
             (prompt_dir / "prompt_identity.txt").write_text("TASK-IDENTITY-001\n")
 
@@ -1097,6 +1453,42 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("PASS", record["gate_results"]["credential_surface"]["status"])
         self.assertIn("required credential env is present", record["gate_results"]["credential_surface"]["note"])
 
+    def test_doctor_rejects_credential_escape_outside_target_contour(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_credential_escape_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            target_root = project_root / "target_surface"
+            artifact_path = project_root / "artifacts" / "final_result.json"
+            outside_dir = tmp / "outside"
+            project_root.mkdir(parents=True, exist_ok=True)
+            target_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "artifacts").mkdir(parents=True, exist_ok=True)
+            outside_dir.mkdir(parents=True, exist_ok=True)
+            corpus_path = project_root / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+            (outside_dir / "credentials").write_text("aws_access_key_id = demo\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "SUPPORT_DOCTOR"
+            args.helper_ok = True
+            args.prompt_identity_ok = True
+            args.credential_env = ["AWS_SHARED_CREDENTIALS_FILE"]
+
+            previous_value = os.environ.get("AWS_SHARED_CREDENTIALS_FILE")
+            os.environ["AWS_SHARED_CREDENTIALS_FILE"] = str(outside_dir / "credentials")
+            try:
+                record = build_doctor_record(args)
+            finally:
+                if previous_value is None:
+                    os.environ.pop("AWS_SHARED_CREDENTIALS_FILE", None)
+                else:
+                    os.environ["AWS_SHARED_CREDENTIALS_FILE"] = previous_value
+
+        self.assertEqual("NOT_ACCEPTABLE_CREDENTIAL_SURFACE", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["credential_surface"]["status"])
+        self.assertIn("escapes the trusted target contour", record["gate_results"]["credential_surface"]["note"])
+
     def test_doctor_rejects_symlinked_helper_surface(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_doctor_helper_symlink_") as tmpdir:
             tmp = Path(tmpdir)
@@ -1226,6 +1618,362 @@ class TruthRegressionTests(unittest.TestCase):
 
         self.assertEqual("PASS", record["gate_results"]["helper_integrity"]["status"])
         self.assertIn("parses successfully", record["gate_results"]["helper_integrity"]["note"])
+
+    def test_doctor_rejects_helper_symlink_inside_symlinked_workspace(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_helper_inner_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            real_workspace = tmp / "real_workspace"
+            workspace_link = tmp / "workspace_link"
+            project_root = workspace_link / "project"
+            target_root = project_root / "target_surface"
+            artifact_root = project_root / "artifacts"
+            artifact_path = artifact_root / "final_result.json"
+            real_workspace.mkdir(parents=True, exist_ok=True)
+            workspace_link.symlink_to(real_workspace, target_is_directory=True)
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            corpus_path = project_root / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+            real_helper_root = project_root / "real_helpers"
+            helper_link_root = project_root / "helpers_link"
+            real_helper_root.mkdir(parents=True, exist_ok=True)
+            helper_link_root.symlink_to(real_helper_root, target_is_directory=True)
+            (real_helper_root / "helper.py").write_text("print('ok')\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "SUPPORT_DOCTOR"
+            args.clean_surface = False
+            args.artifact_viable = False
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+            args.helper_path = str(helper_link_root / "helper.py")
+
+            record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_HELPER_INTEGRITY", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["helper_integrity"]["status"])
+        self.assertIn("parent is a symlink", record["gate_results"]["helper_integrity"]["note"])
+
+    def test_doctor_rejects_helper_changed_during_validation(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_helper_toc_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            target_root = project_root / "target_surface"
+            artifact_root = project_root / "artifacts"
+            artifact_path = artifact_root / "final_result.json"
+            helper = project_root / "helpers" / "helper.py"
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            helper.parent.mkdir(parents=True, exist_ok=True)
+            helper.write_text("print('stable helper')\n")
+            corpus_path = project_root / "corpus.json"
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.doctor_level = "SUPPORT_DOCTOR"
+            args.clean_surface = True
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+            args.helper_path = str(helper)
+
+            original_run = synrail_doctor_v1.subprocess.run
+
+            def mutating_run(cmd: object, *run_args: object, **run_kwargs: object) -> subprocess.CompletedProcess:
+                if isinstance(cmd, list) and "py_compile" in cmd:
+                    helper.write_text("print('swapped helper')\n")
+                    return subprocess.CompletedProcess(cmd, 0, "", "")
+                return original_run(cmd, *run_args, **run_kwargs)
+
+            synrail_doctor_v1.subprocess.run = mutating_run
+            try:
+                record = build_doctor_record(args)
+            finally:
+                synrail_doctor_v1.subprocess.run = original_run
+
+        self.assertEqual("NOT_ACCEPTABLE_HELPER_INTEGRITY", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["helper_integrity"]["status"])
+        self.assertIn("changed during validation", record["gate_results"]["helper_integrity"]["note"])
+
+    def test_doctor_cli_rechecks_output_surface_before_write(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_output_toc_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside_root = tmp / "outside"
+            output_path = artifact_root / "doctor.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside_root.mkdir(parents=True, exist_ok=True)
+
+            violation = synrail_doctor_v1.path_surface_violation(
+                str(output_path),
+                field="output",
+                scope="artifact_root",
+                surface_label="output path",
+                expected_surface="a direct machine-readable artifact surface",
+                stop_at=project_root,
+                project_root=project_root,
+                artifact_root=artifact_root,
+            )
+            self.assertIsNone(violation)
+
+            output_path.symlink_to(outside_root / "doctor.json")
+            violation = synrail_doctor_v1.path_surface_violation(
+                str(output_path),
+                field="output",
+                scope="artifact_root",
+                surface_label="output path",
+                expected_surface="a direct machine-readable artifact surface",
+                stop_at=project_root,
+                project_root=project_root,
+                artifact_root=artifact_root,
+            )
+
+        self.assertIsNotNone(violation)
+        payload = violation.as_payload()
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--output", payload["path_arg"])
+        self.assertIn("symlink", payload["detail"])
+        self.assertFalse((outside_root / "doctor.json").exists())
+
+    def test_doctor_rejects_target_identity_changed_during_validation(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_target_identity_toc_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            target_root = project_root / "target_surface"
+            artifact_root = project_root / "artifacts"
+            artifact_path = artifact_root / "final_result.json"
+            corpus_path = project_root / "corpus.json"
+            identity_file = project_root / "target_identity.txt"
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+            identity_file.write_text("EXPECTED_SURFACE_001\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.clean_surface = True
+            args.artifact_viable = True
+            args.helper_ok = True
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+            args.target_identity_file = str(identity_file)
+            args.expected_target_identity = "EXPECTED_SURFACE_001"
+
+            original_read = synrail_doctor_v1.read_non_empty_text
+
+            def mutating_read(path: Path) -> str:
+                value = original_read(path)
+                identity_file.write_text("EXPECTED_SURFACE_001\nCHANGED\n")
+                return value
+
+            with patch("synrail_doctor_v1.read_non_empty_text", side_effect=mutating_read):
+                record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_BASELINE_IDENTITY", record["final_verdict"])
+        self.assertEqual("FAIL", record["gate_results"]["baseline_identity"]["status"])
+        self.assertIn("changed during validation", record["gate_results"]["baseline_identity"]["note"])
+
+    def test_doctor_rejects_coverage_corpus_changed_during_validation(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_coverage_corpus_toc_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            target_root = project_root / "target_surface"
+            artifact_root = project_root / "artifacts"
+            artifact_path = artifact_root / "final_result.json"
+            corpus_path = project_root / "corpus.json"
+            target_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            corpus = load_json(TOOLS_ROOT / "doctor_coverage_corpus_v0.json")
+            corpus_path.write_text(json.dumps(corpus, indent=2, ensure_ascii=True) + "\n")
+
+            args = doctor_args(corpus_file=corpus_path, target_path=target_root, artifact_path=artifact_path)
+            args.clean_surface = True
+            args.artifact_viable = True
+            args.helper_ok = True
+            args.credentials_ok = True
+            args.prompt_identity_ok = True
+
+            original_load_corpus = synrail_doctor_v1.load_coverage_corpus
+
+            def mutating_load_corpus(*load_args: object, **load_kwargs: object) -> tuple[dict, Path]:
+                payload, resolved = original_load_corpus(*load_args, **load_kwargs)
+                corpus_path.write_text(json.dumps({**payload, "measured_cases": []}, indent=2, ensure_ascii=True) + "\n")
+                return payload, resolved
+
+            with patch("synrail_doctor_v1.load_coverage_corpus", side_effect=mutating_load_corpus):
+                record = build_doctor_record(args)
+
+        self.assertEqual("NOT_ACCEPTABLE_DOCTOR_COVERAGE", record["final_verdict"])
+        self.assertEqual("BLOCKED", record["coverage"]["gate_status"])
+        self.assertEqual("DOCTOR_COVERAGE_CORPUS_CHANGED_DURING_VALIDATION", record["coverage"]["gate_reason"])
+
+    def test_doctor_cli_rechecks_state_surface_before_write(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_doctor_state_toc_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            outside_root = tmp / "outside"
+            state_path = artifact_root / "state.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            outside_root.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")), indent=2, ensure_ascii=True) + "\n")
+
+            violation = synrail_doctor_v1.path_surface_violation(
+                str(state_path),
+                field="state_file",
+                scope="artifact_root",
+                surface_label="state update path",
+                expected_surface="a direct machine-readable state surface",
+                stop_at=project_root,
+                project_root=project_root,
+                artifact_root=artifact_root,
+            )
+            self.assertIsNone(violation)
+
+            state_path.unlink()
+            state_path.symlink_to(outside_root / "state.json")
+            violation = synrail_doctor_v1.path_surface_violation(
+                str(state_path),
+                field="state_file",
+                scope="artifact_root",
+                surface_label="state update path",
+                expected_surface="a direct machine-readable state surface",
+                stop_at=project_root,
+                project_root=project_root,
+                artifact_root=artifact_root,
+            )
+
+            self.assertIsNotNone(violation)
+            payload = violation.as_payload()
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--state-file", payload["path_arg"])
+            self.assertIn("symlink", payload["detail"])
+            self.assertFalse((outside_root / "state.json").exists())
+            self.assertTrue(state_path.is_symlink())
+
+    def test_bundle_recheck_marks_changed_file_drift_during_recheck(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_changed_file_toc_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            changed_file = "tmp_recheck/app.py"
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": [changed_file],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": changed_file,
+                    "added_line": "import logging",
+                    "context_before": "from os import path",
+                    "context_after": "return logging",
+                    "verification_command": f"grep -n 'import logging' {changed_file}",
+                    "verification_result": "import logging",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": f"Workspace clean after updating only {changed_file} with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            args = bundle_args(final_result=final_result)
+            project_root = tmp / "recheck_project"
+            target = project_root / changed_file
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("import logging\n")
+
+            original_run = subprocess.run
+
+            def mutating_run(cmd: object, *run_args: object, **run_kwargs: object) -> subprocess.CompletedProcess:
+                if isinstance(cmd, list) and cmd[:2] == ["grep", "-n"]:
+                    target.write_text("import logging\nimport logging changed\n")
+                return original_run(cmd, *run_args, **run_kwargs)
+
+            with patch("synrail_bundle_v0.subprocess.run", side_effect=mutating_run):
+                bundle = build_bundle(args)
+                verdict = build_verdict(copy.deepcopy(state), bundle)
+
+            self.assertTrue(bundle["verification_recheck"]["executed"])
+            self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+            self.assertFalse(bundle["verification_recheck"]["matched"])
+            self.assertEqual("changed_file_changed_during_recheck", bundle["verification_recheck"]["skip_reason"])
+            self.assertEqual("VERIFICATION_RECHECK_FAILED", verdict["blocking_reason"])
+            self.assertEqual("REJECTED", verdict["closure_status"])
+            self.assertEqual("PROOF_BUNDLE_REPAIR", verdict["next_allowed_transition"])
+            self.assertEqual("import logging\n", bundle["verification_recheck"]["stdout_snippet"])
+            self.assertTrue(target.exists())
+
+    def test_bundle_recheck_marks_changed_file_symlink_swap_during_recheck(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_changed_file_symlink_swap_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            changed_file = "tmp_recheck/app.py"
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": [changed_file],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": changed_file,
+                    "added_line": "import logging",
+                    "context_before": "from os import path",
+                    "context_after": "return logging",
+                    "verification_command": f"grep -n 'import logging' {changed_file}",
+                    "verification_result": "import logging",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": f"Workspace clean after updating only {changed_file} with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+
+            args = bundle_args(final_result=final_result)
+            project_root = tmp / "recheck_project"
+            target = project_root / changed_file
+            outside = tmp / "outside.py"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("import logging\n")
+            outside.write_text("import logging\n")
+
+            original_run = subprocess.run
+
+            def mutating_run(cmd: object, *run_args: object, **run_kwargs: object) -> subprocess.CompletedProcess:
+                if isinstance(cmd, list) and cmd[:2] == ["grep", "-n"]:
+                    target.unlink()
+                    target.symlink_to(outside)
+                return original_run(cmd, *run_args, **run_kwargs)
+
+            with patch("synrail_bundle_v0.subprocess.run", side_effect=mutating_run):
+                bundle = build_bundle(args)
+                verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertTrue(bundle["verification_recheck"]["executed"])
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertFalse(bundle["verification_recheck"]["matched"])
+        self.assertEqual("changed_file_changed_during_recheck", bundle["verification_recheck"]["skip_reason"])
+        self.assertEqual("VERIFICATION_RECHECK_FAILED", verdict["blocking_reason"])
+        self.assertEqual("REJECTED", verdict["closure_status"])
 
     def test_doctor_rejects_symlinked_artifact_parent_surface(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_doctor_artifact_symlink_") as tmpdir:
@@ -2262,6 +3010,140 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("--report-file", payload["path_arg"])
         self.assertIn("escapes artifact root", payload["detail"])
 
+    def test_artifact_consistency_cli_rejects_symlinked_report_file_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_artifact_consistency_report_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            real_report = artifact_root / "real_report.json"
+            symlink_report = artifact_root / "report.json"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            real_report.write_text("{}\n")
+            symlink_report.symlink_to(real_report)
+            (artifact_root / "state.json").write_text(json.dumps(controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")), indent=2, ensure_ascii=True) + "\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_artifact_consistency_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--report-file",
+                    str(symlink_report),
+                    "--output",
+                    str(artifact_root / "artifact_consistency.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--report-file", payload["path_arg"])
+        self.assertIn("report file is a symlink", payload["detail"])
+
+    def test_artifact_consistency_cli_rejects_symlinked_report_file_parent_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_artifact_consistency_report_parent_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            real_reports = artifact_root / "real_reports"
+            symlink_reports = artifact_root / "reports"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            real_reports.mkdir(parents=True, exist_ok=True)
+            symlink_reports.symlink_to(real_reports, target_is_directory=True)
+            (real_reports / "report.json").write_text("{}\n")
+            (artifact_root / "state.json").write_text(json.dumps(controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")), indent=2, ensure_ascii=True) + "\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_artifact_consistency_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--report-file",
+                    str(symlink_reports / "report.json"),
+                    "--output",
+                    str(artifact_root / "artifact_consistency.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--report-file", payload["path_arg"])
+        self.assertIn("report file parent is a symlink", payload["detail"])
+
+    def test_artifact_consistency_cli_rejects_symlinked_report_file_ancestor_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_artifact_consistency_report_ancestor_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            project_root = tmp / "project"
+            artifact_root = project_root / ".synrail"
+            real_reports = artifact_root / "real_reports"
+            linked_reports = artifact_root / "linked_reports"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            real_reports.mkdir(parents=True, exist_ok=True)
+            linked_reports.symlink_to(real_reports, target_is_directory=True)
+            nested = linked_reports / "nested"
+            nested.mkdir(parents=True, exist_ok=True)
+            (nested / "report.json").write_text("{}\n")
+            (artifact_root / "state.json").write_text(json.dumps(controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")), indent=2, ensure_ascii=True) + "\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_artifact_consistency_v0.py"),
+                    "--state-file",
+                    str(artifact_root / "state.json"),
+                    "--report-file",
+                    str(nested / "report.json"),
+                    "--output",
+                    str(artifact_root / "artifact_consistency.json"),
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+        self.assertEqual("--report-file", payload["path_arg"])
+        self.assertIn("report file ancestor is a symlink", payload["detail"])
+
+    def test_checkpoint_restore_blocks_symlinked_target_artifact_ancestor(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_checkpoint_target_ancestor_symlink_") as tmpdir:
+            tmp = Path(tmpdir)
+            target_root = tmp / "restore_target"
+            real_parent = target_root / "real_parent"
+            linked_parent = target_root / "linked_parent"
+            target_root.mkdir(parents=True, exist_ok=True)
+            real_parent.mkdir(parents=True, exist_ok=True)
+            linked_parent.symlink_to(real_parent, target_is_directory=True)
+            record = {
+                "artifact_manifest": [
+                    {
+                        "artifact_id": "state",
+                        "path": "linked_parent/nested/state.json",
+                    }
+                ]
+            }
+
+            errors = restore_target_path_errors(record, target_root)
+
+        self.assertEqual(["restore target path ancestor is a symlink: state"], errors)
+
     def test_continuation_arbiter_cli_rejects_repair_receipt_escape_surface(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_continuation_arbiter_receipt_escape_") as tmpdir:
             tmp = Path(tmpdir)
@@ -3289,6 +4171,943 @@ class TruthRegressionTests(unittest.TestCase):
             verdict["narrow_next_safe_step"],
         )
         self.assertIn("artifact_modified_outside_workflow", verdict["closure_warnings"])
+
+    def test_closure_rejects_post_bundle_final_result_drift_via_freshness_binding(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_closure_freshness_drift_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                    "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
+                    "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
+                    "verification_command": "grep -Fno 'VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}' tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            args = bundle_args(final_result=final_result)
+            bundle = build_bundle(args)
+            bundle_path = tmp / "bundle.json"
+            bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
+            state_path = tmp / "state.json"
+            state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+            state["_state_file"] = str(state_path)
+            bundle["_bundle_file"] = str(bundle_path)
+
+            final_result.write_text(final_result.read_text().replace("PROVEN", "ALREADY_SATISFIED"))
+            verdict = build_verdict(copy.deepcopy(state), copy.deepcopy(bundle))
+
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("CLOSURE_FRESHNESS_FAILED", verdict["blocking_reason"])
+        self.assertIn("closure_freshness_binding_mismatch", verdict["closure_warnings"])
+
+    def test_closure_certificate_carries_bound_hashes_for_live_closure(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_closure_certificate_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                    "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
+                    "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
+                    "verification_command": "grep -Fno 'VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}' tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            args = bundle_args(final_result=final_result)
+            bundle = build_bundle(args)
+            bundle_path = tmp / "bundle.json"
+            bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
+            state_path = tmp / "state.json"
+            state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+            state["_state_file"] = str(state_path)
+            bundle["_bundle_file"] = str(bundle_path)
+            verdict = build_verdict(copy.deepcopy(state), copy.deepcopy(bundle))
+            certificate = build_closure_certificate(
+                state=copy.deepcopy(state),
+                bundle=copy.deepcopy(bundle),
+                verdict=verdict,
+            )
+            expected_bundle_sha256 = hashlib.sha256(bundle_path.read_bytes()).hexdigest()
+            expected_state_sha256 = hashlib.sha256(state_path.read_bytes()).hexdigest()
+            expected_final_result_sha256 = hashlib.sha256(final_result.read_bytes()).hexdigest()
+
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+        self.assertEqual("closure_certificate_v0", certificate["schema_version"])
+        self.assertEqual(expected_bundle_sha256, certificate["bundle_sha256"])
+        self.assertEqual(expected_state_sha256, certificate["state_sha256"])
+        self.assertEqual(expected_final_result_sha256, certificate["final_result_sha256"])
+        self.assertEqual("task-001", certificate["task_identity"])
+        self.assertEqual(state["run_id"], certificate["final_result_request_id"])
+        self.assertEqual(state.get("start_timestamp_utc", ""), certificate["start_timestamp_utc"])
+        self.assertEqual(int(state.get("check_count", 0)), certificate["check_count"])
+        self.assertEqual(0, certificate["repair_attempt_count"])
+        self.assertEqual(0, certificate["repair_max_attempts"])
+        self.assertTrue(certificate["closure_timestamp_utc"])
+        self.assertTrue(certificate["closure_freshness_binding"]["live_recheck"])
+        self.assertTrue(certificate["closure_freshness_binding"]["all_hashes_match"])
+
+    def test_persisted_closure_certificate_tracks_updated_accepted_state(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_persisted_closure_certificate_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                    "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
+                    "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
+                    "verification_command": "grep -Fno 'VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}' tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            args = bundle_args(final_result=final_result)
+            bundle = build_bundle(args)
+            bundle_path = tmp / "bundle.json"
+            bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
+            state_path = tmp / "state.json"
+            state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+
+            persisted_state = controlled_state(load_json(state_path))
+            persisted_state["closure"]["status"] = "ACCEPTED"
+            persisted_state["closure"]["blocking_reason"] = ""
+            persisted_state["closure"]["next_allowed_transition"] = "NONE"
+            persisted_state["closure"]["narrow_next_safe_step"] = "NONE"
+            persisted_state["closure"]["missing_sections"] = []
+            persisted_state["state"] = "CLOSURE_ACCEPTED"
+            persisted_state["closure_timestamp_utc"] = "2026-05-02T07:00:00Z"
+            state_path.write_text(json.dumps(persisted_state, indent=2, ensure_ascii=True) + "\n")
+
+            verdict = build_verdict(
+                copy.deepcopy(state) | {"_state_file": str(state_path)},
+                copy.deepcopy(bundle) | {"_bundle_file": str(bundle_path)},
+            )
+            certificate_path = tmp / "closure_certificate.json"
+            certificate = persist_closure_certificate(
+                certificate_path,
+                state=persisted_state,
+                state_path=state_path,
+                bundle=bundle,
+                bundle_path=bundle_path,
+                verdict=verdict,
+            )
+            expected_state_sha256 = hashlib.sha256(state_path.read_bytes()).hexdigest()
+
+        self.assertEqual("ACCEPTED", certificate["closure_status"])
+        self.assertEqual(expected_state_sha256, certificate["state_sha256"])
+        self.assertEqual("2026-05-02T07:00:00Z", certificate["closure_timestamp_utc"])
+        self.assertEqual("task-001", certificate["task_identity"])
+
+    def test_canonical_run_artifact_carries_closure_certificate(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        report = {
+            "result": "ACCEPTED",
+            "stopping_stage": "accepted",
+            "reason": "NONE",
+            "doctor_verdict": "PASS",
+            "resume_applied": False,
+            "resume_from_state": "",
+            "repair_handoff_applied": False,
+            "repair_handoff_from_state": "",
+            "repair_handoff_required_inputs": [],
+            "missing_continuation_inputs": [],
+            "selection_applied": False,
+            "selected_mode": "",
+            "selected_with_preparation": False,
+            "preparation_applied": False,
+            "preparation_ready_for_closure": False,
+            "bundle_status": "COMPLETE",
+            "closure_status": "ACCEPTED",
+            "refresh_applied": False,
+            "comparison_applied": False,
+            "blockers": [],
+            "dominant_blocker": "NONE",
+            "resulting_state": state["state"],
+            "next_safe_step": state["next_safe_step"],
+        }
+        worked = {
+            "resulting_state": state["state"],
+            "current_closure_status": state["closure"]["status"],
+            "next_safe_step": state["next_safe_step"],
+        }
+        certificate = {
+            "schema_version": "closure_certificate_v0",
+            "run_id": state["run_id"],
+            "closure_status": "ACCEPTED",
+            "bundle_sha256": "bundle-hash",
+            "state_sha256": "state-hash",
+        }
+
+        run_artifact = build_canonical_run_artifact(
+            state=state,
+            report=report,
+            worked=worked,
+            repair_packet=None,
+            closure_certificate=certificate,
+        )
+
+        self.assertEqual("closure_certificate_v0", run_artifact["closure_certificate"]["schema_version"])
+        self.assertEqual(state["run_id"], run_artifact["closure_certificate"]["run_id"])
+        self.assertEqual("bundle-hash", run_artifact["closure_certificate"]["bundle_sha256"])
+
+    def test_artifact_consistency_records_closure_certificate(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        certificate = {
+            "schema_version": "closure_certificate_v0",
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "closure_status": state["closure"]["status"],
+        }
+
+        record = build_artifact_consistency_record(
+            state=state,
+            closure_certificate=certificate,
+        )
+
+        self.assertIn("closure_certificate", record["checked_artifacts"])
+        self.assertEqual("KEEP_DERIVED_ARTIFACT", record["artifact_actions"]["closure_certificate"])
+        self.assertEqual("CONSISTENT", record["result"])
+
+    def test_artifact_consistency_marks_stale_closure_certificate(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        certificate = {
+            "schema_version": "closure_certificate_v0",
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "closure_status": "REJECTED",
+        }
+
+        record = build_artifact_consistency_record(
+            state=state,
+            closure_certificate=certificate,
+        )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("closure_certificate", record["stale_artifact_ids"])
+        self.assertEqual("REEMIT_FROM_STATE", record["artifact_actions"]["closure_certificate"])
+
+    def test_artifact_consistency_marks_stale_run_with_embedded_closure_certificate(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        run_artifact = {
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "resulting_state": {"state": state["state"]},
+            "closure_certificate": {
+                "schema_version": "closure_certificate_v0",
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "closure_status": "REJECTED",
+            },
+        }
+
+        record = build_artifact_consistency_record(
+            state=state,
+            run_artifact=run_artifact,
+        )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("run", record["stale_artifact_ids"])
+        self.assertEqual("REEMIT_FROM_STATE", record["artifact_actions"]["run"])
+
+    def test_artifact_consistency_marks_stale_closure_certificate_hashes(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_closure_certificate_hash_drift_") as tmpdir:
+            tmp = Path(tmpdir)
+            state["start_timestamp_utc"] = "2026-05-02T06:00:00Z"
+            state["check_count"] = 3
+            state["closure_timestamp_utc"] = "2026-05-02T07:00:00Z"
+            state_path = tmp / "state.json"
+            state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+            final_result = tmp / "final_result.json"
+            final_result.write_text(json.dumps({"status": "PROVEN"}, indent=2, ensure_ascii=True) + "\n")
+            bundle_path = tmp / "bundle.json"
+            bundle = {
+                "run_id": state["run_id"],
+                "artifact_identity": {"task_identity": "task-001"},
+                "repair_packet": {"repair_attempt_count": 2, "repair_max_attempts": 5},
+                "closure_freshness_binding": {
+                    "schema_version": "closure_freshness_binding_v0",
+                    "bound_at_utc": "2026-05-02T07:00:00Z",
+                    "artifacts": [
+                        {
+                            "artifact_id": "final_result",
+                            "path": str(final_result),
+                            "required": True,
+                            "present": True,
+                            "sha256": hashlib.sha256(final_result.read_bytes()).hexdigest(),
+                        }
+                    ],
+                },
+            }
+            bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
+            repair_packet = {
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "from_state": state["state"],
+                "repair_termination": {"attempt_count": 2, "max_attempts": 5},
+            }
+            certificate = {
+                "schema_version": "closure_certificate_v0",
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "closure_status": state["closure"]["status"],
+                "state_sha256": "stale-state-hash",
+                "bundle_sha256": "stale-bundle-hash",
+                "final_result_sha256": "stale-final-hash",
+                "task_identity": "wrong-task",
+                "start_timestamp_utc": "stale-start-time",
+                "check_count": 9,
+                "closure_timestamp_utc": "stale-closure-time",
+                "repair_attempt_count": 7,
+                "repair_max_attempts": 8,
+            }
+
+            record = build_artifact_consistency_record(
+                state=state,
+                state_file=state_path,
+                bundle_file=bundle_path,
+                bundle=bundle,
+                closure_certificate=certificate,
+                repair_packet=repair_packet,
+            )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("closure_certificate", record["stale_artifact_ids"])
+        self.assertEqual("REEMIT_FROM_STATE", record["artifact_actions"]["closure_certificate"])
+        self.assertIn("closure_certificate refers to stale final_result_sha256 hash", "\n".join(record["failure_reasons"]))
+        self.assertIn("closure_certificate refers to stale task_identity snapshot", record["failure_reasons"])
+        self.assertIn("closure_certificate refers to stale start_timestamp_utc snapshot", record["failure_reasons"])
+        self.assertIn("closure_certificate refers to stale check_count snapshot", record["failure_reasons"])
+        self.assertIn("closure_certificate refers to stale closure_timestamp_utc snapshot", record["failure_reasons"])
+        self.assertIn("closure_certificate refers to stale repair_attempt_count snapshot", record["failure_reasons"])
+        self.assertIn("closure_certificate refers to stale repair_max_attempts snapshot", record["failure_reasons"])
+
+    def test_artifact_consistency_marks_stale_repair_counter_snapshots(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        repair_packet = {
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "from_state": state["state"],
+            "repair_termination": {"attempt_count": 2, "max_attempts": 5},
+        }
+        report = {
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "resulting_state": state["state"],
+            "repair_attempt_count": 1,
+            "repair_max_attempts": 4,
+        }
+        orchestration = {
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "resulting_state": state["state"],
+            "repair_packet": {"repair_attempt_count": 1, "repair_max_attempts": 4},
+            "repair_history": {"attempt_count": 1, "max_attempts": 4},
+        }
+        run_artifact = {
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "resulting_state": {"state": state["state"]},
+            "closure_certificate": {
+                "schema_version": "closure_certificate_v0",
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "closure_status": state["closure"]["status"],
+            },
+            "repair_packet": {"repair_attempt_count": 1, "repair_max_attempts": 4},
+            "repair_history": {"attempt_count": 1, "max_attempts": 4},
+        }
+
+        record = build_artifact_consistency_record(
+            state=state,
+            report=report,
+            orchestration=orchestration,
+            run_artifact=run_artifact,
+            repair_packet=repair_packet,
+        )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("report", record["stale_artifact_ids"])
+        self.assertIn("orchestration", record["stale_artifact_ids"])
+        self.assertIn("run", record["stale_artifact_ids"])
+        self.assertIn("report refers to stale repair_attempt_count snapshot", record["failure_reasons"])
+        self.assertIn("orchestration refers to stale repair_packet.repair_attempt_count snapshot", record["failure_reasons"])
+        self.assertIn("run refers to stale repair_history.attempt_count snapshot", record["failure_reasons"])
+        self.assertEqual("REEMIT_FROM_STATE", record["artifact_actions"]["report"])
+        self.assertEqual("REEMIT_FROM_STATE", record["artifact_actions"]["orchestration"])
+        self.assertEqual("REEMIT_FROM_STATE", record["artifact_actions"]["run"])
+
+    def test_artifact_consistency_marks_stale_run_embedded_closure_timing_snapshots(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        state["start_timestamp_utc"] = "2026-05-02T06:00:00Z"
+        state["check_count"] = 4
+        run_artifact = {
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "resulting_state": {"state": state["state"]},
+            "closure_certificate": {
+                "schema_version": "closure_certificate_v0",
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "closure_status": state["closure"]["status"],
+                "start_timestamp_utc": "2026-05-02T05:59:59Z",
+                "check_count": 2,
+            },
+        }
+
+        record = build_artifact_consistency_record(
+            state=state,
+            run_artifact=run_artifact,
+        )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("run", record["stale_artifact_ids"])
+        self.assertIn("run refers to stale start_timestamp_utc snapshot", record["failure_reasons"])
+        self.assertIn("run refers to stale check_count snapshot", record["failure_reasons"])
+
+    def test_artifact_consistency_records_matching_repair_counter_snapshots(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        repair_packet = {
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "from_state": state["state"],
+            "repair_termination": {"attempt_count": 2, "max_attempts": 5},
+        }
+        report = {
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "resulting_state": state["state"],
+            "repair_attempt_count": 2,
+            "repair_max_attempts": 5,
+        }
+        orchestration = {
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "resulting_state": state["state"],
+            "repair_packet": {"repair_attempt_count": 2, "repair_max_attempts": 5},
+            "repair_history": {"attempt_count": 2, "max_attempts": 5},
+        }
+        run_artifact = {
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "resulting_state": {"state": state["state"]},
+            "closure_certificate": {
+                "schema_version": "closure_certificate_v0",
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "closure_status": state["closure"]["status"],
+                "start_timestamp_utc": state.get("start_timestamp_utc", ""),
+                "check_count": int(state.get("check_count", 0)),
+                "repair_attempt_count": 2,
+                "repair_max_attempts": 5,
+            },
+            "repair_packet": {"repair_attempt_count": 2, "repair_max_attempts": 5},
+            "repair_history": {"attempt_count": 2, "max_attempts": 5},
+        }
+
+        record = build_artifact_consistency_record(
+            state=state,
+            report=report,
+            orchestration=orchestration,
+            run_artifact=run_artifact,
+            repair_packet=repair_packet,
+        )
+
+        self.assertEqual("CONSISTENT", record["result"])
+        self.assertNotIn("report", record["stale_artifact_ids"])
+        self.assertNotIn("orchestration", record["stale_artifact_ids"])
+        self.assertNotIn("run", record["stale_artifact_ids"])
+        self.assertEqual("KEEP_DERIVED_ARTIFACT", record["artifact_actions"]["report"])
+        self.assertEqual("KEEP_DERIVED_ARTIFACT", record["artifact_actions"]["orchestration"])
+        self.assertEqual("KEEP_DERIVED_ARTIFACT", record["artifact_actions"]["run"])
+        self.assertEqual("KEEP_DERIVED_ARTIFACT", record["artifact_actions"]["repair_packet"])
+
+    def test_phase_closure_rebinds_bundle_and_certificate_to_live_final_result_snapshot(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        state["state"] = "PROOF_BUNDLE_COMPLETE"
+        state["closure"]["status"] = "OPEN"
+        state["closure"]["blocking_reason"] = ""
+        state["closure"]["next_allowed_transition"] = "READY"
+        state["closure"]["narrow_next_safe_step"] = "decide closure"
+
+        with tempfile.TemporaryDirectory(prefix="synrail_phase_closure_drift_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                    "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
+                    "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
+                    "verification_command": "grep -Fno 'VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}' tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            state_path = tmp / "state.json"
+            state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+            bundle_path = tmp / "bundle.json"
+            bundle = build_bundle(bundle_args(final_result=final_result))
+            bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
+            closure_path = tmp / "closure.json"
+            closure_path.write_text("{}\n")
+            certificate_path = tmp / "closure_certificate.json"
+            report_path = tmp / "report.json"
+            doctor_output = tmp / "doctor.json"
+            doctor_output.write_text("{}\n")
+            final_result.write_text(final_result.read_text().replace("PROVEN", "ALREADY_SATISFIED"))
+
+            args = argparse.Namespace(
+                state_file=str(state_path),
+                bundle_output=str(bundle_path),
+                closure_output=str(closure_path),
+                closure_certificate_output=str(certificate_path),
+                acceptance_validation_output="",
+                project_profile_file="",
+                acceptance_criteria_file="",
+                final_result=str(final_result),
+                task_class="proof_sensitive_fix",
+                run_id=state["run_id"],
+                readback=str(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "readback.txt"),
+                scenario_proof=str(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "scenario.txt"),
+                baseline_identity="trusted_clean",
+                execution_surface_identity="clean-clone",
+                prompt_identity="prompt-001",
+                task_identity="task-001",
+                doctor_output=str(doctor_output),
+                report_output=str(report_path),
+                refresh_output="",
+                refresh_event_type="",
+                refresh_doctor_status="",
+                refresh_use_bundle=False,
+                observability_output="",
+                artifact_consistency_output="",
+                output="",
+                worked_artifact_output="",
+                run_artifact_output="",
+                repair_packet_output="",
+                repair_handoff_output="",
+                repair_receipt_output="",
+                plan_output="",
+                preparation_receipt_output="",
+            )
+            ctx = OrchestrationContext(state=state, state_path=state_path, doctor_record={"final_verdict": "ACCEPTABLE_READY"}, bundle=bundle)
+
+            with patch("synrail_spine_v0.run_python_capture", return_value=(0, "")):
+                code = _phase_closure(ctx, args)
+
+            rebased_bundle = load_json(bundle_path)
+            certificate = load_json(certificate_path)
+            closure_payload = load_json(closure_path)
+
+        self.assertIsNone(code)
+        self.assertEqual("ALREADY_SATISFIED", rebased_bundle["final_result"]["normalized_status"])
+        self.assertEqual("task-001", certificate["task_identity"])
+        self.assertEqual(rebased_bundle["verification_recheck"], certificate["verification_recheck"])
+        self.assertEqual(rebased_bundle["closure_freshness_binding"]["bound_at_utc"], certificate["closure_freshness_binding"]["bound_at_utc"])
+        self.assertEqual(
+            rebased_bundle["closure_freshness_binding"]["artifacts"][0]["sha256"],
+            certificate["final_result_sha256"],
+        )
+        self.assertTrue(certificate["closure_timestamp_utc"])
+        self.assertEqual(certificate["closure_status"], ctx.state["closure"]["status"])
+        self.assertEqual(certificate["closure_status"], closure_payload["closure_status"])
+        self.assertEqual(certificate["blocking_reason"], closure_payload["blocking_reason"])
+        self.assertEqual(certificate["blocking_reason"], ctx.state["closure"]["blocking_reason"])
+
+    def test_phase_closure_rejects_post_accept_final_result_drift_before_persisting_certificate(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        state["state"] = "PROOF_BUNDLE_COMPLETE"
+        state["closure"]["status"] = "CLAIMED_NOT_ACCEPTED"
+        state["closure"]["blocking_reason"] = ""
+        state["closure"]["next_allowed_transition"] = ""
+        state["closure"]["narrow_next_safe_step"] = ""
+        state["closure"]["missing_sections"] = []
+        state["next_safe_step"] = "decide closure"
+        state["closure_timestamp_utc"] = ""
+
+        with tempfile.TemporaryDirectory(prefix="synrail_phase_closure_atomic_drift_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                    "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
+                    "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
+                    "verification_command": "grep -Fno 'VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}' tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            state_path = tmp / "state.json"
+            state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+            bundle_path = tmp / "bundle.json"
+            bundle = build_bundle(bundle_args(final_result=final_result))
+            bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
+            closure_path = tmp / "closure.json"
+            closure_path.write_text("{}\n")
+            certificate_path = tmp / "closure_certificate.json"
+            report_path = tmp / "report.json"
+            doctor_output = tmp / "doctor.json"
+            doctor_output.write_text("{}\n")
+
+            args = argparse.Namespace(
+                state_file=str(state_path),
+                bundle_output=str(bundle_path),
+                closure_output=str(closure_path),
+                closure_certificate_output=str(certificate_path),
+                acceptance_validation_output="",
+                project_profile_file="",
+                acceptance_criteria_file="",
+                final_result=str(final_result),
+                task_class="proof_sensitive_fix",
+                run_id=state["run_id"],
+                readback=str(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "readback.txt"),
+                scenario_proof=str(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "scenario.txt"),
+                baseline_identity="trusted_clean",
+                execution_surface_identity="clean-clone",
+                prompt_identity="prompt-001",
+                task_identity="task-001",
+                doctor_output=str(doctor_output),
+                report_output=str(report_path),
+                refresh_output="",
+                refresh_event_type="",
+                refresh_doctor_status="",
+                refresh_use_bundle=False,
+                observability_output="",
+                artifact_consistency_output="",
+                output="",
+                worked_artifact_output="",
+                run_artifact_output="",
+                repair_packet_output="",
+                repair_handoff_output="",
+                repair_receipt_output="",
+                plan_output="",
+                preparation_receipt_output="",
+                doctor_run_id=state["run_id"],
+                doctor_level="strict",
+                target_path="tools/reference/synrail_bundle_v0.py",
+                target_classification="repo_file",
+                intended_run_class="bounded_change",
+                bootstrap_provenance_ok=True,
+                bootstrap_provenance_reason="CONTROLLED_BOOTSTRAP_CONFIRMED",
+                mode_selection_receipt="",
+                preparation_artifact_root="",
+                refresh_recovery_status="",
+                refresh_reverification_complete=False,
+                refresh_use_closure=False,
+                comparison_output="",
+                comparison_input="",
+                repair_packet_file="",
+                repair_receipt_file="",
+            )
+            ctx = OrchestrationContext(state=state, state_path=state_path, doctor_record={"final_verdict": "ACCEPTABLE_READY"}, bundle=bundle)
+
+            original_save_state = synrail_spine_v0.save_state
+            mutated = False
+
+            def mutate_after_accept(path: Path, payload: dict) -> None:
+                nonlocal mutated
+                original_save_state(path, payload)
+                if not mutated and payload.get("closure", {}).get("status") == "ACCEPTED":
+                    final_result.write_text(final_result.read_text().replace("\"status\": \"PROVEN\"", "\"status\": \"ALREADY_SATISFIED\""))
+                    mutated = True
+
+            with patch("synrail_spine_v0.run_python_capture", return_value=(0, "")), patch("synrail_spine_v0.save_state", side_effect=mutate_after_accept), patch("synrail_spine_v0.finalize_runtime_outputs", return_value=None):
+                code = _phase_closure(ctx, args)
+
+            certificate = load_json(certificate_path)
+            closure_payload = load_json(closure_path)
+            persisted_state = load_json(state_path)
+
+        self.assertEqual(0, code)
+        self.assertEqual("REJECTED", closure_payload["closure_status"])
+        self.assertEqual("CLOSURE_FRESHNESS_FAILED", closure_payload["blocking_reason"])
+        self.assertEqual("REJECTED", certificate["closure_status"])
+        self.assertEqual("CLOSURE_FRESHNESS_FAILED", certificate["blocking_reason"])
+        self.assertEqual("REJECTED", persisted_state["closure"]["status"])
+        self.assertEqual("CLOSURE_REJECTED", persisted_state["state"])
+        self.assertEqual("", persisted_state["closure_timestamp_utc"])
+
+    def test_artifact_consistency_marks_stale_run_embedded_closure_certificate_hashes(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_run_embedded_certificate_hash_drift_") as tmpdir:
+            tmp = Path(tmpdir)
+            state_path = tmp / "state.json"
+            state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+            bundle_path = tmp / "bundle.json"
+            bundle_path.write_text(json.dumps({"run_id": state["run_id"]}, indent=2, ensure_ascii=True) + "\n")
+            run_artifact = {
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "resulting_state": {"state": state["state"]},
+                "closure_certificate": {
+                    "schema_version": "closure_certificate_v0",
+                    "run_id": state["run_id"],
+                    "task_class": state["task_class"],
+                    "closure_status": state["closure"]["status"],
+                    "state_sha256": "stale-state-hash",
+                    "bundle_sha256": "stale-bundle-hash",
+                },
+            }
+
+            record = build_artifact_consistency_record(
+                state=state,
+                state_file=state_path,
+                bundle_file=bundle_path,
+                run_artifact=run_artifact,
+            )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("run", record["stale_artifact_ids"])
+        self.assertEqual("REEMIT_FROM_STATE", record["artifact_actions"]["run"])
+
+    def test_artifact_consistency_marks_stale_closure_certificate_verification_recheck(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        bundle = {
+            "verification_recheck": {"executed": True, "matched": True},
+            "closure_freshness_binding": {"schema_version": "closure_freshness_binding_v0", "artifacts": []},
+        }
+        certificate = {
+            "schema_version": "closure_certificate_v0",
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "closure_status": state["closure"]["status"],
+            "verification_recheck": {"executed": True, "matched": False},
+        }
+
+        record = build_artifact_consistency_record(
+            state=state,
+            bundle=bundle,
+            closure_certificate=certificate,
+        )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("closure_certificate", record["stale_artifact_ids"])
+        self.assertEqual("REEMIT_FROM_STATE", record["artifact_actions"]["closure_certificate"])
+
+    def test_artifact_consistency_marks_stale_when_expected_hash_exists_but_source_file_is_missing(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        certificate = {
+            "schema_version": "closure_certificate_v0",
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "closure_status": state["closure"]["status"],
+            "state_sha256": "expected-state-hash",
+        }
+
+        record = build_artifact_consistency_record(
+            state=state,
+            state_file=Path("/tmp/definitely-missing-synrail-state.json"),
+            closure_certificate=certificate,
+        )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("closure_certificate", record["stale_artifact_ids"])
+        self.assertIn(
+            "closure_certificate refers to missing source artifact for state_sha256",
+            record["failure_reasons"],
+        )
+
+    def test_artifact_consistency_rejects_one_sided_closure_certificate_verification_recheck(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        bundle = {
+            "verification_recheck": {"executed": True, "matched": True},
+            "closure_freshness_binding": {"schema_version": "closure_freshness_binding_v0", "artifacts": []},
+        }
+        certificate = {
+            "schema_version": "closure_certificate_v0",
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "closure_status": state["closure"]["status"],
+        }
+
+        record = build_artifact_consistency_record(
+            state=state,
+            bundle=bundle,
+            closure_certificate=certificate,
+        )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("closure_certificate", record["stale_artifact_ids"])
+        self.assertIn(
+            "closure_certificate refers to stale verification_recheck snapshot",
+            record["failure_reasons"],
+        )
+
+    def test_artifact_consistency_rejects_one_sided_run_embedded_freshness_binding(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        run_artifact = {
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "resulting_state": {"state": state["state"]},
+            "closure_certificate": {
+                "schema_version": "closure_certificate_v0",
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "closure_status": state["closure"]["status"],
+                "closure_freshness_binding": {"present": True, "artifacts": []},
+            },
+        }
+
+        record = build_artifact_consistency_record(
+            state=state,
+            bundle={},
+            run_artifact=run_artifact,
+        )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("run", record["stale_artifact_ids"])
+        self.assertIn("run refers to stale closure_freshness_binding snapshot", record["failure_reasons"])
+
+    def test_artifact_consistency_marks_stale_closure_certificate_freshness_binding(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        bundle = {
+            "verification_recheck": {"executed": True, "matched": True},
+            "closure_freshness_binding": {
+                "schema_version": "closure_freshness_binding_v0",
+                "bound_at_utc": "2026-05-01T00:00:00Z",
+                "artifacts": [],
+            },
+        }
+        certificate = {
+            "schema_version": "closure_certificate_v0",
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "closure_status": state["closure"]["status"],
+            "closure_freshness_binding": {
+                "present": True,
+                "schema_version": "closure_freshness_binding_v0",
+                "bound_at_utc": "stale-binding",
+                "all_required_present": True,
+                "all_hashes_match": False,
+                "artifacts": [],
+                "live_recheck": False,
+            },
+        }
+
+        record = build_artifact_consistency_record(
+            state=state,
+            bundle=bundle,
+            closure_certificate=certificate,
+        )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("closure_certificate", record["stale_artifact_ids"])
+        self.assertEqual("REEMIT_FROM_STATE", record["artifact_actions"]["closure_certificate"])
+
+    def test_artifact_consistency_marks_stale_run_embedded_closure_certificate_verification_recheck(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+        bundle = {
+            "verification_recheck": {"executed": True, "matched": True},
+            "closure_freshness_binding": {"schema_version": "closure_freshness_binding_v0", "artifacts": []},
+        }
+        run_artifact = {
+            "run_id": state["run_id"],
+            "task_class": state["task_class"],
+            "resulting_state": {"state": state["state"]},
+            "closure_certificate": {
+                "schema_version": "closure_certificate_v0",
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "closure_status": state["closure"]["status"],
+                "verification_recheck": {"executed": True, "matched": False},
+            },
+        }
+
+        record = build_artifact_consistency_record(
+            state=state,
+            bundle=bundle,
+            run_artifact=run_artifact,
+        )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("run", record["stale_artifact_ids"])
+        self.assertEqual("REEMIT_FROM_STATE", record["artifact_actions"]["run"])
 
     def test_bundle_recheck_matches_allowed_command(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
@@ -4656,6 +6475,157 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertIn("diff_provenance", bundle["semantically_insufficient_sections"])
         self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
 
+    def test_git_diff_rejects_multi_file_change_when_patch_covers_only_one_named_file(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_multi_file_partial_patch_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "change_disposition": "modified",
+                "summary": "Claimed two files but only included a patch and provenance for one.",
+                "modified_files": ["core/router.py", "tools/cinematic.py"],
+                "git_diff": (
+                    "diff --git a/core/router.py b/core/router.py\n"
+                    "--- a/core/router.py\n"
+                    "+++ b/core/router.py\n"
+                    "@@ -1,2 +1,3 @@\n"
+                    " from tools.logging import get_logger\n"
+                    "+from tools.cinematic import generate_cinematic_zoom\n"
+                    " ROUTES = {'/zoom': handle_zoom_request}\n"
+                ),
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "core/router.py",
+                    "added_line": "from tools.cinematic import generate_cinematic_zoom",
+                    "context_before": "from tools.logging import get_logger",
+                    "context_after": "ROUTES = {'/zoom': handle_zoom_request}",
+                    "verification_command": "grep -n 'generate_cinematic_zoom' core/router.py",
+                    "verification_result": "2:from tools.cinematic import generate_cinematic_zoom",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating core/router.py and tools/cinematic.py.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text("Changed surfaces: core/router.py and tools/cinematic.py\n")
+            scenario.write_text(
+                "Scenario: local zoom path check\n"
+                "Command: grep -n 'generate_cinematic_zoom' core/router.py\n"
+                "Observed: router import present\n"
+                "Status: PASSED\n"
+            )
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
+        self.assertEqual(["core/router.py"], bundle["diff_provenance"]["patch_paths"])
+        self.assertFalse(bundle["diff_provenance"]["patch_covers_modified_files"])
+        self.assertFalse(bundle["diff_provenance"]["semantically_sufficient"])
+        self.assertIn("diff_provenance", bundle["semantically_insufficient_sections"])
+        self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
+
+    def test_git_diff_accepts_multi_file_change_when_patch_covers_every_named_file(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_multi_file_full_patch_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+            project_root = tmp / "recheck_project"
+            (project_root / "core").mkdir(parents=True, exist_ok=True)
+            (project_root / "tools").mkdir(parents=True, exist_ok=True)
+            (project_root / "core" / "router.py").write_text(
+                "from tools.logging import get_logger\n"
+                "from tools.cinematic import generate_cinematic_zoom\n"
+                "ROUTES = {'/zoom': handle_zoom_request}\n"
+            )
+            (project_root / "tools" / "cinematic.py").write_text(
+                "def generate_cinematic_zoom() -> str:\n"
+                "    return \"zoom\"\n"
+            )
+
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "change_disposition": "modified",
+                "summary": "Updated two files and included patch coverage for both.",
+                "modified_files": ["core/router.py", "tools/cinematic.py"],
+                "git_diff": (
+                    "diff --git a/core/router.py b/core/router.py\n"
+                    "--- a/core/router.py\n"
+                    "+++ b/core/router.py\n"
+                    "@@ -1,2 +1,3 @@\n"
+                    " from tools.logging import get_logger\n"
+                    "+from tools.cinematic import generate_cinematic_zoom\n"
+                    " ROUTES = {'/zoom': handle_zoom_request}\n"
+                    "diff --git a/tools/cinematic.py b/tools/cinematic.py\n"
+                    "--- a/tools/cinematic.py\n"
+                    "+++ b/tools/cinematic.py\n"
+                    "@@ -0,0 +1,2 @@\n"
+                    "+def generate_cinematic_zoom() -> str:\n"
+                    "+    return \"zoom\"\n"
+                ),
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "core/router.py",
+                    "added_line": "from tools.cinematic import generate_cinematic_zoom",
+                    "context_before": "from tools.logging import get_logger",
+                    "context_after": "ROUTES = {'/zoom': handle_zoom_request}",
+                    "verification_command": "grep -n 'generate_cinematic_zoom' core/router.py",
+                    "verification_result": "2:from tools.cinematic import generate_cinematic_zoom",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating core/router.py and tools/cinematic.py.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            readback.write_text("Changed surfaces: core/router.py and tools/cinematic.py\n")
+            scenario.write_text(
+                "Scenario: local zoom path check\n"
+                "Command: grep -n 'generate_cinematic_zoom' core/router.py\n"
+                "Observed: router import present\n"
+                "Status: PASSED\n"
+            )
+
+            args = bundle_args(final_result=final_result)
+            args.readback = str(readback)
+            args.scenario_proof = str(scenario)
+            args.state_file = str(write_project_profile_for_recheck(final_result.parent, project_root=project_root))
+            bundle = build_bundle(args)
+
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("COMPLETE", bundle["status"])
+        self.assertEqual(["core/router.py", "tools/cinematic.py"], bundle["diff_provenance"]["patch_paths"])
+        self.assertTrue(bundle["diff_provenance"]["patch_covers_modified_files"])
+        self.assertTrue(bundle["diff_provenance"]["semantically_sufficient"])
+        self.assertTrue(bundle["verification_corroboration"]["runtime_verification_sufficient"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
     def test_structured_diff_provenance_accepts_multi_file_change_with_per_file_records(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
 
@@ -4896,6 +6866,217 @@ class TruthRegressionTests(unittest.TestCase):
             bundle["semantic_next_safe_step"],
         )
         self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
+
+
+class TestDedicatedProofAttackPack(unittest.TestCase):
+    """Named P2 bundle-level attack pack for hostile proof attempts."""
+
+    def _state(self) -> dict:
+        return controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+    def _base_final_result(self, state: dict) -> dict:
+        return {
+            "request_id": state["run_id"],
+            "status": "PROVEN",
+            "change_disposition": "modified",
+            "summary": "Added a logging import to src/app.py with direct structured provenance.",
+            "modified_files": ["src/app.py"],
+            "git_diff": "",
+            "diff_provenance": {
+                "method": "direct_file_observation",
+                "changed_file": "src/app.py",
+                "added_line": "import logging",
+                "context_after": "def run() -> None:",
+                "verification_command": "grep -n 'import logging' src/app.py",
+                "verification_result": "1:import logging",
+            },
+            "artifact_identity": {
+                "baseline_identity": "trusted_clean",
+                "execution_surface_identity": "clean-clone",
+                "prompt_identity": "prompt-001",
+                "task_identity": "task-001",
+            },
+            "cleanup_status": {
+                "success": True,
+                "summary": "Workspace clean after updating only src/app.py with no unintended changes.",
+            },
+        }
+
+    def _valid_readback_text(self) -> str:
+        return (
+            "Changed surface: src/app.py\n"
+            "Observed: src/app.py now begins with the literal line import logging above def run().\n"
+        )
+
+    def _valid_scenario_text(self) -> str:
+        return (
+            "Scenario: verify logging import\n"
+            "Command: grep -n 'import logging' src/app.py\n"
+            "Observed: 1:import logging\n"
+            "Status: PASSED\n"
+        )
+
+    def _build_bundle_with_supporting_artifacts(
+        self,
+        final_payload: dict,
+        *,
+        readback_text: str | None = None,
+        scenario_text: str | None = None,
+        project_files: dict[str, str] | None = None,
+    ) -> dict:
+        with tempfile.TemporaryDirectory(prefix="synrail_dedicated_attack_pack_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            final_result.write_text(json.dumps(final_payload, indent=2, ensure_ascii=True) + "\n")
+
+            readback = tmp / "readback.txt"
+            scenario = tmp / "scenario.txt"
+            project_root = tmp / "recheck_project"
+
+            if project_files:
+                for relative_path, content in project_files.items():
+                    target = project_root / relative_path
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(content)
+
+            args = bundle_args(final_result=final_result)
+            if project_files:
+                args.state_file = str(write_project_profile_for_recheck(final_result.parent, project_root=project_root))
+
+            if readback_text is None:
+                args.readback = str(tmp / "missing_readback.txt")
+            else:
+                readback.write_text(readback_text)
+                args.readback = str(readback)
+
+            if scenario_text is None:
+                args.scenario_proof = str(tmp / "missing_scenario.txt")
+            else:
+                scenario.write_text(scenario_text)
+                args.scenario_proof = str(scenario)
+
+            return build_bundle(args)
+
+    def test_bundle_rejects_structured_provenance_without_verification_fields(self) -> None:
+        state = self._state()
+        final_payload = self._base_final_result(state)
+        final_payload["diff_provenance"].pop("verification_command")
+        final_payload["diff_provenance"]["verification_result"] = ""
+
+        bundle = self._build_bundle_with_supporting_artifacts(
+            final_payload,
+            readback_text=self._valid_readback_text(),
+            scenario_text=self._valid_scenario_text(),
+        )
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("PARTIAL", bundle["status"])
+        self.assertEqual("NOT_EVALUATED", bundle["semantic_status"])
+        self.assertFalse(bundle["diff_provenance"]["verification_command_present"])
+        self.assertFalse(bundle["diff_provenance"]["structured_record_sufficient"])
+        self.assertFalse(bundle["verification_corroboration"]["runtime_verification_sufficient"])
+        self.assertIn("diff_provenance", bundle["missing_sections"])
+        self.assertEqual("MISSING_PROOF_SECTIONS", verdict["blocking_reason"])
+
+    def test_bundle_rejects_structured_provenance_without_changed_file(self) -> None:
+        state = self._state()
+        final_payload = self._base_final_result(state)
+        final_payload["diff_provenance"]["changed_file"] = ""
+
+        bundle = self._build_bundle_with_supporting_artifacts(
+            final_payload,
+            readback_text=self._valid_readback_text(),
+            scenario_text=self._valid_scenario_text(),
+        )
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
+        self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
+        self.assertFalse(bundle["diff_provenance"]["structured_record_sufficient"])
+        self.assertFalse(bundle["diff_provenance"]["semantically_sufficient"])
+        self.assertIn("diff_provenance", bundle["semantically_insufficient_sections"])
+        self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
+
+    def test_bundle_rejects_fabricated_scenario_output_without_runtime_evidence(self) -> None:
+        state = self._state()
+        final_payload = self._base_final_result(state)
+        final_payload["diff_provenance"]["verification_command"] = ""
+        final_payload["diff_provenance"]["verification_result"] = ""
+        scenario_text = (
+            "Scenario: verify logging import\n"
+            "Command: grep -n 'import logging' src/app.py\n"
+            "Observed: grep confirms logging import in src/app.py\n"
+            "Status: PASSED\n"
+        )
+
+        bundle = self._build_bundle_with_supporting_artifacts(
+            final_payload,
+            readback_text=self._valid_readback_text(),
+            scenario_text=scenario_text,
+        )
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("PARTIAL", bundle["status"])
+        self.assertEqual("NOT_EVALUATED", bundle["semantic_status"])
+        self.assertFalse(bundle["verification_corroboration"]["runtime_verification_sufficient"])
+        self.assertFalse(bundle["scenario_proof"]["content_semantically_sufficient"])
+        self.assertFalse(bundle["scenario_proof"]["waived_by_runtime_corroboration"])
+        self.assertIn("diff_provenance", bundle["missing_sections"])
+        self.assertEqual("MISSING_PROOF_SECTIONS", verdict["blocking_reason"])
+
+    def test_bundle_rejects_already_satisfied_without_real_observation(self) -> None:
+        state = self._state()
+        final_payload = self._base_final_result(state)
+        final_payload["status"] = "ALREADY_SATISFIED"
+        final_payload["change_disposition"] = "already_satisfied"
+        final_payload["summary"] = "Claimed the requested import already existed before edits."
+        final_payload["modified_files"] = []
+        final_payload["diff_provenance"] = {
+            "method": "direct_file_observation",
+            "changed_file": "src/app.py",
+            "verification_command": "grep -n 'import logging' src/app.py",
+            "verification_result": "1:import logging",
+            "provenance_note": "Claimed no-op observation without naming the observed line.",
+        }
+
+        bundle = self._build_bundle_with_supporting_artifacts(
+            final_payload,
+            readback_text=self._valid_readback_text(),
+            scenario_text=self._valid_scenario_text(),
+        )
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
+        self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
+        self.assertFalse(bundle["diff_provenance"]["structured_record_sufficient"])
+        self.assertFalse(bundle["diff_provenance"]["semantically_sufficient"])
+        self.assertIn("diff_provenance", bundle["semantically_insufficient_sections"])
+        self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
+
+    def test_bundle_accepts_dedicated_attack_pack_positive_control(self) -> None:
+        state = self._state()
+        final_payload = self._base_final_result(state)
+        readback_text = self._valid_readback_text()
+        scenario_text = self._valid_scenario_text()
+        project_files = {
+            "src/app.py": "import logging\ndef run() -> None:\n    pass\n",
+        }
+
+        bundle = self._build_bundle_with_supporting_artifacts(
+            final_payload,
+            readback_text=readback_text,
+            scenario_text=scenario_text,
+            project_files=project_files,
+        )
+        verdict = build_verdict(copy.deepcopy(state), bundle)
+
+        self.assertEqual("COMPLETE", bundle["status"])
+        self.assertEqual("SUFFICIENT", bundle["semantic_status"])
+        self.assertTrue(bundle["diff_provenance"]["structured_record_sufficient"])
+        self.assertTrue(bundle["verification_corroboration"]["runtime_verification_sufficient"])
+        self.assertTrue(bundle["verification_recheck"]["executed"])
+        self.assertTrue(bundle["verification_recheck"]["matched"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
 
 
 class TestAntiNarrativeGuards(unittest.TestCase):

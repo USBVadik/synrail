@@ -186,6 +186,7 @@ def render_local_workflow_policy(
                 repo_native_commands["status"],
                 repo_native_commands["start"],
                 repo_native_commands["check"],
+                f"{repo_native_alpha_command} runtime-helper",
                 "```",
                 "",
                 "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
@@ -241,6 +242,38 @@ def render_policy_markdown(
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
 ) -> str:
+    if agent_type == "gemini":
+        return render_local_workflow_policy(
+            heading="# Gemini Workflow",
+            intro="Use Synrail as the default local control path for this repo.",
+            artifact_root=artifact_root,
+            command=command,
+            fallback_command=fallback_command,
+            repo_native_alpha_command=repo_native_alpha_command,
+            workspace_isolation_note=workspace_isolation_note,
+            prefer_runtime_helper=prefer_runtime_helper,
+            first_command_heading="## First Command",
+            first_command_intro="For every new user task, run Synrail first so you can see the current governed state:",
+            show_cli_kernel_note=True,
+            start_intro="If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
+            include_gemini_orientation_note=True,
+        )
+    if agent_type == "claude":
+        return render_local_workflow_policy(
+            heading="# Claude Workflow",
+            intro="Use Synrail as the default local control path for this repo.",
+            artifact_root=artifact_root,
+            command=command,
+            fallback_command=fallback_command,
+            repo_native_alpha_command=repo_native_alpha_command,
+            workspace_isolation_note=workspace_isolation_note,
+            prefer_runtime_helper=prefer_runtime_helper,
+            first_command_heading="## First Command",
+            first_command_intro="For every new user task, run Synrail first so you can see the current governed state:",
+            show_cli_kernel_note=True,
+            start_intro="If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
+        )
+
     commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
     note_lines = policy_workspace_note_lines(
         workspace_isolation_note=workspace_isolation_note,
@@ -258,138 +291,72 @@ def render_policy_markdown(
         else None
     )
 
-    if agent_type == "agents":
-        lines = [
-            "# Agent Workflow",
-            "",
-            "This repo uses Synrail to keep one bounded local change inside one controlled run.",
-            "",
-            "## First Step On Every New Task",
-            "",
-            "Run Synrail before deciding what to do next. It is a CLI control kernel, not a background daemon.",
-            "```bash",
-            commands["status"],
-            "```",
-            "",
-        ]
-        lines.extend(orientation_lines)
-        if repo_native_commands:
-            lines.extend(
-                [
-                    "## Repo-Local Fallback",
-                    "",
-                    "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
-                    "",
-                    "```bash",
-                    repo_native_commands["status"],
-                    repo_native_commands["start"],
-                    repo_native_commands["check"],
-                    "```",
-                    "",
-                    "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
-                    "",
-                ]
-            )
-        lines.extend([
-            "## Before You Edit",
-            "",
-            "1. If Synrail shows that no controlled run is active, start one before mutating code:",
-            "```bash",
-            commands["start"],
-            "```",
-            "",
-            "2. Keep the change local and bounded to the stated task.",
-            f"3. Run the local commands needed to verify the change honestly, then edit `{artifact_root}/final_result.json` in place as the work becomes real. Only materialize readback or scenario proof if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
-            "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
-            f"5. {policy_no_git_proof_line(artifact_root)}",
-            "",
-            "## Before You Claim Success",
-            "",
-            "```bash",
-            commands["check"],
-            "```",
-            "",
-            "If Synrail is non-green, fix only what check tells you to fix, then rerun:",
-            "",
-            "```bash",
-            commands["check"],
-            "```",
-            "",
-            *policy_non_accepted_status_lines(commands["check"]),
-            "## Important",
-            "",
-            "- Do not skip Synrail and try to legalize edits afterward.",
-            "- Do not claim success without real local verification.",
-            "- If `synrail` is unavailable from PATH here, try the checkout-local fallbacks first instead of reverse-engineering the entrypoint.",
-            "- Only report the control tool missing after the local checkout fallbacks fail too.",
-            "",
-        ])
-    else:
-        title = "Gemini" if agent_type == "gemini" else "Claude"
-        lines = [
-            f"# {title} Workflow",
-            "",
-            "Use Synrail as the default local control path for this repo.",
-            "",
-            "## First Command",
-            "",
-            "For every new user task, run Synrail first so you can see the current governed state:",
-            "",
-            "```bash",
-            commands["status"],
-            "```",
-            "",
-            "Synrail is a CLI control kernel, not a background daemon.",
-            "",
-        ]
-        lines.extend(orientation_lines)
-        if agent_type == "gemini":
-            lines.extend(policy_gemini_orientation_lines())
-        if repo_native_commands:
-            lines.extend(
-                [
-                    "## Repo-Local Fallback",
-                    "",
-                    "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
-                    "",
-                    "```bash",
-                    repo_native_commands["status"],
-                    repo_native_commands["start"],
-                    repo_native_commands["check"],
-                    "```",
-                    "",
-                    "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
-                    "",
-                ]
-            )
-        lines.extend([
-            "## Start",
-            "",
-            "If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
-            "",
-            "```bash",
-            commands["start"],
-            "```",
-            "",
-            "## Work",
-            "",
-            "- Keep edits bounded and local to this repo.",
-            f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
-            "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
-            f"- {policy_no_git_proof_line(artifact_root)}",
-            "",
-            "## Finish",
-            "",
-            "```bash",
-            commands["check"],
-            "```",
-            "",
-            f"If non-green, fix only what check tells you to fix, then rerun `{commands['check']}`.",
-            "",
-            "Do not bypass Synrail and do not claim success without real local verification.",
-            "",
-            *policy_non_accepted_status_lines(commands["check"]),
-        ])
+    lines = [
+        "# Agent Workflow",
+        "",
+        "This repo uses Synrail to keep one bounded local change inside one controlled run.",
+        "",
+        "## First Step On Every New Task",
+        "",
+        "Run Synrail before deciding what to do next. It is a CLI control kernel, not a background daemon.",
+        "```bash",
+        commands["status"],
+        "```",
+        "",
+    ]
+    lines.extend(orientation_lines)
+    if repo_native_commands:
+        lines.extend(
+            [
+                "## Repo-Local Fallback",
+                "",
+                "If this host blocks checkout-local wrappers behind approval or permission gates, use the repo-local alpha entrypoint directly:",
+                "",
+                "```bash",
+                repo_native_commands["status"],
+                repo_native_commands["start"],
+                repo_native_commands["check"],
+                f"{repo_native_alpha_command} runtime-helper",
+                "```",
+                "",
+                "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
+                "",
+            ]
+        )
+    lines.extend([
+        "## Before You Edit",
+        "",
+        "1. If Synrail shows that no controlled run is active, start one before mutating code:",
+        "```bash",
+        commands["start"],
+        "```",
+        "",
+        "2. Keep the change local and bounded to the stated task.",
+        f"3. Run the local commands needed to verify the change honestly, then edit `{artifact_root}/final_result.json` in place as the work becomes real. Only materialize readback or scenario proof if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+        "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
+        f"5. {policy_no_git_proof_line(artifact_root)}",
+        "",
+        "## Before You Claim Success",
+        "",
+        "```bash",
+        commands["check"],
+        "```",
+        "",
+        "If Synrail is non-green, fix only what check tells you to fix, then rerun:",
+        "",
+        "```bash",
+        commands["check"],
+        "```",
+        "",
+        *policy_non_accepted_status_lines(commands["check"]),
+        "## Important",
+        "",
+        "- Do not skip Synrail and try to legalize edits afterward.",
+        "- Do not claim success without real local verification.",
+        "- If `synrail` is unavailable from PATH here, try the checkout-local fallbacks first instead of reverse-engineering the entrypoint.",
+        "- Only report the control tool missing after the local checkout fallbacks fail too.",
+        "",
+    ])
 
     lines.extend(portability_lines)
     lines.extend(note_lines)
@@ -483,6 +450,69 @@ def render_agent_policy_block(
         show_cli_kernel_note=False,
         start_intro="If Synrail shows that no controlled run is active, start one:",
         finish_intro="Before claiming success, run:",
+    )
+
+
+def render_agents_policy_block(
+    *,
+    artifact_root: str,
+    command: str = "synrail",
+    fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
+    return render_agent_policy_block(
+        title="Synrail Local Workflow",
+        intro="This repo uses Synrail to keep one bounded local change inside one controlled run.",
+        artifact_root=artifact_root,
+        command=command,
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+    )
+
+
+def render_gemini_policy_block(
+    *,
+    artifact_root: str,
+    command: str = "synrail",
+    fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
+    return render_agent_policy_block(
+        title="Synrail Local Workflow",
+        intro="Use Synrail as the default local control path for this repo.",
+        artifact_root=artifact_root,
+        command=command,
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+    )
+
+
+def render_claude_policy_block(
+    *,
+    artifact_root: str,
+    command: str = "synrail",
+    fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
+    return render_agent_policy_block(
+        title="Synrail Local Workflow",
+        intro="Use Synrail as the default local control path for this repo.",
+        artifact_root=artifact_root,
+        command=command,
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
     )
 
 

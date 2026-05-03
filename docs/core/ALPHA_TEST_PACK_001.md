@@ -43,6 +43,8 @@ synrail start --artifact-root "$ARTIFACT_ROOT" --project-root "$PROJECT_ROOT" --
 # do this now: strengthen final_result.json first, then run synrail check
 # or use Wow Scenario A below to see the false-success block
 synrail check --artifact-root "$ARTIFACT_ROOT"
+# if you need a small UI/runtime verification path for a rendered or route-facing change:
+# synrail runtime-helper
 # optional standalone bounded prompt after a non-green check:
 # synrail repair-step --artifact-root "$ARTIFACT_ROOT"
 synrail telemetry export --artifact-root "$ARTIFACT_ROOT"

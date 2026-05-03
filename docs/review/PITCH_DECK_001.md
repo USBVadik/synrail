@@ -66,10 +66,11 @@ Current contour:
 1. `synrail start`
 2. strengthen `final_result.json` first and keep `readback.txt` plus `scenario_proof.txt` fallback-only unless `synrail check` later names one
 3. `synrail check`
-4. if non-green: fix only the named gap and rerun `synrail check`; when refresh invalidation is known, the default summary now points only at the stale obligation class
-5. if a standalone bounded repair prompt helps: `synrail repair-step`
-6. if restore point exists and returning is safer: `synrail restore`
-7. if needed: `synrail telemetry export` or `synrail bug-packet`
+4. if the change touches rendered UI, a page template, or a server-side route handler and you want lightweight local runtime evidence: `synrail runtime-helper`
+5. if non-green: fix only the named gap and rerun `synrail check`; when refresh invalidation is known, the default summary now points only at the stale obligation class
+6. use `synrail repair-step` only if a standalone bounded repair prompt is actually helpful
+7. if restore point exists and returning is safer: `synrail restore --preview`, then `synrail restore` if it is still the right move
+8. if needed: `synrail telemetry export` or `synrail bug-packet`
 
 ## Slide 7 — Core architecture
 

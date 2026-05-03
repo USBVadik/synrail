@@ -169,6 +169,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Repo-native status: `python3 alpha.py`")
         print('Repo-native start: `python3 alpha.py start "Describe the bounded local change."`')
         print("Repo-native check: `python3 alpha.py check`")
+        print("Repo-native runtime helper: `python3 alpha.py runtime-helper`")
     print("If you already have `synrail` on PATH, you can use `synrail` instead.")
     return 0
 

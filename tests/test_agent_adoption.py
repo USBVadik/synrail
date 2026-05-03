@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import os
 import subprocess
 import sys
@@ -21,10 +23,15 @@ TOOLS_ROOT = REPO_ROOT / "tools" / "reference"
 if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
+from synrail_agent_adoption_v0 import render_claude_policy_block, render_claude_policy_markdown, render_gemini_policy_block, render_gemini_policy_markdown, render_local_workflow_policy
 from synrail_cli_v0 import (
+    cmd_check,
+    cmd_init_agent,
+    cmd_init_ci,
     cmd_install_agent_files,
     preferred_synrail_command,
     preferred_synrail_fallback_command,
+    runtime_helper_text,
 )
 
 
@@ -124,6 +131,181 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("approval or permission wall", claude)
             self.assertIn("Repo-Local Fallback", claude)
             self.assertIn("python3 alpha.py check", claude)
+
+    def test_init_agent_writes_only_requested_single_agent_file(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_agent_single_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            result = self.run_alpha(
+                "init-agent",
+                "--agent",
+                "claude",
+                "--project-root",
+                str(project_root),
+                "--artifact-root",
+                ".synrail",
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("Agent onboarding is ready for claude.", result.stdout)
+            self.assertIn("CLAUDE.md: written", result.stdout)
+            self.assertNotIn("AGENTS.md:", result.stdout)
+            self.assertNotIn("GEMINI.md:", result.stdout)
+            self.assertFalse((project_root / "AGENTS.md").exists())
+            self.assertFalse((project_root / "GEMINI.md").exists())
+            self.assertTrue((project_root / "CLAUDE.md").exists())
+            claude = (project_root / "CLAUDE.md").read_text()
+            self.assertIn("Use Synrail as the default local control path", claude)
+            self.assertIn("python3 alpha.py check", claude)
+
+    def test_init_agent_routes_codex_and_cursor_to_full_agent_wiring(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_agent_alias_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            codex = self.run_alpha(
+                "init-agent",
+                "--agent",
+                "codex",
+                "--project-root",
+                str(project_root),
+                "--artifact-root",
+                ".synrail",
+            )
+            self.assertEqual(0, codex.returncode, codex.stdout + codex.stderr)
+            self.assertIn("Agent adoption files are ready.", codex.stdout)
+            self.assertTrue((project_root / "AGENTS.md").exists())
+            self.assertTrue((project_root / "GEMINI.md").exists())
+            self.assertTrue((project_root / "CLAUDE.md").exists())
+
+            cursor_root = Path(tmpdir) / "cursor_project"
+            cursor_root.mkdir(parents=True, exist_ok=True)
+            (cursor_root / "alpha.py").write_text("print('stub')\n")
+            cursor = self.run_alpha(
+                "init-agent",
+                "--agent",
+                "cursor",
+                "--project-root",
+                str(cursor_root),
+                "--artifact-root",
+                ".synrail",
+            )
+            self.assertEqual(0, cursor.returncode, cursor.stdout + cursor.stderr)
+            self.assertIn("Agent adoption files are ready.", cursor.stdout)
+            self.assertTrue((cursor_root / "AGENTS.md").exists())
+            self.assertTrue((cursor_root / "GEMINI.md").exists())
+            self.assertTrue((cursor_root / "CLAUDE.md").exists())
+
+    def test_cmd_init_agent_can_append_existing_single_agent_file(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_agent_append_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
+            (project_root / "GEMINI.md").write_text("# Existing Gemini Context\n\nKeep this repo focused on product work.\n")
+
+            stdout = StringIO()
+            args = mock.Mock(
+                agent="gemini",
+                project_root=str(project_root),
+                artifact_root=".synrail",
+                force=False,
+            )
+            with redirect_stdout(stdout):
+                rc = cmd_init_agent(args)
+            self.assertEqual(0, rc)
+            rendered = stdout.getvalue()
+            self.assertIn("Agent onboarding is ready for gemini.", rendered)
+            self.assertIn("GEMINI.md: appended", rendered)
+            self.assertNotIn("AGENTS.md:", rendered)
+            gemini = (project_root / "GEMINI.md").read_text()
+            self.assertIn("# Existing Gemini Context", gemini)
+            self.assertIn("<!-- SYNRAIL_GEMINI_START -->", gemini)
+            self.assertIn("Use Synrail as the default local control path", gemini)
+
+            agents = (project_root / "AGENTS.md")
+            claude = (project_root / "CLAUDE.md")
+            self.assertFalse(agents.exists())
+            self.assertFalse(claude.exists())
+            self.assertIn("run `synrail` in this repo", rendered)
+
+    def test_init_ci_writes_bounded_github_action_adapter(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_ci_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            result = self.run_alpha(
+                "init-ci",
+                "--project-root",
+                str(project_root),
+                "--artifact-root",
+                ".synrail",
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("GitHub Action CI adapter is ready.", result.stdout)
+            self.assertIn("Adapter scope: bounded check-only GitHub composite action", result.stdout)
+            self.assertIn("Workflow call site: uses: ./.github/actions/synrail-check", result.stdout)
+            self.assertIn("Invocation path: python3 alpha.py check --artifact-root \"${{ inputs.artifact-root }}\"", result.stdout)
+
+            action_file = project_root / ".github" / "actions" / "synrail-check" / "action.yml"
+            self.assertTrue(action_file.exists())
+            action = action_file.read_text()
+            self.assertIn("name: Synrail check", action)
+            self.assertIn("using: composite", action)
+            self.assertIn("python3 alpha.py check --artifact-root \"${{ inputs.artifact-root }}\"", action)
+            self.assertNotIn("start", action)
+            self.assertNotIn("restore", action)
+
+    def test_cmd_init_ci_blocks_replacement_without_force(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_ci_block_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            action_dir = project_root / ".github" / "actions" / "synrail-check"
+            action_dir.mkdir(parents=True, exist_ok=True)
+            action_file = action_dir / "action.yml"
+            action_file.write_text("name: Existing adapter\n")
+
+            stdout = StringIO()
+            args = mock.Mock(
+                project_root=str(project_root),
+                artifact_root=".synrail",
+                force=False,
+            )
+            with redirect_stdout(stdout):
+                rc = cmd_init_ci(args)
+            self.assertEqual(2, rc)
+            rendered = stdout.getvalue()
+            self.assertIn("GitHub Action CI adapter already exists with different contents.", rendered)
+            self.assertIn("rerun with --force", rendered)
+            self.assertEqual("name: Existing adapter\n", action_file.read_text())
+
+    def test_cmd_init_ci_force_replaces_existing_adapter_with_backup(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_ci_force_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            action_dir = project_root / ".github" / "actions" / "synrail-check"
+            action_dir.mkdir(parents=True, exist_ok=True)
+            action_file = action_dir / "action.yml"
+            action_file.write_text("name: Existing adapter\n")
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            stdout = StringIO()
+            args = mock.Mock(
+                project_root=str(project_root),
+                artifact_root=".synrail",
+                force=True,
+            )
+            with redirect_stdout(stdout):
+                rc = cmd_init_ci(args)
+            self.assertEqual(0, rc)
+            rendered = stdout.getvalue()
+            self.assertIn("GitHub Action CI adapter is ready.", rendered)
+            self.assertIn("Adapter backup:", rendered)
+            self.assertIn("What to do next: commit the refreshed adapter", rendered)
+            self.assertIn("python3 alpha.py check --artifact-root \"${{ inputs.artifact-root }}\"", action_file.read_text())
+            backups = list(action_dir.glob("action.yml.synrail.bak.*"))
+            self.assertEqual(1, len(backups))
+            self.assertEqual("name: Existing adapter\n", backups[0].read_text())
 
     def test_prefers_repo_portable_command_when_path_points_elsewhere(self) -> None:
         with mock.patch("synrail_cli_v0.sys.argv", ["/opt/synrail/.venv/bin/synrail"]), mock.patch(
@@ -282,6 +464,7 @@ class AgentAdoptionTests(unittest.TestCase):
             project_root = parent_root / "project"
             (parent_root / ".git").mkdir(parents=True, exist_ok=True)
             (project_root / "templates").mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
 
             result = self.run_alpha(
                 "install-agent-files",
@@ -295,6 +478,7 @@ class AgentAdoptionTests(unittest.TestCase):
             claude = (project_root / "CLAUDE.md").read_text()
             self.assertIn("Parent git repo detected above the project root", claude)
             self.assertIn("runtime-helper", claude)
+            self.assertIn("python3 alpha.py runtime-helper", claude)
             self.assertIn("Keep repo instructions portable: prefer `synrail`", claude)
 
     def test_install_agent_files_surfaces_machine_fallback_without_committing_it_into_commands(self) -> None:
@@ -325,6 +509,266 @@ class AgentAdoptionTests(unittest.TestCase):
                 gemini,
             )
             self.assertNotIn("/opt/synrail/.venv/bin/synrail start", gemini)
+
+    def test_gemini_and_claude_policy_markdown_match_shared_local_workflow_renderer(self) -> None:
+        common_kwargs = {
+            "artifact_root": ".synrail",
+            "command": "synrail",
+            "fallback_command": "./.venv/bin/synrail",
+            "repo_native_alpha_command": "python3 alpha.py",
+            "workspace_isolation_note": "Parent git repo detected above the project root.",
+            "prefer_runtime_helper": True,
+        }
+
+        self.assertEqual(
+            render_local_workflow_policy(
+                heading="# Gemini Workflow",
+                intro="Use Synrail as the default local control path for this repo.",
+                first_command_heading="## First Command",
+                first_command_intro="For every new user task, run Synrail first so you can see the current governed state:",
+                show_cli_kernel_note=True,
+                start_intro="If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
+                include_gemini_orientation_note=True,
+                **common_kwargs,
+            ),
+            render_gemini_policy_markdown(**common_kwargs),
+        )
+        self.assertEqual(
+            render_local_workflow_policy(
+                heading="# Claude Workflow",
+                intro="Use Synrail as the default local control path for this repo.",
+                first_command_heading="## First Command",
+                first_command_intro="For every new user task, run Synrail first so you can see the current governed state:",
+                show_cli_kernel_note=True,
+                start_intro="If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
+                **common_kwargs,
+            ),
+            render_claude_policy_markdown(**common_kwargs),
+        )
+
+    def test_gemini_and_claude_policy_blocks_use_dedicated_helpers_without_drift(self) -> None:
+        common_kwargs = {
+            "artifact_root": ".synrail",
+            "command": "synrail",
+            "fallback_command": "./.venv/bin/synrail",
+            "repo_native_alpha_command": "python3 alpha.py",
+            "workspace_isolation_note": "Parent git repo detected above the project root.",
+            "prefer_runtime_helper": True,
+        }
+
+        self.assertEqual(
+            render_local_workflow_policy(
+                heading="## Synrail Local Workflow",
+                intro="Use Synrail as the default local control path for this repo.",
+                first_command_heading=None,
+                first_command_intro="First command for every new task:",
+                show_cli_kernel_note=False,
+                start_intro="If Synrail shows that no controlled run is active, start one:",
+                finish_intro="Before claiming success, run:",
+                **common_kwargs,
+            ),
+            render_gemini_policy_block(**common_kwargs),
+        )
+        self.assertEqual(
+            render_local_workflow_policy(
+                heading="## Synrail Local Workflow",
+                intro="Use Synrail as the default local control path for this repo.",
+                first_command_heading=None,
+                first_command_intro="First command for every new task:",
+                show_cli_kernel_note=False,
+                start_intro="If Synrail shows that no controlled run is active, start one:",
+                finish_intro="Before claiming success, run:",
+                **common_kwargs,
+            ),
+            render_claude_policy_block(**common_kwargs),
+        )
+
+    def test_check_guidance_surfaces_runtime_helper_for_runtime_evidence_projects(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_check_runtime_guidance_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            (artifact_root / "state.json").write_text(
+                json.dumps(
+                    {
+                        "run_id": "RUN-123",
+                        "task_class": "bounded_change",
+                        "state": "CLAIMED_NOT_ACCEPTED",
+                        "next_safe_step": "attest target surface",
+                        "check_count": 0,
+                        "proof_bundle": {
+                            "status": "MISSING",
+                            "missing_sections": [],
+                            "structural_status": "MISSING",
+                            "semantic_status": "MISSING",
+                            "semantically_insufficient_sections": [],
+                            "semantic_next_safe_step": "",
+                            "artifact_integrity_warning": False,
+                        },
+                        "integrity": {
+                            "status": "UNKNOWN",
+                            "exact_task_identity_ok": True,
+                            "bootstrap_provenance_ok": True,
+                            "bootstrap_provenance_reason": "CONTROLLED_BOOTSTRAP_CONFIRMED",
+                        },
+                        "closure": {
+                            "status": "CLAIMED_NOT_ACCEPTED",
+                            "blocking_reason": "",
+                            "next_allowed_transition": "CHECK",
+                            "narrow_next_safe_step": "",
+                            "missing_sections": [],
+                        },
+                    },
+                    ensure_ascii=True,
+                )
+                + "\n"
+            )
+            (artifact_root / "bootstrap.json").write_text(
+                json.dumps(
+                    {
+                        "task_identity": "Guide the proof path instead of asking me to invent it.",
+                        "prompt_identity": "prompt-123",
+                        "target_path": "tests/test_agent_adoption.py",
+                        "target_classification": "file",
+                        "baseline_identity": "autodetected_python_baseline",
+                        "execution_surface_identity": "autodetected_python_worktree",
+                        "intended_run_class": "bounded_change",
+                    },
+                    ensure_ascii=True,
+                )
+                + "\n"
+            )
+            (artifact_root / "proof_request.json").write_text(
+                json.dumps(
+                    {
+                        "preferred_artifacts": {
+                            "final_result": ".synrail/final_result.json",
+                        }
+                    },
+                    ensure_ascii=True,
+                )
+                + "\n"
+            )
+            (artifact_root / "task_identity.txt").write_text("Guide the proof path instead of asking me to invent it.\n")
+            (artifact_root / "prompt_identity.txt").write_text("prompt-123\n")
+            (artifact_root / "target_identity.txt").write_text("tests/test_agent_adoption.py\n")
+            (artifact_root / "acceptance_criteria.json").write_text(json.dumps({"criteria_revision_id": "rev-1"}, ensure_ascii=True) + "\n")
+            (artifact_root / "project_profile.json").write_text(
+                json.dumps(
+                    {
+                        "project_root": str(project_root),
+                        "prefers_runtime_evidence": True,
+                    },
+                    ensure_ascii=True,
+                )
+                + "\n"
+            )
+            (artifact_root / "final_result.json").write_text('{"status":"starter"}\n')
+            (artifact_root / "starter_hashes.json").write_text(
+                json.dumps(
+                    {
+                        "final_result": "2f2fe4f1d7fc4322fd1f8bf5c22de7714f1f3f900c1e499f198ed28d2fd96199"
+                    },
+                    ensure_ascii=True,
+                )
+                + "\n"
+            )
+
+            stdout = StringIO()
+            args = argparse.Namespace(
+                artifact_root=str(artifact_root),
+                state_file="",
+                report_file="",
+                output="",
+                doctor_file="",
+                repair_packet_file="",
+                consistency_recovery_file="",
+                checkpoint_record_file="",
+                checkpoint_id="",
+                acceptance_validation_output="",
+                project_profile_file="",
+                acceptance_criteria_file="",
+                target_path="",
+                target_classification="",
+                baseline_identity="",
+                execution_surface_identity="",
+                final_result="",
+                prompt_identity="",
+                task_identity="",
+                readback="",
+                scenario_proof="",
+                plan_output="",
+                preparation_receipt_output="",
+                preparation_artifact_root="",
+                refresh_output="",
+                observability_output="",
+                artifact_consistency_output="",
+                refresh_event_type="",
+                refresh_doctor_status="",
+                refresh_recovery_status="",
+                refresh_reverification_complete=False,
+                refresh_use_bundle=False,
+                refresh_use_closure=False,
+                baseline_file="",
+                synrail_file="",
+                comparison_output="",
+                worked_artifact_output="",
+                run_artifact_output="",
+                clean_surface=False,
+                artifact_viable=False,
+                helper_ok=False,
+                credentials_ok=False,
+                prompt_identity_ok=False,
+                artifact_path="",
+                helper_path="",
+                credential_env=[],
+                prompt_identity_file="",
+                target_identity_file="",
+                coverage_profile_file="",
+                coverage_corpus_file="",
+                changed_file=[],
+                allowed_scope_path=[],
+                mode="default",
+                final_answer_file="",
+                doctor_run_id="",
+                doctor_level="",
+                bundle_output="",
+                closure_output="",
+                closure_certificate_output="",
+                checkpoint_record_output="",
+            )
+            with mock.patch("synrail_cli_v0.validate_root_within_project", return_value=None), mock.patch(
+                "synrail_cli_v0.validate_check_like_paths",
+                return_value=None,
+            ), mock.patch("synrail_cli_v0.discover_candidate_file_filtered", return_value=None), mock.patch(
+                "synrail_cli_v0.apply_bootstrap_defaults",
+                return_value={"status": "VALID", "reason": "CONTROLLED_BOOTSTRAP_CONFIRMED"},
+            ), mock.patch("synrail_cli_v0.cmd_thin_output", return_value=0), mock.patch(
+                "synrail_cli_v0.current_project_root", return_value=project_root
+            ), mock.patch("synrail_cli_v0.Path.cwd", return_value=project_root), redirect_stdout(stdout):
+                rc = cmd_check(args)
+            self.assertEqual(2, rc)
+            rendered = stdout.getvalue()
+            self.assertIn("waiting for explicit proof artifacts and local verification evidence", rendered)
+            self.assertIn("Need a canonical final_result shape? run synrail final-result-template", rendered)
+            self.assertIn("Need a small UI/runtime verification path? run synrail runtime-helper", rendered)
+            self.assertTrue(str(args.closure_certificate_output).endswith(".synrail/closure_certificate.json"))
+            self.assertTrue(str(args.run_artifact_output).endswith(".synrail/run.json"))
+
+    def test_runtime_helper_marks_examples_as_manual_runtime_evidence(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_runtime_helper_text_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "templates").mkdir(parents=True, exist_ok=True)
+
+            with mock.patch("synrail_cli_v0.load_project_profile", return_value={"project_root": str(project_root), "prefers_runtime_evidence": True}):
+                helper = runtime_helper_text(root=project_root)
+
+        self.assertIn("manual runtime evidence", helper)
+        self.assertIn("curl -s http://localhost:8000/  # then inspect the local response", helper)
+        self.assertIn("python3 - <<'PY'", helper)
+        self.assertIn("keep verification_command to the direct file-observation allowlist", helper)
 
 
 if __name__ == "__main__":

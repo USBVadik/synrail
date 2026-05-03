@@ -21,8 +21,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ALPHA_ENTRY = REPO_ROOT / "alpha.py"
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+if str(REPO_ROOT / "tools" / "reference") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "tools" / "reference"))
+
+from synrail_io_v0 import load_json  # noqa: E402
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -73,6 +75,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
         self.assertIn("explain-proof (proof-explain)", help_result.stdout)
         self.assertIn("save", help_result.stdout)
         self.assertIn("restore", help_result.stdout)
+        self.assertIn("init-agent", help_result.stdout)
+        self.assertIn("init-ci", help_result.stdout)
         self.assertNotIn("install-agent-files", help_result.stdout)
         self.assertNotIn("session-export", help_result.stdout)
         self.assertNotIn("bug-packet", help_result.stdout)
@@ -80,6 +84,24 @@ class ControlledStartSmokeTests(unittest.TestCase):
         self.assertNotIn("readback-template", help_result.stdout)
         self.assertNotIn("scenario-proof-template", help_result.stdout)
         self.assertNotIn("runtime-helper", help_result.stdout)
+        self.assertNotIn("deploy-check", help_result.stdout)
+        self.assertNotIn("generate-prompt", help_result.stdout)
+        self.assertNotIn("init\n", help_result.stdout)
+        self.assertNotIn("init ", help_result.stdout)
+        self.assertNotIn("init\t", help_result.stdout)
+        self.assertNotIn("usage: synrail init", help_result.stdout)
+        self.assertNotIn("usage: synrail install-agent-files", help_result.stdout)
+        self.assertNotIn("usage: synrail init-ci", help_result.stderr)
+        self.assertNotIn("usage: synrail init-agent", help_result.stderr)
+        self.assertNotIn("usage: synrail install-agent-files", help_result.stderr)
+        self.assertNotIn("session-export", help_result.stdout)
+        self.assertNotIn("bug-packet", help_result.stdout)
+        self.assertNotIn("final-result-template", help_result.stdout)
+        self.assertNotIn("readback-template", help_result.stdout)
+        self.assertNotIn("scenario-proof-template", help_result.stdout)
+        self.assertNotIn("runtime-helper", help_result.stdout)
+        self.assertNotIn("deploy-check", help_result.stdout)
+        self.assertNotIn("generate-prompt", help_result.stdout)
         self.assertNotIn("deploy-check", help_result.stdout)
         self.assertNotIn("generate-prompt", help_result.stdout)
 
@@ -226,6 +248,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             project_root = Path(tmpdir) / "project"
             artifact_root = project_root / ".synrail"
             project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "templates").mkdir(parents=True, exist_ok=True)
 
             start = self.run_alpha(
                 "start",
@@ -246,6 +269,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.", start.stdout)
             self.assertIn("Need a canonical final_result shape? run synrail final-result-template", start.stdout)
             self.assertIn("Starter proof surface is ready for this run.", start.stdout)
+            self.assertIn("Runtime helper: synrail runtime-helper", start.stdout)
             self.assertTrue((artifact_root / "bootstrap.json").exists())
             self.assertTrue((artifact_root / "bootstrap_validation.json").exists())
             self.assertTrue((artifact_root / "proof_request.json").exists())
@@ -302,6 +326,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             project_root = Path(tmpdir) / "project"
             artifact_root = project_root / ".synrail"
             project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "templates").mkdir(parents=True, exist_ok=True)
 
             init = self.run_alpha(
                 "init",
@@ -314,19 +339,68 @@ class ControlledStartSmokeTests(unittest.TestCase):
                 cwd=project_root,
             )
             self.assertEqual(0, init.returncode, init.stdout + init.stderr)
+            self.assertIn("Synrail setup is ready.", init.stdout)
+            self.assertIn("This setup is not a controlled run yet.", init.stdout)
+            self.assertIn("Runtime helper: synrail runtime-helper", init.stdout)
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, check.returncode, check.stdout + check.stderr)
             self.assertIn("Controlled Run Required", check.stdout)
             self.assertIn("Next command: synrail start", check.stdout)
 
-            thin_output = load_json(artifact_root / "thin_output.json")
-            state = load_json(artifact_root / "state.json")
+    def test_refresh_acceptance_reports_validation_after_controlled_start(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_refresh_acceptance_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "templates").mkdir(parents=True, exist_ok=True)
 
-            self.assertEqual("NON_GREEN", thin_output["outcome_class"])
-            self.assertEqual("synrail start", thin_output["next_command"])
-            self.assertFalse(state["integrity"]["bootstrap_provenance_ok"])
-            self.assertEqual("CONTROLLED_BOOTSTRAP_NOT_CONFIRMED", state["closure"]["blocking_reason"])
+            start = self.run_alpha(
+                "start",
+                "Refresh acceptance from a controlled run.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            refresh = self.run_alpha("refresh-acceptance", cwd=project_root)
+            self.assertEqual(0, refresh.returncode, refresh.stdout + refresh.stderr)
+            self.assertIn("Acceptance rules refreshed.", refresh.stdout)
+            self.assertIn("Validation: VALID", refresh.stdout)
+            self.assertIn("Next command: synrail check", refresh.stdout)
+            self.assertTrue((artifact_root / "acceptance_validation.json").exists())
+
+            validation = load_json(artifact_root / "acceptance_validation.json")
+            self.assertEqual("acceptance_criteria_validation_record_v0", validation["schema_version"])
+            self.assertEqual("VALID", validation["status"])
+            self.assertEqual("CRITERIA_VALID", validation["reason"])
+            self.assertTrue(validation["task_class_matches"])
+            self.assertTrue(validation["project_type_matches"])
+            self.assertTrue(validation["target_classification_matches"])
+            self.assertTrue(validation["intended_run_class_matches"])
+            self.assertTrue(validation["required_gate_ids_match"])
+            self.assertTrue(validation["required_bundle_sections_match"])
+            self.assertTrue(validation["criteria_standard_matches"])
+            self.assertTrue(validation["criteria_owner_matches"])
+            self.assertTrue(validation["project_profile_fingerprint_matches"])
+            self.assertTrue(validation["criteria_revision_matches"])
+            self.assertTrue(validation["provenance_complete"])
+            self.assertTrue(validation["provenance_profile_fingerprint_matches"])
+            self.assertEqual("synrail refresh-acceptance", load_json(artifact_root / "acceptance_criteria.json")["criteria_provenance"]["generated_by"])
+
+            state = load_json(artifact_root / "state.json")
+            self.assertEqual(0, state["check_count"])
+            self.assertEqual("INITIALIZED", state["state"])
+            self.assertEqual("", state["closure_timestamp_utc"])
+            self.assertEqual("UNKNOWN", state["doctor"]["status"])
+            self.assertEqual("MISSING", state["proof_bundle"]["status"])
+            self.assertEqual("OPEN", state["closure"]["status"])
+            self.assertEqual("attest target surface", state["next_safe_step"])
+            self.assertTrue((artifact_root / "bootstrap_validation.json").exists())
+            self.assertTrue((artifact_root / "proof_request.json").exists())
+            self.assertTrue((artifact_root / "acceptance_criteria.json").exists())
+            self.assertTrue((artifact_root / "final_result.json").exists())
+            self.assertFalse((artifact_root / "thin_output.json").exists())
+            self.assertFalse((artifact_root / "report.json").exists())
 
     def test_thin_output_surfaces_refresh_change_impact(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_refresh_change_impact_") as tmpdir:
@@ -484,6 +558,25 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("already_satisfied", template.stdout)
             self.assertNotIn('"cleanup_status": {', template.stdout)
 
+    def test_final_result_template_can_write_output_file(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_final_result_template_output_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "Write the canonical final_result template to a file.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+            output_path = project_root / "template.json"
+            template = self.run_alpha("final-result-template", "--output", str(output_path), cwd=project_root)
+            self.assertEqual(0, template.returncode, template.stdout + template.stderr)
+            self.assertIn("Wrote canonical final_result template to template.json", template.stdout)
+            self.assertTrue(output_path.exists())
+            self.assertIn('"status": "PROVEN"', output_path.read_text())
+
     def test_readback_template_uses_current_run_context(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_readback_template_") as tmpdir:
             project_root = Path(tmpdir) / "project"
@@ -509,6 +602,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("leave this readback untouched unless Synrail explicitly targets this file", template.stdout)
             self.assertIn("keep it minimal and concrete; do not add extra narrative beyond the named blocker", template.stdout)
             self.assertIn("Runtime hint:", template.stdout)
+            self.assertIn("for UI, route, or rendered output changes", template.stdout)
+            self.assertIn("synrail runtime-helper", template.stdout)
 
     def test_scenario_proof_template_uses_current_run_context(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_scenario_proof_template_") as tmpdir:
@@ -523,6 +618,12 @@ class ControlledStartSmokeTests(unittest.TestCase):
             )
             self.assertEqual(0, start.returncode, start.stdout + start.stderr)
             state = load_json(artifact_root / "state.json")
+            write_json(
+                artifact_root / "project_profile.json",
+                {
+                    "prefers_runtime_evidence": True,
+                },
+            )
 
             template = self.run_alpha("scenario-proof-template", cwd=project_root)
             self.assertEqual(0, template.returncode, template.stdout + template.stderr)
@@ -533,6 +634,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("Fallback-only note", template.stdout)
             self.assertIn("leave this scenario proof untouched unless Synrail explicitly targets this file", template.stdout)
             self.assertIn("keep it minimal and concrete; do not add extra narrative beyond the named blocker", template.stdout)
+            self.assertIn("Runtime hint:", template.stdout)
+            self.assertIn("synrail runtime-helper", template.stdout)
             self.assertIn("Status: PASSED", template.stdout)
 
     def test_runtime_helper_offers_small_ui_paths(self) -> None:
@@ -547,8 +650,10 @@ class ControlledStartSmokeTests(unittest.TestCase):
 
             helper = self.run_alpha("runtime-helper", cwd=project_root)
             self.assertEqual(0, helper.returncode, helper.stdout + helper.stderr)
-            self.assertIn("curl -s http://localhost:8000/ | grep -C 2 'needle'", helper.stdout)
-            self.assertIn("python3 -c", helper.stdout)
+            self.assertIn("manual runtime evidence", helper.stdout)
+            self.assertIn("curl -s http://localhost:8000/  # then inspect the local response", helper.stdout)
+            self.assertIn("python3 - <<'PY'", helper.stdout)
+            self.assertIn("keep verification_command to the direct file-observation allowlist", helper.stdout)
             self.assertIn("browser automation", helper.stdout)
 
     def test_status_surfaces_nested_parent_git_warning(self) -> None:
@@ -746,6 +851,12 @@ class ControlledStartSmokeTests(unittest.TestCase):
             project_root.mkdir(parents=True, exist_ok=True)
             artifact_root.mkdir(parents=True, exist_ok=True)
             write_json(
+                artifact_root / "project_profile.json",
+                {
+                    "prefers_runtime_evidence": True,
+                },
+            )
+            write_json(
                 artifact_root / "bundle.json",
                 {
                     "status": "STRUCTURALLY_COMPLETE",
@@ -772,6 +883,8 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("scenario_proof", explain.stdout)
             self.assertIn("scenario_proof target: .synrail/scenario_proof.txt", explain.stdout)
             self.assertIn("scenario-proof evidence does not yet record a concrete scenario context and outcome", explain.stdout)
+            self.assertIn("Runtime nudge:", explain.stdout)
+            self.assertIn("synrail runtime-helper", explain.stdout)
             self.assertIn("synrail scenario-proof-template", explain.stdout)
 
     def test_explain_proof_surfaces_verification_corroboration_fix(self) -> None:
@@ -1499,12 +1612,24 @@ class ControlledStartSmokeTests(unittest.TestCase):
             doctor = load_json(artifact_root / "doctor.json")
             report = load_json(artifact_root / "report.json")
             thin_output = load_json(artifact_root / "thin_output.json")
+            rejected_state = load_json(artifact_root / "state.json")
             self.assertIn("execution surface has out-of-scope modifications", doctor["gate_results"]["clean_execution_surface"]["note"])
             self.assertIn("unrelated.txt", doctor["gate_results"]["clean_execution_surface"]["note"])
             self.assertEqual("FAIL", doctor["gate_results"]["clean_execution_surface"]["status"])
             self.assertEqual([], doctor["override_gates"])
             self.assertEqual("DOCTOR_NOT_GREEN", report.get("reason", ""))
             self.assertNotEqual("ACCEPTED", thin_output["outcome_class"])
+            self.assertEqual(1, rejected_state["check_count"])
+            self.assertEqual("", rejected_state["closure_timestamp_utc"])
+
+            retry = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, retry.returncode, retry.stdout + retry.stderr)
+            self.assertIn("Workspace Not Trusted", retry.stdout)
+            self.assertIn("--clean-surface", retry.stdout)
+
+            retried_state = load_json(artifact_root / "state.json")
+            self.assertEqual(2, retried_state["check_count"])
+            self.assertEqual("", retried_state["closure_timestamp_utc"])
 
     def test_check_waives_cleanup_from_runtime_doctor_truth(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_cleanup_happy_path_") as tmpdir:
@@ -1572,6 +1697,16 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertTrue(accepted_state["start_timestamp_utc"])
             self.assertTrue(accepted_state["closure_timestamp_utc"])
             self.assertEqual(1, accepted_state["check_count"])
+
+            first_closure_timestamp = accepted_state["closure_timestamp_utc"]
+            retry = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, retry.returncode, retry.stdout + retry.stderr)
+            self.assertIn("Status: Accepted", retry.stdout)
+
+            retried_state = load_json(artifact_root / "state.json")
+            self.assertEqual("CLOSURE_ACCEPTED", retried_state["state"])
+            self.assertEqual(2, retried_state["check_count"])
+            self.assertEqual(first_closure_timestamp, retried_state["closure_timestamp_utc"])
 
 
     def test_start_after_terminal_state_auto_clears_proof(self) -> None:
@@ -1654,6 +1789,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             project_root = Path(tmpdir) / "project"
             artifact_root = project_root / ".synrail"
             project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "templates").mkdir(parents=True, exist_ok=True)
 
             start1 = self.run_alpha(
                 "start",
@@ -1673,6 +1809,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(0, start2.returncode, start2.stdout + start2.stderr)
             self.assertIn("Synrail already has a controlled run in progress.", start2.stdout)
             self.assertIn(first_run_id, start2.stdout)
+            self.assertIn("Runtime helper: synrail runtime-helper", start2.stdout)
 
             second_state = load_json(artifact_root / "state.json")
             self.assertEqual(first_run_id, second_state["run_id"])
@@ -1761,6 +1898,220 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
             self.assertEqual("--target-identity-file", payload["path_arg"])
             self.assertIn("escapes project and artifact roots", payload["detail"])
+
+    def test_direct_doctor_rejects_symlinked_target_identity_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_target_identity_symlink_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            target_identity = project_root / "target_identity.txt"
+            target_identity.write_text("EXPECTED_SURFACE_001\n")
+            target_identity_link = project_root / "target_identity_link.txt"
+            target_identity_link.symlink_to(target_identity)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "EXACT_RETRY_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "exact_retry",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--target-identity-file",
+                    str(target_identity_link),
+                    "--expected-target-identity",
+                    "EXPECTED_SURFACE_001",
+                    "--prompt-identity-ok",
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--target-identity-file", payload["path_arg"])
+            self.assertIn("symlink", payload["detail"])
+
+    def test_direct_doctor_rejects_symlinked_prompt_identity_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_prompt_identity_symlink_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            prompt_identity = artifact_root / "prompt_identity.txt"
+            prompt_identity.write_text("TASK-IDENTITY-001\n")
+            prompt_identity_link = artifact_root / "prompt_identity_link.txt"
+            prompt_identity_link.symlink_to(prompt_identity)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "EXACT_RETRY_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "exact_retry",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--artifact-path",
+                    str(artifact_root / "final_result.json"),
+                    "--prompt-identity-file",
+                    str(prompt_identity_link),
+                    "--expected-task-identity",
+                    "TASK-IDENTITY-001",
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--prompt-identity-file", payload["path_arg"])
+            self.assertIn("symlink", payload["detail"])
+
+    def test_direct_doctor_rejects_symlinked_helper_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_helper_symlink_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            helper_root = project_root / "helpers"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            helper_root.mkdir(parents=True, exist_ok=True)
+            helper = helper_root / "helper.py"
+            helper.write_text("print('ok')\n")
+            helper_link = project_root / "helper_link.py"
+            helper_link.symlink_to(helper)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "tools" / "reference" / "synrail_doctor_v1.py"),
+                    "--doctor-run-id",
+                    "R1",
+                    "--doctor-level",
+                    "SUPPORT_DOCTOR",
+                    "--target-path",
+                    str(project_root),
+                    "--target-classification",
+                    "local",
+                    "--baseline-identity",
+                    "baseline",
+                    "--intended-run-class",
+                    "support_run",
+                    "--output",
+                    str(artifact_root / "doctor.json"),
+                    "--helper-path",
+                    str(helper_link),
+                    "--credentials-ok",
+                    "--prompt-identity-ok",
+                ],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--helper-path", payload["path_arg"])
+            self.assertIn("symlink", payload["detail"])
+
+    def test_direct_doctor_rejects_symlinked_coverage_profile_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_coverage_profile_symlink_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            coverage_profile = project_root / "coverage_profile.json"
+            coverage_profile.write_text("{}\n")
+            coverage_profile_link = project_root / "coverage_profile_link.json"
+            coverage_profile_link.symlink_to(coverage_profile)
+
+            result = self.run_alpha(
+                "doctor",
+                "--doctor-run-id",
+                "R1",
+                "--doctor-level",
+                "CORE_DOCTOR",
+                "--target-path",
+                str(project_root),
+                "--target-classification",
+                "local",
+                "--baseline-identity",
+                "baseline",
+                "--intended-run-class",
+                "core_probe",
+                "--output",
+                str(artifact_root / "doctor.json"),
+                "--coverage-profile-file",
+                str(coverage_profile_link),
+                cwd=project_root,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--coverage-profile-file", payload["path_arg"])
+            self.assertIn("symlink", payload["detail"])
+
+    def test_direct_doctor_rejects_symlinked_coverage_corpus_surface(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_coverage_corpus_symlink_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            coverage_corpus = project_root / "coverage_corpus.json"
+            coverage_corpus.write_text("[]\n")
+            coverage_corpus_link = project_root / "coverage_corpus_link.json"
+            coverage_corpus_link.symlink_to(coverage_corpus)
+
+            result = self.run_alpha(
+                "doctor",
+                "--doctor-run-id",
+                "R1",
+                "--doctor-level",
+                "CORE_DOCTOR",
+                "--target-path",
+                str(project_root),
+                "--target-classification",
+                "local",
+                "--baseline-identity",
+                "baseline",
+                "--intended-run-class",
+                "core_probe",
+                "--output",
+                str(artifact_root / "doctor.json"),
+                "--coverage-corpus-file",
+                str(coverage_corpus_link),
+                cwd=project_root,
+            )
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--coverage-corpus-file", payload["path_arg"])
+            self.assertIn("symlink", payload["detail"])
 
     def test_direct_doctor_rejects_symlinked_output_surface(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_output_symlink_") as tmpdir:

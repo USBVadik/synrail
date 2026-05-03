@@ -31,6 +31,7 @@ Current helper, compatibility, or advanced surfaces still include:
 - `repair-step`
 - `retry`
 - `confirm-restore`
+- `runtime-helper`
 - `telemetry export`
 - `bug-packet`
 - `session-export`
@@ -172,6 +173,12 @@ This is not a general orchestration planner or the preferred first-run command.
 
 It is a constrained bridge from current non-green truth to one next attempt.
 
+### Runtime-helper
+
+`runtime-helper` renders small local runtime-verification suggestions for UI, route, or rendered-output tasks.
+
+It does not accept or repair a run by itself. Its output is guidance for the operator or agent to produce stronger concrete evidence before `synrail check`, usually through a small `curl`, local response, or template-render command rather than browser automation.
+
 ### Retry
 
 `retry` is a compatibility alias for continuation on a repairable contour.
@@ -197,6 +204,12 @@ The current local matrix is intentionally narrow but explicit:
 - git workspace without a committed HEAD via file-copy fallback
 - non-git file-copy restore
 - unsupported contours that fail early and honestly
+
+The current restore path also hardens the write surface itself:
+
+- `restore --preview` blocks symlinked or otherwise indirect target paths before mutation
+- runtime rechecks the target path again before restore writes and again before rollback writes
+- late target-path retargeting fails closed instead of redirecting restore or rollback writes outside the requested root
 
 ### Telemetry export / bug packet
 
@@ -341,6 +354,7 @@ Covers the current outside-facing first-run contour plus bounded helper and revi
 
 - `start`
 - `check`
+- `runtime-helper` guidance rendering
 - `repair-step`
 - `telemetry export`
 - `bug-packet`

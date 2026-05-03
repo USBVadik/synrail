@@ -38,6 +38,10 @@ Minimum package:
 10. focused economics fixtures:
    - `fixtures/repeatable_everyday_benchmark_pack_001.json`
    - `fixtures/cost_of_control_everyday_001.json`
+11. reviewer return template:
+   - [FEEDBACK_INTAKE_001.md](./FEEDBACK_INTAKE_001.md)
+12. external signal scorecard:
+   - [ALPHA_SIGNAL_SCORECARD_001.md](./ALPHA_SIGNAL_SCORECARD_001.md)
 
 Cut the external handoff from that exact snapshot. Do not assemble the send from a drifting local working tree.
 
@@ -56,6 +60,8 @@ If the reviewer will only spend 10-20 minutes, send:
 1. [ALPHA_TEST_PACK_001.md](../core/ALPHA_TEST_PACK_001.md)
 2. [EXTERNAL_CRITIQUE_PACK_001.md](./EXTERNAL_CRITIQUE_PACK_001.md)
 3. [KNOWN_WEAKNESSES_001.md](./KNOWN_WEAKNESSES_001.md)
+
+When you frame the current runnable lane, keep `synrail runtime-helper` positioned as optional reviewer guidance rather than a default mandatory step: if they need a small UI/runtime verification path for a rendered or route-facing change, point them to `synrail runtime-helper`; otherwise keep them on the default quickstart/check path.
 
 ## Short DM Version
 
@@ -157,6 +163,8 @@ Ask them to send back:
 3. the artifact or proof step that still felt self-issued or hard to trust
 4. one sentence on whether restore, re-entry, or handoff value felt concrete or vague
 5. telemetry export, if they used it
+6. a filled [FEEDBACK_INTAKE_001.md](./FEEDBACK_INTAKE_001.md) or answers in that exact shape
+7. a filled [ALPHA_SIGNAL_SCORECARD_001.md](./ALPHA_SIGNAL_SCORECARD_001.md) so one external pass can be read against the current expansion gate instead of free-form impressions
 
 ## Current Honest Positioning
 
@@ -166,6 +174,7 @@ Keep this wording tight:
 - one alpha lane
 - not a platform
 - not a broad workflow shell
+- restore is path-trust-hardened on a narrow local matrix, with `restore --preview` positioned before mutation; it is not broadly mature
 - strongest where false green is expensive and verified fallback matters
 
 ## Before You Hit Send

@@ -2,7 +2,9 @@
 
 ## Scope
 
-This audit covers the current **local working tree** of `synrail` on branch `codex/first-extraction-pr`, evaluated on top of pushed commit `09f3bbf`.
+Reviewed snapshot: exact selected repository snapshot prepared for critic handoff
+Verification note: rerun the listed validation commands on the exact snapshot you send
+This audit should travel with the exact snapshot it describes, not with a drifting local working tree.
 
 It is intentionally broader than a commit review.
 It covers:
@@ -12,7 +14,7 @@ It covers:
 - critic-facing documentation and claim discipline
 - live signal already captured in the repo
 
-This is therefore a review of **current project truth**, not only of the last pushed GitHub state.
+This is therefore a review of the selected snapshot truth, not a drifting local working tree or only the last pushed GitHub state.
 
 ## Validation Snapshot
 
@@ -272,7 +274,7 @@ The strongest implementation qualities in this tranche are:
 
 A few places still carry prototype smell:
 - duplicate parser definition in `synrail_thin_output_v0.py`
-- the project is still being presented from a very dirty local worktree rather than a clean integrated branch state
+- the external handoff still needs to be cut from one explicitly selected snapshot rather than a drifting local working tree
 - some critic/send artifacts point at files not yet tracked in git
 
 None of these look like product-kernel regressions.
@@ -378,7 +380,7 @@ The most honest overall verdict is:
 ## Pre-Send Caveats
 
 Before external handoff, the following should be acknowledged explicitly:
-- the audit reflects the current local working tree, not only pushed GitHub state
+- the audit reflects the exact selected snapshot you hand to critics, not a drifting local working tree
 - the external send should be cut from an explicitly chosen snapshot rather than a drifting local working tree
 
 These are send/readiness issues, not evidence that the product kernel regressed.

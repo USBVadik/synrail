@@ -67,10 +67,11 @@ The intended local contour on the current branch is now:
 3. do the work
 4. strengthen `.synrail/final_result.json` first, leave `readback.txt` and `scenario_proof.txt` untouched unless `synrail check` explicitly names one, and leave `cleanup_status` absent unless Synrail explicitly asks for cleanup attestation
 5. `synrail check`
-6. if blocked: fix only the named gap from `synrail check`; when refresh invalidation matches the active run, the default summary now points only at the stale obligation class
-7. use `synrail repair-step` only if a standalone bounded repair prompt is actually useful
-8. use `synrail restore` only when the contour explicitly calls for it
-9. stop only at accepted closure
+6. if you need a small UI/runtime verification path for a rendered or route-facing change: `synrail runtime-helper`
+7. if blocked: fix only the named gap from `synrail check`; when refresh invalidation matches the active run, the default summary now points only at the stale obligation class
+8. use `synrail repair-step` only if a standalone bounded repair prompt is actually useful
+9. use `synrail restore --preview`, then `synrail restore` only when the contour explicitly calls for it
+10. stop only at accepted closure
 
 Important current properties:
 

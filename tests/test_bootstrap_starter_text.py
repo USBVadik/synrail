@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -79,6 +80,28 @@ class BootstrapStarterTextTests(unittest.TestCase):
         self.assertNotIn("explicitly asks for scenario proof", contents["scenario_proof"])
         self.assertNotIn("describe what this changed surface now contains, returns, or renders", contents["readback"])
         self.assertNotIn("describe the exact runtime context on the attested target surface", contents["scenario_proof"])
+
+    def test_runtime_evidence_projects_receive_runtime_helper_guidance(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_bootstrap_runtime_hint_") as tmpdir:
+            project_root = Path(tmpdir)
+            (project_root / "templates").mkdir(parents=True, exist_ok=True)
+
+            contents = build_proof_starter_contents(
+                run_id="RUN_123",
+                task_class="bounded_change",
+                task_identity="Surface runtime helper guidance",
+                project_root=project_root,
+            )
+
+        self.assertIn('"synrail runtime-helper"', contents["final_result"])
+        self.assertIn(
+            "Runtime hint: for UI, route, or rendered output changes, prefer a local response or rendered fragment over source-only grep when possible; run `synrail runtime-helper` if you want a small curl or template-render path before browser automation",
+            contents["readback"],
+        )
+        self.assertIn(
+            "Runtime hint: prefer a local request, rendered response, or observed runtime output over a source-only grep when possible; run `synrail runtime-helper` if you want a small curl or template-render path before browser automation",
+            contents["scenario_proof"],
+        )
 
 
 if __name__ == "__main__":

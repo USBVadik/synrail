@@ -83,6 +83,7 @@ Deep technical review path:
 - regression tests for truth-critical failures
 - a compact external tester pack plus claim-validation pack
 - refresh-driven stale-obligation guidance in the default non-green shell
+- a narrow restore path that blocks symlinked or otherwise indirect target surfaces before mutation and rechecks the target again before restore and rollback writes
 - one repeatable everyday benchmark pack whose broader class is still baseline-favorable overall
 - one narrow focused `small_template_text_fix` family with five justified low-drag paths and a machine-readable split where the canonical pack reads `FOCUSED_CLASS_CHEAP_ENOUGH` plus `FOCUSED_CLASS_BEHAVIOR_CHEAP_BY_DEFAULT`, but same-family pressure can still keep kernel cheapness while dropping behavior cheapness to `FOCUSED_CLASS_BEHAVIOR_NOT_YET_CHEAP_BY_DEFAULT`
 
@@ -95,6 +96,7 @@ But it is still intentionally narrow:
 - no hosted telemetry
 - no broad packaging polish
 - no claim of general domain correctness
+- restore maturity is still matrix-bounded and local even with the new direct-target path-trust hardening
 
 ## What we most want criticized
 
@@ -126,6 +128,8 @@ Start here for live runnable and fixture-backed review:
 - `fixtures/cost_of_control_small_template_text_fix_001.json`
 - `fixtures/small_template_text_fix_behavior_pressure_pack_001.json`
 - `fixtures/cost_of_control_small_template_text_fix_behavior_pressure_001.json`
+
+The current outside-facing alpha lane also keeps `synrail runtime-helper` as an optional helper surface, not a default mandatory hop: if you need a small UI/runtime verification path for a rendered or route-facing change, use `synrail runtime-helper`; otherwise stay on the default `start` -> work -> `check` contour.
 
 ## Recommended review commands
 

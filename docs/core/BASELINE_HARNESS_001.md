@@ -62,8 +62,8 @@ The current harness compares:
 
 The active economics harness now also records:
 
-Current comparison inputs in this repo are marked as `curated_local_estimate`.
-They are not empirical measurements.
+Current comparison inputs in this repo are mostly marked as `curated_local_estimate`, with the focused behavior-pressure benchmark slice marked as `pressure_synthetic`.
+None of these comparison inputs are empirical external measurements.
 
 - scenario class
 - path identity
