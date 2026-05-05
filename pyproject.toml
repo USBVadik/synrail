@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "synrail"
+version = "0.1.0"
+description = "Guided control for reliable agent execution."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "USBDick" },
+    { name = "Vadik" },
+]
+
+[project.scripts]
+synrail = "alpha:main"
+
+[project.optional-dependencies]
+dev = [
+    "coverage",
+    "pip-audit",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+]
+
+[tool.setuptools]
+py-modules = ["alpha", "reference_runner"]
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.packages.find]
+include = ["tools*", "schemas"]
+
+[tool.setuptools.package-data]
+tools = ["reference/*.json", "reference/*.sh"]
+schemas = ["*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+extend-exclude = [
+    "fixtures/alpha_external_run_014b/raw",
+    "fixtures/alpha_external_run_014c/raw",
+    "fixtures/alpha_external_run_014d/raw",
+    "fixtures/alpha_external_run_014e/raw",
+    "fixtures/doctor_pressure_test_003",
+    "fixtures/doctor_pressure_test_006",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/test_agent_adoption.py" = ["E402"]
+"tests/test_gate_units.py" = ["E402", "F401", "F811"]
+"tests/test_prompt_chain.py" = ["E402"]
+"tests/test_truth_regressions.py" = ["E402"]
+"tests/test_untested_modules.py" = ["E402", "F401"]
+"tests/test_alpha_test_pack_smoke.py" = ["F401"]
+"tests/test_install_smoke.py" = ["F401"]
+"tests/test_controlled_start_smoke.py" = ["F841"]
+"tests/test_deploy_gate.py" = ["F841"]
+"fixtures/alpha_external_run_032/raw/synrail_install_v0.py" = ["F401"]
+"fixtures/alpha_external_run_033/raw/synrail_install_v0.py" = ["F401"]
+"fixtures/alpha_external_run_034/raw/synrail_install_v0.py" = ["F401"]
+"fixtures/alpha_external_run_035/raw/synrail_install_v0.py" = ["F401"]
+"fixtures/doctor_pressure_test_003/broken_helper.py" = ["E999"]
+"fixtures/doctor_pressure_test_006/broken_import_helper.py" = ["F401"]
+"fixtures/alpha_external_run_014b/raw/retry_logic.after_break.py" = ["F821"]
+"fixtures/alpha_external_run_014b/raw/retry_logic.after_restore.py" = ["F821"]
+"fixtures/alpha_external_run_014c/raw/retry_logic.after_break.py" = ["F821"]
+"fixtures/alpha_external_run_014c/raw/retry_logic.after_restore.py" = ["F821"]
+"fixtures/alpha_external_run_014d/raw/retry_logic.after_break.py" = ["F821"]
+"fixtures/alpha_external_run_014d/raw/retry_logic.after_restore.py" = ["F821"]
+"fixtures/alpha_external_run_014e/raw/retry_logic.after_break.py" = ["F821"]
+"fixtures/alpha_external_run_014e/raw/retry_logic.after_restore.py" = ["F821"]
+"tools/reference/synrail_continuation_adoption_v0.py" = ["F841"]
+"tools/reference/synrail_hybrid_status_v0.py" = ["F841"]
+"tools/reference/synrail_doctor_v1.py" = ["F841"]
+"tools/reference/synrail_install_v0.py" = ["F401"]
+"tools/reference/synrail_cli_v0.py" = ["F401", "F841"]
+"tools/reference/synrail_bootstrap_v0.py" = ["F401"]
+"tools/reference/synrail_artifact_consistency_v0.py" = ["F401"]
+"tools/reference/synrail_bundle_v0.py" = ["F401"]
+"tools/reference/synrail_checkpoint_v0.py" = ["F841"]
+"tools/reference/synrail_agent_adoption_v0.py" = ["F541"]
+"tools/reference/synrail_commands_v0.py" = ["E501"]

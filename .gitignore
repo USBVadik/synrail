@@ -10,6 +10,8 @@ fixtures/alpha_lane_run_002/
 .claude/settings.local.json
 .claude/worktrees/
 .venv/
+.coverage
+coverage.xml
 fixtures/alpha_external_run_00[1-9]/*.txt
 fixtures/alpha_external_run_00[1-9]/*.rc
 fixtures/alpha_external_run_00[1-9]/agent.log

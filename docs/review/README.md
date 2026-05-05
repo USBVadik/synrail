@@ -1,6 +1,10 @@
 # Review Docs
 
-Start with:
+This index is for deeper review, critique, and outreach material.
+It is not the primary public source-of-truth reading path for the repo.
+Start with `../../README.md`, `../core/FIRST_RUN_GUIDE.md`, and `../README.md` first.
+
+Then continue here when you specifically want the review/archive layer:
 
 - `../core/ALPHA_TEST_PACK_001.md`
 - `EXTERNAL_CRITIQUE_PACK_001.md`

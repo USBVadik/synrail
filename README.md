@@ -2,6 +2,9 @@
 
 Synrail catches false-green AI-agent work before you accept it.
 
+The failure mode is simple: an agent says "done", the tests look plausible, and the operator is still missing trustworthy proof.
+Synrail exists to hold that line between execution and acceptance.
+
 An agent saying "done" is not the same thing as an accepted result.
 Synrail keeps that boundary explicit.
 
@@ -14,9 +17,13 @@ Agent: tests passed
 Synrail: Status: Proof Invalid
 Reason: verification command not executed / freshness mismatch
 Next: repair final_result.json
+Agent: repaired final_result.json
+Synrail: Status: Accepted
 ```
 
 That is the product wedge: block plausible-but-unproven closure, name the exact blocker, and keep the next repair step bounded.
+The point is not to make agent output sound confident. The point is to stop false-green closure before it gets accepted as truth.
+See the standalone [false-green demo](examples/false_green_demo.md).
 
 ## Quick Start
 
@@ -67,10 +74,11 @@ It is stronger on false-green prevention, bounded repair, and continuation than 
 Start here:
 
 - [First Run Guide](docs/core/FIRST_RUN_GUIDE.md)
+- [Docs Map](docs/README.md)
 
 Then, only if you want deeper product or technical context:
 
-- [docs/review/README.md](docs/review/README.md)
+- [Review archive map](docs/review/README.md)
 
 ## Layout
 

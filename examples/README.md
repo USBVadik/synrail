@@ -28,6 +28,12 @@ They are here to show how `Synrail` artifacts fit together without importing raw
     - closure decision
     - refresh after degradation
     - baseline comparison
+- `false_green_demo.md`
+  - one short public-facing transcript showing:
+    - a plausible claimed-done moment
+    - a non-green Synrail rejection
+    - a bounded repair
+    - final accepted closure
 
 ## Related fixtures
 

@@ -116,6 +116,7 @@ try:
         RestoreConsistencyThinContext,
         PromptReadingFollowupContext,
         RetryRecoveryReadingContext,
+        RecoveryPromptObservabilityContext,
         OperatorBriefRenderReadingContext,
         OperatorRenderAdoptionPressureContext,
         RepairBundleClosureContext,
@@ -204,6 +205,7 @@ except ImportError:
         RestoreConsistencyThinContext,
         PromptReadingFollowupContext,
         RetryRecoveryReadingContext,
+        RecoveryPromptObservabilityContext,
         OperatorBriefRenderReadingContext,
         OperatorRenderAdoptionPressureContext,
         RepairBundleClosureContext,
@@ -864,6 +866,15 @@ def retry_recovery_reading_context() -> RetryRecoveryReadingContext:
         prompt_retry_guard_script=PROMPT_RETRY_GUARD,
         consistency_recovery_script=CONSISTENCY_RECOVERY,
         checkpoint_operator_reading_script=CHECKPOINT_OPERATOR_READING,
+    )
+
+
+def recovery_prompt_observability_context() -> RecoveryPromptObservabilityContext:
+    return RecoveryPromptObservabilityContext(
+        run_python=run_python,
+        consistency_recovery_prompt_script=CONSISTENCY_RECOVERY_PROMPT,
+        consistency_recovery_prompt_reading_script=CONSISTENCY_RECOVERY_PROMPT_READING,
+        observability_script=OBSERVABILITY,
     )
 
 
@@ -2693,27 +2704,15 @@ def cmd_checkpoint_operator_reading(args: argparse.Namespace) -> int:
 
 
 def cmd_consistency_recovery_prompt(args: argparse.Namespace) -> int:
-    return extracted_cmd_consistency_recovery_prompt(
-        args,
-        run_python=run_python,
-        consistency_recovery_prompt_script=CONSISTENCY_RECOVERY_PROMPT,
-    )
+    return extracted_cmd_consistency_recovery_prompt(args, context=recovery_prompt_observability_context())
 
 
 def cmd_consistency_recovery_prompt_reading(args: argparse.Namespace) -> int:
-    return extracted_cmd_consistency_recovery_prompt_reading(
-        args,
-        run_python=run_python,
-        consistency_recovery_prompt_reading_script=CONSISTENCY_RECOVERY_PROMPT_READING,
-    )
+    return extracted_cmd_consistency_recovery_prompt_reading(args, context=recovery_prompt_observability_context())
 
 
 def cmd_observability(args: argparse.Namespace) -> int:
-    return extracted_cmd_observability(
-        args,
-        run_python=run_python,
-        observability_script=OBSERVABILITY,
-    )
+    return extracted_cmd_observability(args, context=recovery_prompt_observability_context())
 
 
 def cmd_deploy(args: argparse.Namespace) -> int:

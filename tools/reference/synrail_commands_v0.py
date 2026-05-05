@@ -340,18 +340,106 @@ def render_github_action_ci_workflow(*, artifact_root: str) -> str:
         [
             "name: Synrail check",
             "on:",
+            "  push:",
             "  pull_request:",
             "  workflow_dispatch:",
+            "permissions:",
+            "  contents: read",
             "jobs:",
             "  synrail-check:",
             "    runs-on: ubuntu-latest",
             "    steps:",
             "      - name: Checkout repo",
             "        uses: actions/checkout@v4",
+            "      - name: Set up Python",
+            "        uses: actions/setup-python@v5",
+            "        with:",
+            "          python-version: \"3.11\"",
+            "      - name: Upgrade pip",
+            "        run: python3 -m pip install --upgrade pip",
+            "      - name: Install Synrail dev dependencies",
+            "        run: python3 -m pip install -e \".[dev]\"",
+            "      - name: Run unit tests",
+            "        run: python3 -m unittest discover -s tests",
+            "      - name: Run Ruff",
+            "        run: ruff check .",
+            "      - name: Run coverage",
+            "        run: pytest --cov=tools/reference --cov=alpha --cov-report=term-missing --cov-report=xml",
             "      - name: Run Synrail composite action",
             "        uses: ./.github/actions/synrail-check",
             "        with:",
             f"          artifact-root: {artifact_root}",
+        ]
+    ) + "\n"
+
+
+def render_security_hygiene_workflow() -> str:
+    return "\n".join(
+        [
+            "name: Security hygiene",
+            "on:",
+            "  push:",
+            "  pull_request:",
+            "  workflow_dispatch:",
+            "permissions:",
+            "  contents: read",
+            "jobs:",
+            "  security-hygiene:",
+            "    runs-on: ubuntu-latest",
+            "    steps:",
+            "      - name: Checkout repo",
+            "        uses: actions/checkout@v4",
+            "      - name: Set up Python",
+            "        uses: actions/setup-python@v5",
+            "        with:",
+            "          python-version: \"3.11\"",
+            "      - name: Upgrade pip",
+            "        run: python3 -m pip install --upgrade pip",
+            "      - name: Install Synrail dev dependencies",
+            "        run: python3 -m pip install -e \".[dev]\"",
+            "      - name: Run unit tests",
+            "        run: python3 -m unittest discover -s tests",
+            "      - name: Run Ruff",
+            "        run: ruff check .",
+            "      - name: Run coverage",
+            "        run: pytest --cov=tools/reference --cov=alpha --cov-report=term-missing --cov-report=xml",
+            "      - name: Audit Python dependencies",
+            "        run: pip-audit",
+            "      - name: Check repository text for common secret patterns",
+            "        shell: bash",
+            "        run: |",
+            "          python3 - <<'PY'",
+            "          from pathlib import Path",
+            "          import re",
+            "          import sys",
+            "",
+            "          patterns = [",
+            "              re.compile(r\"BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY\"),",
+            "              re.compile(r\"ghp_[A-Za-z0-9]{20,}\"),",
+            "              re.compile(r\"github_pat_[A-Za-z0-9_]{20,}\"),",
+            "              re.compile(r\"AKIA[0-9A-Z]{16}\"),",
+            "              re.compile(r\"AIza[A-Za-z0-9_-]{20,}\"),",
+            "              re.compile(r\"xox[baprs]-[A-Za-z0-9-]{10,}\"),",
+            "          ]",
+            "          excluded_dirs = {\".git\", \".venv\", \"__pycache__\"}",
+            "          excluded_suffixes = {\".pyc\"}",
+            "",
+            "          for path in Path('.').rglob('*'):",
+            "              if not path.is_file():",
+            "                  continue",
+            "              if any(part in excluded_dirs for part in path.parts):",
+            "                  continue",
+            "              if path.suffix in excluded_suffixes:",
+            "                  continue",
+            "              try:",
+            "                  text = path.read_text(errors='ignore')",
+            "              except OSError:",
+            "                  continue",
+            "              for pattern in patterns:",
+            "                  if pattern.search(text):",
+            "                      print(f'Potential secret pattern detected: {path}')",
+            "                      sys.exit(1)",
+            "          PY",
         ]
     ) + "\n"
 
@@ -442,7 +530,7 @@ def cmd_init_ci(
     if workflow_enabled:
         print("GitHub Actions workflow is ready.")
         print(f"Workflow path: {workflow_path}")
-        print("Workflow triggers: pull_request, workflow_dispatch")
+        print("Workflow triggers: push, pull_request, workflow_dispatch")
         print("Workflow behavior: checks out the repo and runs the local composite action without mutating proof artifacts by default.")
         if workflow_backup:
             print(f"Workflow backup: {workflow_backup}")
@@ -632,6 +720,14 @@ class RetryRecoveryReadingContext:
     prompt_retry_guard_script: Path
     consistency_recovery_script: Path
     checkpoint_operator_reading_script: Path
+
+
+@dataclass(frozen=True)
+class RecoveryPromptObservabilityContext:
+    run_python: Callable[[Path, list[str]], int]
+    consistency_recovery_prompt_script: Path
+    consistency_recovery_prompt_reading_script: Path
+    observability_script: Path
 
 
 def cmd_session_export(
@@ -1805,8 +1901,7 @@ def cmd_checkpoint_operator_reading(
 def cmd_consistency_recovery_prompt(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    consistency_recovery_prompt_script: Path,
+    context: RecoveryPromptObservabilityContext,
 ) -> int:
     forwarded = [
         "--consistency-recovery-file", args.consistency_recovery_file,
@@ -1814,17 +1909,16 @@ def cmd_consistency_recovery_prompt(
     ]
     if args.thin_output_file:
         forwarded.extend(["--thin-output-file", args.thin_output_file])
-    return run_python(consistency_recovery_prompt_script, forwarded)
+    return context.run_python(context.consistency_recovery_prompt_script, forwarded)
 
 
 def cmd_consistency_recovery_prompt_reading(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    consistency_recovery_prompt_reading_script: Path,
+    context: RecoveryPromptObservabilityContext,
 ) -> int:
-    return run_python(
-        consistency_recovery_prompt_reading_script,
+    return context.run_python(
+        context.consistency_recovery_prompt_reading_script,
         [
             "--consistency-recovery-file", args.consistency_recovery_file,
             "--prompt-file", args.prompt_file,
@@ -1836,8 +1930,7 @@ def cmd_consistency_recovery_prompt_reading(
 def cmd_observability(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    observability_script: Path,
+    context: RecoveryPromptObservabilityContext,
 ) -> int:
     forwarded = [
         "--state-file", args.state_file,
@@ -1851,7 +1944,7 @@ def cmd_observability(
     ]:
         if value:
             forwarded.extend([flag, value])
-    return run_python(observability_script, forwarded)
+    return context.run_python(context.observability_script, forwarded)
 
 
 def cmd_deploy(
@@ -2323,13 +2416,27 @@ def cmd_thin_output_reading_cluster(
     checkpoint_operator_reading_script: Path,
     consistency_recovery_prompt_script: Path,
     consistency_recovery_prompt_reading_script: Path,
+    observability_script: Path,
 ) -> dict[str, Callable[[], int]]:
+    retry_recovery_reading_context = RetryRecoveryReadingContext(
+        run_python=run_python,
+        prompt_retry_guard_script=prompt_retry_guard_script,
+        consistency_recovery_script=consistency_recovery_script,
+        checkpoint_operator_reading_script=checkpoint_operator_reading_script,
+    )
+    recovery_prompt_observability_context = RecoveryPromptObservabilityContext(
+        run_python=run_python,
+        consistency_recovery_prompt_script=consistency_recovery_prompt_script,
+        consistency_recovery_prompt_reading_script=consistency_recovery_prompt_reading_script,
+        observability_script=observability_script,
+    )
     return {
         "thin_output_reading": lambda: cmd_thin_output_reading(args, run_python=run_python, thin_output_reading_script=thin_output_reading_script),
         "prompt_followup": lambda: cmd_prompt_followup(args, run_python=run_python, prompt_followup_script=prompt_followup_script),
-        "prompt_retry_guard": lambda: cmd_prompt_retry_guard(args, run_python=run_python, prompt_retry_guard_script=prompt_retry_guard_script),
-        "consistency_recovery": lambda: cmd_consistency_recovery(args, run_python=run_python, consistency_recovery_script=consistency_recovery_script),
-        "checkpoint_operator_reading": lambda: cmd_checkpoint_operator_reading(args, run_python=run_python, checkpoint_operator_reading_script=checkpoint_operator_reading_script),
-        "consistency_recovery_prompt": lambda: cmd_consistency_recovery_prompt(args, run_python=run_python, consistency_recovery_prompt_script=consistency_recovery_prompt_script),
-        "consistency_recovery_prompt_reading": lambda: cmd_consistency_recovery_prompt_reading(args, run_python=run_python, consistency_recovery_prompt_reading_script=consistency_recovery_prompt_reading_script),
+        "prompt_retry_guard": lambda: cmd_prompt_retry_guard(args, context=retry_recovery_reading_context),
+        "consistency_recovery": lambda: cmd_consistency_recovery(args, context=retry_recovery_reading_context),
+        "checkpoint_operator_reading": lambda: cmd_checkpoint_operator_reading(args, context=retry_recovery_reading_context),
+        "consistency_recovery_prompt": lambda: cmd_consistency_recovery_prompt(args, context=recovery_prompt_observability_context),
+        "consistency_recovery_prompt_reading": lambda: cmd_consistency_recovery_prompt_reading(args, context=recovery_prompt_observability_context),
+        "observability": lambda: cmd_observability(args, context=recovery_prompt_observability_context),
     }

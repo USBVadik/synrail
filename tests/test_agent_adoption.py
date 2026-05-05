@@ -33,6 +33,7 @@ from synrail_cli_v0 import (
     preferred_synrail_fallback_command,
     runtime_helper_text,
 )
+from synrail_commands_v0 import render_security_hygiene_workflow
 
 
 class AgentAdoptionTests(unittest.TestCase):
@@ -398,15 +399,20 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
             self.assertIn("GitHub Action CI adapter is ready.", result.stdout)
             self.assertIn("GitHub Actions workflow is ready.", result.stdout)
-            self.assertIn("Workflow triggers: pull_request, workflow_dispatch", result.stdout)
+            self.assertIn("Workflow triggers: push, pull_request, workflow_dispatch", result.stdout)
             action_file = project_root / ".github" / "actions" / "synrail-check" / "action.yml"
             workflow_file = project_root / ".github" / "workflows" / "synrail-check.yml"
             self.assertTrue(action_file.exists())
             self.assertTrue(workflow_file.exists())
             workflow = workflow_file.read_text()
+            self.assertIn("push:", workflow)
             self.assertIn("pull_request:", workflow)
             self.assertIn("workflow_dispatch:", workflow)
             self.assertIn("uses: actions/checkout@v4", workflow)
+            self.assertIn("uses: actions/setup-python@v5", workflow)
+            self.assertIn("python3 -m unittest discover -s tests", workflow)
+            self.assertIn("ruff check .", workflow)
+            self.assertIn("pytest --cov=tools/reference --cov=alpha --cov-report=term-missing --cov-report=xml", workflow)
             self.assertIn("uses: ./.github/actions/synrail-check", workflow)
             self.assertIn("artifact-root: .synrail", workflow)
 
@@ -478,6 +484,54 @@ class AgentAdoptionTests(unittest.TestCase):
             backups = list(workflow_dir.glob("synrail-check.yml.synrail.bak.*"))
             self.assertEqual(1, len(backups))
             self.assertEqual("name: Existing workflow\n", backups[0].read_text())
+
+    def test_repo_security_hygiene_workflow_covers_dependency_audit_and_secret_patterns(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "security-hygiene.yml").read_text()
+
+        self.assertIn("name: Security hygiene", workflow)
+        self.assertIn("push:", workflow)
+        self.assertIn("pull_request:", workflow)
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("uses: actions/checkout@v4", workflow)
+        self.assertIn("uses: actions/setup-python@v5", workflow)
+        self.assertIn('python-version: "3.11"', workflow)
+        self.assertIn('python3 -m pip install -e ".[dev]"', workflow)
+        self.assertIn("python3 -m unittest discover -s tests", workflow)
+        self.assertIn("ruff check .", workflow)
+        self.assertIn("pytest --cov=tools/reference --cov=alpha --cov-report=term-missing --cov-report=xml", workflow)
+        self.assertIn("pip-audit", workflow)
+        self.assertIn("Check repository text for common secret patterns", workflow)
+        self.assertIn("python3 - <<'PY'", workflow)
+        self.assertIn('excluded_dirs = {".git", ".venv", "__pycache__"}', workflow)
+        self.assertIn("AKIA[0-9A-Z]{16}", workflow)
+        self.assertIn("ghp_[A-Za-z0-9]{20,}", workflow)
+
+    def test_observability_command_does_not_raise_missing_context_nameerror(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_observability_cli_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            result = self.run_alpha(
+                "observability",
+                "--help",
+                cwd=project_root,
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertNotIn("NameError", result.stdout + result.stderr)
+            self.assertIn("usage: synrail observability", result.stdout)
+            self.assertIn("--refresh-file", result.stdout)
+            self.assertIn("--output", result.stdout)
+
+    def test_init_ci_renderer_covers_security_hygiene_workflow(self) -> None:
+        workflow = render_security_hygiene_workflow()
+        self.assertIn("name: Security hygiene", workflow)
+        self.assertIn("push:", workflow)
+        self.assertIn("python3 -m unittest discover -s tests", workflow)
+        self.assertIn("ruff check .", workflow)
+        self.assertIn("pytest --cov=tools/reference --cov=alpha --cov-report=term-missing --cov-report=xml", workflow)
+        self.assertIn("pip-audit", workflow)
+        self.assertIn("python3 - <<'PY'", workflow)
+        self.assertIn("ghp_[A-Za-z0-9]{20,}", workflow)
+        self.assertIn("AKIA[0-9A-Z]{16}", workflow)
 
     def test_prefers_repo_portable_command_when_path_points_elsewhere(self) -> None:
         with mock.patch("synrail_cli_v0.sys.argv", ["/opt/synrail/.venv/bin/synrail"]), mock.patch(

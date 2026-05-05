@@ -73,3 +73,13 @@ A good PR in this repo should say:
 - what was intentionally left out
 
 If a change mainly benefits one downstream agent or one proving-ground environment, call that out explicitly and reconsider whether it belongs in this repo at all.
+
+## Issue guidance
+
+Use the GitHub issue templates to keep bug reports and feature requests bounded.
+
+- bug reports should name the observed status or misleading outcome and point to the smallest repro or artifact path
+- feature requests should explain why the change belongs in Synrail itself and what should stay out of scope
+- broad remote-host, downstream-agent, or production workflow asks should be labeled explicitly as outside the current support boundary unless the request is about tightening that boundary honestly
+
+If the normal feedback export is not enough for a bug report, attach `synrail bug-packet --artifact-root .synrail`.
