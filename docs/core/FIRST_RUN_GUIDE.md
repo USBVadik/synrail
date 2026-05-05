@@ -2,6 +2,17 @@
 
 Synrail governs one bounded change at a time. It blocks false-green closure and tells you what to fix.
 
+## False-Green Demo
+
+```text
+Agent: tests passed
+Synrail: Status: Proof Invalid
+Reason: verification command not executed / freshness mismatch
+Next: repair final_result.json
+```
+
+Only `Status: Accepted` means the task may be reported as complete.
+
 ## Install
 
 ```bash
@@ -12,6 +23,17 @@ python3 tools/reference/synrail_install_v0.py --venv .venv
 
 If you want local coding agents to discover Synrail naturally in this repo, bootstrap the repo-native hints in one step:
 
+For a runnable GitHub Actions lane after install, use:
+
+```bash
+synrail init-ci --workflow
+```
+
+That writes both the local composite action and `.github/workflows/synrail-check.yml`. If you only want the adapter, run `synrail init-ci` and then add your own workflow that calls `uses: ./.github/actions/synrail-check`.
+
+If either generated file already exists with different contents, Synrail blocks unless you rerun with `--force`, and it writes a timestamped `.synrail.bak.*` backup before replacing the existing file.
+
+
 ```bash
 python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd)"
 ```
@@ -20,6 +42,18 @@ This installs the current Synrail CLI into `.venv` and immediately creates missi
 
 ## Git Preflight
 
+Start here:
+
+```bash
+synrail preflight
+```
+
+If the checkout-local wrapper is blocked on this host, use the repo-local fallback instead:
+
+```bash
+python3 alpha.py preflight
+```
+
 Synrail works best when `git` is installed because the cheapest strong proof is a real `git_diff`.
 
 Check once:
@@ -27,6 +61,12 @@ Check once:
 ```bash
 git --version
 ```
+
+If `git` is missing, preflight should make the weaker path explicit:
+
+Git is not installed. Synrail can still use structured diff_provenance, but git_diff and restore coverage will be weaker. Install git for the normal path.
+
+Use that exact message when preflight reports the missing-git path.
 
 If `git` is missing, Synrail can still run. Do not invent a `git_diff`. In `.synrail/final_result.json`, leave `git_diff` empty and use structured provenance instead:
 
@@ -132,6 +172,8 @@ synrail explain-proof
 ```
 
 Repeat until `synrail check` prints `Status: Accepted`.
+
+Only `Status: Accepted` means the task may be reported as complete. If Synrail returns `Proof Invalid`, `Rejected`, `Blocked`, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.
 
 ## What non-green means
 

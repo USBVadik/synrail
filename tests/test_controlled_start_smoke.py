@@ -77,6 +77,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
         self.assertIn("restore", help_result.stdout)
         self.assertIn("init-agent", help_result.stdout)
         self.assertIn("init-ci", help_result.stdout)
+        self.assertIn("preflight", help_result.stdout)
         self.assertNotIn("install-agent-files", help_result.stdout)
         self.assertNotIn("session-export", help_result.stdout)
         self.assertNotIn("bug-packet", help_result.stdout)
@@ -160,6 +161,63 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertIn("rerun .venv/bin/synrail check.", check.stdout)
             self.assertIn("Need a canonical final_result shape? run .venv/bin/synrail final-result-template", check.stdout)
+
+    def test_preflight_reports_git_missing_without_crashing(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_preflight_no_git_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            result = self.run_alpha(
+                "preflight",
+                cwd=project_root,
+                env_overrides={"PATH": ""},
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn(
+                "Git is not installed. Synrail can still use structured diff_provenance, but git_diff and restore coverage will be weaker. Install git for the normal path.",
+                result.stdout,
+            )
+
+    def test_preflight_reports_repo_native_alpha_fallback(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_preflight_alpha_fallback_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            result = self.run_alpha(
+                "preflight",
+                cwd=project_root,
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("Repo-native alpha fallback available: yes", result.stdout)
+            self.assertIn("Repo-native alpha command: python3 alpha.py", result.stdout)
+
+    def test_preflight_json_shape_is_machine_readable(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_preflight_json_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root = project_root / ".artifacts"
+
+            result = self.run_alpha(
+                "preflight",
+                "--artifact-root",
+                str(artifact_root),
+                "--json",
+                cwd=project_root,
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PASS", payload["status"])
+            self.assertEqual(str(project_root.resolve()), payload["project_root"])
+            self.assertEqual(str(project_root.resolve()), payload["current_directory"])
+            self.assertEqual(str(artifact_root.resolve()), payload["artifact_root"])
+            self.assertIn("python_version", payload)
+            self.assertIn("available", payload["git"])
+            self.assertIn("message", payload["git"])
+            self.assertIn("available", payload["synrail_wrapper"])
+            self.assertIn("command", payload["synrail_wrapper"])
+            self.assertIn("available", payload["repo_native_alpha_fallback"])
+            self.assertIn("command", payload["repo_native_alpha_fallback"])
 
     def test_restore_preview_surfaces_file_copy_contract(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_restore_preview_") as tmpdir:

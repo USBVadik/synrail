@@ -79,9 +79,10 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("Only materialize readback or scenario proof if Synrail explicitly targets them", agents)
             self.assertIn("If `git` is unavailable on this host, do not invent `git_diff`", agents)
             self.assertIn("Do not skip Synrail", agents)
-            self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", agents)
-            self.assertIn("do not send a final success/completion answer", agents)
+            self.assertIn("Only `Status: Accepted` means the task may be reported as complete. If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", agents)
             self.assertIn("functionally complete, 100% done", agents)
+            self.assertIn('synrail start "TASK" --artifact-root ./.synrail', agents)
+            self.assertIn("# only stop on Status: Accepted", agents)
             self.assertIn("./.venv/bin/synrail", agents)
             self.assertIn("python3 alpha.py", agents)
             self.assertIn("approval or permission wall", agents)
@@ -104,9 +105,10 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("fallback-only surfaces", gemini)
             self.assertIn("do not touch them unless Synrail explicitly targets them", gemini)
             self.assertIn("If `git` is unavailable on this host, do not invent `git_diff`", gemini)
-            self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", gemini)
-            self.assertIn("do not send a final success/completion answer", gemini)
+            self.assertIn("Only `Status: Accepted` means the task may be reported as complete. If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", gemini)
             self.assertIn("functionally complete, 100% done", gemini)
+            self.assertIn('synrail start "TASK" --artifact-root ./.synrail', gemini)
+            self.assertIn("# only stop on Status: Accepted", gemini)
             self.assertIn("./.venv/bin/synrail", gemini)
             self.assertIn("python3 alpha.py", gemini)
             self.assertIn("approval or permission wall", gemini)
@@ -123,9 +125,10 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("fallback-only surfaces", claude)
             self.assertIn("do not touch them unless Synrail explicitly targets them", claude)
             self.assertIn("If `git` is unavailable on this host, do not invent `git_diff`", claude)
-            self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", claude)
-            self.assertIn("do not send a final success/completion answer", claude)
+            self.assertIn("Only `Status: Accepted` means the task may be reported as complete. If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", claude)
             self.assertIn("functionally complete, 100% done", claude)
+            self.assertIn('synrail start "TASK" --artifact-root ./.synrail', claude)
+            self.assertIn("# only stop on Status: Accepted", claude)
             self.assertIn("./.venv/bin/synrail", claude)
             self.assertIn("python3 alpha.py", claude)
             self.assertIn("approval or permission wall", claude)
@@ -158,6 +161,9 @@ class AgentAdoptionTests(unittest.TestCase):
             claude = (project_root / "CLAUDE.md").read_text()
             self.assertIn("Use Synrail as the default local control path", claude)
             self.assertIn("python3 alpha.py check", claude)
+            self.assertIn("Only `Status: Accepted` means the task may be reported as complete. If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", claude)
+            self.assertIn('synrail start "TASK" --artifact-root ./.synrail', claude)
+            self.assertIn("# only stop on Status: Accepted", claude)
 
     def test_init_agent_routes_codex_and_cursor_to_full_agent_wiring(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_init_agent_alias_") as tmpdir:
@@ -197,6 +203,72 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertTrue((cursor_root / "AGENTS.md").exists())
             self.assertTrue((cursor_root / "GEMINI.md").exists())
             self.assertTrue((cursor_root / "CLAUDE.md").exists())
+
+    def test_generated_agent_policy_forbids_done_after_non_accepted_check(self) -> None:
+        agents = render_local_workflow_policy(
+            heading="# Agent Workflow",
+            intro="This repo uses Synrail to keep one bounded local change inside one controlled run.",
+            artifact_root=".synrail",
+            command="synrail",
+            fallback_command="./.venv/bin/synrail",
+            repo_native_alpha_command="python3 alpha.py",
+            workspace_isolation_note="",
+            prefer_runtime_helper=False,
+            first_command_heading="## First Step On Every New Task",
+            first_command_intro="Run Synrail before deciding what to do next. It is a CLI control kernel, not a background daemon.",
+            show_cli_kernel_note=False,
+            start_intro="If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
+        )
+        self.assertEqual(1, agents.count("Only `Status: Accepted` means the task may be reported as complete."))
+        self.assertIn("If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", agents)
+        self.assertIn('synrail start "TASK" --artifact-root ./.synrail', agents)
+        self.assertIn("synrail check --artifact-root ./.synrail", agents)
+        self.assertIn("# only stop on Status: Accepted", agents)
+
+    def test_init_agent_single_file_contains_non_accepted_rule(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_agent_single_rule_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            result = self.run_alpha(
+                "init-agent",
+                "--agent",
+                "claude",
+                "--project-root",
+                str(project_root),
+                "--artifact-root",
+                ".synrail",
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            claude = (project_root / "CLAUDE.md").read_text()
+            self.assertEqual(1, claude.count("Only `Status: Accepted` means the task may be reported as complete."))
+            self.assertIn("If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", claude)
+            self.assertIn('synrail start "TASK" --artifact-root ./.synrail', claude)
+            self.assertIn("synrail check --artifact-root ./.synrail", claude)
+            self.assertIn("# only stop on Status: Accepted", claude)
+
+    def test_install_agent_files_contains_non_accepted_rule_for_all_agents(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_install_agent_rule_all_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            result = self.run_alpha(
+                "install-agent-files",
+                "--project-root",
+                str(project_root),
+                "--artifact-root",
+                ".synrail",
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            for name in ["AGENTS.md", "GEMINI.md", "CLAUDE.md"]:
+                content = (project_root / name).read_text()
+                self.assertEqual(1, content.count("Only `Status: Accepted` means the task may be reported as complete."), name)
+                self.assertIn("If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", content)
+                self.assertIn('synrail start "TASK" --artifact-root ./.synrail', content)
+                self.assertIn("synrail check --artifact-root ./.synrail", content)
+                self.assertIn("# only stop on Status: Accepted", content)
 
     def test_cmd_init_agent_can_append_existing_single_agent_file(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_init_agent_append_") as tmpdir:
@@ -270,6 +342,7 @@ class AgentAdoptionTests(unittest.TestCase):
             args = mock.Mock(
                 project_root=str(project_root),
                 artifact_root=".synrail",
+                workflow=False,
                 force=False,
             )
             with redirect_stdout(stdout):
@@ -293,6 +366,7 @@ class AgentAdoptionTests(unittest.TestCase):
             args = mock.Mock(
                 project_root=str(project_root),
                 artifact_root=".synrail",
+                workflow=False,
                 force=True,
             )
             with redirect_stdout(stdout):
@@ -306,6 +380,104 @@ class AgentAdoptionTests(unittest.TestCase):
             backups = list(action_dir.glob("action.yml.synrail.bak.*"))
             self.assertEqual(1, len(backups))
             self.assertEqual("name: Existing adapter\n", backups[0].read_text())
+
+    def test_init_ci_workflow_writes_composite_action_and_workflow(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_ci_workflow_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            result = self.run_alpha(
+                "init-ci",
+                "--workflow",
+                "--project-root",
+                str(project_root),
+                "--artifact-root",
+                ".synrail",
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("GitHub Action CI adapter is ready.", result.stdout)
+            self.assertIn("GitHub Actions workflow is ready.", result.stdout)
+            self.assertIn("Workflow triggers: pull_request, workflow_dispatch", result.stdout)
+            action_file = project_root / ".github" / "actions" / "synrail-check" / "action.yml"
+            workflow_file = project_root / ".github" / "workflows" / "synrail-check.yml"
+            self.assertTrue(action_file.exists())
+            self.assertTrue(workflow_file.exists())
+            workflow = workflow_file.read_text()
+            self.assertIn("pull_request:", workflow)
+            self.assertIn("workflow_dispatch:", workflow)
+            self.assertIn("uses: actions/checkout@v4", workflow)
+            self.assertIn("uses: ./.github/actions/synrail-check", workflow)
+            self.assertIn("artifact-root: .synrail", workflow)
+
+    def test_init_ci_default_says_adapter_only(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_ci_adapter_only_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            result = self.run_alpha(
+                "init-ci",
+                "--project-root",
+                str(project_root),
+                "--artifact-root",
+                ".synrail",
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("Adapter only: add a workflow that calls uses: ./.github/actions/synrail-check, or rerun with --workflow.", result.stdout)
+            self.assertFalse((project_root / ".github" / "workflows" / "synrail-check.yml").exists())
+
+    def test_init_ci_workflow_blocks_existing_different_file_without_force(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_ci_workflow_block_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            workflow_dir = project_root / ".github" / "workflows"
+            workflow_dir.mkdir(parents=True, exist_ok=True)
+            workflow_file = workflow_dir / "synrail-check.yml"
+            workflow_file.write_text("name: Existing workflow\n")
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            stdout = StringIO()
+            args = mock.Mock(
+                project_root=str(project_root),
+                artifact_root=".synrail",
+                workflow=True,
+                force=False,
+            )
+            with redirect_stdout(stdout):
+                rc = cmd_init_ci(args)
+            self.assertEqual(2, rc)
+            rendered = stdout.getvalue()
+            self.assertIn("GitHub Actions workflow already exists with different contents.", rendered)
+            self.assertIn("rerun with --force", rendered)
+            self.assertEqual("name: Existing workflow\n", workflow_file.read_text())
+
+    def test_init_ci_workflow_force_creates_backup(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_ci_workflow_force_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            workflow_dir = project_root / ".github" / "workflows"
+            workflow_dir.mkdir(parents=True, exist_ok=True)
+            workflow_file = workflow_dir / "synrail-check.yml"
+            workflow_file.write_text("name: Existing workflow\n")
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            stdout = StringIO()
+            args = mock.Mock(
+                project_root=str(project_root),
+                artifact_root=".synrail",
+                workflow=True,
+                force=True,
+            )
+            with redirect_stdout(stdout):
+                rc = cmd_init_ci(args)
+            self.assertEqual(0, rc)
+            rendered = stdout.getvalue()
+            self.assertIn("GitHub Actions workflow is ready.", rendered)
+            self.assertIn("Workflow backup:", rendered)
+            self.assertIn("What to do next: commit the refreshed adapter and workflow", rendered)
+            self.assertIn("uses: ./.github/actions/synrail-check", workflow_file.read_text())
+            backups = list(workflow_dir.glob("synrail-check.yml.synrail.bak.*"))
+            self.assertEqual(1, len(backups))
+            self.assertEqual("name: Existing workflow\n", backups[0].read_text())
 
     def test_prefers_repo_portable_command_when_path_points_elsewhere(self) -> None:
         with mock.patch("synrail_cli_v0.sys.argv", ["/opt/synrail/.venv/bin/synrail"]), mock.patch(
@@ -419,16 +591,18 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("Use Synrail as the default local control path", gemini)
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", gemini)
             self.assertIn("Do not turn project recall into repo archaeology.", gemini)
-            self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", gemini)
-            self.assertIn("do not send a final success/completion answer", gemini)
+            self.assertIn("Only `Status: Accepted` means the task may be reported as complete. If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", gemini)
+            self.assertIn('synrail start "TASK" --artifact-root ./.synrail', gemini)
+            self.assertIn("# only stop on Status: Accepted", gemini)
             self.assertIn("Keep repo instructions portable: prefer `synrail`", gemini)
             self.assertIn("approval or permission wall", gemini)
             self.assertIn("# Existing Claude Context", claude)
             self.assertIn("<!-- SYNRAIL_CLAUDE_START -->", claude)
             self.assertIn("Use Synrail as the default local control path", claude)
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", claude)
-            self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", claude)
-            self.assertIn("do not send a final success/completion answer", claude)
+            self.assertIn("Only `Status: Accepted` means the task may be reported as complete. If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", claude)
+            self.assertIn('synrail start "TASK" --artifact-root ./.synrail', claude)
+            self.assertIn("# only stop on Status: Accepted", claude)
             self.assertIn("approval or permission wall", claude)
 
             forced = self.run_alpha(
@@ -452,11 +626,13 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("Use Synrail as the default local control path", (project_root / "GEMINI.md").read_text())
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", (project_root / "GEMINI.md").read_text())
             self.assertIn("Do not turn project recall into repo archaeology.", (project_root / "GEMINI.md").read_text())
-            self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", (project_root / "GEMINI.md").read_text())
+            self.assertIn("Only `Status: Accepted` means the task may be reported as complete. If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", (project_root / "GEMINI.md").read_text())
+            self.assertIn('synrail start "TASK" --artifact-root ./.synrail', (project_root / "GEMINI.md").read_text())
             self.assertNotIn("<!-- SYNRAIL_CLAUDE_START -->", (project_root / "CLAUDE.md").read_text())
             self.assertIn("Use Synrail as the default local control path", (project_root / "CLAUDE.md").read_text())
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", (project_root / "CLAUDE.md").read_text())
-            self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", (project_root / "CLAUDE.md").read_text())
+            self.assertIn("Only `Status: Accepted` means the task may be reported as complete. If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", (project_root / "CLAUDE.md").read_text())
+            self.assertIn('synrail start "TASK" --artifact-root ./.synrail', (project_root / "CLAUDE.md").read_text())
 
     def test_install_agent_files_adds_nested_git_and_runtime_notes(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_agent_nested_git_") as tmpdir:

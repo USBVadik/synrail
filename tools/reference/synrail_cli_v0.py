@@ -106,6 +106,22 @@ except ImportError:
 
 try:
     from .synrail_commands_v0 import (
+        AgentAdoptionContext,
+        CiPreflightContext,
+        ApplyRefreshValidateContext,
+        DoctorCompareSubstituteContext,
+        HybridModeContext,
+        ProofPreparationCostContext,
+        CheckpointCreateSaveVerifyContext,
+        RestoreConsistencyThinContext,
+        PromptReadingFollowupContext,
+        RetryRecoveryReadingContext,
+        OperatorBriefRenderReadingContext,
+        OperatorRenderAdoptionPressureContext,
+        RepairBundleClosureContext,
+        ReproducibilityOperatorBriefContext,
+        SessionExportBugPacketContext,
+        TelemetryContext,
         cmd_apply_bundle as extracted_cmd_apply_bundle,
         cmd_apply_closure as extracted_cmd_apply_closure,
         cmd_artifact_consistency as extracted_cmd_artifact_consistency,
@@ -137,6 +153,7 @@ try:
         cmd_operator_render_adoption_delta as extracted_cmd_operator_render_adoption_delta,
         cmd_orchestrate as extracted_cmd_orchestrate,
         cmd_plan_proof as extracted_cmd_plan_proof,
+        cmd_preflight as extracted_cmd_preflight,
         cmd_preparation_receipt as extracted_cmd_preparation_receipt,
         cmd_prompt_followup as extracted_cmd_prompt_followup,
         cmd_prompt_retry_guard as extracted_cmd_prompt_retry_guard,
@@ -161,11 +178,13 @@ try:
         run_install_agent_files_command,
     )
     from .synrail_controlled_start_shell_v0 import (
+        ControlledStartShellContext,
         cmd_init as extracted_cmd_init,
         cmd_refresh_acceptance as extracted_cmd_refresh_acceptance,
         cmd_start as extracted_cmd_start,
     )
     from .synrail_public_shell_v0 import (
+        PublicShellContext,
         cmd_explain_proof as extracted_cmd_explain_proof,
         cmd_final_result_template as extracted_cmd_final_result_template,
         cmd_readback_template as extracted_cmd_readback_template,
@@ -175,6 +194,22 @@ try:
     )
 except ImportError:
     from synrail_commands_v0 import (
+        AgentAdoptionContext,
+        CiPreflightContext,
+        ApplyRefreshValidateContext,
+        DoctorCompareSubstituteContext,
+        HybridModeContext,
+        ProofPreparationCostContext,
+        CheckpointCreateSaveVerifyContext,
+        RestoreConsistencyThinContext,
+        PromptReadingFollowupContext,
+        RetryRecoveryReadingContext,
+        OperatorBriefRenderReadingContext,
+        OperatorRenderAdoptionPressureContext,
+        RepairBundleClosureContext,
+        ReproducibilityOperatorBriefContext,
+        SessionExportBugPacketContext,
+        TelemetryContext,
         cmd_apply_bundle as extracted_cmd_apply_bundle,
         cmd_apply_closure as extracted_cmd_apply_closure,
         cmd_artifact_consistency as extracted_cmd_artifact_consistency,
@@ -206,6 +241,7 @@ except ImportError:
         cmd_operator_render_adoption_delta as extracted_cmd_operator_render_adoption_delta,
         cmd_orchestrate as extracted_cmd_orchestrate,
         cmd_plan_proof as extracted_cmd_plan_proof,
+        cmd_preflight as extracted_cmd_preflight,
         cmd_preparation_receipt as extracted_cmd_preparation_receipt,
         cmd_prompt_followup as extracted_cmd_prompt_followup,
         cmd_prompt_retry_guard as extracted_cmd_prompt_retry_guard,
@@ -230,11 +266,13 @@ except ImportError:
         run_install_agent_files_command,
     )
     from synrail_controlled_start_shell_v0 import (
+        ControlledStartShellContext,
         cmd_init as extracted_cmd_init,
         cmd_refresh_acceptance as extracted_cmd_refresh_acceptance,
         cmd_start as extracted_cmd_start,
     )
     from synrail_public_shell_v0 import (
+        PublicShellContext,
         cmd_explain_proof as extracted_cmd_explain_proof,
         cmd_final_result_template as extracted_cmd_final_result_template,
         cmd_readback_template as extracted_cmd_readback_template,
@@ -618,9 +656,8 @@ def preferred_synrail_fallback_command() -> str | None:
     )
 
 
-def cmd_install_agent_files(args: argparse.Namespace) -> int:
-    return extracted_cmd_install_agent_files(
-        args,
+def agent_adoption_context() -> AgentAdoptionContext:
+    return AgentAdoptionContext(
         relative_artifact_root_for_project=relative_artifact_root_for_project,
         preferred_synrail_command=preferred_synrail_command,
         preferred_synrail_fallback_command=preferred_synrail_fallback_command,
@@ -637,30 +674,196 @@ def cmd_install_agent_files(args: argparse.Namespace) -> int:
     )
 
 
+def cmd_install_agent_files(args: argparse.Namespace) -> int:
+    return extracted_cmd_install_agent_files(args, context=agent_adoption_context())
+
+
 def cmd_init_agent(args: argparse.Namespace) -> int:
-    return extracted_cmd_init_agent(
-        args,
+    return extracted_cmd_init_agent(args, context=agent_adoption_context())
+
+
+def ci_preflight_context() -> CiPreflightContext:
+    return CiPreflightContext(
         relative_artifact_root_for_project=relative_artifact_root_for_project,
+        preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
+        current_project_root=current_project_root,
         preferred_synrail_command=preferred_synrail_command,
         preferred_synrail_fallback_command=preferred_synrail_fallback_command,
-        preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
         workspace_git_context=workspace_git_context,
-        project_prefers_runtime_evidence=project_prefers_runtime_evidence,
-        render_agent_policy_markdown=render_agent_policy_markdown,
-        render_gemini_policy_markdown=render_gemini_policy_markdown,
-        render_claude_policy_markdown=render_claude_policy_markdown,
-        render_agents_policy_block=render_agents_policy_block,
-        render_gemini_policy_block=render_gemini_policy_block,
-        render_claude_policy_block=render_claude_policy_block,
-        write_agent_policy_file=write_agent_policy_file,
     )
 
 
 def cmd_init_ci(args: argparse.Namespace) -> int:
-    return extracted_cmd_init_ci(
-        args,
-        relative_artifact_root_for_project=relative_artifact_root_for_project,
-        preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
+    return extracted_cmd_init_ci(args, context=ci_preflight_context())
+
+
+def cmd_preflight(args: argparse.Namespace) -> int:
+    return extracted_cmd_preflight(args, context=ci_preflight_context())
+
+
+def telemetry_context() -> TelemetryContext:
+    return TelemetryContext(
+        alpha_root_from_args=alpha_root_from_args,
+        enable_telemetry=enable_telemetry,
+        default_session_replay_file=default_session_replay_file,
+        default_issue_body_file=default_issue_body_file,
+        export_session_replay=export_session_replay,
+    )
+
+
+def session_export_bug_packet_context() -> SessionExportBugPacketContext:
+    return SessionExportBugPacketContext(
+        alpha_root_from_args=alpha_root_from_args,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        alpha_file=alpha_file,
+        cmd_observability=cmd_observability,
+        run_python=run_python,
+        bug_packet_script=BUG_PACKET,
+    )
+
+
+def reproducibility_operator_brief_context() -> ReproducibilityOperatorBriefContext:
+    return ReproducibilityOperatorBriefContext(
+        run_python=run_python,
+        reproducibility_script=REPRODUCIBILITY,
+        second_operator_script=SECOND_OPERATOR,
+        operator_brief_script=OPERATOR_BRIEF,
+    )
+
+
+def operator_brief_render_reading_context() -> OperatorBriefRenderReadingContext:
+    return OperatorBriefRenderReadingContext(
+        run_python=run_python,
+        operator_brief_chain_script=OPERATOR_BRIEF_CHAIN,
+        operator_render_script=OPERATOR_RENDER,
+        operator_reading_script=OPERATOR_READING,
+    )
+
+
+def operator_render_adoption_pressure_context() -> OperatorRenderAdoptionPressureContext:
+    return OperatorRenderAdoptionPressureContext(
+        run_python=run_python,
+        operator_render_adoption_script=OPERATOR_RENDER_ADOPTION,
+        operator_render_adoption_delta_script=OPERATOR_RENDER_ADOPTION_DELTA,
+        externality_pressure_script=EXTERNALITY_PRESSURE,
+    )
+
+
+def repair_bundle_closure_context() -> RepairBundleClosureContext:
+    return RepairBundleClosureContext(
+        run_python=run_python,
+        repair_handoff_script=REPAIR_HANDOFF,
+        bundle_script=BUNDLE,
+        closure_script=CLOSURE,
+    )
+
+
+def apply_refresh_validate_context() -> ApplyRefreshValidateContext:
+    return ApplyRefreshValidateContext(
+        run_python=run_python,
+        spine_script=SPINE,
+        refresh_script=REFRESH,
+        validate_script=VALIDATE,
+    )
+
+
+def doctor_compare_substitute_context() -> DoctorCompareSubstituteContext:
+    return DoctorCompareSubstituteContext(
+        alpha_root_from_args=alpha_root_from_args,
+        current_project_root=current_project_root,
+        validate_root_within_project=validate_root_within_project,
+        validate_doctor_paths=validate_doctor_paths,
+        load_json=load_json,
+        comparison_harness_for_inputs=comparison_harness_for_inputs,
+        run_python=run_python,
+        doctor_script=DOCTOR,
+        substitute_pressure_script=SUBSTITUTE_PRESSURE,
+    )
+
+
+def hybrid_mode_context() -> HybridModeContext:
+    return HybridModeContext(
+        run_python=run_python,
+        hybrid_status_script=HYBRID_STATUS,
+        mode_selector_script=MODE_SELECTOR,
+        mode_receipt_script=MODE_RECEIPT,
+    )
+
+
+def proof_preparation_cost_context() -> ProofPreparationCostContext:
+    return ProofPreparationCostContext(
+        run_python=run_python,
+        proof_plan_script=PROOF_PLAN,
+        preparation_receipt_script=PREPARATION_RECEIPT,
+        governed_cost_script=GOVERNED_COST,
+    )
+
+
+def checkpoint_create_save_verify_context() -> CheckpointCreateSaveVerifyContext:
+    return CheckpointCreateSaveVerifyContext(
+        alpha_root_from_args=alpha_root_from_args,
+        checkpoint_record_file=checkpoint_record_file,
+        checkpoint_root=checkpoint_root,
+        alpha_file=alpha_file,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        checkpoint_verify_file=checkpoint_verify_file,
+        discover_checkpoint_record=discover_checkpoint_record,
+        run_python=run_python,
+        run_python_capture=run_python_capture,
+        print_checkpoint_summary=print_checkpoint_summary,
+        print_save_summary=print_save_summary,
+        shell_command=shell_command,
+        checkpoint_script=CHECKPOINT,
+    )
+
+
+def restore_consistency_thin_context() -> RestoreConsistencyThinContext:
+    return RestoreConsistencyThinContext(
+        alpha_root_from_args=alpha_root_from_args,
+        discover_checkpoint_record=discover_checkpoint_record,
+        alpha_file=alpha_file,
+        load_json=load_json,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        run_python=run_python,
+        run_python_capture=run_python_capture,
+        print_checkpoint_summary=print_checkpoint_summary,
+        shell_command=shell_command,
+        sync_restored_checkpoint_artifacts=sync_restored_checkpoint_artifacts,
+        print_thin_output_summary=print_thin_output_summary,
+        checkpoint_script=CHECKPOINT,
+        artifact_consistency_script=ARTIFACT_CONSISTENCY,
+        thin_output_script=THIN_OUTPUT,
+    )
+
+
+def prompt_reading_followup_context() -> PromptReadingFollowupContext:
+    return PromptReadingFollowupContext(
+        alpha_root_from_args=alpha_root_from_args,
+        alpha_file=alpha_file,
+        maybe_existing_alpha_file=maybe_existing_alpha_file,
+        discover_checkpoint_record=discover_checkpoint_record,
+        load_json=load_json,
+        apply_resume_output_defaults=apply_resume_output_defaults,
+        ensure_repair_packet_synthesis_defaults=ensure_repair_packet_synthesis_defaults,
+        synthesize_repair_packet=synthesize_repair_packet,
+        run_python=run_python,
+        run_python_capture=run_python_capture,
+        maybe_materialize_requested_fallback_surface=maybe_materialize_requested_fallback_surface,
+        print_prompt_summary=print_prompt_summary,
+        load_project_profile=load_project_profile,
+        plain_shell_command=plain_shell_command,
+        prompt_bridge_script=PROMPT_BRIDGE,
+        thin_output_reading_script=THIN_OUTPUT_READING,
+        prompt_followup_script=PROMPT_FOLLOWUP,
+    )
+
+
+def retry_recovery_reading_context() -> RetryRecoveryReadingContext:
+    return RetryRecoveryReadingContext(
+        run_python=run_python,
+        prompt_retry_guard_script=PROMPT_RETRY_GUARD,
+        consistency_recovery_script=CONSISTENCY_RECOVERY,
+        checkpoint_operator_reading_script=CHECKPOINT_OPERATOR_READING,
     )
 
 
@@ -2276,74 +2479,51 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
     print("\n".join(line for line in lines if line))
 
 
-def cmd_status(args: argparse.Namespace) -> int:
-    return extracted_cmd_status(
-        args,
+def public_shell_context() -> PublicShellContext:
+    return PublicShellContext(
         alpha_root_from_args=alpha_root_from_args,
         default_workspace_artifact_root=default_workspace_artifact_root,
         alpha_file=alpha_file,
-        ensure_run_state_extensions=ensure_run_state_extensions,
         load_json=load_json,
+        display_path=display_path,
+        ensure_run_state_extensions=ensure_run_state_extensions,
         build_workspace_status=build_workspace_status,
         print_workspace_dashboard=print_workspace_dashboard,
+        build_proof_explanation=build_proof_explanation,
+        print_proof_explanation=print_proof_explanation,
+        final_result_template_payload=final_result_template_payload,
+        scenario_proof_template_text=scenario_proof_template_text,
+        readback_template_text=readback_template_text,
+        runtime_helper_text=runtime_helper_text,
     )
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    return extracted_cmd_status(args, context=public_shell_context())
 
 
 def cmd_explain_proof(args: argparse.Namespace) -> int:
-    return extracted_cmd_explain_proof(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        default_workspace_artifact_root=default_workspace_artifact_root,
-        alpha_file=alpha_file,
-        load_json=load_json,
-        build_proof_explanation=build_proof_explanation,
-        print_proof_explanation=print_proof_explanation,
-    )
+    return extracted_cmd_explain_proof(args, context=public_shell_context())
 
 
 def cmd_final_result_template(args: argparse.Namespace) -> int:
-    return extracted_cmd_final_result_template(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        default_workspace_artifact_root=default_workspace_artifact_root,
-        final_result_template_payload=final_result_template_payload,
-        display_path=display_path,
-    )
+    return extracted_cmd_final_result_template(args, context=public_shell_context())
 
 
 def cmd_scenario_proof_template(args: argparse.Namespace) -> int:
-    return extracted_cmd_scenario_proof_template(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        default_workspace_artifact_root=default_workspace_artifact_root,
-        scenario_proof_template_text=scenario_proof_template_text,
-        display_path=display_path,
-    )
+    return extracted_cmd_scenario_proof_template(args, context=public_shell_context())
 
 
 def cmd_readback_template(args: argparse.Namespace) -> int:
-    return extracted_cmd_readback_template(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        default_workspace_artifact_root=default_workspace_artifact_root,
-        readback_template_text=readback_template_text,
-        display_path=display_path,
-    )
+    return extracted_cmd_readback_template(args, context=public_shell_context())
 
 
 def cmd_runtime_helper(args: argparse.Namespace) -> int:
-    return extracted_cmd_runtime_helper(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        default_workspace_artifact_root=default_workspace_artifact_root,
-        runtime_helper_text=runtime_helper_text,
-        display_path=display_path,
-    )
+    return extracted_cmd_runtime_helper(args, context=public_shell_context())
 
 
-def cmd_init(args: argparse.Namespace) -> int:
-    return extracted_cmd_init(
-        args,
+def controlled_start_shell_context() -> ControlledStartShellContext:
+    return ControlledStartShellContext(
         alpha_root_from_args=alpha_root_from_args,
         default_alpha_run_id=default_alpha_run_id,
         alpha_file=alpha_file,
@@ -2356,75 +2536,47 @@ def cmd_init(args: argparse.Namespace) -> int:
         save_alpha_identity_files=save_alpha_identity_files,
         write_acceptance_criteria=write_acceptance_criteria,
         print_init_summary=print_init_summary,
-    )
-
-
-def cmd_start(args: argparse.Namespace) -> int:
-    return extracted_cmd_start(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        alpha_file=alpha_file,
         load_json=load_json,
-        default_alpha_run_id=default_alpha_run_id,
-        default_task_class=DEFAULT_ALPHA_TASK_CLASS,
         resolve_start_identities=resolve_start_identities,
         plain_shell_command=plain_shell_command,
         existing_preferred_proof_artifacts=existing_preferred_proof_artifacts,
         terminal_run_states=TERMINAL_RUN_STATES,
         shell_command=shell_command,
         print_existing_run_summary=print_existing_run_summary,
-        run_python_capture=run_python_capture,
-        spine_script=SPINE,
-        build_project_profile=build_project_profile,
-        save_project_profile=save_project_profile,
         clear_runtime_artifacts_for_start=clear_runtime_artifacts_for_start,
-        save_alpha_identity_files=save_alpha_identity_files,
         write_controlled_start_artifacts=write_controlled_start_artifacts,
-        write_acceptance_criteria=write_acceptance_criteria,
         apply_bootstrap_defaults=apply_bootstrap_defaults,
         save_bootstrap_json=save_bootstrap_json,
         update_last_known_final_result_hash=update_last_known_final_result_hash,
         preferred_proof_artifact_paths=preferred_proof_artifact_paths,
         print_start_summary=print_start_summary,
-    )
-
-
-def cmd_refresh_acceptance(args: argparse.Namespace) -> int:
-    return extracted_cmd_refresh_acceptance(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        load_json=load_json,
-        alpha_file=alpha_file,
-        write_acceptance_criteria=write_acceptance_criteria,
         write_acceptance_validation=write_acceptance_validation,
         print_acceptance_refresh_summary=print_acceptance_refresh_summary,
     )
 
 
+def cmd_init(args: argparse.Namespace) -> int:
+    return extracted_cmd_init(args, context=controlled_start_shell_context())
+
+
+def cmd_start(args: argparse.Namespace) -> int:
+    return extracted_cmd_start(args, context=controlled_start_shell_context())
+
+
+def cmd_refresh_acceptance(args: argparse.Namespace) -> int:
+    return extracted_cmd_refresh_acceptance(args, context=controlled_start_shell_context())
+
+
 def cmd_telemetry_enable(args: argparse.Namespace) -> int:
-    return extracted_cmd_telemetry_enable(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        enable_telemetry=enable_telemetry,
-    )
+    return extracted_cmd_telemetry_enable(args, context=telemetry_context())
 
 
 def cmd_telemetry_export(args: argparse.Namespace) -> int:
-    return extracted_cmd_telemetry_export(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        default_session_replay_file=default_session_replay_file,
-        default_issue_body_file=default_issue_body_file,
-        export_session_replay=export_session_replay,
-    )
+    return extracted_cmd_telemetry_export(args, context=telemetry_context())
 
 
 def cmd_bundle_check(args: argparse.Namespace) -> int:
-    return extracted_cmd_bundle_check(
-        args,
-        run_python=run_python,
-        bundle_script=BUNDLE,
-    )
+    return extracted_cmd_bundle_check(args, context=repair_bundle_closure_context())
 
 
 def cmd_apply_bundle(args: argparse.Namespace) -> int:
@@ -2436,164 +2588,72 @@ def cmd_apply_bundle(args: argparse.Namespace) -> int:
 
 
 def cmd_closure(args: argparse.Namespace) -> int:
-    return extracted_cmd_closure(
-        args,
-        run_python=run_python,
-        closure_script=CLOSURE,
-    )
+    return extracted_cmd_closure(args, context=repair_bundle_closure_context())
 
 
 def cmd_apply_closure(args: argparse.Namespace) -> int:
-    return extracted_cmd_apply_closure(
-        args,
-        run_python=run_python,
-        spine_script=SPINE,
-    )
+    return extracted_cmd_apply_closure(args, context=apply_refresh_validate_context())
 
 
 def cmd_refresh(args: argparse.Namespace) -> int:
-    return extracted_cmd_refresh(
-        args,
-        run_python=run_python,
-        refresh_script=REFRESH,
-    )
+    return extracted_cmd_refresh(args, context=apply_refresh_validate_context())
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    return extracted_cmd_validate(
-        args,
-        run_python=run_python,
-        validate_script=VALIDATE,
-    )
+    return extracted_cmd_validate(args, context=apply_refresh_validate_context())
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
-    result = extracted_cmd_doctor(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        current_project_root=current_project_root,
-        validate_root_within_project=validate_root_within_project,
-        validate_doctor_paths=validate_doctor_paths,
-        run_python=run_python,
-        doctor_script=DOCTOR,
-    )
+    result = extracted_cmd_doctor(args, context=doctor_compare_substitute_context())
     if result == 0:
         maybe_print_doctor_override_warning(Path(args.output), file=sys.stderr)
     return result
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
-    return extracted_cmd_compare(
-        args,
-        load_json=load_json,
-        comparison_harness_for_inputs=comparison_harness_for_inputs,
-        run_python=run_python,
-    )
+    return extracted_cmd_compare(args, context=doctor_compare_substitute_context())
 
 
 def cmd_substitute_pressure(args: argparse.Namespace) -> int:
-    return extracted_cmd_substitute_pressure(
-        args,
-        run_python=run_python,
-        substitute_pressure_script=SUBSTITUTE_PRESSURE,
-    )
+    return extracted_cmd_substitute_pressure(args, context=doctor_compare_substitute_context())
 
 
 def cmd_hybrid_status(args: argparse.Namespace) -> int:
-    return extracted_cmd_hybrid_status(
-        args,
-        run_python=run_python,
-        hybrid_status_script=HYBRID_STATUS,
-    )
+    return extracted_cmd_hybrid_status(args, context=hybrid_mode_context())
 
 
 def cmd_recommend_mode(args: argparse.Namespace) -> int:
-    return extracted_cmd_recommend_mode(
-        args,
-        run_python=run_python,
-        mode_selector_script=MODE_SELECTOR,
-    )
+    return extracted_cmd_recommend_mode(args, context=hybrid_mode_context())
 
 
 def cmd_select_mode(args: argparse.Namespace) -> int:
-    return extracted_cmd_select_mode(
-        args,
-        run_python=run_python,
-        mode_receipt_script=MODE_RECEIPT,
-    )
+    return extracted_cmd_select_mode(args, context=hybrid_mode_context())
 
 
 def cmd_plan_proof(args: argparse.Namespace) -> int:
-    return extracted_cmd_plan_proof(
-        args,
-        run_python=run_python,
-        proof_plan_script=PROOF_PLAN,
-    )
+    return extracted_cmd_plan_proof(args, context=proof_preparation_cost_context())
 
 
 def cmd_preparation_receipt(args: argparse.Namespace) -> int:
-    return extracted_cmd_preparation_receipt(
-        args,
-        run_python=run_python,
-        preparation_receipt_script=PREPARATION_RECEIPT,
-    )
+    return extracted_cmd_preparation_receipt(args, context=proof_preparation_cost_context())
 
 
 def cmd_governed_cost(args: argparse.Namespace) -> int:
-    return extracted_cmd_governed_cost(
-        args,
-        run_python=run_python,
-        governed_cost_script=GOVERNED_COST,
-    )
+    return extracted_cmd_governed_cost(args, context=proof_preparation_cost_context())
 
 
 def cmd_create_checkpoint(args: argparse.Namespace) -> int:
-    return extracted_cmd_create_checkpoint(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        checkpoint_root=checkpoint_root,
-        alpha_file=alpha_file,
-        checkpoint_record_file=checkpoint_record_file,
-        maybe_existing_alpha_file=maybe_existing_alpha_file,
-        run_python=run_python,
-        run_python_capture=run_python_capture,
-        print_checkpoint_summary=print_checkpoint_summary,
-        checkpoint_script=CHECKPOINT,
-    )
+    return extracted_cmd_create_checkpoint(args, context=checkpoint_create_save_verify_context())
 
 
 def cmd_save(args: argparse.Namespace) -> int:
     if args.mode == "dev":
         return cmd_create_checkpoint(args)
-    return extracted_cmd_save(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        checkpoint_record_file=checkpoint_record_file,
-        checkpoint_root=checkpoint_root,
-        alpha_file=alpha_file,
-        maybe_existing_alpha_file=maybe_existing_alpha_file,
-        checkpoint_verify_file=checkpoint_verify_file,
-        run_python_capture=run_python_capture,
-        print_checkpoint_summary=print_checkpoint_summary,
-        print_save_summary=print_save_summary,
-        checkpoint_script=CHECKPOINT,
-    )
+    return extracted_cmd_save(args, context=checkpoint_create_save_verify_context())
 
 
 def cmd_restore_checkpoint(args: argparse.Namespace) -> int:
-    return extracted_cmd_restore_checkpoint(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        discover_checkpoint_record=discover_checkpoint_record,
-        alpha_file=alpha_file,
-        load_json=load_json,
-        run_python=run_python,
-        run_python_capture=run_python_capture,
-        print_checkpoint_summary=print_checkpoint_summary,
-        shell_command=shell_command,
-        sync_restored_checkpoint_artifacts=sync_restored_checkpoint_artifacts,
-        checkpoint_script=CHECKPOINT,
-    )
+    return extracted_cmd_restore_checkpoint(args, context=restore_consistency_thin_context())
 
 
 def cmd_restore(args: argparse.Namespace) -> int:
@@ -2601,89 +2661,35 @@ def cmd_restore(args: argparse.Namespace) -> int:
 
 
 def cmd_artifact_consistency(args: argparse.Namespace) -> int:
-    return extracted_cmd_artifact_consistency(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        alpha_file=alpha_file,
-        maybe_existing_alpha_file=maybe_existing_alpha_file,
-        run_python=run_python,
-        artifact_consistency_script=ARTIFACT_CONSISTENCY,
-    )
+    return extracted_cmd_artifact_consistency(args, context=restore_consistency_thin_context())
 
 
 def cmd_thin_output(args: argparse.Namespace) -> int:
-    return extracted_cmd_thin_output(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        alpha_file=alpha_file,
-        maybe_existing_alpha_file=maybe_existing_alpha_file,
-        discover_checkpoint_record=discover_checkpoint_record,
-        run_python=run_python,
-        run_python_capture=run_python_capture,
-        print_thin_output_summary=print_thin_output_summary,
-        thin_output_script=THIN_OUTPUT,
-    )
+    return extracted_cmd_thin_output(args, context=restore_consistency_thin_context())
 
 
 def cmd_generate_prompt(args: argparse.Namespace) -> int:
-    return extracted_cmd_generate_prompt(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        alpha_file=alpha_file,
-        maybe_existing_alpha_file=maybe_existing_alpha_file,
-        discover_checkpoint_record=discover_checkpoint_record,
-        load_json=load_json,
-        apply_resume_output_defaults=apply_resume_output_defaults,
-        ensure_repair_packet_synthesis_defaults=ensure_repair_packet_synthesis_defaults,
-        synthesize_repair_packet=synthesize_repair_packet,
-        run_python=run_python,
-        run_python_capture=run_python_capture,
-        maybe_materialize_requested_fallback_surface=maybe_materialize_requested_fallback_surface,
-        print_prompt_summary=print_prompt_summary,
-        load_project_profile=load_project_profile,
-        plain_shell_command=plain_shell_command,
-        prompt_bridge_script=PROMPT_BRIDGE,
-    )
+    return extracted_cmd_generate_prompt(args, context=prompt_reading_followup_context())
 
 
 def cmd_thin_output_reading(args: argparse.Namespace) -> int:
-    return extracted_cmd_thin_output_reading(
-        args,
-        run_python=run_python,
-        thin_output_reading_script=THIN_OUTPUT_READING,
-    )
+    return extracted_cmd_thin_output_reading(args, context=prompt_reading_followup_context())
 
 
 def cmd_prompt_followup(args: argparse.Namespace) -> int:
-    return extracted_cmd_prompt_followup(
-        args,
-        run_python=run_python,
-        prompt_followup_script=PROMPT_FOLLOWUP,
-    )
+    return extracted_cmd_prompt_followup(args, context=prompt_reading_followup_context())
 
 
 def cmd_prompt_retry_guard(args: argparse.Namespace) -> int:
-    return extracted_cmd_prompt_retry_guard(
-        args,
-        run_python=run_python,
-        prompt_retry_guard_script=PROMPT_RETRY_GUARD,
-    )
+    return extracted_cmd_prompt_retry_guard(args, context=retry_recovery_reading_context())
 
 
 def cmd_consistency_recovery(args: argparse.Namespace) -> int:
-    return extracted_cmd_consistency_recovery(
-        args,
-        run_python=run_python,
-        consistency_recovery_script=CONSISTENCY_RECOVERY,
-    )
+    return extracted_cmd_consistency_recovery(args, context=retry_recovery_reading_context())
 
 
 def cmd_checkpoint_operator_reading(args: argparse.Namespace) -> int:
-    return extracted_cmd_checkpoint_operator_reading(
-        args,
-        run_python=run_python,
-        checkpoint_operator_reading_script=CHECKPOINT_OPERATOR_READING,
-    )
+    return extracted_cmd_checkpoint_operator_reading(args, context=retry_recovery_reading_context())
 
 
 def cmd_consistency_recovery_prompt(args: argparse.Namespace) -> int:
@@ -2733,94 +2739,47 @@ def cmd_deploy_check(args: argparse.Namespace) -> int:
 
 
 def cmd_bug_packet(args: argparse.Namespace) -> int:
-    return extracted_cmd_bug_packet(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        maybe_existing_alpha_file=maybe_existing_alpha_file,
-        alpha_file=alpha_file,
-        run_python=run_python,
-        bug_packet_script=BUG_PACKET,
-    )
+    return extracted_cmd_bug_packet(args, context=session_export_bug_packet_context())
 
 
 def cmd_reproducibility(args: argparse.Namespace) -> int:
-    return extracted_cmd_reproducibility(
-        args,
-        run_python=run_python,
-        reproducibility_script=REPRODUCIBILITY,
-    )
+    return extracted_cmd_reproducibility(args, context=reproducibility_operator_brief_context())
 
 
 def cmd_second_operator(args: argparse.Namespace) -> int:
-    return extracted_cmd_second_operator(
-        args,
-        run_python=run_python,
-        second_operator_script=SECOND_OPERATOR,
-    )
+    return extracted_cmd_second_operator(args, context=reproducibility_operator_brief_context())
 
 
 def cmd_operator_brief(args: argparse.Namespace) -> int:
-    return extracted_cmd_operator_brief(
-        args,
-        run_python=run_python,
-        operator_brief_script=OPERATOR_BRIEF,
-    )
+    return extracted_cmd_operator_brief(args, context=reproducibility_operator_brief_context())
 
 
 def cmd_operator_brief_chain(args: argparse.Namespace) -> int:
-    return extracted_cmd_operator_brief_chain(
-        args,
-        run_python=run_python,
-        operator_brief_chain_script=OPERATOR_BRIEF_CHAIN,
-    )
+    return extracted_cmd_operator_brief_chain(args, context=operator_brief_render_reading_context())
 
 
 def cmd_operator_render(args: argparse.Namespace) -> int:
-    return extracted_cmd_operator_render(
-        args,
-        run_python=run_python,
-        operator_render_script=OPERATOR_RENDER,
-    )
+    return extracted_cmd_operator_render(args, context=operator_brief_render_reading_context())
 
 
 def cmd_operator_render_adoption(args: argparse.Namespace) -> int:
-    return extracted_cmd_operator_render_adoption(
-        args,
-        run_python=run_python,
-        operator_render_adoption_script=OPERATOR_RENDER_ADOPTION,
-    )
+    return extracted_cmd_operator_render_adoption(args, context=operator_render_adoption_pressure_context())
 
 
 def cmd_operator_render_adoption_delta(args: argparse.Namespace) -> int:
-    return extracted_cmd_operator_render_adoption_delta(
-        args,
-        run_python=run_python,
-        operator_render_adoption_delta_script=OPERATOR_RENDER_ADOPTION_DELTA,
-    )
+    return extracted_cmd_operator_render_adoption_delta(args, context=operator_render_adoption_pressure_context())
 
 
 def cmd_operator_reading(args: argparse.Namespace) -> int:
-    return extracted_cmd_operator_reading(
-        args,
-        run_python=run_python,
-        operator_reading_script=OPERATOR_READING,
-    )
+    return extracted_cmd_operator_reading(args, context=operator_brief_render_reading_context())
 
 
 def cmd_externality_pressure(args: argparse.Namespace) -> int:
-    return extracted_cmd_externality_pressure(
-        args,
-        run_python=run_python,
-        externality_pressure_script=EXTERNALITY_PRESSURE,
-    )
+    return extracted_cmd_externality_pressure(args, context=operator_render_adoption_pressure_context())
 
 
 def cmd_repair_handoff(args: argparse.Namespace) -> int:
-    return extracted_cmd_repair_handoff(
-        args,
-        run_python=run_python,
-        repair_handoff_script=REPAIR_HANDOFF,
-    )
+    return extracted_cmd_repair_handoff(args, context=repair_bundle_closure_context())
 
 
 def cmd_repair_packet(args: argparse.Namespace) -> int:
@@ -2835,27 +2794,11 @@ def cmd_repair_packet(args: argparse.Namespace) -> int:
 
 
 def cmd_session_export(args: argparse.Namespace) -> int:
-    return extracted_cmd_session_export(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        maybe_existing_alpha_file=maybe_existing_alpha_file,
-        alpha_file=alpha_file,
-        cmd_observability=cmd_observability,
-    )
+    return extracted_cmd_session_export(args, context=session_export_bug_packet_context())
 
 
 def cmd_verify_checkpoint(args: argparse.Namespace) -> int:
-    return extracted_cmd_verify_checkpoint(
-        args,
-        alpha_root_from_args=alpha_root_from_args,
-        discover_checkpoint_record=discover_checkpoint_record,
-        checkpoint_verify_file=checkpoint_verify_file,
-        run_python=run_python,
-        run_python_capture=run_python_capture,
-        print_checkpoint_summary=print_checkpoint_summary,
-        shell_command=shell_command,
-        checkpoint_script=CHECKPOINT,
-    )
+    return extracted_cmd_verify_checkpoint(args, context=checkpoint_create_save_verify_context())
 
 
 def cmd_orchestrate(args: argparse.Namespace) -> int:
@@ -3736,11 +3679,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_init_agent.add_argument("--force", action="store_true")
     p_init_agent.set_defaults(func=cmd_init_agent)
 
-    p_init_ci = sub.add_parser("init-ci", help="Write a bounded GitHub Action adapter for Synrail check")
+    p_init_ci = sub.add_parser("init-ci", help="Write a bounded GitHub Action adapter or workflow scaffold for Synrail check")
     p_init_ci.add_argument("--project-root", default=".")
     p_init_ci.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_init_ci.add_argument("--workflow", action="store_true")
     p_init_ci.add_argument("--force", action="store_true")
     p_init_ci.set_defaults(func=cmd_init_ci)
+
+    p_preflight = sub.add_parser("preflight", aliases=["doctor-install"], help="Check local install and fallback readiness")
+    p_preflight.add_argument("--project-root", default=".")
+    p_preflight.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_preflight.add_argument("--json", action="store_true")
+    p_preflight.set_defaults(func=cmd_preflight)
 
     p_install_agent_files = sub.add_parser("install-agent-files", help=argparse.SUPPRESS)
     p_install_agent_files.add_argument("--project-root", default=".")

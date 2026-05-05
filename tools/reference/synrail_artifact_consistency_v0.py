@@ -20,9 +20,9 @@ except ImportError:
 from typing import Any
 
 try:
-    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, path_surface_violation, validate_namespace_paths, validate_root_within_project
+    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, DUAL_SCOPE, PathScopeValidationError, path_surface_violation, path_within_scope, validate_namespace_paths, validate_root_within_project
 except ImportError:
-    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, path_surface_violation, validate_namespace_paths, validate_root_within_project
+    from synrail_path_scope_v0 import ARTIFACT_SCOPE, DUAL_SCOPE, PathScopeValidationError, path_surface_violation, path_within_scope, validate_namespace_paths, validate_root_within_project
 
 
 ARTIFACT_CONSISTENCY_PATH_SCOPES = {
@@ -145,6 +145,8 @@ def compare_hash_field(
     field_name: str,
     expected_hash: str,
     source_path: Path | None,
+    project_root: Path,
+    artifact_root: Path,
     failures: list[dict],
     stale_ids: list[str],
 ) -> None:
@@ -160,15 +162,31 @@ def compare_hash_field(
             }
         )
         return
+    hash_scope = ARTIFACT_SCOPE if field_name in {"state_sha256", "bundle_sha256"} else DUAL_SCOPE
+    if not path_within_scope(
+        str(source_path),
+        scope=hash_scope,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    ):
+        append_unique(stale_ids, artifact_id)
+        failures.append(
+            {
+                "type": "RESULTING_STATE_MISMATCH",
+                "artifact_id": artifact_id,
+                "detail": f"{artifact_id} refers to out-of-scope source artifact for {field_name}",
+            }
+        )
+        return
     violation = path_surface_violation(
         str(source_path),
         field="bundle_file",
-        scope=ARTIFACT_SCOPE,
+        scope=hash_scope,
         surface_label=f"source artifact for {field_name}",
         expected_surface="a direct machine-readable artifact surface",
-        stop_at=source_path.parent,
-        project_root=Path.cwd().resolve(),
-        artifact_root=source_path.parent,
+        stop_at=artifact_root,
+        project_root=project_root,
+        artifact_root=artifact_root,
     )
     if violation is not None or not source_path.exists() or not source_path.is_file():
         append_unique(stale_ids, artifact_id)
@@ -191,8 +209,6 @@ def compare_hash_field(
             "detail": f"{artifact_id} refers to stale {field_name} hash for {source_path.name}",
         }
     )
-
-
 def compare_snapshot_field(
     *,
     artifact_id: str,
@@ -260,6 +276,8 @@ def build_record(
     repair_handoff: dict | None = None,
     repair_receipt: dict | None = None,
     artifact_errors: dict[str, str] | None = None,
+    project_root: Path | None = None,
+    artifact_root: Path | None = None,
 ) -> dict:
     failures: list[dict] = []
     checked_artifacts: list[str] = ["state_file"]
@@ -268,6 +286,8 @@ def build_record(
     corrupt_artifact_ids: list[str] = []
     artifact_actions: dict[str, str] = {"state_file": "TRUST_SOURCE_OF_TRUTH"}
     artifact_errors = artifact_errors or {}
+    project_root = (project_root or current_project_root()).resolve()
+    artifact_root = (artifact_root or (state_file.parent if state_file is not None else project_root)).resolve()
     current_verification_recheck = dict(bundle.get("verification_recheck", {})) if isinstance(bundle, dict) else {}
     current_closure_freshness_binding = (
         evaluate_closure_freshness_binding(
@@ -391,6 +411,8 @@ def build_record(
             field_name="state_sha256",
             expected_hash=run_artifact.get("closure_certificate", {}).get("state_sha256", ""),
             source_path=state_file,
+            project_root=project_root,
+            artifact_root=artifact_root,
             failures=failures,
             stale_ids=stale_artifact_ids,
         )
@@ -399,6 +421,8 @@ def build_record(
             field_name="bundle_sha256",
             expected_hash=run_artifact.get("closure_certificate", {}).get("bundle_sha256", ""),
             source_path=bundle_file,
+            project_root=project_root,
+            artifact_root=artifact_root,
             failures=failures,
             stale_ids=stale_artifact_ids,
         )
@@ -414,6 +438,8 @@ def build_record(
                 ),
                 None,
             ),
+            project_root=project_root,
+            artifact_root=artifact_root,
             failures=failures,
             stale_ids=stale_artifact_ids,
         )
@@ -531,6 +557,8 @@ def build_record(
             field_name="state_sha256",
             expected_hash=closure_certificate.get("state_sha256", ""),
             source_path=state_file,
+            project_root=project_root,
+            artifact_root=artifact_root,
             failures=failures,
             stale_ids=stale_artifact_ids,
         )
@@ -539,6 +567,8 @@ def build_record(
             field_name="bundle_sha256",
             expected_hash=closure_certificate.get("bundle_sha256", ""),
             source_path=bundle_file,
+            project_root=project_root,
+            artifact_root=artifact_root,
             failures=failures,
             stale_ids=stale_artifact_ids,
         )
@@ -554,6 +584,8 @@ def build_record(
                 ),
                 None,
             ),
+            project_root=project_root,
+            artifact_root=artifact_root,
             failures=failures,
             stale_ids=stale_artifact_ids,
         )
@@ -782,6 +814,8 @@ def main() -> int:
             repair_handoff=optional_artifact(args.repair_handoff_file, "repair_handoff"),
             repair_receipt=optional_artifact(args.repair_receipt_file, "repair_receipt"),
             artifact_errors=artifact_errors,
+            project_root=project_root,
+            artifact_root=artifact_root,
         )
     except PathScopeValidationError as exc:
         print(json.dumps(exc.as_payload(), ensure_ascii=True))

@@ -122,6 +122,54 @@ def bundle_args(*, final_result: Path) -> argparse.Namespace:
     )
 
 
+def build_live_verdict(state: dict, bundle: dict, *, root: Path | None = None) -> dict:
+    if root is not None:
+        state_path = root / "state.json"
+        bundle_path = root / "bundle.json"
+        live_state = copy.deepcopy(state)
+        live_bundle = copy.deepcopy(bundle)
+        binding = live_bundle.get("closure_freshness_binding", {})
+        if isinstance(binding, dict):
+            rebound_artifacts = []
+            synthetic_payloads = {
+                "final_result": json.dumps(live_bundle.get("final_result", {}), indent=2, ensure_ascii=True).encode() + b"\n",
+                "readback": (live_bundle.get("readback", {}).get("path", "") or "readback placeholder\n").encode(),
+                "scenario_proof": (live_bundle.get("scenario_proof", {}).get("path", "") or "scenario placeholder\n").encode(),
+                "doctor": json.dumps({"status": "PASS"}, indent=2, ensure_ascii=True).encode() + b"\n",
+            }
+            for item in binding.get("artifacts", []):
+                if not isinstance(item, dict):
+                    continue
+                rebound_item = copy.deepcopy(item)
+                source_path_text = (item.get("path", "") or "").strip()
+                artifact_id = (item.get("artifact_id", "") or "artifact").strip() or "artifact"
+                target_path = root / f"{artifact_id}.bound"
+                payload = synthetic_payloads.get(artifact_id, f"{artifact_id}\n".encode())
+                if source_path_text:
+                    source_path = Path(source_path_text)
+                    if source_path.exists() and source_path.is_file():
+                        payload = source_path.read_bytes()
+                elif not item.get("required", False) and not item.get("present", False):
+                    rebound_artifacts.append(rebound_item)
+                    continue
+                target_path.write_bytes(payload)
+                rebound_item["path"] = str(target_path)
+                rebound_item["present"] = True
+                rebound_item["sha256"] = hashlib.sha256(payload).hexdigest()
+                rebound_artifacts.append(rebound_item)
+            live_bundle["closure_freshness_binding"] = {
+                **binding,
+                "artifacts": rebound_artifacts,
+            }
+        state_path.write_text(json.dumps(live_state, indent=2, ensure_ascii=True) + "\n")
+        bundle_path.write_text(json.dumps(live_bundle, indent=2, ensure_ascii=True) + "\n")
+        live_state["_state_file"] = str(state_path)
+        live_bundle["_bundle_file"] = str(bundle_path)
+        return build_verdict(live_state, live_bundle)
+    with tempfile.TemporaryDirectory(prefix="synrail_live_verdict_") as tmpdir:
+        return build_live_verdict(state, bundle, root=Path(tmpdir))
+
+
 def write_state_bound_hash_context(root: Path, *, state: dict, starter_hash: str) -> Path:
     state_file = root / "state.json"
     state_payload = copy.deepcopy(state)
@@ -198,7 +246,7 @@ class TruthRegressionTests(unittest.TestCase):
         bundle = build_bundle(
             bundle_args(final_result=FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "final_result_valid.json")
         )
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("COMPLETE", bundle["status"])
         self.assertEqual("SUFFICIENT", bundle["semantic_status"])
@@ -1903,7 +1951,7 @@ class TruthRegressionTests(unittest.TestCase):
 
             with patch("synrail_bundle_v0.subprocess.run", side_effect=mutating_run):
                 bundle = build_bundle(args)
-                verdict = build_verdict(copy.deepcopy(state), bundle)
+                verdict = build_live_verdict(state, bundle)
 
             self.assertTrue(bundle["verification_recheck"]["executed"])
             self.assertTrue(bundle["verification_recheck"]["command_allowed"])
@@ -1966,7 +2014,7 @@ class TruthRegressionTests(unittest.TestCase):
 
             with patch("synrail_bundle_v0.subprocess.run", side_effect=mutating_run):
                 bundle = build_bundle(args)
-                verdict = build_verdict(copy.deepcopy(state), bundle)
+                verdict = build_live_verdict(state, bundle)
 
         self.assertTrue(bundle["verification_recheck"]["executed"])
         self.assertTrue(bundle["verification_recheck"]["command_allowed"])
@@ -4145,7 +4193,7 @@ class TruthRegressionTests(unittest.TestCase):
         state["doctor"]["override_gates"] = ["clean_execution_surface", "artifact_viability"]
         bundle = load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "bundle_valid.json")
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("ACCEPTED", verdict["closure_status"])
         self.assertEqual("", verdict["blocking_reason"])
@@ -4161,7 +4209,7 @@ class TruthRegressionTests(unittest.TestCase):
         bundle = copy.deepcopy(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "bundle_valid.json"))
         bundle["artifact_integrity_warning"] = True
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("REJECTED", verdict["closure_status"])
         self.assertEqual("ARTIFACT_INTEGRITY_FAILED", verdict["blocking_reason"])
@@ -4218,6 +4266,48 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("REJECTED", verdict["closure_status"])
         self.assertEqual("CLOSURE_FRESHNESS_FAILED", verdict["blocking_reason"])
         self.assertIn("closure_freshness_binding_mismatch", verdict["closure_warnings"])
+
+    def test_build_verdict_rejects_complete_bundle_without_live_freshness_files(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_closure_not_live_") as tmpdir:
+            tmp = Path(tmpdir)
+            final_result = tmp / "final_result.json"
+            final_result.write_text(json.dumps({
+                "request_id": state["run_id"],
+                "status": "PROVEN",
+                "modified_files": ["tools/reference/synrail_bundle_v0.py"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "tools/reference/synrail_bundle_v0.py",
+                    "added_line": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                    "context_before": "GENERIC_EXECUTION_STATUSES = {\"SUCCESS\", \"COMPLETED\", \"DONE\", \"OK\", \"PASSED\"}",
+                    "context_after": "VERIFICATION_RECHECK_TIMEOUT_SECONDS = 10",
+                    "verification_command": "grep -Fno 'VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}' tools/reference/synrail_bundle_v0.py",
+                    "verification_result": "VERIFICATION_RECHECK_ALLOWED_BINARIES = {\"grep\", \"cat\", \"head\", \"tail\", \"git\"}",
+                },
+                "artifact_identity": {
+                    "baseline_identity": "trusted_clean",
+                    "execution_surface_identity": "clean-clone",
+                    "prompt_identity": "prompt-001",
+                    "task_identity": "task-001",
+                },
+                "cleanup_status": {
+                    "success": True,
+                    "summary": "Workspace clean after updating only tools/reference/synrail_bundle_v0.py with no unintended changes.",
+                },
+            }, indent=2, ensure_ascii=True) + "\n")
+            bundle = build_bundle(bundle_args(final_result=final_result))
+            verdict = build_verdict(copy.deepcopy(state), copy.deepcopy(bundle))
+
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("CLOSURE_FRESHNESS_NOT_LIVE", verdict["blocking_reason"])
+        self.assertEqual("PROOF_BUNDLE_REPAIR", verdict["next_allowed_transition"])
+        self.assertEqual(
+            "rerun closure through the live artifact path so freshness can be verified",
+            verdict["narrow_next_safe_step"],
+        )
 
     def test_closure_certificate_carries_bound_hashes_for_live_closure(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
@@ -4993,6 +5083,191 @@ class TruthRegressionTests(unittest.TestCase):
             record["failure_reasons"],
         )
 
+    def test_artifact_consistency_rejects_certificate_final_result_hash_outside_artifact_root(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_artifact_consistency_outside_certificate_") as tmpdir:
+            tmp = Path(tmpdir)
+            artifact_root = tmp / ".synrail"
+            artifact_root.mkdir()
+            state_path = artifact_root / "state.json"
+            bundle_path = artifact_root / "bundle.json"
+            outside = tmp / "outside_final_result.json"
+            outside.write_text(json.dumps({"status": "PROVEN"}, indent=2, ensure_ascii=True) + "\n")
+            state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+            bundle = {
+                "run_id": state["run_id"],
+                "closure_freshness_binding": {
+                    "schema_version": "closure_freshness_binding_v0",
+                    "bound_at_utc": "2026-05-03T00:00:00Z",
+                    "artifacts": [
+                        {
+                            "artifact_id": "final_result",
+                            "path": str(outside),
+                            "required": True,
+                            "present": True,
+                            "sha256": hashlib.sha256(outside.read_bytes()).hexdigest(),
+                        }
+                    ],
+                },
+            }
+            bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
+            certificate = {
+                "schema_version": "closure_certificate_v0",
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "closure_status": state["closure"]["status"],
+                "final_result_sha256": hashlib.sha256(outside.read_bytes()).hexdigest(),
+            }
+
+            record = build_artifact_consistency_record(
+                state=state,
+                state_file=state_path,
+                bundle_file=bundle_path,
+                bundle=bundle,
+                closure_certificate=certificate,
+                project_root=REPO_ROOT,
+                artifact_root=artifact_root,
+            )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("closure_certificate", record["stale_artifact_ids"])
+        self.assertIn(
+            "closure_certificate refers to out-of-scope source artifact for final_result_sha256",
+            record["failure_reasons"],
+        )
+
+    def test_artifact_consistency_rejects_run_embedded_certificate_outside_hash_source(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_artifact_consistency_outside_run_") as tmpdir:
+            tmp = Path(tmpdir)
+            artifact_root = tmp / ".synrail"
+            artifact_root.mkdir()
+            state_path = artifact_root / "state.json"
+            bundle_path = artifact_root / "bundle.json"
+            outside = tmp / "outside_final_result.json"
+            outside.write_text(json.dumps({"status": "PROVEN"}, indent=2, ensure_ascii=True) + "\n")
+            state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+            bundle = {
+                "run_id": state["run_id"],
+                "closure_freshness_binding": {
+                    "schema_version": "closure_freshness_binding_v0",
+                    "bound_at_utc": "2026-05-03T00:00:00Z",
+                    "artifacts": [
+                        {
+                            "artifact_id": "final_result",
+                            "path": str(outside),
+                            "required": True,
+                            "present": True,
+                            "sha256": hashlib.sha256(outside.read_bytes()).hexdigest(),
+                        }
+                    ],
+                },
+            }
+            bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
+            run_artifact = {
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "resulting_state": {"state": state["state"]},
+                "closure_certificate": {
+                    "schema_version": "closure_certificate_v0",
+                    "run_id": state["run_id"],
+                    "task_class": state["task_class"],
+                    "closure_status": state["closure"]["status"],
+                    "final_result_sha256": hashlib.sha256(outside.read_bytes()).hexdigest(),
+                },
+            }
+
+            record = build_artifact_consistency_record(
+                state=state,
+                state_file=state_path,
+                bundle_file=bundle_path,
+                bundle=bundle,
+                run_artifact=run_artifact,
+                project_root=REPO_ROOT,
+                artifact_root=artifact_root,
+            )
+
+        self.assertEqual("INCONSISTENT", record["result"])
+        self.assertIn("run", record["stale_artifact_ids"])
+        self.assertIn(
+            "run refers to out-of-scope source artifact for final_result_sha256",
+            record["failure_reasons"],
+        )
+
+    def test_artifact_consistency_accepts_certificate_hash_source_inside_artifact_root(self) -> None:
+        state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
+
+        with tempfile.TemporaryDirectory(prefix="synrail_artifact_consistency_inside_certificate_") as tmpdir:
+            tmp = Path(tmpdir)
+            artifact_root = tmp / ".synrail"
+            artifact_root.mkdir()
+            state_path = artifact_root / "state.json"
+            bundle_path = artifact_root / "bundle.json"
+            final_result = artifact_root / "final_result.json"
+            final_result.write_text(json.dumps({"status": "PROVEN"}, indent=2, ensure_ascii=True) + "\n")
+            state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+            bundle = {
+                "run_id": state["run_id"],
+                "closure_freshness_binding": {
+                    "schema_version": "closure_freshness_binding_v0",
+                    "bound_at_utc": "2026-05-03T00:00:00Z",
+                    "artifacts": [
+                        {
+                            "artifact_id": "final_result",
+                            "path": str(final_result),
+                            "required": True,
+                            "present": True,
+                            "sha256": hashlib.sha256(final_result.read_bytes()).hexdigest(),
+                        }
+                    ],
+                },
+            }
+            bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
+            final_result_hash = hashlib.sha256(final_result.read_bytes()).hexdigest()
+            certificate = {
+                "schema_version": "closure_certificate_v0",
+                "run_id": state["run_id"],
+                "task_class": state["task_class"],
+                "closure_status": state["closure"]["status"],
+                "final_result_sha256": final_result_hash,
+                "closure_freshness_binding": {
+                    "present": True,
+                    "schema_version": "closure_freshness_binding_v0",
+                    "bound_at_utc": "2026-05-03T00:00:00Z",
+                    "all_required_present": True,
+                    "all_hashes_match": True,
+                    "artifacts": [
+                        {
+                            "artifact_id": "final_result",
+                            "path": str(final_result),
+                            "required": True,
+                            "present": True,
+                            "expected_sha256": final_result_hash,
+                            "current_sha256": final_result_hash,
+                            "hashes_match": True,
+                            "live_recheck": True,
+                        }
+                    ],
+                    "live_recheck": True,
+                },
+            }
+
+            record = build_artifact_consistency_record(
+                state=state,
+                state_file=state_path,
+                bundle_file=bundle_path,
+                bundle=bundle,
+                closure_certificate=certificate,
+                project_root=REPO_ROOT,
+                artifact_root=artifact_root,
+            )
+
+        self.assertEqual("CONSISTENT", record["result"])
+        self.assertNotIn("closure_certificate", record["stale_artifact_ids"])
+        self.assertEqual("KEEP_DERIVED_ARTIFACT", record["artifact_actions"]["closure_certificate"])
+
     def test_artifact_consistency_rejects_one_sided_closure_certificate_verification_recheck(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
         bundle = {
@@ -5143,7 +5418,7 @@ class TruthRegressionTests(unittest.TestCase):
             }, indent=2, ensure_ascii=True) + "\n")
 
             bundle = build_bundle(bundle_args(final_result=final_result))
-            verdict = build_verdict(copy.deepcopy(state), bundle)
+            verdict = build_live_verdict(state, bundle)
 
         self.assertTrue(bundle["verification_recheck"]["executed"])
         self.assertTrue(bundle["verification_recheck"]["command_allowed"])
@@ -5186,7 +5461,7 @@ class TruthRegressionTests(unittest.TestCase):
             }, indent=2, ensure_ascii=True) + "\n")
 
             bundle = build_bundle(bundle_args(final_result=final_result))
-            verdict = build_verdict(copy.deepcopy(state), bundle)
+            verdict = build_live_verdict(state, bundle)
 
         self.assertFalse(bundle["diff_provenance"]["verification_command_present"])
         self.assertFalse(bundle["diff_provenance"]["structurally_complete"])
@@ -5235,7 +5510,7 @@ class TruthRegressionTests(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text("import logging\n")
             bundle = build_bundle(args)
-            verdict = build_verdict(copy.deepcopy(state), bundle)
+            verdict = build_live_verdict(state, bundle)
 
         self.assertTrue(bundle["verification_recheck"]["executed"])
         self.assertTrue(bundle["verification_recheck"]["command_allowed"])
@@ -5283,7 +5558,7 @@ class TruthRegressionTests(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text("# DO NOT import logging\n")
             bundle = build_bundle(args)
-            verdict = build_verdict(copy.deepcopy(state), bundle)
+            verdict = build_live_verdict(state, bundle)
 
         self.assertTrue(bundle["verification_recheck"]["executed"])
         self.assertTrue(bundle["verification_recheck"]["command_allowed"])
@@ -5330,7 +5605,7 @@ class TruthRegressionTests(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text("import logging\nimport logging extra\n")
             bundle = build_bundle(args)
-            verdict = build_verdict(copy.deepcopy(state), bundle)
+            verdict = build_live_verdict(state, bundle)
 
         self.assertTrue(bundle["verification_recheck"]["executed"])
         self.assertTrue(bundle["verification_recheck"]["command_allowed"])
@@ -5371,7 +5646,7 @@ class TruthRegressionTests(unittest.TestCase):
             }, indent=2, ensure_ascii=True) + "\n")
 
             bundle = build_bundle(bundle_args(final_result=final_result))
-            verdict = build_verdict(copy.deepcopy(state), bundle)
+            verdict = build_live_verdict(state, bundle)
 
         self.assertTrue(bundle["verification_recheck"]["executed"])
         self.assertTrue(bundle["verification_recheck"]["command_allowed"])
@@ -5411,7 +5686,7 @@ class TruthRegressionTests(unittest.TestCase):
             }, indent=2, ensure_ascii=True) + "\n")
 
             bundle = build_bundle(bundle_args(final_result=final_result))
-            verdict = build_verdict(copy.deepcopy(state), bundle)
+            verdict = build_live_verdict(state, bundle)
 
         self.assertFalse(bundle["verification_recheck"]["executed"])
         self.assertFalse(bundle["verification_recheck"]["command_allowed"])
@@ -5454,7 +5729,7 @@ class TruthRegressionTests(unittest.TestCase):
             }, indent=2, ensure_ascii=True) + "\n")
 
             bundle = build_bundle(bundle_args(final_result=final_result))
-            verdict = build_verdict(copy.deepcopy(state), bundle)
+            verdict = build_live_verdict(state, bundle)
 
         self.assertFalse(marker.exists())
         self.assertFalse(bundle["verification_recheck"]["executed"])
@@ -5507,7 +5782,7 @@ class TruthRegressionTests(unittest.TestCase):
                 final_result=FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "final_result_semantic_thin.json"
             )
         )
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
         self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
@@ -5564,7 +5839,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.state_file = str(write_state_bound_hash_context(tmp, state=state, starter_hash=starter_hash))
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertFalse(bundle["artifact_integrity_warning"])
         self.assertEqual("COMPLETE", bundle["status"])
@@ -5615,7 +5890,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.last_known_final_result_hash = hashlib.sha256(final_result.read_bytes()).hexdigest()
             args.starter_final_result_hash = args.last_known_final_result_hash
             bundle = build_bundle(args)
-            verdict = build_verdict(copy.deepcopy(state), bundle)
+            verdict = build_live_verdict(state, bundle)
 
         self.assertTrue(bundle["artifact_integrity_warning"])
         self.assertEqual("REJECTED", verdict["closure_status"])
@@ -5652,7 +5927,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.scenario_proof = str(scenario)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
         self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
@@ -5723,7 +5998,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.task_identity = ""
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("COMPLETE", bundle["status"])
         self.assertEqual("SUFFICIENT", bundle["semantic_status"])
@@ -5785,7 +6060,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.doctor_file = str(doctor_file)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("COMPLETE", bundle["status"])
         self.assertEqual("SUFFICIENT", bundle["semantic_status"])
@@ -5847,7 +6122,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.scenario_proof = str(scenario)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("COMPLETE", bundle["status"])
         self.assertEqual("SUFFICIENT", bundle["semantic_status"])
@@ -5906,7 +6181,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.scenario_proof = str(scenario)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
         self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
@@ -5963,7 +6238,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.scenario_proof = str(scenario)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("COMPLETE", bundle["status"])
         self.assertEqual("SUFFICIENT", bundle["semantic_status"])
@@ -6020,7 +6295,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.scenario_proof = str(scenario)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("COMPLETE", bundle["status"])
         self.assertEqual("SUFFICIENT", bundle["semantic_status"])
@@ -6081,7 +6356,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.scenario_proof = str(scenario)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertTrue(bundle["readback"]["content_semantically_sufficient"])
         self.assertTrue(bundle["readback"]["waived_by_runtime_corroboration"])
@@ -6131,7 +6406,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.scenario_proof = str(tmp / "missing_scenario.txt")
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("COMPLETE", bundle["status"])
         self.assertEqual("SUFFICIENT", bundle["semantic_status"])
@@ -6186,7 +6461,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.scenario_proof = str(scenario)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("COMPLETE", bundle["status"])
         self.assertEqual("SUFFICIENT", bundle["semantic_status"])
@@ -6247,7 +6522,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.scenario_proof = str(scenario)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertTrue(bundle["scenario_proof"]["content_semantically_sufficient"])
         self.assertTrue(bundle["scenario_proof"]["waived_by_runtime_corroboration"])
@@ -6311,7 +6586,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.scenario_proof = str(scenario)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertTrue(bundle["verification_corroboration"]["has_patch_runtime_verification"])
         self.assertTrue(bundle["verification_corroboration"]["runtime_verification_sufficient"])
@@ -6364,7 +6639,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.scenario_proof = str(tmp / "missing_scenario.txt")
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("direct_file_observation", bundle["diff_provenance"]["normalized_method"])
         self.assertTrue(bundle["diff_provenance"]["method_inferred"])
@@ -6465,7 +6740,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.scenario_proof = str(scenario)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
         self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
@@ -6532,7 +6807,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.scenario_proof = str(scenario)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
         self.assertEqual(["core/router.py"], bundle["diff_provenance"]["patch_paths"])
@@ -6617,7 +6892,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.state_file = str(write_project_profile_for_recheck(final_result.parent, project_root=project_root))
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("COMPLETE", bundle["status"])
         self.assertEqual(["core/router.py", "tools/cinematic.py"], bundle["diff_provenance"]["patch_paths"])
@@ -6701,7 +6976,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.state_file = str(write_project_profile_for_recheck(final_result.parent, project_root=project_root))
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("COMPLETE", bundle["status"])
         self.assertEqual("SUFFICIENT", bundle["semantic_status"])
@@ -6779,7 +7054,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.task_identity = "Add Local signals only subtitle under Watchlist heading and do not change anything else"
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
         self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
@@ -6856,7 +7131,7 @@ class TruthRegressionTests(unittest.TestCase):
             args.task_identity = "Add Local signals only subtitle under Watchlist heading and do not change anything else"
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
         self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
@@ -6968,7 +7243,7 @@ class TestDedicatedProofAttackPack(unittest.TestCase):
             readback_text=self._valid_readback_text(),
             scenario_text=self._valid_scenario_text(),
         )
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("PARTIAL", bundle["status"])
         self.assertEqual("NOT_EVALUATED", bundle["semantic_status"])
@@ -6988,7 +7263,7 @@ class TestDedicatedProofAttackPack(unittest.TestCase):
             readback_text=self._valid_readback_text(),
             scenario_text=self._valid_scenario_text(),
         )
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
         self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
@@ -7014,7 +7289,7 @@ class TestDedicatedProofAttackPack(unittest.TestCase):
             readback_text=self._valid_readback_text(),
             scenario_text=scenario_text,
         )
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("PARTIAL", bundle["status"])
         self.assertEqual("NOT_EVALUATED", bundle["semantic_status"])
@@ -7044,7 +7319,7 @@ class TestDedicatedProofAttackPack(unittest.TestCase):
             readback_text=self._valid_readback_text(),
             scenario_text=self._valid_scenario_text(),
         )
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("STRUCTURALLY_COMPLETE", bundle["status"])
         self.assertEqual("INSUFFICIENT", bundle["semantic_status"])
@@ -7052,6 +7327,123 @@ class TestDedicatedProofAttackPack(unittest.TestCase):
         self.assertFalse(bundle["diff_provenance"]["semantically_sufficient"])
         self.assertIn("diff_provenance", bundle["semantically_insufficient_sections"])
         self.assertEqual("SEMANTIC_PROOF_INSUFFICIENT", verdict["blocking_reason"])
+
+    def test_recheck_rejects_cat_outside_project_operand(self) -> None:
+        state = self._state()
+        final_payload = self._base_final_result(state)
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_cat_outside_") as tmpdir:
+            outside = Path(tmpdir) / "outside.txt"
+            outside.write_text("outside-secret\n")
+            final_payload["diff_provenance"]["verification_command"] = f"cat {outside}"
+            final_payload["diff_provenance"]["verification_result"] = "outside-secret"
+            bundle = self._build_bundle_with_supporting_artifacts(
+                final_payload,
+                readback_text=self._valid_readback_text(),
+                scenario_text=self._valid_scenario_text(),
+                project_files={"src/app.py": "import logging\ndef run() -> None:\n    pass\n"},
+            )
+            verdict = build_live_verdict(state, bundle)
+
+        self.assertTrue(bundle["verification_recheck"]["required"])
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertFalse(bundle["verification_recheck"]["executed"])
+        self.assertFalse(bundle["verification_recheck"]["matched"])
+        self.assertEqual("command_path_out_of_scope", bundle["verification_recheck"]["skip_reason"])
+        self.assertEqual("VERIFICATION_RECHECK_NOT_EXECUTED", verdict["blocking_reason"])
+
+    def test_recheck_rejects_grep_outside_project_operand(self) -> None:
+        state = self._state()
+        final_payload = self._base_final_result(state)
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_grep_outside_") as tmpdir:
+            outside = Path(tmpdir) / "outside.txt"
+            outside.write_text("import logging\n")
+            final_payload["diff_provenance"]["verification_command"] = f"grep -n 'import logging' {outside}"
+            final_payload["diff_provenance"]["verification_result"] = "1:import logging"
+            bundle = self._build_bundle_with_supporting_artifacts(
+                final_payload,
+                readback_text=self._valid_readback_text(),
+                scenario_text=self._valid_scenario_text(),
+                project_files={"src/app.py": "import logging\ndef run() -> None:\n    pass\n"},
+            )
+            verdict = build_live_verdict(state, bundle)
+
+        self.assertTrue(bundle["verification_recheck"]["required"])
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertFalse(bundle["verification_recheck"]["executed"])
+        self.assertFalse(bundle["verification_recheck"]["matched"])
+        self.assertEqual("command_path_out_of_scope", bundle["verification_recheck"]["skip_reason"])
+        self.assertEqual("VERIFICATION_RECHECK_NOT_EXECUTED", verdict["blocking_reason"])
+
+    def test_recheck_rejects_mixed_safe_and_unsafe_operands(self) -> None:
+        state = self._state()
+        final_payload = self._base_final_result(state)
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_mixed_operands_") as tmpdir:
+            outside = Path(tmpdir) / "outside.txt"
+            outside.write_text("import logging\n")
+            final_payload["diff_provenance"]["verification_command"] = (
+                f"grep -n 'import logging' src/app.py {outside}"
+            )
+            final_payload["diff_provenance"]["verification_result"] = "1:import logging"
+            bundle = self._build_bundle_with_supporting_artifacts(
+                final_payload,
+                readback_text=self._valid_readback_text(),
+                scenario_text=self._valid_scenario_text(),
+                project_files={"src/app.py": "import logging\ndef run() -> None:\n    pass\n"},
+            )
+            verdict = build_live_verdict(state, bundle)
+
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertFalse(bundle["verification_recheck"]["executed"])
+        self.assertEqual("command_path_out_of_scope", bundle["verification_recheck"]["skip_reason"])
+        self.assertEqual("VERIFICATION_RECHECK_NOT_EXECUTED", verdict["blocking_reason"])
+
+    def test_recheck_accepts_cat_changed_file_inside_project(self) -> None:
+        state = self._state()
+        final_payload = self._base_final_result(state)
+        final_payload["diff_provenance"]["verification_command"] = "cat src/app.py"
+        final_payload["diff_provenance"]["verification_result"] = "import logging\ndef run() -> None:\n    pass"
+        readback_text = self._valid_readback_text()
+        scenario_text = self._valid_scenario_text()
+        project_files = {
+            "src/app.py": "import logging\ndef run() -> None:\n    pass\n",
+        }
+
+        bundle = self._build_bundle_with_supporting_artifacts(
+            final_payload,
+            readback_text=readback_text,
+            scenario_text=scenario_text,
+            project_files=project_files,
+        )
+        verdict = build_live_verdict(state, bundle)
+
+        self.assertTrue(bundle["verification_recheck"]["executed"])
+        self.assertTrue(bundle["verification_recheck"]["matched"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+
+    def test_recheck_accepts_grep_changed_file_inside_project(self) -> None:
+        state = self._state()
+        final_payload = self._base_final_result(state)
+        readback_text = self._valid_readback_text()
+        scenario_text = self._valid_scenario_text()
+        project_files = {
+            "src/app.py": "import logging\ndef run() -> None:\n    pass\n",
+        }
+
+        bundle = self._build_bundle_with_supporting_artifacts(
+            final_payload,
+            readback_text=readback_text,
+            scenario_text=scenario_text,
+            project_files=project_files,
+        )
+        verdict = build_live_verdict(state, bundle)
+
+        self.assertEqual("COMPLETE", bundle["status"])
+        self.assertEqual("SUFFICIENT", bundle["semantic_status"])
+        self.assertTrue(bundle["diff_provenance"]["structured_record_sufficient"])
+        self.assertTrue(bundle["verification_corroboration"]["runtime_verification_sufficient"])
+        self.assertTrue(bundle["verification_recheck"]["executed"])
+        self.assertTrue(bundle["verification_recheck"]["matched"])
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
 
     def test_bundle_accepts_dedicated_attack_pack_positive_control(self) -> None:
         state = self._state()
@@ -7068,7 +7460,7 @@ class TestDedicatedProofAttackPack(unittest.TestCase):
             scenario_text=scenario_text,
             project_files=project_files,
         )
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertEqual("COMPLETE", bundle["status"])
         self.assertEqual("SUFFICIENT", bundle["semantic_status"])
@@ -8624,7 +9016,7 @@ class TestCleanupRuntimeWaiver(unittest.TestCase):
             args.doctor_file = str(doctor_file)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertTrue(bundle["cleanup_status"]["waived_by_runtime_corroboration"])
         self.assertTrue(bundle["cleanup_status"]["structurally_complete"])
@@ -8715,7 +9107,7 @@ class TestCleanupRuntimeWaiver(unittest.TestCase):
             args.doctor_file = str(doctor_file)
             bundle = build_bundle(args)
 
-        verdict = build_verdict(copy.deepcopy(state), bundle)
+        verdict = build_live_verdict(state, bundle)
 
         self.assertTrue(bundle["cleanup_status"]["content_semantically_sufficient"])
         self.assertFalse(bundle["cleanup_status"]["from_doctor"])

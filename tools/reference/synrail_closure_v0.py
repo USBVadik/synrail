@@ -347,10 +347,17 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         verdict["narrow_next_safe_step"] = "rebuild the final result artifact and proof bundle on the current surface"
         return verdict
 
+    live_freshness_available = bool(state.get("_state_file") and bundle.get("_bundle_file"))
     freshness = evaluate_closure_freshness_binding(
         bundle.get("closure_freshness_binding", {}),
-        live_recheck=bool(state.get("_state_file") and bundle.get("_bundle_file")),
+        live_recheck=live_freshness_available,
     )
+    if not live_freshness_available:
+        verdict["closure_status"] = "REJECTED"
+        verdict["blocking_reason"] = "CLOSURE_FRESHNESS_NOT_LIVE"
+        verdict["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
+        verdict["narrow_next_safe_step"] = "rerun closure through the live artifact path so freshness can be verified"
+        return verdict
     if not freshness.get("present", False):
         verdict["closure_status"] = "REJECTED"
         verdict["blocking_reason"] = "CLOSURE_FRESHNESS_BINDING_MISSING"

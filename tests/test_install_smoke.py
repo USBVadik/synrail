@@ -160,15 +160,24 @@ class InstallSmokeTests(unittest.TestCase):
             self.assertIn("If `git` is unavailable on this host, do not invent `git_diff`", claude)
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", claude)
 
-    def test_first_run_docs_keep_final_result_as_default_proof_target(self) -> None:
+    def test_first_run_guide_mentions_preflight_and_git_missing_path(self) -> None:
         first_run_guide = (REPO_ROOT / "docs" / "core" / "FIRST_RUN_GUIDE.md").read_text()
+        public_readme = (REPO_ROOT / "README.md").read_text()
         reference_readme = (REPO_ROOT / "tools" / "reference" / "README.md").read_text()
 
+        self.assertIn("Agent: tests passed", first_run_guide)
+        self.assertIn("Synrail: Status: Proof Invalid", first_run_guide)
+        self.assertIn("Reason: verification command not executed / freshness mismatch", first_run_guide)
+        self.assertIn("Next: repair final_result.json", first_run_guide)
+        self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", first_run_guide)
         self.assertIn("On the normal happy path, treat it as the only proof surface you need to touch.", first_run_guide)
         self.assertIn("leave `readback.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
         self.assertIn("leave `scenario_proof.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
         self.assertIn("Only if `check` later targets a fallback prose surface, use:", first_run_guide)
         self.assertIn("Git Preflight", first_run_guide)
+        self.assertIn("synrail preflight", first_run_guide)
+        self.assertIn("python3 alpha.py preflight", first_run_guide)
+        self.assertIn("Git is not installed. Synrail can still use structured diff_provenance, but git_diff and restore coverage will be weaker. Install git for the normal path.", first_run_guide)
         self.assertIn("If `git` is missing, Synrail can still run. Do not invent a `git_diff`.", first_run_guide)
         self.assertIn("leave `git_diff` empty and use structured provenance instead", first_run_guide)
         self.assertIn("for a multi-file change, use `diff_provenance_records` or `per_file_diff_provenance`", first_run_guide)
@@ -178,6 +187,16 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("`Status: Accepted` means the proof bundle is complete", first_run_guide)
         self.assertIn("`Proof Too Thin To Trust` -- structure is there but evidence is thin.", first_run_guide)
         self.assertIn("`Cannot Continue This Run` -- this run reached a terminal rejected state.", first_run_guide)
+
+        self.assertIn("Synrail catches false-green AI-agent work before you accept it.", public_readme)
+        self.assertIn("## 30-Second Demo", public_readme)
+        self.assertIn("Agent: tests passed", public_readme)
+        self.assertIn("Synrail: Status: Proof Invalid", public_readme)
+        self.assertIn("## When To Use It", public_readme)
+        self.assertIn("## When Not To Use It", public_readme)
+        self.assertIn("narrow local alpha product", public_readme)
+        self.assertIn("not yet broad self-serve or broad production-ready", public_readme)
+        self.assertIn("[docs/review/README.md](docs/review/README.md)", public_readme)
 
         self.assertIn("strengthen final_result.json first", reference_readme)
         self.assertIn("leave readback/scenario_proof untouched unless synrail check later names them", reference_readme)

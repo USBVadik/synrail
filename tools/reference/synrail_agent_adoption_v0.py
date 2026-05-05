@@ -102,14 +102,38 @@ def policy_portability_note_lines(
     return lines
 
 
+def policy_explicit_artifact_root(artifact_root: str) -> str:
+    artifact_path = Path(artifact_root)
+    if artifact_path.is_absolute():
+        return shlex.quote(str(artifact_path))
+    artifact_text = str(artifact_path)
+    if artifact_text.startswith("./"):
+        return shlex.quote(artifact_text)
+    return shlex.quote(f"./{artifact_text}")
+
+
+def policy_run_loop_lines(*, artifact_root: str, command: str) -> list[str]:
+    explicit_root = policy_explicit_artifact_root(artifact_root)
+    return [
+        "## Run Loop",
+        "",
+        "```bash",
+        f'{command} start "TASK" --artifact-root {explicit_root}',
+        "# work",
+        f"{command} check --artifact-root {explicit_root}",
+        "# only stop on Status: Accepted",
+        "```",
+        "",
+    ]
+
+
 def policy_non_accepted_status_lines(check_command: str) -> list[str]:
     return [
         "## Non-Accepted Status Rule",
         "",
-        "Only `Status: Accepted` means the task may be reported as complete.",
-        f"If `{check_command}` prints `Proof Invalid`, `Proof Incomplete`, `Proof Too Thin To Trust`, `Workspace Not Ready`, `Workspace Not Trusted`, `Needs Review`, or any other non-green status, do not send a final success/completion answer.",
+        "Only `Status: Accepted` means the task may be reported as complete. If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.",
         "Do not say the task is functionally complete, 100% done, fully done, or all requirements met while Synrail is non-green.",
-        "Instead report the exact Synrail status, follow only the named next command or repair target, and rerun Synrail until `Status: Accepted` appears.",
+        f"If `{check_command}` prints any other non-green status, report the exact Synrail status, follow only the named next command or repair target, and rerun Synrail until `Status: Accepted` appears.",
         "",
     ]
 
@@ -202,6 +226,7 @@ def render_local_workflow_policy(
         commands["start"],
         "```",
         "",
+        *policy_run_loop_lines(artifact_root=artifact_root, command=command),
         "## Work",
         "",
         "- Keep edits bounded and local to this repo.",
@@ -336,6 +361,7 @@ def render_policy_markdown(
         "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
         f"5. {policy_no_git_proof_line(artifact_root)}",
         "",
+        *policy_run_loop_lines(artifact_root=artifact_root, command=command),
         "## Before You Claim Success",
         "",
         "```bash",

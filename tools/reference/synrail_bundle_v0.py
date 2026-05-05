@@ -172,6 +172,169 @@ def normalize_verification_recheck_text(value: str, *, executable: str) -> str:
     return "\n".join(lines)
 
 
+def _resolved_command_operand_path(path_text: str, *, recheck_root: Path) -> Path:
+    candidate = Path(path_text)
+    if not candidate.is_absolute():
+        candidate = recheck_root / candidate
+    return candidate.expanduser().resolve()
+
+
+def _validated_command_operand_paths(
+    path_texts: list[str],
+    *,
+    recheck_root: Path,
+    executable: str,
+) -> tuple[list[Path] | None, str]:
+    artifact_root = recheck_root / ".synrail"
+    validated: list[Path] = []
+    for path_text in path_texts:
+        candidate = _resolved_command_operand_path(path_text, recheck_root=recheck_root)
+        if not path_within_scope(
+            str(candidate),
+            scope=DUAL_SCOPE,
+            project_root=recheck_root,
+            artifact_root=artifact_root,
+        ):
+            return None, "command_path_out_of_scope"
+        violation = path_surface_violation(
+            str(candidate),
+            field="final_result",
+            scope=DUAL_SCOPE,
+            surface_label=f"verification recheck {executable} operand",
+            expected_surface="a direct in-scope verification surface",
+            stop_at=recheck_root,
+            project_root=recheck_root,
+            artifact_root=artifact_root,
+        )
+        if violation is not None:
+            return None, "command_path_out_of_scope"
+        validated.append(candidate)
+    return validated, ""
+
+
+def _parse_grep_operand_paths(argv: list[str]) -> tuple[list[str] | None, str]:
+    safe_cluster_flags = {"n", "i", "F", "E", "o"}
+    safe_flags_with_values = {"-A", "-B", "-C"}
+    args = argv[1:]
+    index = 0
+    while index < len(args):
+        token = args[index]
+        if token == "--":
+            index += 1
+            break
+        if token in safe_flags_with_values:
+            if index + 1 >= len(args):
+                return None, "command_shape_unsupported"
+            index += 2
+            continue
+        if token.startswith("-A") or token.startswith("-B") or token.startswith("-C"):
+            if token in safe_flags_with_values:
+                return None, "command_shape_unsupported"
+            index += 1
+            continue
+        if token.startswith("-"):
+            if token.startswith("--"):
+                return None, "command_shape_unsupported"
+            cluster = token[1:]
+            if not cluster or any(flag not in safe_cluster_flags for flag in cluster):
+                return None, "command_shape_unsupported"
+            index += 1
+            continue
+        break
+    if index >= len(args):
+        return None, "command_shape_unsupported"
+    pattern_index = index
+    file_operands = args[pattern_index + 1 :]
+    if not file_operands:
+        return None, "command_shape_unsupported"
+    return file_operands, ""
+
+
+def _parse_head_tail_operand_paths(argv: list[str]) -> tuple[list[str] | None, str]:
+    args = argv[1:]
+    index = 0
+    while index < len(args):
+        token = args[index]
+        if token == "--":
+            index += 1
+            break
+        if token in {"-n", "-c"}:
+            if index + 1 >= len(args):
+                return None, "command_shape_unsupported"
+            index += 2
+            continue
+        if token.startswith("-n") or token.startswith("-c"):
+            if token in {"-n", "-c"}:
+                return None, "command_shape_unsupported"
+            index += 1
+            continue
+        if token.startswith("-"):
+            if token == "-f":
+                index += 1
+                continue
+            return None, "command_shape_unsupported"
+        break
+    file_operands = args[index:]
+    if not file_operands:
+        return None, "command_shape_unsupported"
+    return file_operands, ""
+
+
+def _parse_cat_operand_paths(argv: list[str]) -> tuple[list[str] | None, str]:
+    args = argv[1:]
+    if args and args[0] == "--":
+        args = args[1:]
+    if not args or any(token.startswith("-") for token in args):
+        return None, "command_shape_unsupported"
+    return args, ""
+
+
+def _parse_git_operand_paths(argv: list[str]) -> tuple[list[str] | None, str]:
+    args = argv[1:]
+    if not args or args[0] not in {"diff", "show", "log"}:
+        return None, "command_shape_unsupported"
+    if "--" not in args:
+        return [], ""
+    separator = args.index("--")
+    pathspecs = args[separator + 1 :]
+    if not pathspecs:
+        return None, "command_shape_unsupported"
+    return pathspecs, ""
+
+
+def validated_verification_command_operand_paths(
+    argv: list[str],
+    *,
+    recheck_root: Path,
+    changed_path: Path | None,
+) -> tuple[list[Path] | None, str]:
+    executable = argv[0]
+    parser_map = {
+        "cat": _parse_cat_operand_paths,
+        "head": _parse_head_tail_operand_paths,
+        "tail": _parse_head_tail_operand_paths,
+        "grep": _parse_grep_operand_paths,
+        "git": _parse_git_operand_paths,
+    }
+    parser = parser_map.get(executable)
+    if parser is None:
+        return None, "command_shape_unsupported"
+    operand_texts, skip_reason = parser(argv)
+    if operand_texts is None:
+        return None, skip_reason
+    validated_paths, skip_reason = _validated_command_operand_paths(
+        operand_texts,
+        recheck_root=recheck_root,
+        executable=executable,
+    )
+    if validated_paths is None:
+        return None, skip_reason
+    if changed_path is not None and validated_paths:
+        if any(path != changed_path for path in validated_paths):
+            return None, "command_shape_unsupported"
+    return validated_paths, ""
+
+
 def verification_recheck_result(record: object, *, project_root: Path | None = None) -> dict:
     recheck_root = (project_root or PROJECT_ROOT).resolve()
     result = {
@@ -237,6 +400,15 @@ def verification_recheck_result(record: object, *, project_root: Path | None = N
             result["skip_reason"] = "changed_file_missing"
             return result
         verified_changed_path = changed_path.resolve(strict=True)
+
+    validated_operand_paths, skip_reason = validated_verification_command_operand_paths(
+        argv,
+        recheck_root=recheck_root,
+        changed_path=verified_changed_path,
+    )
+    if validated_operand_paths is None:
+        result["skip_reason"] = skip_reason
+        return result
 
     result["executed"] = True
 

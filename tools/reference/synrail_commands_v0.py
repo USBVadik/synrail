@@ -6,19 +6,31 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import shutil
 import sys
+import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
+
+
+@dataclass(frozen=True)
+class TelemetryContext:
+    alpha_root_from_args: Callable[..., Path | None]
+    enable_telemetry: Callable[[Path, str], dict]
+    default_session_replay_file: Callable[[Path], Path]
+    default_issue_body_file: Callable[[Path], Path]
+    export_session_replay: Callable[[Path, Path, Path | None], dict]
+
 
 
 def cmd_telemetry_enable(
     args: argparse.Namespace,
     *,
-    alpha_root_from_args: Callable[..., Path],
-    enable_telemetry: Callable[[Path, str], dict],
+    context: TelemetryContext,
 ) -> int:
-    root = alpha_root_from_args(args, ensure=True)
-    config = enable_telemetry(root, args.tester_id)
+    root = context.alpha_root_from_args(args, ensure=True)
+    config = context.enable_telemetry(root, args.tester_id)
     print(json.dumps({"result": "OK", "telemetry_session_id": config["telemetry_session_id"]}, ensure_ascii=True))
     return 0
 
@@ -26,6 +38,23 @@ def cmd_telemetry_enable(
 
 
 PolicyWriter = Callable[[Path, str, str, bool], tuple[bool, str, Path | None]]
+
+
+@dataclass(frozen=True)
+class AgentAdoptionContext:
+    relative_artifact_root_for_project: Callable[..., str]
+    preferred_synrail_command: Callable[[], str]
+    preferred_synrail_fallback_command: Callable[[], str | None]
+    preferred_repo_native_alpha_command: Callable[..., str | None]
+    workspace_git_context: Callable[[Path], dict]
+    project_prefers_runtime_evidence: Callable[[Path], bool]
+    render_agent_policy_markdown: Callable[..., str]
+    render_gemini_policy_markdown: Callable[..., str]
+    render_claude_policy_markdown: Callable[..., str]
+    render_agents_policy_block: Callable[..., str]
+    render_gemini_policy_block: Callable[..., str]
+    render_claude_policy_block: Callable[..., str]
+    write_agent_policy_file: PolicyWriter
 
 
 def emit_completed_capture(completed: object) -> None:
@@ -40,24 +69,19 @@ def emit_completed_capture(completed: object) -> None:
 def build_agent_policy_context(
     args: argparse.Namespace,
     *,
-    relative_artifact_root_for_project: Callable[..., str],
-    preferred_synrail_command: Callable[[], str],
-    preferred_synrail_fallback_command: Callable[[], str | None],
-    preferred_repo_native_alpha_command: Callable[..., str | None],
-    workspace_git_context: Callable[[Path], dict],
-    project_prefers_runtime_evidence: Callable[[Path], bool],
+    context: AgentAdoptionContext,
 ) -> dict[str, object]:
     project_root = Path(args.project_root or ".").resolve()
-    artifact_root = relative_artifact_root_for_project(
+    artifact_root = context.relative_artifact_root_for_project(
         project_root=project_root,
         artifact_root=args.artifact_root,
     )
-    command = preferred_synrail_command()
-    fallback_command = preferred_synrail_fallback_command()
-    repo_native_alpha_command = preferred_repo_native_alpha_command(project_root=project_root)
-    git_context = workspace_git_context(project_root)
+    command = context.preferred_synrail_command()
+    fallback_command = context.preferred_synrail_fallback_command()
+    repo_native_alpha_command = context.preferred_repo_native_alpha_command(project_root=project_root)
+    git_context = context.workspace_git_context(project_root)
     workspace_isolation_note = git_context.get("workspace_isolation_note", "")
-    prefer_runtime_helper = project_prefers_runtime_evidence(project_root)
+    prefer_runtime_helper = context.project_prefers_runtime_evidence(project_root)
     return {
         "project_root": project_root,
         "artifact_root": artifact_root,
@@ -72,41 +96,24 @@ def build_agent_policy_context(
 def run_install_agent_files_command(
     args: argparse.Namespace,
     *,
-    relative_artifact_root_for_project: Callable[..., str],
-    preferred_synrail_command: Callable[[], str],
-    preferred_synrail_fallback_command: Callable[[], str | None],
-    preferred_repo_native_alpha_command: Callable[..., str | None],
-    workspace_git_context: Callable[[Path], dict],
-    project_prefers_runtime_evidence: Callable[[Path], bool],
-    render_agent_policy_markdown: Callable[..., str],
-    render_gemini_policy_markdown: Callable[..., str],
-    render_claude_policy_markdown: Callable[..., str],
-    render_agents_policy_block: Callable[..., str],
-    render_gemini_policy_block: Callable[..., str],
-    render_claude_policy_block: Callable[..., str],
-    write_agent_policy_file: PolicyWriter,
+    context: AgentAdoptionContext,
 ) -> int:
-    context = build_agent_policy_context(
+    policy_context = build_agent_policy_context(
         args,
-        relative_artifact_root_for_project=relative_artifact_root_for_project,
-        preferred_synrail_command=preferred_synrail_command,
-        preferred_synrail_fallback_command=preferred_synrail_fallback_command,
-        preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
-        workspace_git_context=workspace_git_context,
-        project_prefers_runtime_evidence=project_prefers_runtime_evidence,
+        context=context,
     )
-    project_root = context["project_root"]
-    artifact_root = context["artifact_root"]
-    command = context["command"]
-    fallback_command = context["fallback_command"]
-    repo_native_alpha_command = context["repo_native_alpha_command"]
-    workspace_isolation_note = context["workspace_isolation_note"]
-    prefer_runtime_helper = context["prefer_runtime_helper"]
+    project_root = policy_context["project_root"]
+    artifact_root = policy_context["artifact_root"]
+    command = policy_context["command"]
+    fallback_command = policy_context["fallback_command"]
+    repo_native_alpha_command = policy_context["repo_native_alpha_command"]
+    workspace_isolation_note = policy_context["workspace_isolation_note"]
+    prefer_runtime_helper = policy_context["prefer_runtime_helper"]
     agents_path = project_root / "AGENTS.md"
     gemini_path = project_root / "GEMINI.md"
     claude_path = project_root / "CLAUDE.md"
 
-    agents_content = render_agent_policy_markdown(
+    agents_content = context.render_agent_policy_markdown(
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
@@ -114,7 +121,7 @@ def run_install_agent_files_command(
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
-    gemini_content = render_gemini_policy_markdown(
+    gemini_content = context.render_gemini_policy_markdown(
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
@@ -122,7 +129,7 @@ def run_install_agent_files_command(
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
-    claude_content = render_claude_policy_markdown(
+    claude_content = context.render_claude_policy_markdown(
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
@@ -130,7 +137,7 @@ def run_install_agent_files_command(
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
-    agents_block = render_agents_policy_block(
+    agents_block = context.render_agents_policy_block(
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
@@ -138,7 +145,7 @@ def run_install_agent_files_command(
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
-    gemini_block = render_gemini_policy_block(
+    gemini_block = context.render_gemini_policy_block(
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
@@ -146,7 +153,7 @@ def run_install_agent_files_command(
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
     )
-    claude_block = render_claude_policy_block(
+    claude_block = context.render_claude_policy_block(
         artifact_root=artifact_root,
         command=command,
         fallback_command=fallback_command,
@@ -155,19 +162,19 @@ def run_install_agent_files_command(
         prefer_runtime_helper=prefer_runtime_helper,
     )
 
-    agents_written, agents_state, agents_backup = write_agent_policy_file(
+    agents_written, agents_state, agents_backup = context.write_agent_policy_file(
         agents_path,
         agents_content,
         managed_block=agents_block,
         force=args.force,
     )
-    gemini_written, gemini_state, gemini_backup = write_agent_policy_file(
+    gemini_written, gemini_state, gemini_backup = context.write_agent_policy_file(
         gemini_path,
         gemini_content,
         managed_block=gemini_block,
         force=args.force,
     )
-    claude_written, claude_state, claude_backup = write_agent_policy_file(
+    claude_written, claude_state, claude_backup = context.write_agent_policy_file(
         claude_path,
         claude_content,
         managed_block=claude_block,
@@ -209,95 +216,42 @@ def run_install_agent_files_command(
 def cmd_install_agent_files(
     args: argparse.Namespace,
     *,
-    relative_artifact_root_for_project: Callable[..., str],
-    preferred_synrail_command: Callable[[], str],
-    preferred_synrail_fallback_command: Callable[[], str | None],
-    preferred_repo_native_alpha_command: Callable[..., str | None],
-    workspace_git_context: Callable[[Path], dict],
-    project_prefers_runtime_evidence: Callable[[Path], bool],
-    render_agent_policy_markdown: Callable[..., str],
-    render_gemini_policy_markdown: Callable[..., str],
-    render_claude_policy_markdown: Callable[..., str],
-    render_agents_policy_block: Callable[..., str],
-    render_gemini_policy_block: Callable[..., str],
-    render_claude_policy_block: Callable[..., str],
-    write_agent_policy_file: PolicyWriter,
+    context: AgentAdoptionContext,
 ) -> int:
     return run_install_agent_files_command(
         args,
-        relative_artifact_root_for_project=relative_artifact_root_for_project,
-        preferred_synrail_command=preferred_synrail_command,
-        preferred_synrail_fallback_command=preferred_synrail_fallback_command,
-        preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
-        workspace_git_context=workspace_git_context,
-        project_prefers_runtime_evidence=project_prefers_runtime_evidence,
-        render_agent_policy_markdown=render_agent_policy_markdown,
-        render_gemini_policy_markdown=render_gemini_policy_markdown,
-        render_claude_policy_markdown=render_claude_policy_markdown,
-        render_agents_policy_block=render_agents_policy_block,
-        render_gemini_policy_block=render_gemini_policy_block,
-        render_claude_policy_block=render_claude_policy_block,
-        write_agent_policy_file=write_agent_policy_file,
+        context=context,
     )
 
 
 def cmd_init_agent(
     args: argparse.Namespace,
     *,
-    relative_artifact_root_for_project: Callable[..., str],
-    preferred_synrail_command: Callable[[], str],
-    preferred_synrail_fallback_command: Callable[[], str | None],
-    preferred_repo_native_alpha_command: Callable[..., str | None],
-    workspace_git_context: Callable[[Path], dict],
-    project_prefers_runtime_evidence: Callable[[Path], bool],
-    render_agent_policy_markdown: Callable[..., str],
-    render_gemini_policy_markdown: Callable[..., str],
-    render_claude_policy_markdown: Callable[..., str],
-    render_agents_policy_block: Callable[..., str],
-    render_gemini_policy_block: Callable[..., str],
-    render_claude_policy_block: Callable[..., str],
-    write_agent_policy_file: PolicyWriter,
+    context: AgentAdoptionContext,
 ) -> int:
     agent = (getattr(args, "agent", "") or "").strip().lower()
     if agent in {"codex", "cursor"}:
         return run_install_agent_files_command(
             args,
-            relative_artifact_root_for_project=relative_artifact_root_for_project,
-            preferred_synrail_command=preferred_synrail_command,
-            preferred_synrail_fallback_command=preferred_synrail_fallback_command,
-            preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
-            workspace_git_context=workspace_git_context,
-            project_prefers_runtime_evidence=project_prefers_runtime_evidence,
-            render_agent_policy_markdown=render_agent_policy_markdown,
-            render_gemini_policy_markdown=render_gemini_policy_markdown,
-            render_claude_policy_markdown=render_claude_policy_markdown,
-            render_agents_policy_block=render_agents_policy_block,
-            render_gemini_policy_block=render_gemini_policy_block,
-            render_claude_policy_block=render_claude_policy_block,
-            write_agent_policy_file=write_agent_policy_file,
+            context=context,
         )
 
-    context = build_agent_policy_context(
+    policy_context = build_agent_policy_context(
         args,
-        relative_artifact_root_for_project=relative_artifact_root_for_project,
-        preferred_synrail_command=preferred_synrail_command,
-        preferred_synrail_fallback_command=preferred_synrail_fallback_command,
-        preferred_repo_native_alpha_command=preferred_repo_native_alpha_command,
-        workspace_git_context=workspace_git_context,
-        project_prefers_runtime_evidence=project_prefers_runtime_evidence,
+        context=context,
     )
-    project_root = context["project_root"]
-    artifact_root = context["artifact_root"]
-    command = context["command"]
-    fallback_command = context["fallback_command"]
-    repo_native_alpha_command = context["repo_native_alpha_command"]
-    workspace_isolation_note = context["workspace_isolation_note"]
-    prefer_runtime_helper = context["prefer_runtime_helper"]
+    project_root = policy_context["project_root"]
+    artifact_root = policy_context["artifact_root"]
+    command = policy_context["command"]
+    fallback_command = policy_context["fallback_command"]
+    repo_native_alpha_command = policy_context["repo_native_alpha_command"]
+    workspace_isolation_note = policy_context["workspace_isolation_note"]
+    prefer_runtime_helper = policy_context["prefer_runtime_helper"]
 
     file_name = "CLAUDE.md" if agent == "claude" else "GEMINI.md"
     path = project_root / file_name
     if agent == "claude":
-        full_content = render_claude_policy_markdown(
+        full_content = context.render_claude_policy_markdown(
             artifact_root=artifact_root,
             command=command,
             fallback_command=fallback_command,
@@ -305,7 +259,7 @@ def cmd_init_agent(
             workspace_isolation_note=workspace_isolation_note,
             prefer_runtime_helper=prefer_runtime_helper,
         )
-        managed_block = render_claude_policy_block(
+        managed_block = context.render_claude_policy_block(
             artifact_root=artifact_root,
             command=command,
             fallback_command=fallback_command,
@@ -314,7 +268,7 @@ def cmd_init_agent(
             prefer_runtime_helper=prefer_runtime_helper,
         )
     else:
-        full_content = render_gemini_policy_markdown(
+        full_content = context.render_gemini_policy_markdown(
             artifact_root=artifact_root,
             command=command,
             fallback_command=fallback_command,
@@ -322,7 +276,7 @@ def cmd_init_agent(
             workspace_isolation_note=workspace_isolation_note,
             prefer_runtime_helper=prefer_runtime_helper,
         )
-        managed_block = render_gemini_policy_block(
+        managed_block = context.render_gemini_policy_block(
             artifact_root=artifact_root,
             command=command,
             fallback_command=fallback_command,
@@ -331,7 +285,7 @@ def cmd_init_agent(
             prefer_runtime_helper=prefer_runtime_helper,
         )
 
-    written, state, backup = write_agent_policy_file(
+    written, state, backup = context.write_agent_policy_file(
         path,
         full_content,
         managed_block=managed_block,
@@ -381,7 +335,34 @@ def render_github_action_ci_adapter(*, artifact_root: str, invocation_command: s
     ) + "\n"
 
 
-def write_ci_adapter_file(path: Path, content: str, *, force: bool) -> tuple[bool, str, Path | None]:
+def render_github_action_ci_workflow(*, artifact_root: str) -> str:
+    return "\n".join(
+        [
+            "name: Synrail check",
+            "on:",
+            "  pull_request:",
+            "  workflow_dispatch:",
+            "jobs:",
+            "  synrail-check:",
+            "    runs-on: ubuntu-latest",
+            "    steps:",
+            "      - name: Checkout repo",
+            "        uses: actions/checkout@v4",
+            "      - name: Run Synrail composite action",
+            "        uses: ./.github/actions/synrail-check",
+            "        with:",
+            f"          artifact-root: {artifact_root}",
+        ]
+    ) + "\n"
+
+
+def inspect_ci_file(path: Path, content: str) -> str:
+    if not path.exists():
+        return "missing"
+    return "unchanged" if path.read_text() == content else "different"
+
+
+def write_ci_file(path: Path, content: str, *, force: bool) -> tuple[bool, str, Path | None]:
     if path.exists():
         current = path.read_text()
         if current == content:
@@ -398,29 +379,56 @@ def write_ci_adapter_file(path: Path, content: str, *, force: bool) -> tuple[boo
     return True, "written", None
 
 
+@dataclass(frozen=True)
+class CiPreflightContext:
+    relative_artifact_root_for_project: Callable[..., str]
+    preferred_repo_native_alpha_command: Callable[..., str | None]
+    current_project_root: Callable[[], Path]
+    preferred_synrail_command: Callable[[], str]
+    preferred_synrail_fallback_command: Callable[[], str | None]
+    workspace_git_context: Callable[[Path], dict]
+
+
 def cmd_init_ci(
     args: argparse.Namespace,
     *,
-    relative_artifact_root_for_project: Callable[..., str],
-    preferred_repo_native_alpha_command: Callable[..., str | None],
+    context: CiPreflightContext,
 ) -> int:
     project_root = Path(args.project_root or ".").resolve()
-    artifact_root = relative_artifact_root_for_project(
+    artifact_root = context.relative_artifact_root_for_project(
         project_root=project_root,
         artifact_root=args.artifact_root,
     )
-    invocation_command = preferred_repo_native_alpha_command(project_root=project_root) or "synrail"
+    invocation_command = context.preferred_repo_native_alpha_command(project_root=project_root) or "synrail"
     adapter_path = project_root / ".github" / "actions" / "synrail-check" / "action.yml"
-    content = render_github_action_ci_adapter(
+    adapter_content = render_github_action_ci_adapter(
         artifact_root=artifact_root,
         invocation_command=invocation_command,
     )
-    written, state, backup = write_ci_adapter_file(adapter_path, content, force=args.force)
-    if state == "blocked":
+    workflow_enabled = bool(getattr(args, "workflow", False))
+    workflow_path = project_root / ".github" / "workflows" / "synrail-check.yml"
+    workflow_content = render_github_action_ci_workflow(artifact_root=artifact_root)
+
+    adapter_inspection = inspect_ci_file(adapter_path, adapter_content)
+    if adapter_inspection == "different" and not args.force:
         print("GitHub Action CI adapter already exists with different contents.")
         print(f"Adapter path: {adapter_path}")
         print("What to do next: review the existing adapter and rerun with --force if you want Synrail to replace it with the bounded check adapter.")
         return 2
+    if workflow_enabled:
+        workflow_inspection = inspect_ci_file(workflow_path, workflow_content)
+        if workflow_inspection == "different" and not args.force:
+            print("GitHub Actions workflow already exists with different contents.")
+            print(f"Workflow path: {workflow_path}")
+            print("What to do next: review the existing workflow and rerun with --force if you want Synrail to replace it with the bounded workflow scaffold.")
+            return 2
+
+    adapter_written, adapter_state, adapter_backup = write_ci_file(adapter_path, adapter_content, force=args.force)
+    workflow_written = False
+    workflow_state = ""
+    workflow_backup: Path | None = None
+    if workflow_enabled:
+        workflow_written, workflow_state, workflow_backup = write_ci_file(workflow_path, workflow_content, force=args.force)
 
     print("GitHub Action CI adapter is ready.")
     print(f"Project root: {project_root}")
@@ -429,35 +437,48 @@ def cmd_init_ci(
     print(f"Artifact root default: {artifact_root}")
     print(f"Invocation path: {invocation_command} check --artifact-root \"${{{{ inputs.artifact-root }}}}\"")
     print("Workflow call site: uses: ./.github/actions/synrail-check")
-    if backup:
-        print(f"Adapter backup: {backup}")
-    if state == "updated":
-        print("What to do next: commit the refreshed adapter and call it from a workflow with `uses: ./.github/actions/synrail-check`.")
-    elif written:
-        print("What to do next: commit the adapter and call it from a workflow with `uses: ./.github/actions/synrail-check`.")
+    if adapter_backup:
+        print(f"Adapter backup: {adapter_backup}")
+    if workflow_enabled:
+        print("GitHub Actions workflow is ready.")
+        print(f"Workflow path: {workflow_path}")
+        print("Workflow triggers: pull_request, workflow_dispatch")
+        print("Workflow behavior: checks out the repo and runs the local composite action without mutating proof artifacts by default.")
+        if workflow_backup:
+            print(f"Workflow backup: {workflow_backup}")
+        if adapter_state == "updated" or workflow_state == "updated":
+            print("What to do next: commit the refreshed adapter and workflow so GitHub Actions can run the bounded Synrail lane.")
+        elif adapter_written or workflow_written:
+            print("What to do next: commit the adapter and workflow so GitHub Actions can run the bounded Synrail lane.")
+        else:
+            print("What to do next: keep the existing adapter and workflow committed so GitHub Actions continues using the bounded Synrail lane.")
+        return 0
+
+    print("Adapter only: add a workflow that calls uses: ./.github/actions/synrail-check, or rerun with --workflow.")
+    if adapter_state == "updated":
+        print("What to do next: commit the refreshed adapter and add a workflow with `uses: ./.github/actions/synrail-check`, or rerun with `--workflow`.")
+    elif adapter_written:
+        print("What to do next: commit the adapter and add a workflow with `uses: ./.github/actions/synrail-check`, or rerun with `--workflow`.")
     else:
-        print("What to do next: call the existing adapter from a workflow with `uses: ./.github/actions/synrail-check`.")
+        print("What to do next: call the existing adapter from a workflow with `uses: ./.github/actions/synrail-check`, or rerun with `--workflow`.")
     return 0
 
 
 def cmd_telemetry_export(
     args: argparse.Namespace,
     *,
-    alpha_root_from_args: Callable[..., Path | None],
-    default_session_replay_file: Callable[[Path], Path],
-    default_issue_body_file: Callable[[Path], Path],
-    export_session_replay: Callable[[Path, Path, Path | None], dict],
+    context: TelemetryContext,
 ) -> int:
-    root = alpha_root_from_args(args)
+    root = context.alpha_root_from_args(args)
     if not root:
         print(json.dumps({"result": "ERROR", "reason": "ARTIFACT_ROOT_REQUIRED"}, ensure_ascii=True))
         return 2
     if not getattr(args, "output", None):
-        args.output = str(default_session_replay_file(root))
+        args.output = str(context.default_session_replay_file(root))
     if not getattr(args, "issue_output", None):
-        args.issue_output = str(default_issue_body_file(root))
+        args.issue_output = str(context.default_issue_body_file(root))
     try:
-        record = export_session_replay(root, Path(args.output), Path(args.issue_output))
+        record = context.export_session_replay(root, Path(args.output), Path(args.issue_output))
     except ValueError:
         print("Synrail could not export feedback yet.")
         print("What happened: telemetry is not enabled for this artifact root.")
@@ -470,44 +491,180 @@ def cmd_telemetry_export(
     return 0
 
 
+@dataclass(frozen=True)
+class SessionExportBugPacketContext:
+    alpha_root_from_args: Callable[..., Path | None]
+    maybe_existing_alpha_file: Callable[[Path | None, str], str | None]
+    alpha_file: Callable[[Path, str], Path]
+    cmd_observability: Callable[[argparse.Namespace], int]
+    run_python: Callable[[Path, list[str]], int]
+    bug_packet_script: Path
+
+
+@dataclass(frozen=True)
+class ReproducibilityOperatorBriefContext:
+    run_python: Callable[[Path, list[str]], int]
+    reproducibility_script: Path
+    second_operator_script: Path
+    operator_brief_script: Path
+
+
+@dataclass(frozen=True)
+class OperatorBriefRenderReadingContext:
+    run_python: Callable[[Path, list[str]], int]
+    operator_brief_chain_script: Path
+    operator_render_script: Path
+    operator_reading_script: Path
+
+
+@dataclass(frozen=True)
+class OperatorRenderAdoptionPressureContext:
+    run_python: Callable[[Path, list[str]], int]
+    operator_render_adoption_script: Path
+    operator_render_adoption_delta_script: Path
+    externality_pressure_script: Path
+
+
+@dataclass(frozen=True)
+class RepairBundleClosureContext:
+    run_python: Callable[[Path, list[str]], int]
+    repair_handoff_script: Path
+    bundle_script: Path
+    closure_script: Path
+
+
+@dataclass(frozen=True)
+class ApplyRefreshValidateContext:
+    run_python: Callable[[Path, list[str]], int]
+    spine_script: Path
+    refresh_script: Path
+    validate_script: Path
+
+
+@dataclass(frozen=True)
+class DoctorCompareSubstituteContext:
+    alpha_root_from_args: Callable[..., Path | None]
+    current_project_root: Callable[[], Path]
+    validate_root_within_project: Callable[..., None]
+    validate_doctor_paths: Callable[..., None]
+    load_json: Callable[[Path], dict]
+    comparison_harness_for_inputs: Callable[[str, str], Path]
+    run_python: Callable[[Path, list[str]], int]
+    doctor_script: Path
+    substitute_pressure_script: Path
+
+
+@dataclass(frozen=True)
+class HybridModeContext:
+    run_python: Callable[[Path, list[str]], int]
+    hybrid_status_script: Path
+    mode_selector_script: Path
+    mode_receipt_script: Path
+
+
+@dataclass(frozen=True)
+class ProofPreparationCostContext:
+    run_python: Callable[[Path, list[str]], int]
+    proof_plan_script: Path
+    preparation_receipt_script: Path
+    governed_cost_script: Path
+
+
+@dataclass(frozen=True)
+class CheckpointCreateSaveVerifyContext:
+    alpha_root_from_args: Callable[..., Path | None]
+    checkpoint_record_file: Callable[[Path, str], Path]
+    checkpoint_root: Callable[[Path, str], Path]
+    alpha_file: Callable[[Path, str], Path]
+    maybe_existing_alpha_file: Callable[[Path | None, str], str | None]
+    checkpoint_verify_file: Callable[[Path, str], Path]
+    discover_checkpoint_record: Callable[[Path | None, str | None], str | None]
+    run_python: Callable[[Path, list[str]], int]
+    run_python_capture: Callable[[Path, list[str]], object]
+    print_checkpoint_summary: Callable[[Path, str, Path | None], None]
+    print_save_summary: Callable[[Path, Path, Path | None], None]
+    shell_command: Callable[[Path, str], str]
+    checkpoint_script: Path
+
+
+@dataclass(frozen=True)
+class RestoreConsistencyThinContext:
+    alpha_root_from_args: Callable[..., Path | None]
+    discover_checkpoint_record: Callable[[Path | None, str | None], str | None]
+    alpha_file: Callable[[Path, str], Path]
+    load_json: Callable[[Path], dict]
+    maybe_existing_alpha_file: Callable[[Path | None, str], str | None]
+    run_python: Callable[[Path, list[str]], int]
+    run_python_capture: Callable[[Path, list[str]], object]
+    print_checkpoint_summary: Callable[[Path, str, Path | None], None]
+    shell_command: Callable[[Path, str], str]
+    sync_restored_checkpoint_artifacts: Callable[[Path], None]
+    print_thin_output_summary: Callable[[Path], None]
+    checkpoint_script: Path
+    artifact_consistency_script: Path
+    thin_output_script: Path
+
+
+@dataclass(frozen=True)
+class PromptReadingFollowupContext:
+    alpha_root_from_args: Callable[..., Path | None]
+    alpha_file: Callable[[Path, str], Path]
+    maybe_existing_alpha_file: Callable[[Path | None, str], str | None]
+    discover_checkpoint_record: Callable[[Path | None, str | None], str | None]
+    load_json: Callable[[Path], dict]
+    apply_resume_output_defaults: Callable[..., None]
+    ensure_repair_packet_synthesis_defaults: Callable[[argparse.Namespace], None]
+    synthesize_repair_packet: Callable[[argparse.Namespace, dict], None]
+    run_python: Callable[[Path, list[str]], int]
+    run_python_capture: Callable[[Path, list[str]], object]
+    maybe_materialize_requested_fallback_surface: Callable[..., str | None]
+    print_prompt_summary: Callable[[Path], None]
+    load_project_profile: Callable[[Path | None], dict | None]
+    plain_shell_command: Callable[..., str]
+    prompt_bridge_script: Path
+    thin_output_reading_script: Path
+    prompt_followup_script: Path
+
+
+@dataclass(frozen=True)
+class RetryRecoveryReadingContext:
+    run_python: Callable[[Path, list[str]], int]
+    prompt_retry_guard_script: Path
+    consistency_recovery_script: Path
+    checkpoint_operator_reading_script: Path
+
+
 def cmd_session_export(
     args: argparse.Namespace,
     *,
-    alpha_root_from_args: Callable[..., Path | None],
-    maybe_existing_alpha_file: Callable[[Path | None, str], str | None],
-    alpha_file: Callable[[Path, str], Path],
-    cmd_observability: Callable[[argparse.Namespace], int],
+    context: SessionExportBugPacketContext,
 ) -> int:
-    root = alpha_root_from_args(args)
+    root = context.alpha_root_from_args(args)
     if root:
         if not getattr(args, "state_file", None):
-            args.state_file = maybe_existing_alpha_file(root, "state")
+            args.state_file = context.maybe_existing_alpha_file(root, "state")
         if not getattr(args, "report_file", None):
-            args.report_file = maybe_existing_alpha_file(root, "report")
+            args.report_file = context.maybe_existing_alpha_file(root, "report")
         if not getattr(args, "repair_packet_file", None):
-            args.repair_packet_file = maybe_existing_alpha_file(root, "repair_packet")
+            args.repair_packet_file = context.maybe_existing_alpha_file(root, "repair_packet")
         if not getattr(args, "repair_receipt_file", None):
-            args.repair_receipt_file = maybe_existing_alpha_file(root, "repair_receipt")
+            args.repair_receipt_file = context.maybe_existing_alpha_file(root, "repair_receipt")
         if not getattr(args, "refresh_file", None):
-            args.refresh_file = maybe_existing_alpha_file(root, "refresh")
+            args.refresh_file = context.maybe_existing_alpha_file(root, "refresh")
         if not getattr(args, "output", None):
-            args.output = str(alpha_file(root, "session_export"))
+            args.output = str(context.alpha_file(root, "session_export"))
     if not getattr(args, "state_file", None) or not getattr(args, "report_file", None):
         print(json.dumps({"result": "ERROR", "reason": "STATE_AND_REPORT_REQUIRED"}, ensure_ascii=True))
         return 2
-    return cmd_observability(args)
+    return context.cmd_observability(args)
 
 
 def cmd_bug_packet(
     args: argparse.Namespace,
     *,
-    alpha_root_from_args: Callable[..., Path | None],
-    maybe_existing_alpha_file: Callable[[Path | None, str], str | None],
-    alpha_file: Callable[[Path, str], Path],
-    run_python: Callable[[Path, list[str]], int],
-    bug_packet_script: Path,
+    context: SessionExportBugPacketContext,
 ) -> int:
-    root = alpha_root_from_args(args)
+    root = context.alpha_root_from_args(args)
     if root:
         for attr, file_id in [
             ("state_file", "state"),
@@ -519,15 +676,15 @@ def cmd_bug_packet(
             ("thin_output_file", "thin_output"),
         ]:
             if not getattr(args, attr, None):
-                value = maybe_existing_alpha_file(root, file_id)
+                value = context.maybe_existing_alpha_file(root, file_id)
                 if value:
                     setattr(args, attr, value)
         if not getattr(args, "observability_file", None):
-            session_export = maybe_existing_alpha_file(root, "session_export")
+            session_export = context.maybe_existing_alpha_file(root, "session_export")
             if session_export:
                 args.observability_file = session_export
         if not getattr(args, "output", None):
-            args.output = str(alpha_file(root, "bug_packet"))
+            args.output = str(context.alpha_file(root, "bug_packet"))
         if not getattr(args, "issue_output", None):
             args.issue_output = str(root / "bug_packet_issue.md")
     if not getattr(args, "state_file", None) or not getattr(args, "report_file", None):
@@ -549,7 +706,7 @@ def cmd_bug_packet(
     ]:
         if value:
             forwarded.extend([flag, value])
-    code = run_python(bug_packet_script, forwarded)
+    code = context.run_python(context.bug_packet_script, forwarded)
     if code == 0:
         print("Bug packet ready.")
         print("What it includes: one compact runtime summary and one issue-ready markdown body.")
@@ -561,11 +718,10 @@ def cmd_bug_packet(
 def cmd_reproducibility(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    reproducibility_script: Path,
+    context: ReproducibilityOperatorBriefContext,
 ) -> int:
-    return run_python(
-        reproducibility_script,
+    return context.run_python(
+        context.reproducibility_script,
         [
             "--run-a", args.run_a,
             "--run-b", args.run_b,
@@ -578,11 +734,10 @@ def cmd_reproducibility(
 def cmd_second_operator(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    second_operator_script: Path,
+    context: ReproducibilityOperatorBriefContext,
 ) -> int:
-    return run_python(
-        second_operator_script,
+    return context.run_python(
+        context.second_operator_script,
         [
             "--state-file", args.state_file,
             "--repair-packet-file", args.repair_packet_file,
@@ -596,8 +751,7 @@ def cmd_second_operator(
 def cmd_operator_brief(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    operator_brief_script: Path,
+    context: ReproducibilityOperatorBriefContext,
 ) -> int:
     forwarded = [
         "--state-file", args.state_file,
@@ -607,47 +761,44 @@ def cmd_operator_brief(
     ]
     if args.doctor_file:
         forwarded.extend(["--doctor-file", args.doctor_file])
-    return run_python(operator_brief_script, forwarded)
+    return context.run_python(context.operator_brief_script, forwarded)
 
 
 
 def cmd_operator_brief_chain(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    operator_brief_chain_script: Path,
+    context: OperatorBriefRenderReadingContext,
 ) -> int:
     forwarded: list[str] = []
     for brief in args.brief:
         forwarded.extend(["--brief", brief])
     forwarded.extend(["--output", args.output])
-    return run_python(operator_brief_chain_script, forwarded)
+    return context.run_python(context.operator_brief_chain_script, forwarded)
 
 
 
 def cmd_operator_render(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    operator_render_script: Path,
+    context: OperatorBriefRenderReadingContext,
 ) -> int:
     forwarded = ["--output", args.output]
     if args.brief_file:
         forwarded.extend(["--brief-file", args.brief_file])
     if args.chain_file:
         forwarded.extend(["--chain-file", args.chain_file])
-    return run_python(operator_render_script, forwarded)
+    return context.run_python(context.operator_render_script, forwarded)
 
 
 
 def cmd_operator_render_adoption(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    operator_render_adoption_script: Path,
+    context: OperatorRenderAdoptionPressureContext,
 ) -> int:
-    return run_python(
-        operator_render_adoption_script,
+    return context.run_python(
+        context.operator_render_adoption_script,
         [
             "--source", args.source,
             "--render", args.render,
@@ -661,25 +812,23 @@ def cmd_operator_render_adoption(
 def cmd_operator_render_adoption_delta(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    operator_render_adoption_delta_script: Path,
+    context: OperatorRenderAdoptionPressureContext,
 ) -> int:
     forwarded: list[str] = []
     for record in args.record:
         forwarded.extend(["--record", record])
     forwarded.extend(["--output", args.output])
-    return run_python(operator_render_adoption_delta_script, forwarded)
+    return context.run_python(context.operator_render_adoption_delta_script, forwarded)
 
 
 
 def cmd_operator_reading(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    operator_reading_script: Path,
+    context: OperatorBriefRenderReadingContext,
 ) -> int:
-    return run_python(
-        operator_reading_script,
+    return context.run_python(
+        context.operator_reading_script,
         [
             "--second-operator-file", args.second_operator_file,
             "--brief-file", args.brief_file,
@@ -694,11 +843,10 @@ def cmd_operator_reading(
 def cmd_externality_pressure(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    externality_pressure_script: Path,
+    context: OperatorRenderAdoptionPressureContext,
 ) -> int:
-    return run_python(
-        externality_pressure_script,
+    return context.run_python(
+        context.externality_pressure_script,
         [
             "--reproducibility-file", args.reproducibility_file,
             "--second-operator-file", args.second_operator_file,
@@ -713,21 +861,19 @@ def cmd_externality_pressure(
 def cmd_repair_handoff(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    repair_handoff_script: Path,
+    context: RepairBundleClosureContext,
 ) -> int:
     forwarded = [
         "--state-file", args.state_file,
         "--output", args.output,
     ]
-    return run_python(repair_handoff_script, forwarded)
+    return context.run_python(context.repair_handoff_script, forwarded)
 
 
 def cmd_bundle_check(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    bundle_script: Path,
+    context: RepairBundleClosureContext,
 ) -> int:
     forwarded = [
         "--final-result", args.final_result,
@@ -748,7 +894,7 @@ def cmd_bundle_check(
     for flag, value in optional_pairs:
         if value:
             forwarded.extend([flag, value])
-    return run_python(bundle_script, forwarded)
+    return context.run_python(context.bundle_script, forwarded)
 
 
 def cmd_apply_bundle(
@@ -763,8 +909,7 @@ def cmd_apply_bundle(
 def cmd_closure(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    closure_script: Path,
+    context: RepairBundleClosureContext,
 ) -> int:
     forwarded = [
         "--state-file", args.state_file,
@@ -773,23 +918,21 @@ def cmd_closure(
     ]
     if args.update_state:
         forwarded.append("--update-state")
-    return run_python(closure_script, forwarded)
+    return context.run_python(context.closure_script, forwarded)
 
 
 def cmd_apply_closure(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    spine_script: Path,
+    context: ApplyRefreshValidateContext,
 ) -> int:
-    return run_python(spine_script, ["apply-closure", args.state_file, args.closure_file])
+    return context.run_python(context.spine_script, ["apply-closure", args.state_file, args.closure_file])
 
 
 def cmd_refresh(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    refresh_script: Path,
+    context: ApplyRefreshValidateContext,
 ) -> int:
     forwarded = [
         "--state-file", args.state_file,
@@ -809,31 +952,25 @@ def cmd_refresh(
         forwarded.append("--reverification-complete")
     if args.update_state:
         forwarded.append("--update-state")
-    return run_python(refresh_script, forwarded)
+    return context.run_python(context.refresh_script, forwarded)
 
 
 def cmd_validate(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    validate_script: Path,
+    context: ApplyRefreshValidateContext,
 ) -> int:
-    return run_python(validate_script, ["--schema", args.schema, "--document", args.document])
+    return context.run_python(context.validate_script, ["--schema", args.schema, "--document", args.document])
 
 
 def cmd_doctor(
     args: argparse.Namespace,
     *,
-    alpha_root_from_args: Callable[..., Path | None],
-    current_project_root: Callable[[], Path],
-    validate_root_within_project: Callable[..., None],
-    validate_doctor_paths: Callable[..., None],
-    run_python: Callable[[Path, list[str]], int],
-    doctor_script: Path,
+    context: DoctorCompareSubstituteContext,
 ) -> int:
-    artifact_root = alpha_root_from_args(args) or Path(args.output).expanduser().resolve().parent
-    project_root = current_project_root()
-    validate_root_within_project(
+    artifact_root = context.alpha_root_from_args(args) or Path(args.output).expanduser().resolve().parent
+    project_root = context.current_project_root()
+    context.validate_root_within_project(
         "artifact_root" if getattr(args, "artifact_root", None) else "output",
         getattr(args, "artifact_root", None) or args.output,
         root=artifact_root,
@@ -841,7 +978,7 @@ def cmd_doctor(
         artifact_root=artifact_root,
     )
     artifact_root.mkdir(parents=True, exist_ok=True)
-    validate_doctor_paths(args, artifact_root=artifact_root, project_root=project_root)
+    context.validate_doctor_paths(args, artifact_root=artifact_root, project_root=project_root)
     forwarded = [
         "--doctor-run-id", args.doctor_run_id,
         "--doctor-level", args.doctor_level,
@@ -884,19 +1021,151 @@ def cmd_doctor(
         forwarded.extend(["--allowed-scope-path", allowed_scope_path])
     for env_name in args.credential_env:
         forwarded.extend(["--credential-env", env_name])
-    return run_python(doctor_script, forwarded)
+    return context.run_python(context.doctor_script, forwarded)
+
+
+GIT_MISSING_MESSAGE = (
+    "Git is not installed. Synrail can still use structured diff_provenance, but git_diff and restore coverage will be weaker. Install git for the normal path."
+)
+
+
+def _preflight_wrapper_available(project_root: Path) -> bool:
+    for candidate in [project_root / ".venv" / "bin" / "synrail"]:
+        if candidate.exists() and candidate.is_file():
+            return True
+    return shutil.which("synrail") is not None
+
+
+def _artifact_root_writable(artifact_root: Path) -> bool:
+    try:
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=artifact_root, delete=True):
+            pass
+        return True
+    except OSError:
+        return False
+
+
+def _parent_git_repo_above(project_root: Path, current_dir: Path, workspace_git_context: Callable[[Path], dict]) -> str:
+    current_context = workspace_git_context(current_dir)
+    project_context = workspace_git_context(project_root)
+    for context in [current_context, project_context]:
+        parent_root = (context.get("parent_git_root", "") or "").strip()
+        if parent_root:
+            return parent_root
+    return ""
+
+
+def build_preflight_report(
+    *,
+    project_root: Path,
+    current_dir: Path,
+    artifact_root: Path,
+    preferred_synrail_command: Callable[[], str],
+    preferred_synrail_fallback_command: Callable[[], str | None],
+    preferred_repo_native_alpha_command: Callable[..., str | None],
+    workspace_git_context: Callable[[Path], dict],
+) -> dict[str, object]:
+    git_path = shutil.which("git")
+    git_available = git_path is not None
+    current_git_context = workspace_git_context(current_dir)
+    current_directory_is_git_repo = current_git_context.get("workspace_git_mode", "") in {"workspace_git_root", "nested_parent_git"}
+    parent_git_root = _parent_git_repo_above(project_root, current_dir, workspace_git_context)
+    repo_native_alpha_command = preferred_repo_native_alpha_command(project_root=project_root)
+    wrapper_command = preferred_synrail_command()
+    fallback_command = preferred_synrail_fallback_command()
+    wrapper_available = _preflight_wrapper_available(project_root)
+    artifact_root_writable = _artifact_root_writable(artifact_root)
+    report = {
+        "status": "PASS",
+        "project_root": str(project_root),
+        "current_directory": str(current_dir),
+        "python_version": sys.version.split()[0],
+        "git": {
+            "available": git_available,
+            "path": git_path or "",
+            "message": "" if git_available else GIT_MISSING_MESSAGE,
+        },
+        "current_directory_git_repo": current_directory_is_git_repo,
+        "parent_git_repo_above_project_root": bool(parent_git_root),
+        "parent_git_root": parent_git_root,
+        "artifact_root": str(artifact_root),
+        "artifact_root_writable": artifact_root_writable,
+        "synrail_wrapper": {
+            "available": wrapper_available,
+            "command": wrapper_command,
+            "fallback_command": fallback_command or "",
+        },
+        "repo_native_alpha_fallback": {
+            "available": repo_native_alpha_command is not None,
+            "command": repo_native_alpha_command or "",
+        },
+    }
+    if not artifact_root_writable:
+        report["status"] = "FAIL"
+    return report
+
+
+def _print_preflight_human(report: dict[str, object]) -> None:
+    git = report["git"]
+    wrapper = report["synrail_wrapper"]
+    alpha_fallback = report["repo_native_alpha_fallback"]
+    print("Synrail preflight")
+    print(f"Python version: {report['python_version']}")
+    if git["available"]:
+        print(f"Git: available ({git['path']})")
+    else:
+        print(GIT_MISSING_MESSAGE)
+    print(f"Current directory is a git repo: {'yes' if report['current_directory_git_repo'] else 'no'}")
+    print(
+        "Parent git repo above project root: "
+        + (str(report["parent_git_root"]) if report["parent_git_repo_above_project_root"] else "no")
+    )
+    print(f"Artifact root: {report['artifact_root']}")
+    print(f"Artifact root writable: {'yes' if report['artifact_root_writable'] else 'no'}")
+    print(f"Synrail wrapper available: {'yes' if wrapper['available'] else 'no'}")
+    print(f"Synrail command: {wrapper['command']}")
+    if wrapper["fallback_command"]:
+        print(f"Synrail fallback command: {wrapper['fallback_command']}")
+    print(f"Repo-native alpha fallback available: {'yes' if alpha_fallback['available'] else 'no'}")
+    if alpha_fallback["command"]:
+        print(f"Repo-native alpha command: {alpha_fallback['command']}")
+    if report["status"] != "PASS":
+        print("What to do next: fix the failing local preflight surface before relying on the normal install path.")
+
+
+def cmd_preflight(
+    args: argparse.Namespace,
+    *,
+    context: CiPreflightContext,
+) -> int:
+    current_dir = context.current_project_root()
+    project_root = Path(getattr(args, "project_root", "") or current_dir).expanduser().resolve()
+    artifact_root = Path(getattr(args, "artifact_root", "") or (project_root / ".synrail")).expanduser().resolve()
+    report = build_preflight_report(
+        project_root=project_root,
+        current_dir=current_dir,
+        artifact_root=artifact_root,
+        preferred_synrail_command=context.preferred_synrail_command,
+        preferred_synrail_fallback_command=context.preferred_synrail_fallback_command,
+        preferred_repo_native_alpha_command=context.preferred_repo_native_alpha_command,
+        workspace_git_context=context.workspace_git_context,
+    )
+    if getattr(args, "json", False):
+        print(json.dumps(report, ensure_ascii=True, indent=2))
+    else:
+        _print_preflight_human(report)
+    return 0 if report["status"] == "PASS" else 2
 
 
 def cmd_compare(
     args: argparse.Namespace,
     *,
-    load_json: Callable[[Path], dict],
-    comparison_harness_for_inputs: Callable[[str, str], Path],
-    run_python: Callable[[Path, list[str]], int],
+    context: DoctorCompareSubstituteContext,
 ) -> int:
     try:
-        baseline = load_json(Path(args.baseline_file))
-        harness = comparison_harness_for_inputs(args.baseline_file, args.synrail_file)
+        baseline = context.load_json(Path(args.baseline_file))
+        harness = context.comparison_harness_for_inputs(args.baseline_file, args.synrail_file)
     except ValueError as exc:
         print(json.dumps({"result": "ERROR", "reason": "COMPARISON_INPUT_SCHEMA_MISMATCH", "detail": str(exc)}, ensure_ascii=True))
         return 2
@@ -912,27 +1181,25 @@ def cmd_compare(
             "--synrail-file", args.synrail_file,
             "--output", args.output,
         ]
-    return run_python(harness, forwarded)
+    return context.run_python(harness, forwarded)
 
 
 def cmd_substitute_pressure(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    substitute_pressure_script: Path,
+    context: DoctorCompareSubstituteContext,
 ) -> int:
     forwarded: list[str] = []
     for record in args.record:
         forwarded.extend(["--record", record])
     forwarded.extend(["--output", args.output])
-    return run_python(substitute_pressure_script, forwarded)
+    return context.run_python(context.substitute_pressure_script, forwarded)
 
 
 def cmd_hybrid_status(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    hybrid_status_script: Path,
+    context: HybridModeContext,
 ) -> int:
     forwarded = [
         "--cost-record", args.cost_record,
@@ -940,14 +1207,13 @@ def cmd_hybrid_status(
     ]
     for hybrid_record in args.hybrid_record:
         forwarded.extend(["--hybrid-record", hybrid_record])
-    return run_python(hybrid_status_script, forwarded)
+    return context.run_python(context.hybrid_status_script, forwarded)
 
 
 def cmd_recommend_mode(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    mode_selector_script: Path,
+    context: HybridModeContext,
 ) -> int:
     forwarded = [
         "--cost-record", args.cost_record,
@@ -967,14 +1233,13 @@ def cmd_recommend_mode(
         forwarded.append("--artifact-truth-nontrivial")
     if args.explicit_hybrid_ambiguity:
         forwarded.extend(["--explicit-hybrid-ambiguity", args.explicit_hybrid_ambiguity])
-    return run_python(mode_selector_script, forwarded)
+    return context.run_python(context.mode_selector_script, forwarded)
 
 
 def cmd_select_mode(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    mode_receipt_script: Path,
+    context: HybridModeContext,
 ) -> int:
     forwarded = [
         "--recommendation-file", args.recommendation_file,
@@ -984,14 +1249,13 @@ def cmd_select_mode(
         forwarded.extend(["--selected-mode", args.selected_mode])
     if args.selected_with_preparation:
         forwarded.append("--selected-with-preparation")
-    return run_python(mode_receipt_script, forwarded)
+    return context.run_python(context.mode_receipt_script, forwarded)
 
 
 def cmd_plan_proof(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    proof_plan_script: Path,
+    context: ProofPreparationCostContext,
 ) -> int:
     forwarded = [
         "--run-id", args.run_id,
@@ -1003,17 +1267,16 @@ def cmd_plan_proof(
         "--task-identity", args.task_identity,
         "--output", args.output,
     ]
-    return run_python(proof_plan_script, forwarded)
+    return context.run_python(context.proof_plan_script, forwarded)
 
 
 def cmd_preparation_receipt(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    preparation_receipt_script: Path,
+    context: ProofPreparationCostContext,
 ) -> int:
-    return run_python(
-        preparation_receipt_script,
+    return context.run_python(
+        context.preparation_receipt_script,
         ["--plan-file", args.plan_file, "--bundle-file", args.bundle_file, "--output", args.output],
     )
 
@@ -1021,11 +1284,10 @@ def cmd_preparation_receipt(
 def cmd_governed_cost(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    governed_cost_script: Path,
+    context: ProofPreparationCostContext,
 ) -> int:
-    return run_python(
-        governed_cost_script,
+    return context.run_python(
+        context.governed_cost_script,
         ["--unprepared-file", args.unprepared_file, "--prepared-file", args.prepared_file, "--output", args.output],
     )
 
@@ -1033,25 +1295,17 @@ def cmd_governed_cost(
 def cmd_create_checkpoint(
     args: argparse.Namespace,
     *,
-    alpha_root_from_args: Callable[..., Path],
-    checkpoint_root: Callable[[Path, str], Path],
-    alpha_file: Callable[[Path, str], Path],
-    checkpoint_record_file: Callable[[Path, str], Path],
-    maybe_existing_alpha_file: Callable[[Path | None, str], str | None],
-    run_python: Callable[[Path, list[str]], int],
-    run_python_capture: Callable[[Path, list[str]], object],
-    print_checkpoint_summary: Callable[[Path, str, Path | None], None],
-    checkpoint_script: Path,
+    context: CheckpointCreateSaveVerifyContext,
 ) -> int:
-    root = alpha_root_from_args(args, ensure=True)
+    root = context.alpha_root_from_args(args, ensure=True)
     if root and not getattr(args, "checkpoint_id", None):
         args.checkpoint_id = "working"
     if root and not getattr(args, "checkpoint_root", None):
-        args.checkpoint_root = str(checkpoint_root(root, args.checkpoint_id))
+        args.checkpoint_root = str(context.checkpoint_root(root, args.checkpoint_id))
     if root and not getattr(args, "state_file", None):
-        args.state_file = str(alpha_file(root, "state"))
+        args.state_file = str(context.alpha_file(root, "state"))
     if root and not getattr(args, "output", None):
-        args.output = str(checkpoint_record_file(root, args.checkpoint_id))
+        args.output = str(context.checkpoint_record_file(root, args.checkpoint_id))
     if root:
         for attr, file_id in [
             ("report_file", "report"),
@@ -1066,7 +1320,7 @@ def cmd_create_checkpoint(
             ("repair_receipt_file", "repair_receipt"),
         ]:
             if not getattr(args, attr, None):
-                existing = maybe_existing_alpha_file(root, file_id)
+                existing = context.maybe_existing_alpha_file(root, file_id)
                 if existing:
                     setattr(args, attr, existing)
     forwarded = [
@@ -1092,34 +1346,25 @@ def cmd_create_checkpoint(
         if value:
             forwarded.extend([flag, value])
     if args.mode == "dev":
-        return run_python(checkpoint_script, forwarded)
-    completed = run_python_capture(checkpoint_script, forwarded)
+        return context.run_python(context.checkpoint_script, forwarded)
+    completed = context.run_python_capture(context.checkpoint_script, forwarded)
     if completed.returncode != 0:
         emit_completed_capture(completed)
         return completed.returncode
-    print_checkpoint_summary(Path(args.output), action="create", root=root)
+    context.print_checkpoint_summary(Path(args.output), action="create", root=root)
     return 0
 
 
 def cmd_save(
     args: argparse.Namespace,
     *,
-    alpha_root_from_args: Callable[..., Path],
-    checkpoint_record_file: Callable[[Path, str], Path],
-    checkpoint_root: Callable[[Path, str], Path],
-    alpha_file: Callable[[Path, str], Path],
-    maybe_existing_alpha_file: Callable[[Path | None, str], str | None],
-    checkpoint_verify_file: Callable[[Path, str], Path],
-    run_python_capture: Callable[[Path, list[str]], object],
-    print_checkpoint_summary: Callable[[Path, str, Path | None], None],
-    print_save_summary: Callable[[Path, Path, Path | None], None],
-    checkpoint_script: Path,
+    context: CheckpointCreateSaveVerifyContext,
 ) -> int:
-    root = alpha_root_from_args(args, ensure=True)
+    root = context.alpha_root_from_args(args, ensure=True)
     checkpoint_id = getattr(args, "checkpoint_id", None) or "working"
-    record_output = Path(getattr(args, "output", "") or checkpoint_record_file(root, checkpoint_id))
-    record_root = Path(getattr(args, "checkpoint_root", "") or checkpoint_root(root, checkpoint_id))
-    state_file = Path(getattr(args, "state_file", "") or alpha_file(root, "state"))
+    record_output = Path(getattr(args, "output", "") or context.checkpoint_record_file(root, checkpoint_id))
+    record_root = Path(getattr(args, "checkpoint_root", "") or context.checkpoint_root(root, checkpoint_id))
+    state_file = Path(getattr(args, "state_file", "") or context.alpha_file(root, "state"))
     project_root = Path(getattr(args, "project_root", "") or ".").resolve()
     create_forwarded = [
         "create",
@@ -1155,16 +1400,16 @@ def cmd_save(
                 "repair_handoff_file": "repair_handoff",
                 "repair_receipt_file": "repair_receipt",
             }[attr]
-            value = maybe_existing_alpha_file(root, file_id)
+            value = context.maybe_existing_alpha_file(root, file_id)
         if value:
             create_forwarded.extend([flag, value])
-    created = run_python_capture(checkpoint_script, create_forwarded)
+    created = context.run_python_capture(context.checkpoint_script, create_forwarded)
     if created.returncode != 0:
         emit_completed_capture(created)
         return created.returncode
-    verify_output = Path(checkpoint_verify_file(root, checkpoint_id))
-    verified = run_python_capture(
-        checkpoint_script,
+    verify_output = Path(context.checkpoint_verify_file(root, checkpoint_id))
+    verified = context.run_python_capture(
+        context.checkpoint_script,
         [
             "verify",
             "--checkpoint-record-file", str(record_output),
@@ -1173,32 +1418,25 @@ def cmd_save(
     )
     if verified.returncode != 0:
         emit_completed_capture(verified)
-        print_checkpoint_summary(record_output, action="create", root=root)
+        context.print_checkpoint_summary(record_output, action="create", root=root)
         return verified.returncode
-    print_save_summary(record_output, verify_output, root=root)
+    context.print_save_summary(record_output, verify_output, root=root)
     return 0
 
 
 def cmd_verify_checkpoint(
     args: argparse.Namespace,
     *,
-    alpha_root_from_args: Callable[..., Path | None],
-    discover_checkpoint_record: Callable[[Path | None, str | None], str | None],
-    checkpoint_verify_file: Callable[[Path, str], Path],
-    run_python: Callable[[Path, list[str]], int],
-    run_python_capture: Callable[[Path, list[str]], object],
-    print_checkpoint_summary: Callable[[Path, str, Path | None], None],
-    shell_command: Callable[[Path, str], str],
-    checkpoint_script: Path,
+    context: CheckpointCreateSaveVerifyContext,
 ) -> int:
-    root = alpha_root_from_args(args)
+    root = context.alpha_root_from_args(args)
     if root and not getattr(args, "checkpoint_record_file", None):
-        discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
+        discovered = context.discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
         if discovered:
             args.checkpoint_record_file = discovered
     if root and not getattr(args, "output", None):
         checkpoint_id = getattr(args, "checkpoint_id", None) or (Path(args.checkpoint_record_file).parent.name if getattr(args, "checkpoint_record_file", None) else "working")
-        args.output = str(checkpoint_verify_file(root, checkpoint_id))
+        args.output = str(context.checkpoint_verify_file(root, checkpoint_id))
     if not getattr(args, "checkpoint_record_file", None):
         if args.mode == "dev":
             print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_RECORD_REQUIRED"}, ensure_ascii=True))
@@ -1206,7 +1444,7 @@ def cmd_verify_checkpoint(
             print("Synrail could not find a restore point to confirm.")
             if root:
                 print("What to do next: create one while the project is in a verified working state.")
-                print("Next command: " + shell_command(root, "save"))
+                print("Next command: " + context.shell_command(root, "save"))
         return 2
     if not getattr(args, "output", None):
         print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_VERIFY_OUTPUT_REQUIRED"}, ensure_ascii=True))
@@ -1217,39 +1455,30 @@ def cmd_verify_checkpoint(
         "--output", args.output,
     ]
     if args.mode == "dev":
-        return run_python(checkpoint_script, forwarded)
-    completed = run_python_capture(checkpoint_script, forwarded)
+        return context.run_python(context.checkpoint_script, forwarded)
+    completed = context.run_python_capture(context.checkpoint_script, forwarded)
     if completed.returncode != 0:
         emit_completed_capture(completed)
         return completed.returncode
-    print_checkpoint_summary(Path(args.output), action="verify", root=root)
+    context.print_checkpoint_summary(Path(args.output), action="verify", root=root)
     return 0
 
 
 def cmd_restore_checkpoint(
     args: argparse.Namespace,
     *,
-    alpha_root_from_args: Callable[..., Path | None],
-    discover_checkpoint_record: Callable[[Path | None, str | None], str | None],
-    alpha_file: Callable[[Path, str], Path],
-    load_json: Callable[[Path], dict],
-    run_python: Callable[[Path, list[str]], int],
-    run_python_capture: Callable[[Path, list[str]], object],
-    print_checkpoint_summary: Callable[[Path, str, Path | None], None],
-    shell_command: Callable[[Path, str], str],
-    sync_restored_checkpoint_artifacts: Callable[[Path], None],
-    checkpoint_script: Path,
+    context: RestoreConsistencyThinContext,
 ) -> int:
-    root = alpha_root_from_args(args, ensure=True)
+    root = context.alpha_root_from_args(args, ensure=True)
     if root and not getattr(args, "checkpoint_record_file", None):
-        discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
+        discovered = context.discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
         if discovered:
             args.checkpoint_record_file = discovered
     if root and not getattr(args, "target_root", None):
         args.target_root = str(root)
     if root and not getattr(args, "output", None):
         output_file_id = "checkpoint_restore_preview" if getattr(args, "preview", False) else "checkpoint_restore"
-        args.output = str(alpha_file(root, output_file_id))
+        args.output = str(context.alpha_file(root, output_file_id))
     if not root and not getattr(args, "output", None):
         print(json.dumps({"result": "ERROR", "reason": "CHECKPOINT_OUTPUT_REQUIRED"}, ensure_ascii=True))
         return 2
@@ -1261,7 +1490,7 @@ def cmd_restore_checkpoint(
                 print("Synrail could not find a restore point to preview.")
                 if root:
                     print("What to do next: create one before relying on restore semantics.")
-                    print("Next command: " + shell_command(root, "save"))
+                    print("Next command: " + context.shell_command(root, "save"))
             return 2
         forwarded = [
             "preview",
@@ -1270,12 +1499,12 @@ def cmd_restore_checkpoint(
             "--output", args.output,
         ]
         if args.mode == "dev":
-            return run_python(checkpoint_script, forwarded)
-        completed = run_python_capture(checkpoint_script, forwarded)
+            return context.run_python(context.checkpoint_script, forwarded)
+        completed = context.run_python_capture(context.checkpoint_script, forwarded)
         if completed.returncode != 0:
             emit_completed_capture(completed)
             return completed.returncode
-        print_checkpoint_summary(Path(args.output), action="preview", root=root)
+        context.print_checkpoint_summary(Path(args.output), action="preview", root=root)
         return 0
     if not getattr(args, "checkpoint_record_file", None):
         if args.mode == "dev":
@@ -1284,7 +1513,7 @@ def cmd_restore_checkpoint(
             print("Synrail could not find a verified restore point to restore.")
             if root:
                 print("What to do next: create one while the project is in a verified working state.")
-                print("Next command: " + shell_command(root, "save"))
+                print("Next command: " + context.shell_command(root, "save"))
         return 2
     if not getattr(args, "confirm", False):
         preview_output = Path(args.output).with_name("checkpoint_restore_preview.json")
@@ -1294,11 +1523,11 @@ def cmd_restore_checkpoint(
             "--target-root", args.target_root,
             "--output", str(preview_output),
         ]
-        completed = run_python_capture(checkpoint_script, forwarded)
+        completed = context.run_python_capture(context.checkpoint_script, forwarded)
         if completed.returncode != 0:
             emit_completed_capture(completed)
             return completed.returncode
-        preview_payload = load_json(preview_output)
+        preview_payload = context.load_json(preview_output)
         if preview_payload.get("workspace_restore_destructive", False):
             if args.mode == "dev":
                 print(json.dumps({"result": "ERROR", "reason": "RESTORE_CONFIRM_REQUIRED"}, ensure_ascii=True))
@@ -1306,8 +1535,8 @@ def cmd_restore_checkpoint(
                 print("Synrail will not run this destructive restore without explicit confirmation.")
                 print("What happened: this restore would modify project workspace files on the saved project root.")
                 print("What to do next: preview the restore carefully, then rerun with --confirm if you want to proceed.")
-                print("Preview command: " + shell_command(root, "restore") + " --preview")
-                print("Next command: " + shell_command(root, "restore") + " --confirm")
+                print("Preview command: " + context.shell_command(root, "restore") + " --preview")
+                print("Next command: " + context.shell_command(root, "restore") + " --confirm")
             return 2
     forwarded = [
         "restore",
@@ -1316,36 +1545,32 @@ def cmd_restore_checkpoint(
         "--output", args.output,
     ]
     if args.mode == "dev":
-        code = run_python(checkpoint_script, forwarded)
+        code = context.run_python(context.checkpoint_script, forwarded)
     else:
-        completed = run_python_capture(checkpoint_script, forwarded)
+        completed = context.run_python_capture(context.checkpoint_script, forwarded)
         if completed.returncode != 0:
             emit_completed_capture(completed)
             return completed.returncode
         code = 0
     if code == 0:
-        sync_restored_checkpoint_artifacts(Path(args.target_root))
+        context.sync_restored_checkpoint_artifacts(Path(args.target_root))
         if args.mode != "dev":
-            print_checkpoint_summary(Path(args.output), action="restore", root=root)
+            context.print_checkpoint_summary(Path(args.output), action="restore", root=root)
     return code
 
 
 def cmd_artifact_consistency(
     args: argparse.Namespace,
     *,
-    alpha_root_from_args: Callable[..., Path | None],
-    alpha_file: Callable[[Path, str], Path],
-    maybe_existing_alpha_file: Callable[[Path | None, str], str | None],
-    run_python: Callable[[Path, list[str]], int],
-    artifact_consistency_script: Path,
+    context: RestoreConsistencyThinContext,
 ) -> int:
-    root = alpha_root_from_args(args)
+    root = context.alpha_root_from_args(args)
     if root and not getattr(args, "state_file", None):
-        args.state_file = str(alpha_file(root, "state"))
+        args.state_file = str(context.alpha_file(root, "state"))
     if root and not getattr(args, "output", None):
-        args.output = str(alpha_file(root, "artifact_consistency"))
+        args.output = str(context.alpha_file(root, "artifact_consistency"))
     if root and not getattr(args, "bundle_file", None):
-        args.bundle_file = str(alpha_file(root, "bundle"))
+        args.bundle_file = str(context.alpha_file(root, "bundle"))
     if root:
         for attr, file_id in [
             ("report_file", "report"),
@@ -1357,7 +1582,7 @@ def cmd_artifact_consistency(
             ("repair_receipt_file", "repair_receipt"),
         ]:
             if not getattr(args, attr, None):
-                existing = maybe_existing_alpha_file(root, file_id)
+                existing = context.maybe_existing_alpha_file(root, file_id)
                 if existing:
                     setattr(args, attr, existing)
     forwarded = [
@@ -1377,46 +1602,39 @@ def cmd_artifact_consistency(
     ]:
         if value:
             forwarded.extend([flag, value])
-    return run_python(artifact_consistency_script, forwarded)
+    return context.run_python(context.artifact_consistency_script, forwarded)
 
 
 def cmd_thin_output(
     args: argparse.Namespace,
     *,
-    alpha_root_from_args: Callable[..., Path | None],
-    alpha_file: Callable[[Path, str], Path],
-    maybe_existing_alpha_file: Callable[[Path | None, str], str | None],
-    discover_checkpoint_record: Callable[[Path | None, str | None], str | None],
-    run_python: Callable[[Path, list[str]], int],
-    run_python_capture: Callable[[Path, list[str]], object],
-    print_thin_output_summary: Callable[[Path], None],
-    thin_output_script: Path,
+    context: RestoreConsistencyThinContext,
 ) -> int:
-    root = alpha_root_from_args(args)
+    root = context.alpha_root_from_args(args)
     if root and not getattr(args, "state_file", None):
-        args.state_file = str(alpha_file(root, "state"))
+        args.state_file = str(context.alpha_file(root, "state"))
     if root and not getattr(args, "report_file", None):
-        args.report_file = str(alpha_file(root, "report"))
+        args.report_file = str(context.alpha_file(root, "report"))
     if root and not getattr(args, "output", None):
-        args.output = str(alpha_file(root, "thin_output"))
+        args.output = str(context.alpha_file(root, "thin_output"))
     if root and not getattr(args, "repair_packet_file", None):
-        existing = maybe_existing_alpha_file(root, "repair_packet")
+        existing = context.maybe_existing_alpha_file(root, "repair_packet")
         if existing:
             args.repair_packet_file = existing
     if root and not getattr(args, "doctor_file", None):
-        existing = maybe_existing_alpha_file(root, "doctor")
+        existing = context.maybe_existing_alpha_file(root, "doctor")
         if existing:
             args.doctor_file = existing
     if root and not getattr(args, "consistency_recovery_file", None):
-        existing = maybe_existing_alpha_file(root, "consistency_recovery")
+        existing = context.maybe_existing_alpha_file(root, "consistency_recovery")
         if existing:
             args.consistency_recovery_file = existing
     if root and not getattr(args, "refresh_file", None):
-        existing = maybe_existing_alpha_file(root, "refresh")
+        existing = context.maybe_existing_alpha_file(root, "refresh")
         if existing:
             args.refresh_file = existing
     if root and not getattr(args, "checkpoint_record_file", None):
-        discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
+        discovered = context.discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
         if discovered:
             args.checkpoint_record_file = discovered
     forwarded = [
@@ -1435,60 +1653,46 @@ def cmd_thin_output(
         if value:
             forwarded.extend([flag, value])
     if args.mode == "dev":
-        return run_python(thin_output_script, forwarded)
-    completed = run_python_capture(thin_output_script, forwarded)
+        return context.run_python(context.thin_output_script, forwarded)
+    completed = context.run_python_capture(context.thin_output_script, forwarded)
     if completed.returncode != 0:
         emit_completed_capture(completed)
     elif not getattr(args, "_suppress_summary", False):
-        print_thin_output_summary(Path(args.output))
+        context.print_thin_output_summary(Path(args.output))
     return completed.returncode
 
 
 def cmd_generate_prompt(
     args: argparse.Namespace,
     *,
-    alpha_root_from_args: Callable[..., Path | None],
-    alpha_file: Callable[[Path, str], Path],
-    maybe_existing_alpha_file: Callable[[Path | None, str], str | None],
-    discover_checkpoint_record: Callable[[Path | None, str | None], str | None],
-    load_json: Callable[[Path], dict],
-    apply_resume_output_defaults: Callable[..., None],
-    ensure_repair_packet_synthesis_defaults: Callable[[argparse.Namespace], None],
-    synthesize_repair_packet: Callable[[argparse.Namespace, dict], None],
-    run_python: Callable[[Path, list[str]], int],
-    run_python_capture: Callable[[Path, list[str]], object],
-    maybe_materialize_requested_fallback_surface: Callable[..., str | None],
-    print_prompt_summary: Callable[[Path], None],
-    load_project_profile: Callable[[Path | None], dict | None],
-    plain_shell_command: Callable[..., str],
-    prompt_bridge_script: Path,
+    context: PromptReadingFollowupContext,
 ) -> int:
-    root = alpha_root_from_args(args)
+    root = context.alpha_root_from_args(args)
     if root and not getattr(args, "state_file", None):
-        args.state_file = str(alpha_file(root, "state"))
+        args.state_file = str(context.alpha_file(root, "state"))
     if root and not getattr(args, "report_file", None):
-        existing = maybe_existing_alpha_file(root, "report")
+        existing = context.maybe_existing_alpha_file(root, "report")
         if existing:
             args.report_file = existing
     if root and not getattr(args, "repair_packet_file", None):
-        args.repair_packet_file = str(alpha_file(root, "repair_packet"))
+        args.repair_packet_file = str(context.alpha_file(root, "repair_packet"))
     if root and not getattr(args, "doctor_file", None):
-        existing = maybe_existing_alpha_file(root, "doctor")
+        existing = context.maybe_existing_alpha_file(root, "doctor")
         if existing:
             args.doctor_file = existing
     if root and not getattr(args, "output", None):
-        args.output = str(alpha_file(root, "prompt"))
+        args.output = str(context.alpha_file(root, "prompt"))
     if root and not getattr(args, "checkpoint_record_file", None):
-        discovered = discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
+        discovered = context.discover_checkpoint_record(root, getattr(args, "checkpoint_id", None))
         if discovered:
             args.checkpoint_record_file = discovered
     if not args.repair_packet_file or not Path(args.repair_packet_file).exists():
         state_file = getattr(args, "state_file", None)
         if root and state_file and Path(state_file).expanduser().resolve().exists():
-            state = load_json(Path(state_file).expanduser().resolve())
-            apply_resume_output_defaults(args, state)
-            ensure_repair_packet_synthesis_defaults(args)
-            synthesize_repair_packet(args, state)
+            state = context.load_json(Path(state_file).expanduser().resolve())
+            context.apply_resume_output_defaults(args, state)
+            context.ensure_repair_packet_synthesis_defaults(args)
+            context.synthesize_repair_packet(args, state)
         if not args.repair_packet_file or not Path(args.repair_packet_file).exists():
             if args.mode == "dev":
                 print(json.dumps({"result": "ERROR", "reason": "REPAIR_PACKET_REQUIRED"}, ensure_ascii=True))
@@ -1496,7 +1700,7 @@ def cmd_generate_prompt(
             print("Synrail does not have the next bounded repair instruction yet.")
             if root:
                 print("What to do next: run one check first so Synrail can build the bounded next step.")
-                print("Next command: " + plain_shell_command("check"))
+                print("Next command: " + context.plain_shell_command("check"))
             return 2
     forwarded = [
         "--repair-packet-file", args.repair_packet_file,
@@ -1507,26 +1711,25 @@ def cmd_generate_prompt(
     if getattr(args, "doctor_file", None):
         forwarded.extend(["--doctor-file", args.doctor_file])
     if args.mode == "dev":
-        return run_python(prompt_bridge_script, forwarded)
-    completed = run_python_capture(prompt_bridge_script, forwarded)
+        return context.run_python(context.prompt_bridge_script, forwarded)
+    completed = context.run_python_capture(context.prompt_bridge_script, forwarded)
     if completed.returncode != 0:
         emit_completed_capture(completed)
         return completed.returncode
-    created_fallback = maybe_materialize_requested_fallback_surface(root=root, prompt_file=Path(args.output))
+    created_fallback = context.maybe_materialize_requested_fallback_surface(root=root, prompt_file=Path(args.output))
     if created_fallback:
         print(f"Prepared fallback surface: {created_fallback}")
-    print_prompt_summary(Path(args.output))
+    context.print_prompt_summary(Path(args.output))
     return 0
 
 
 def cmd_thin_output_reading(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    thin_output_reading_script: Path,
+    context: PromptReadingFollowupContext,
 ) -> int:
-    return run_python(
-        thin_output_reading_script,
+    return context.run_python(
+        context.thin_output_reading_script,
         [
             "--thin-output-file", args.thin_output_file,
             "--prompt-bridge-file", args.prompt_bridge_file,
@@ -1540,8 +1743,7 @@ def cmd_thin_output_reading(
 def cmd_prompt_followup(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    prompt_followup_script: Path,
+    context: PromptReadingFollowupContext,
 ) -> int:
     forwarded = [
         "--repair-packet-file", args.repair_packet_file,
@@ -1550,17 +1752,16 @@ def cmd_prompt_followup(
     ]
     if args.thin_output_file:
         forwarded.extend(["--thin-output-file", args.thin_output_file])
-    return run_python(prompt_followup_script, forwarded)
+    return context.run_python(context.prompt_followup_script, forwarded)
 
 
 def cmd_prompt_retry_guard(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    prompt_retry_guard_script: Path,
+    context: RetryRecoveryReadingContext,
 ) -> int:
-    return run_python(
-        prompt_retry_guard_script,
+    return context.run_python(
+        context.prompt_retry_guard_script,
         [
             "--packet-a-file", args.packet_a_file,
             "--prompt-a-file", args.prompt_a_file,
@@ -1574,8 +1775,7 @@ def cmd_prompt_retry_guard(
 def cmd_consistency_recovery(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    consistency_recovery_script: Path,
+    context: RetryRecoveryReadingContext,
 ) -> int:
     forwarded = [
         "--consistency-file", args.consistency_file,
@@ -1583,17 +1783,16 @@ def cmd_consistency_recovery(
     ]
     if args.checkpoint_record_file:
         forwarded.extend(["--checkpoint-record-file", args.checkpoint_record_file])
-    return run_python(consistency_recovery_script, forwarded)
+    return context.run_python(context.consistency_recovery_script, forwarded)
 
 
 def cmd_checkpoint_operator_reading(
     args: argparse.Namespace,
     *,
-    run_python: Callable[[Path, list[str]], int],
-    checkpoint_operator_reading_script: Path,
+    context: RetryRecoveryReadingContext,
 ) -> int:
-    return run_python(
-        checkpoint_operator_reading_script,
+    return context.run_python(
+        context.checkpoint_operator_reading_script,
         [
             "--second-operator-file", args.second_operator_file,
             "--thin-output-file", args.thin_output_file,

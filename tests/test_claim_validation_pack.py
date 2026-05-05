@@ -276,6 +276,24 @@ class ClaimValidationPackTests(unittest.TestCase):
         self.assertIn("if the review is `mixed signal`, do not broaden packaging yet", scorecard)
         self.assertIn("One fresh outside pass should change the roadmap decision", scorecard)
 
+    def test_external_alpha_ledger_docs_distinguish_empirical_runs_from_curated_benchmarks(self) -> None:
+        ledger = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_ALPHA_LEDGER_2026-05.md")
+        run_template = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_ALPHA_RUN_TEMPLATE_001.md")
+        runs_readme = load_text(REPO_ROOT / "fixtures" / "external_alpha_runs" / "README.md")
+        repeatable_benchmark = load_text(REPO_ROOT / "docs" / "core" / "REPEATABLE_EVERYDAY_BENCHMARK_001.md")
+        baseline_harness = load_text(REPO_ROOT / "docs" / "core" / "BASELINE_HARNESS_001.md")
+
+        self.assertIn("This ledger is the repeatable recording surface for the next ten empirical external alpha runs.", ledger)
+        self.assertIn("Do not record curated benchmark fixtures here.", ledger)
+        self.assertIn("Do not move product claims from curated benchmark confidence to empirical external proof until this ledger contains real external runs.", ledger)
+        self.assertIn("This template is for live external use, not for curated benchmark fixtures, synthetic pressure packs, or local estimate-only comparisons.", run_template)
+        self.assertIn("Those artifacts may inform prioritization, but they are not empirical external proof.", run_template)
+        self.assertIn("This directory is reserved for empirical external alpha run records.", runs_readme)
+        self.assertIn("Do not place curated benchmark packs, synthetic pressure fixtures, or local estimate-only comparison inputs here.", runs_readme)
+        self.assertIn("This is not an external alpha benchmark.", repeatable_benchmark)
+        self.assertIn("They are curated local estimates, not empirical external measurements.", repeatable_benchmark)
+        self.assertIn("None of these comparison inputs are empirical external measurements.", baseline_harness)
+
 
 if __name__ == "__main__":
     unittest.main()

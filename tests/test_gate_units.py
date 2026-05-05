@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import json
 import sys
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from io import StringIO
@@ -59,6 +60,20 @@ def ready_state(run_id: str = "R1", task_class: str = "bounded_change") -> dict:
     state["recovery"]["status"] = "NOT_REQUIRED"
     state["recovery"]["reverification_complete"] = False
     return state
+
+
+def live_bound_verdict(state: dict, bundle: dict) -> dict:
+    with tempfile.TemporaryDirectory(prefix="synrail_gate_units_live_") as tmpdir:
+        tmp = Path(tmpdir)
+        state_path = tmp / "state.json"
+        bundle_path = tmp / "bundle.json"
+        state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+        bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
+        live_state = copy.deepcopy(state)
+        live_bundle = copy.deepcopy(bundle)
+        live_state["_state_file"] = str(state_path)
+        live_bundle["_bundle_file"] = str(bundle_path)
+        return build_verdict(live_state, live_bundle)
 
 
 # ---------------------------------------------------------------------------
@@ -443,9 +458,29 @@ class TestBuildVerdict(unittest.TestCase):
         return {"status": "COMPLETE", "missing_sections": [], "semantically_insufficient_sections": []}
 
     def test_accepted_when_all_gates_pass(self) -> None:
-        verdict = build_verdict(self._full_state(), self._complete_bundle())
+        verdict = live_bound_verdict(self._full_state(), self._complete_bundle())
         self.assertEqual("ACCEPTED", verdict["closure_status"])
         self.assertEqual("", verdict["blocking_reason"])
+
+    def test_build_verdict_rejects_complete_bundle_without_live_freshness_files(self) -> None:
+        verdict = build_verdict(self._full_state(), self._complete_bundle())
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("CLOSURE_FRESHNESS_NOT_LIVE", verdict["blocking_reason"])
+        self.assertEqual("PROOF_BUNDLE_REPAIR", verdict["next_allowed_transition"])
+        self.assertEqual(
+            "rerun closure through the live artifact path so freshness can be verified",
+            verdict["narrow_next_safe_step"],
+        )
+
+    def test_build_verdict_accepts_complete_bundle_with_live_freshness_files(self) -> None:
+        verdict = live_bound_verdict(self._full_state(), self._complete_bundle())
+        self.assertEqual("ACCEPTED", verdict["closure_status"])
+        self.assertEqual("", verdict["blocking_reason"])
+
+    def test_closure_certificate_not_issued_as_accepted_when_freshness_not_live(self) -> None:
+        verdict = build_verdict(self._full_state(), self._complete_bundle())
+        self.assertNotEqual("ACCEPTED", verdict["closure_status"])
+        self.assertEqual("CLOSURE_FRESHNESS_NOT_LIVE", verdict["blocking_reason"])
 
     def test_blocks_on_target_not_attested(self) -> None:
         state = self._full_state()
@@ -510,7 +545,7 @@ class TestBuildVerdict(unittest.TestCase):
         bundle = self._complete_bundle() | {
             "verification_recheck": {"executed": False, "matched": False, "skip_reason": "command_not_in_allowlist"}
         }
-        verdict = build_verdict(self._full_state(), bundle)
+        verdict = live_bound_verdict(self._full_state(), bundle)
         self.assertEqual("ACCEPTED", verdict["closure_status"])
         self.assertEqual("", verdict["blocking_reason"])
 
@@ -531,7 +566,7 @@ class TestBuildVerdict(unittest.TestCase):
     def test_accepts_with_doctor_override_warning_present(self) -> None:
         state = self._full_state()
         state["doctor"]["override_gates"] = ["clean_execution_surface", "artifact_viability"]
-        verdict = build_verdict(state, self._complete_bundle())
+        verdict = live_bound_verdict(state, self._complete_bundle())
         self.assertEqual("ACCEPTED", verdict["closure_status"])
         self.assertEqual("", verdict["blocking_reason"])
         self.assertEqual("NONE", verdict["next_allowed_transition"])
@@ -707,7 +742,7 @@ class TestClosureRunIdBinding(unittest.TestCase):
     def test_matching_run_ids_accepted(self) -> None:
         state = ready_state("R1")
         bundle = self._valid_bundle("R1")
-        verdict = build_verdict(state, bundle)
+        verdict = live_bound_verdict(state, bundle)
         self.assertEqual("ACCEPTED", verdict["closure_status"])
         self.assertEqual("", verdict["blocking_reason"])
 
@@ -724,7 +759,7 @@ class TestClosureRunIdBinding(unittest.TestCase):
         state = ready_state("R1")
         bundle = self._valid_bundle("R1")
         bundle["run_id"] = ""
-        verdict = build_verdict(state, bundle)
+        verdict = live_bound_verdict(state, bundle)
         self.assertEqual("ACCEPTED", verdict["closure_status"])
 
     def test_mismatched_artifact_request_id_blocked(self) -> None:
