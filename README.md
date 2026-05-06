@@ -50,24 +50,28 @@ make install-dev
 make demo
 ```
 
-Prefer the repo-native installer when you want the same local control path used by alpha testers:
-
-```bash
-make install-local
-```
+This is the recommended public path for trying Synrail from a checkout.
 
 ## Quick Start
 
 ```bash
-# Install into a local venv (writes CLAUDE.md / GEMINI.md / AGENTS.md for agent discovery)
-python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd)"
+# after make install-dev
 
 # Workflow: start → verify locally → strengthen final_result.json first → check → fix → check again
-synrail start "Describe the bounded local change."
+.venv/bin/synrail start "Describe the bounded local change."
 # run local verification, strengthen .synrail/final_result.json first,
 # leave readback/scenario_proof untouched unless synrail check names them, then:
-synrail check
-# if non-green, fix what check says, then rerun synrail check
+.venv/bin/synrail check
+# if non-green, fix what check says, then rerun .venv/bin/synrail check
+```
+
+## Alpha Tester Install Path
+
+Use this only when you want the repo-native installer path used by alpha testers.
+It writes `CLAUDE.md`, `GEMINI.md`, and `AGENTS.md` for agent discovery in the target project.
+
+```bash
+make install-local
 ```
 
 ## Developer Checks
