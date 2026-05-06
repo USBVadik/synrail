@@ -1,1 +1,0 @@
-"""Synrail package shell."""
