@@ -27,6 +27,11 @@ Agent: repaired final_result.json and ran the real verification
 Synrail: Status: Accepted
 ```
 
+![Synrail false-green demo](examples/false-green-demo/assets/synrail-false-green-hero.gif)
+
+A simulated false-green claim is blocked until the proof is repaired and verified.
+For social posts or embeds that prefer video, use the [MP4 demo asset](examples/false-green-demo/assets/synrail-false-green-hero.mp4).
+
 That is the product wedge: block plausible-but-unproven closure, name the exact blocker, and keep the next repair step bounded.
 The point is not to make agent output sound confident. The point is to stop false-green closure before it gets accepted as truth.
 See the standalone [false-green demo](examples/false-green-demo/README.md), the short [demo summary](examples/false_green_demo.md), and the [first tester protocol](docs/review/FIRST_TESTER_PROTOCOL_001.md).

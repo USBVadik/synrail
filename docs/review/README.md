@@ -11,6 +11,7 @@ Current public-proof surfaces on this branch:
 - `../../examples/false-green-benchmark/README.md`
 - `PUBLIC_LAUNCH_PACKET_001.md`
 - `FIRST_TESTER_PROTOCOL_001.md`
+- `SERVER_GEMINI_ALPHA_FINDING_001.md`
 
 Then continue here when you specifically want the review/archive layer:
 

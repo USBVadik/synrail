@@ -34,6 +34,9 @@ This demo shows the narrow Synrail wedge:
 
 - `run_demo.sh` — printable two-minute walkthrough
 - `transcript.txt` — short sample terminal transcript
+- `assets/synrail-false-green-hero.gif` — README-ready animated demo
+- `assets/synrail-false-green-hero.mp4` — social/posting version of the same demo
+- `assets/synrail-false-green-hero-poster.png` — static preview frame
 
 ## Next step
 
