@@ -47,6 +47,20 @@ If you only open three public surfaces, use them in this order:
 - [Your First Synrail Run](docs/core/FIRST_RUN_GUIDE.md)
 - [first tester protocol](docs/review/FIRST_TESTER_PROTOCOL_001.md)
 
+## Is This Just Post-Review?
+
+Not exactly.
+
+A normal post-review asks: is this code good?
+
+Synrail asks a narrower question first: is the agent allowed to claim this task is done?
+
+If you personally inspect every diff, run every check, and keep the whole agent context in your head, Synrail may be unnecessary overhead. In that mode, you are acting as Synrail manually.
+
+Synrail is for the moment you stop being the runtime supervisor: repeated small agent runs, long context, handoff, failed repairs, or proof-sensitive changes.
+
+It does not replace review. It prevents unearned acceptance before review.
+
 ## Try It In 2 Minutes
 
 ```bash
@@ -67,6 +81,16 @@ make demo
 ```
 
 Use this when you already have the checkout and want the shortest local smoke path.
+
+## You May Not Need Synrail If
+
+- you are doing one tiny change
+- you personally inspect every changed line
+- you run the verification yourself
+- you keep the whole agent context in your head
+- a false-green costs less than running the gate
+
+In that case, the baseline is probably better. Synrail becomes useful when verification debt compounds.
 
 ## Who This Is For
 
