@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "synrail"
 version = "0.1.0"
-description = "Guided control for reliable agent execution."
+description = "Catch false-green claims from AI coding agents before accepting local changes."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }

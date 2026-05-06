@@ -1,5 +1,10 @@
 # Synrail
 
+[![CI](https://github.com/USBVadik/synrail/actions/workflows/security-hygiene.yml/badge.svg)](https://github.com/USBVadik/synrail/actions/workflows/security-hygiene.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+![Status: Alpha](https://img.shields.io/badge/status-alpha-orange)
+
 Synrail catches false-green AI-agent work before you accept it.
 
 Your coding agent says the task is done.
@@ -42,7 +47,18 @@ If you only open three public surfaces, use them in this order:
 - [Your First Synrail Run](docs/core/FIRST_RUN_GUIDE.md)
 - [first tester protocol](docs/review/FIRST_TESTER_PROTOCOL_001.md)
 
-## Run Locally In 2 Minutes
+## Try It In 2 Minutes
+
+```bash
+git clone https://github.com/USBVadik/synrail
+cd synrail
+make install-dev
+make demo
+```
+
+This is the fastest way to see Synrail block a simulated false-green claim and then accept the repaired proof.
+
+## Verify The Local Install
 
 ```bash
 make install-dev
@@ -50,7 +66,22 @@ make install-dev
 make demo
 ```
 
-This is the recommended public path for trying Synrail from a checkout.
+Use this when you already have the checkout and want the shortest local smoke path.
+
+## Who This Is For
+
+- developers using Claude Code, Cursor, Codex, Aider, Gemini CLI, or similar coding agents
+- operators who still manually verify whether an agent's "done" claim is actually supported
+- teams running repeated small agent changes where false-green review cost compounds
+- second operators inheriting a failed repair and needing one bounded next step
+
+## False-Green Cases Synrail Targets
+
+- tests claimed as passed but not actually run
+- proof that does not match the changed files
+- a plausible diff that does not satisfy the requested task
+- narrative completion instead of concrete runtime evidence
+- failed repair handoff without a bounded continuation path
 
 ## Quick Start
 
@@ -88,6 +119,12 @@ For a container smoke path:
 docker build -t synrail-demo .
 docker run --rm synrail-demo synrail --help
 ```
+
+## Give Feedback
+
+- Real false-green caught or missed? Open a `False-green case` issue.
+- Confusing install, check, repair, or acceptance output? Open a `Confusing output` issue.
+- Tried the demo or one real small task? Open an `Alpha feedback` issue.
 
 ## Comparison Table
 
