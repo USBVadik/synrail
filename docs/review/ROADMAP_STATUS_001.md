@@ -138,6 +138,22 @@ These are the most likely next moves after the current local-roadmap closure.
 3. collect one fresh live external signal on the cheapened and evidence-gated branch
 4. decide only after that whether the current wedge deserves broader packaging or more hardening
 
+## Public-signal freeze rule
+
+During the current public-signal period, only these changes should land:
+
+- bugfixes
+- docs clarification
+- demo polish
+- install-path fixes
+
+Do not use this period for:
+
+- kernel growth
+- large refactors
+- new product layers
+- broad packaging expansion
+
 ## Deliberately frozen for now
 
 Not the next move:

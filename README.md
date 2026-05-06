@@ -2,6 +2,12 @@
 
 Synrail catches false-green AI-agent work before you accept it.
 
+Your coding agent says the task is done.
+Synrail checks whether the proof is real.
+
+If the proof is weak, mismatched, or unverified,
+Synrail blocks acceptance and gives one bounded repair step.
+
 The failure mode is simple: an agent says "done", the tests look plausible, and the operator is still missing trustworthy proof.
 Synrail exists to hold that line between execution and acceptance.
 
@@ -13,17 +19,23 @@ Synrail keeps that boundary explicit.
 ## 30-Second Demo
 
 ```text
-Agent: tests passed
+Agent: done, tests passed
 Synrail: Status: Proof Invalid
 Reason: verification command not executed / freshness mismatch
 Next: repair final_result.json
-Agent: repaired final_result.json
+Agent: repaired final_result.json and ran the real verification
 Synrail: Status: Accepted
 ```
 
 That is the product wedge: block plausible-but-unproven closure, name the exact blocker, and keep the next repair step bounded.
 The point is not to make agent output sound confident. The point is to stop false-green closure before it gets accepted as truth.
-See the standalone [false-green demo](examples/false_green_demo.md).
+See the standalone [false-green demo](examples/false-green-demo/README.md), the short [demo summary](examples/false_green_demo.md), and the [first tester protocol](docs/review/FIRST_TESTER_PROTOCOL_001.md).
+
+If you only open three public surfaces, use them in this order:
+
+- [false-green demo](examples/false-green-demo/README.md)
+- [Your First Synrail Run](docs/core/FIRST_RUN_GUIDE.md)
+- [first tester protocol](docs/review/FIRST_TESTER_PROTOCOL_001.md)
 
 ## Quick Start
 
@@ -39,10 +51,20 @@ synrail check
 # if non-green, fix what check says, then rerun synrail check
 ```
 
+## Comparison Table
+
+| Scenario | Manual checks | Agent rules | CI alone | Synrail |
+| --- | --- | --- | --- | --- |
+| Agent claims tests passed but never ran them | easy to miss | usually trusts the claim | maybe later | blocks acceptance until verified |
+| Agent shows a plausible diff but proof does not match the task | manual line audit | weak | no | names the exact proof repair |
+| Second operator inherits a failed repair | manual reconstruction | weak | no | bounded continuation from artifacts |
+| Several bounded agent runs happen in sequence | expensive to re-check each run | weak | late branch signal | proof gate per run |
+
 ## When To Use It
 
 Use Synrail when:
 
+- one local agent run on the same machine needs a reviewable proof boundary
 - an agent can plausibly claim success before the proof is trustworthy
 - you want one bounded repair step instead of free-form debugging after a non-green result
 - continuation or handoff should work without author memory
@@ -53,8 +75,9 @@ Use Synrail when:
 Do not use Synrail when:
 
 - the task is so cheap that a simpler baseline already keeps false-green exposure low enough
-- you need a broad hosted workflow platform or general automation engine
-- you need broad production-target or remote-host orchestration as the main lane today
+- you need a broad self-serve workflow platform or general automation engine
+- you need remote-host or production-target execution as the main lane today
+- you want the current alpha to stand in for full deployment or ops orchestration
 
 ## Current Readiness
 

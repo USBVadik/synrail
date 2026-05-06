@@ -1,15 +1,19 @@
 # False-Green Demo
 
-This is the smallest public demo of the Synrail wedge.
+This is the shortest public entry to the Synrail wedge.
+
+For the runnable two-minute version, start here:
+
+- [examples/false-green-demo/README.md](false-green-demo/README.md)
 
 ## Transcript
 
 ```text
-Agent: tests passed
+Agent: done, tests passed
 Synrail: Status: Proof Invalid
 Reason: verification command not executed / freshness mismatch
 Next: repair final_result.json
-Agent: repaired final_result.json
+Agent: repaired final_result.json and ran the real verification
 Synrail: Status: Accepted
 ```
 
@@ -19,6 +23,16 @@ Synrail: Status: Accepted
 - Synrail rejects that false-green state explicitly
 - the repair target stays bounded
 - only `Status: Accepted` closes the loop
+
+## Next step
+
+If you want the bounded tester handoff after this summary, use the [first tester protocol](../docs/review/FIRST_TESTER_PROTOCOL_001.md).
+
+Feedback should go through the GitHub issue templates:
+
+- `Alpha feedback`
+- `False-green case`
+- `Confusing output`
 
 ## Support boundary
 

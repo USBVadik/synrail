@@ -376,8 +376,16 @@ Fresh unseen validation now also lives beside those pack checks:
 
 ## Current external review contour
 
-See:
+For the shortest public-proof path on this branch, start with:
+
+- `README.md`
+- `examples/false-green-demo/README.md`
+- `examples/false-green-benchmark/README.md`
+- `docs/review/PUBLIC_LAUNCH_PACKET_001.md`
+
+For the deeper handoff-quality outside alpha pack, see:
 
 - `fixtures/alpha_test_pack_run_004/`
 
-This is the current handoff-quality proof for the outside alpha pack.
+The public-proof surfaces explain the wedge quickly.
+The alpha-test-pack fixture is still the deeper runtime evidence contour behind that shorter front door.

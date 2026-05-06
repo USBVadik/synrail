@@ -15,7 +15,23 @@ Start by trying to break its truth claims.
 
 ## Suggested attack order
 
-### 1. Attack the first-run alpha contour
+### 1. Attack the public proof surfaces first
+
+Read:
+
+- `README.md`
+- `examples/false-green-demo/README.md`
+- `examples/false-green-benchmark/README.md`
+- `docs/review/PUBLIC_LAUNCH_PACKET_001.md`
+
+Ask:
+
+- does the first screen make the false-green wedge obvious fast enough?
+- does the runnable demo show a real blocked-to-accepted contour, or only a polished narrative?
+- does the benchmark starter stay honest about being curated local evidence instead of implying empirical proof?
+- does the launch copy overclaim beyond the current narrow local alpha lane?
+
+### 2. Attack the first-run alpha contour
 
 Read:
 
@@ -30,7 +46,7 @@ Ask:
 - where does the shell still sound more certain than the current proof has earned?
 - is the exported telemetry actually useful?
 
-### 2. Attack false accept / false reject boundaries
+### 3. Attack false accept / false reject boundaries
 
 Read:
 
@@ -47,7 +63,7 @@ Ask:
 - where can numeric line/location claims still sound evidentiary without literal evidence?
 - where do allowlisted verification recheck and `shadow_observation_guard_results` still leave too much trust self-issued?
 
-### 3. Attack doctor honesty
+### 4. Attack doctor honesty
 
 Read:
 
@@ -60,7 +76,7 @@ Ask:
 - is measured coverage really enough to justify the readiness claim?
 - what important fail modes are still missing?
 
-### 4. Attack continuation trust
+### 5. Attack continuation trust
 
 Read:
 

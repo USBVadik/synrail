@@ -28,12 +28,16 @@ They are here to show how `Synrail` artifacts fit together without importing raw
     - closure decision
     - refresh after degradation
     - baseline comparison
+- `false-green-demo/`
+  - runnable public demo pack with a README, script, and transcript
+  - shows the shortest path from false-green claim to bounded repair to accepted closure
+- `false-green-benchmark/`
+  - denser starter public benchmark pack with curated local cases and case families
+  - makes the false-green problem concrete without claiming external empirical proof
 - `false_green_demo.md`
-  - one short public-facing transcript showing:
-    - a plausible claimed-done moment
-    - a non-green Synrail rejection
-    - a bounded repair
-    - final accepted closure
+  - one short public-facing summary of the same false-green wedge
+
+For the bounded tester handoff after these examples, use `../docs/review/FIRST_TESTER_PROTOCOL_001.md` and route feedback through the GitHub issue templates.
 
 ## Related fixtures
 

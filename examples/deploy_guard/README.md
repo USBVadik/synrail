@@ -25,8 +25,18 @@ Included examples:
 - `systemd_service_override.conf`
   - example `systemd` drop-in showing `ExecStartPre` with the Synrail deploy guard
 
+## Next step
+
+If you want the bounded tester handoff after reviewing these deploy-guard examples, use the [first tester protocol](../../docs/review/FIRST_TESTER_PROTOCOL_001.md).
+
+Feedback should go through the GitHub issue templates:
+
+- `Alpha feedback`
+- `Confusing output`
+- `Bug report`
+
 Related docs:
 
-- [`docs/core/DEPLOY_GUARD_INTEGRATION_001.md`](/Users/usbdick/Documents/New%20project/synrail/docs/core/DEPLOY_GUARD_INTEGRATION_001.md)
-- [`tools/reference/synrail_deploy_guard.sh`](/Users/usbdick/Documents/New%20project/synrail/tools/reference/synrail_deploy_guard.sh)
-- [`tools/reference/synrail_guarded_side_effect_v0.sh`](/Users/usbdick/Documents/New%20project/synrail/tools/reference/synrail_guarded_side_effect_v0.sh)
+- [`docs/core/DEPLOY_GUARD_INTEGRATION_001.md`](../../docs/core/DEPLOY_GUARD_INTEGRATION_001.md)
+- [`tools/reference/synrail_deploy_guard.sh`](../../tools/reference/synrail_deploy_guard.sh)
+- [`tools/reference/synrail_guarded_side_effect_v0.sh`](../../tools/reference/synrail_guarded_side_effect_v0.sh)

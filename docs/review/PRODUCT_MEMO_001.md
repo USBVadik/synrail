@@ -85,7 +85,20 @@ The current product form is:
 
 - one proof-governed kernel
 - one thin controlled-start alpha shell on top of that kernel
-- one current tester pack plus claim-validation pack for external critique and early alpha pressure
+- one public-proof shell made of the README landing page, false-green demo, benchmark starter, and launch packet
+- one current tester pack plus claim-validation pack for deeper external critique and early alpha pressure
+
+## Public proof surfaces on the current branch
+
+Before deeper review material, the current branch now surfaces the wedge through:
+
+- the README first screen
+- a runnable false-green demo
+- a curated local benchmark starter
+- a launch packet with bounded copy for first outside posts
+
+These are not broad product proof.
+They are the shortest current path for an outside reader to understand the problem, see the blocked-to-accepted contour, and judge whether the wedge is worth trying.
 
 ## Why this matters
 

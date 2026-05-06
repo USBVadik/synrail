@@ -1,0 +1,33 @@
+name: Alpha feedback
+description: Share first-use feedback after trying the demo or one real small task
+labels:
+  - alpha-feedback
+body:
+  - type: textarea
+    id: confusion
+    attributes:
+      label: Where did you get confused?
+      placeholder: install / README / check output / repair step / terminology
+    validations:
+      required: true
+  - type: textarea
+    id: useful
+    attributes:
+      label: Did Synrail catch anything useful?
+      placeholder: What did it block, clarify, or save you from?
+    validations:
+      required: true
+  - type: textarea
+    id: overhead
+    attributes:
+      label: Did the overhead feel justified?
+      placeholder: Too much / reasonable / worth it only in certain cases
+    validations:
+      required: true
+  - type: textarea
+    id: reuse
+    attributes:
+      label: Would you use it again?
+      placeholder: Why or why not?
+    validations:
+      required: true

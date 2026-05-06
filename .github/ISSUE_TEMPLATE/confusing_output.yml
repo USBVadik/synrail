@@ -1,0 +1,27 @@
+name: Confusing output
+description: Report output that was hard to interpret during install, check, repair, or acceptance
+labels:
+  - alpha-feedback
+  - output
+body:
+  - type: textarea
+    id: confusing_output
+    attributes:
+      label: Which output was confusing?
+      placeholder: Paste the shortest useful snippet
+    validations:
+      required: true
+  - type: textarea
+    id: expectation
+    attributes:
+      label: What did you expect instead?
+      placeholder: Clearer error, better next step, less jargon, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      placeholder: What command were you running and what were you trying to do?
+    validations:
+      required: true

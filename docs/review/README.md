@@ -4,6 +4,14 @@ This index is for deeper review, critique, and outreach material.
 It is not the primary public source-of-truth reading path for the repo.
 Start with `../../README.md`, `../core/FIRST_RUN_GUIDE.md`, and `../README.md` first.
 
+Current public-proof surfaces on this branch:
+
+- `../../README.md`
+- `../../examples/false-green-demo/README.md`
+- `../../examples/false-green-benchmark/README.md`
+- `PUBLIC_LAUNCH_PACKET_001.md`
+- `FIRST_TESTER_PROTOCOL_001.md`
+
 Then continue here when you specifically want the review/archive layer:
 
 - `../core/ALPHA_TEST_PACK_001.md`

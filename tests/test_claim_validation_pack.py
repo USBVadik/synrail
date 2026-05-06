@@ -223,6 +223,9 @@ class ClaimValidationPackTests(unittest.TestCase):
         self.assertIn("Covers the current outside-facing first-run contour plus bounded helper and review surfaces:", technical_map)
         self.assertIn("- `runtime-helper`", technical_map)
         self.assertIn("- `repair-step`", technical_map)
+        self.assertIn("For the shortest public-proof path on this branch, start with:", technical_map)
+        self.assertIn("examples/false-green-demo/README.md", technical_map)
+        self.assertIn("PUBLIC_LAUNCH_PACKET_001.md", technical_map)
 
     def test_one_pager_surfaces_runtime_helper_in_current_alpha_lane(self) -> None:
         one_pager = load_text(REPO_ROOT / "docs" / "review" / "ONE_PAGER_001.md")
@@ -235,6 +238,8 @@ class ClaimValidationPackTests(unittest.TestCase):
 
         self.assertIn("if the change affects rendered UI, a page template, or a server-side route handler, run `synrail runtime-helper`", product_memo)
         self.assertIn("rerun `synrail check`; resolve non-green runtime-helper outcomes locally", product_memo)
+        self.assertIn("one public-proof shell made of the README landing page, false-green demo, benchmark starter, and launch packet", product_memo)
+        self.assertIn("Before deeper review material, the current branch now surfaces the wedge through:", product_memo)
 
     def test_external_full_review_surfaces_runtime_helper_in_current_user_contour(self) -> None:
         full_review = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_FULL_REVIEW_2026-04-21.md")
@@ -275,6 +280,15 @@ class ClaimValidationPackTests(unittest.TestCase):
         self.assertIn("broaden packaging only if the review returns `strong wedge signal`", scorecard)
         self.assertIn("if the review is `mixed signal`, do not broaden packaging yet", scorecard)
         self.assertIn("One fresh outside pass should change the roadmap decision", scorecard)
+
+    def test_known_weaknesses_and_critic_guide_surface_public_proof_boundaries(self) -> None:
+        critic_guide = load_text(REPO_ROOT / "docs" / "review" / "CRITIC_GUIDE_001.md")
+        known_weaknesses = load_text(REPO_ROOT / "docs" / "review" / "KNOWN_WEAKNESSES_001.md")
+
+        self.assertIn("Attack the public proof surfaces first", critic_guide)
+        self.assertIn("does the benchmark starter stay honest about being curated local evidence", critic_guide)
+        self.assertIn("sharper README wedge, a runnable false-green demo, a curated local benchmark starter, and a launch packet", known_weaknesses)
+        self.assertIn("whether the benchmark starter stays honest about being curated local evidence", known_weaknesses)
 
     def test_external_alpha_ledger_docs_distinguish_empirical_runs_from_curated_benchmarks(self) -> None:
         ledger = load_text(REPO_ROOT / "docs" / "review" / "EXTERNAL_ALPHA_LEDGER_2026-05.md")

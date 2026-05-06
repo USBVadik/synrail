@@ -85,12 +85,15 @@ What to attack:
 
 ## 6. The current strongest proof is still narrow alpha proof, not broad product proof
 
-This repository now proves one stronger contour.
+This repository now has stronger public proof surfaces than before: a sharper README wedge, a runnable false-green demo, a curated local benchmark starter, and a launch packet.
 
-It does not prove broad product inevitability.
+That is useful.
+It still does not prove broad product inevitability.
 
 What to attack:
 
-- whether the current wedge is strong enough to deserve expansion
+- whether the public proof surfaces make the wedge legible without overclaiming
+- whether the runnable demo feels like real evidence or only polished theater
+- whether the benchmark starter stays honest about being curated local evidence
 - whether the product beats simpler substitutes often enough
 - whether this should remain a narrow kernel instead of growing into a bigger shell

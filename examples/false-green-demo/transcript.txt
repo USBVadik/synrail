@@ -1,0 +1,11 @@
+Agent: done, tests passed
+
+$ python3 alpha.py check
+Synrail: Status: Proof Invalid
+Reason: verification command not executed / freshness mismatch
+Next: repair final_result.json
+
+Agent: repaired final_result.json and ran the real verification
+
+$ python3 alpha.py check --clean-surface
+Synrail: Status: Accepted

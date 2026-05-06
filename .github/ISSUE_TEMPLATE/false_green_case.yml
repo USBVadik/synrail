@@ -1,0 +1,51 @@
+name: False-green case
+description: Agent claimed work was done, but proof or reality did not match
+labels:
+  - alpha-feedback
+  - false-green
+body:
+  - type: input
+    id: agent_used
+    attributes:
+      label: Agent used
+      placeholder: Claude Code / Cursor / Codex / Aider / other
+    validations:
+      required: true
+  - type: input
+    id: task_type
+    attributes:
+      label: Task type
+      placeholder: small refactor / test fix / docs change / batch edit
+    validations:
+      required: true
+  - type: textarea
+    id: claim
+    attributes:
+      label: Agent claim
+      placeholder: What did the agent say was done?
+    validations:
+      required: true
+  - type: textarea
+    id: reality
+    attributes:
+      label: What was actually wrong
+      placeholder: tests did not run / wrong file changed / proof mismatch / incomplete task
+    validations:
+      required: true
+  - type: dropdown
+    id: caught
+    attributes:
+      label: Did Synrail catch it?
+      options:
+        - yes
+        - no
+        - partially
+    validations:
+      required: true
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+      placeholder: What should Synrail have blocked, accepted, or explained?
+    validations:
+      required: true
