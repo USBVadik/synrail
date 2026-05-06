@@ -42,6 +42,20 @@ If you only open three public surfaces, use them in this order:
 - [Your First Synrail Run](docs/core/FIRST_RUN_GUIDE.md)
 - [first tester protocol](docs/review/FIRST_TESTER_PROTOCOL_001.md)
 
+## Run Locally In 2 Minutes
+
+```bash
+make install-dev
+.venv/bin/synrail --help
+make demo
+```
+
+Prefer the repo-native installer when you want the same local control path used by alpha testers:
+
+```bash
+make install-local
+```
+
 ## Quick Start
 
 ```bash
@@ -54,6 +68,21 @@ synrail start "Describe the bounded local change."
 # leave readback/scenario_proof untouched unless synrail check names them, then:
 synrail check
 # if non-green, fix what check says, then rerun synrail check
+```
+
+## Developer Checks
+
+```bash
+make smoke
+make verify
+```
+
+`make verify` runs compile, tests, Ruff, coverage visibility, and dependency audit.
+For a container smoke path:
+
+```bash
+docker build -t synrail-demo .
+docker run --rm synrail-demo synrail --help
 ```
 
 ## Comparison Table
@@ -88,6 +117,10 @@ Do not use Synrail when:
 
 Synrail is currently a narrow local alpha product.
 It is stronger on false-green prevention, bounded repair, and continuation than earlier versions, but it is not yet broad self-serve or broad production-ready.
+
+## License
+
+Synrail is licensed under the Apache License 2.0. See [LICENSE](LICENSE).
 
 ## What It Does
 

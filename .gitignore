@@ -30,3 +30,4 @@ fixtures/alpha_external_run_012b/agent.log
 fixtures/alpha_external_run_012b/workspace/
 fixtures/alpha_external_run_019c/agent.log
 fixtures/alpha_external_run_019c/raw/
+.tmp-*/
