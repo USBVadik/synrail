@@ -539,7 +539,7 @@ Here are the questions I would explicitly like critics to answer.
 If a reviewer wants to try the current product contour quickly:
 
 ```bash
-python3 tools/reference/synrail_install_v0.py --venv .venv
+make install-dev
 source .venv/bin/activate
 synrail
 synrail start "Add one bounded local change."
@@ -553,7 +553,7 @@ synrail check
 If they want local agents to discover the path natively:
 
 ```bash
-python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd)"
+make install-local
 ```
 
 ## Short reading plan for critics

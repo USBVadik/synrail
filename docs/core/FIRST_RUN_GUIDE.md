@@ -16,12 +16,20 @@ Only `Status: Accepted` means the task may be reported as complete.
 ## Install
 
 ```bash
-python3 tools/reference/synrail_install_v0.py --venv .venv
+make install-dev
 ```
+
+This creates the local development venv and installs the `synrail` console script used by the public quickstart.
 
 ## Optional One-Time Repo Setup For Local Agents
 
 If you want local coding agents to discover Synrail naturally in this repo, bootstrap the repo-native hints in one step:
+
+```bash
+make install-local
+```
+
+That wraps the repo-native installer and immediately creates missing `AGENTS.md` / `GEMINI.md` / `CLAUDE.md` files in the repo root or appends a managed Synrail block to existing ones. If you later rerun with `--force`, Synrail first writes a timestamped `.synrail.bak.*` backup of the existing policy file before replacing it. It is optional for humans, but useful when you want the local agent workflow to start in controlled mode without adding Synrail instructions to every prompt.
 
 For a runnable GitHub Actions lane after install, use:
 
@@ -32,13 +40,6 @@ synrail init-ci --workflow
 That writes both the local composite action and `.github/workflows/synrail-check.yml`. If you only want the adapter, run `synrail init-ci` and then add your own workflow that calls `uses: ./.github/actions/synrail-check`.
 
 If either generated file already exists with different contents, Synrail blocks unless you rerun with `--force`, and it writes a timestamped `.synrail.bak.*` backup before replacing the existing file.
-
-
-```bash
-python3 tools/reference/synrail_install_v0.py --venv .venv --project-root "$(pwd)"
-```
-
-This installs the current Synrail CLI into `.venv` and immediately creates missing `AGENTS.md` / `GEMINI.md` / `CLAUDE.md` files in the repo root or appends a managed Synrail block to existing ones. If you later rerun with `--force`, Synrail first writes a timestamped `.synrail.bak.*` backup of the existing policy file before replacing it. It is optional for humans, but useful when you want the local agent workflow to start in controlled mode without adding Synrail instructions to every prompt.
 
 ## Git Preflight
 

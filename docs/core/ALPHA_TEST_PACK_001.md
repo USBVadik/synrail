@@ -19,7 +19,7 @@ The goal of this pack is simple:
 Preferred tester install path:
 
 ```bash
-python3 tools/reference/synrail_install_v0.py --venv .venv
+make install-dev
 ```
 
 If `synrail` is not on your `PATH` after install, replace `synrail` below with the local wrapper from this checkout:

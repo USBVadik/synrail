@@ -42,10 +42,10 @@ If you need a bounded deploy or restart integration after local acceptance, use 
 The currently verified alpha install path is:
 
 ```bash
-python3 tools/reference/synrail_install_v0.py --venv .venv
+make install-dev
 ```
 
-This is now the trusted tester path on the current toolchain. It links the repo into a local venv without depending on setuptools or network access.
+This is now the trusted tester path on the current toolchain. It uses the repo `Makefile` so the public alpha path, CI path, and local smoke path stay aligned.
 
 The reference smoke for this document was run through the installed `synrail` console script, not by calling helper files directly.
 

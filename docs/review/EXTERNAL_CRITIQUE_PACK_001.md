@@ -136,7 +136,7 @@ The current outside-facing alpha lane also keeps `synrail runtime-helper` as an 
 Install:
 
 ```bash
-python3 tools/reference/synrail_install_v0.py --venv .venv
+make install-dev
 ```
 
 Run the full current test suite:

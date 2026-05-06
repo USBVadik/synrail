@@ -166,12 +166,19 @@ class InstallSmokeTests(unittest.TestCase):
         docs_readme = (REPO_ROOT / "docs" / "README.md").read_text()
         review_readme = (REPO_ROOT / "docs" / "review" / "README.md").read_text()
         reference_readme = (REPO_ROOT / "tools" / "reference" / "README.md").read_text()
+        alpha_lane = (REPO_ROOT / "docs" / "core" / "ALPHA_LANE_001.md").read_text()
+        alpha_test_pack = (REPO_ROOT / "docs" / "core" / "ALPHA_TEST_PACK_001.md").read_text()
+        external_critique_pack = (REPO_ROOT / "docs" / "review" / "EXTERNAL_CRITIQUE_PACK_001.md").read_text()
+        review_handoff_checklist = (REPO_ROOT / "docs" / "review" / "REVIEW_HANDOFF_CHECKLIST_001.md").read_text()
 
         self.assertIn("Agent: tests passed", first_run_guide)
         self.assertIn("Synrail: Status: Proof Invalid", first_run_guide)
         self.assertIn("Reason: verification command not executed / freshness mismatch", first_run_guide)
         self.assertIn("Next: repair final_result.json", first_run_guide)
         self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", first_run_guide)
+        self.assertIn("make install-dev", first_run_guide)
+        self.assertIn("make install-local", first_run_guide)
+        self.assertIn("This creates the local development venv and installs the `synrail` console script used by the public quickstart.", first_run_guide)
         self.assertIn("On the normal happy path, treat it as the only proof surface you need to touch.", first_run_guide)
         self.assertIn("leave `readback.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
         self.assertIn("leave `scenario_proof.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
@@ -258,6 +265,20 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("This index is for deeper review, critique, and outreach material.", review_readme)
         self.assertIn("It is not the primary public source-of-truth reading path for the repo.", review_readme)
         self.assertIn("Current public-proof surfaces on this branch:", review_readme)
+
+        current_public_docs = {
+            "README.md": public_readme,
+            "docs/core/FIRST_RUN_GUIDE.md": first_run_guide,
+            "docs/core/ALPHA_LANE_001.md": alpha_lane,
+            "docs/core/ALPHA_TEST_PACK_001.md": alpha_test_pack,
+            "docs/review/EXTERNAL_CRITIQUE_PACK_001.md": external_critique_pack,
+            "docs/review/REVIEW_HANDOFF_CHECKLIST_001.md": review_handoff_checklist,
+            "tools/reference/README.md": reference_readme,
+        }
+        for name, content in current_public_docs.items():
+            with self.subTest(current_public_doc=name):
+                self.assertNotIn("python3 tools/reference/synrail_install_v0.py --venv .venv", content)
+                self.assertNotIn("python3 tools/reference/synrail_install_v0.py", content)
         self.assertIn("../../examples/false-green-demo/README.md", review_readme)
         self.assertIn("PUBLIC_LAUNCH_PACKET_001.md", review_readme)
         self.assertIn("FIRST_TESTER_PROTOCOL_001.md", review_readme)
