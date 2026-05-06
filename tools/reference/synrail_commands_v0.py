@@ -378,7 +378,7 @@ def render_github_action_ci_workflow(*, artifact_root: str) -> str:
 def render_security_hygiene_workflow() -> str:
     return "\n".join(
         [
-            "name: Security hygiene",
+            "name: CI",
             "on:",
             "  push:",
             "  pull_request:",
@@ -386,7 +386,7 @@ def render_security_hygiene_workflow() -> str:
             "permissions:",
             "  contents: read",
             "jobs:",
-            "  security-hygiene:",
+            "  ci:",
             "    runs-on: ubuntu-latest",
             "    steps:",
             "      - name: Checkout repo",

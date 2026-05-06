@@ -489,7 +489,7 @@ class AgentAdoptionTests(unittest.TestCase):
     def test_repo_security_hygiene_workflow_covers_dependency_audit_and_secret_patterns(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "security-hygiene.yml").read_text()
 
-        self.assertIn("name: Security hygiene", workflow)
+        self.assertIn("name: CI", workflow)
         self.assertIn("push:", workflow)
         self.assertIn("pull_request:", workflow)
         self.assertIn("workflow_dispatch:", workflow)
@@ -526,7 +526,7 @@ class AgentAdoptionTests(unittest.TestCase):
 
     def test_init_ci_renderer_covers_security_hygiene_workflow(self) -> None:
         workflow = render_security_hygiene_workflow()
-        self.assertIn("name: Security hygiene", workflow)
+        self.assertIn("name: CI", workflow)
         self.assertIn("push:", workflow)
         self.assertIn("make install-dev", workflow)
         self.assertIn("make test", workflow)
