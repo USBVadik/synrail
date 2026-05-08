@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+import shutil
 import subprocess
 import tempfile
 import time
@@ -13,6 +15,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = REPO_ROOT / "tools" / "reference" / "synrail_install_v0.py"
+
+
+def json_load(path: Path) -> dict:
+    return json.loads(path.read_text())
 
 
 class InstallSmokeTests(unittest.TestCase):
@@ -225,6 +231,54 @@ class InstallSmokeTests(unittest.TestCase):
             )
             self.assertIn("Synrail artifacts removed.", cleanup.stdout)
 
+    @unittest.skipUnless(shutil.which("git"), "git is required for git-root discovery smoke")
+    def test_ephemeral_start_from_subdir_uses_git_project_root(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_ephemeral_gitroot_") as tmpdir:
+            root = Path(tmpdir)
+            project_root = root / "project"
+            nested = project_root / "src" / "nested"
+            cache_root = root / "cache"
+            nested.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["git", "init"], check=True, cwd=project_root, capture_output=True, text=True)
+            env = {**os.environ, "SYNRAIL_CACHE_HOME": str(cache_root)}
+
+            start = subprocess.run(
+                [
+                    "python3",
+                    str(REPO_ROOT / "alpha.py"),
+                    "start",
+                    "--ephemeral",
+                    "ephemeral git root smoke",
+                ],
+                check=True,
+                cwd=nested,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+
+            artifact_line = next(line for line in start.stdout.splitlines() if line.startswith("Artifact root: "))
+            artifact_root = Path(artifact_line.split(": ", 1)[1]).expanduser().resolve()
+            profile = json_load(artifact_root / "project_profile.json")
+            self.assertEqual(Path(profile["project_root"]).resolve(), project_root.resolve())
+            self.assertFalse((project_root / ".synrail").exists())
+            self.assertFalse((nested / ".synrail").exists())
+
+            cleanup = subprocess.run(
+                [
+                    "python3",
+                    str(REPO_ROOT / "alpha.py"),
+                    "cleanup",
+                    "--ephemeral",
+                ],
+                check=True,
+                cwd=nested,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertIn("Synrail artifacts removed.", cleanup.stdout)
+
     def test_supported_installer_can_install_agent_files_into_project(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_install_agent_files_smoke_") as tmpdir:
             root = Path(tmpdir)
@@ -272,11 +326,15 @@ class InstallSmokeTests(unittest.TestCase):
             self.assertIn("Use Synrail as the default local control path", gemini)
             self.assertIn("cheapest honest order", gemini)
             self.assertIn("If `git` is unavailable on this host, do not invent `git_diff`", gemini)
+            self.assertIn("Keep `diff_provenance.verification_command` recheckable", gemini)
+            self.assertIn("Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells", gemini)
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", gemini)
             self.assertIn("Do not turn project recall into repo archaeology.", gemini)
             self.assertIn("Use Synrail as the default local control path", claude)
             self.assertIn("cheapest honest order", claude)
             self.assertIn("If `git` is unavailable on this host, do not invent `git_diff`", claude)
+            self.assertIn("Keep `diff_provenance.verification_command` recheckable", claude)
+            self.assertIn("Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells", claude)
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", claude)
 
     def test_first_run_guide_mentions_preflight_and_git_missing_path(self) -> None:
@@ -304,6 +362,18 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("synrail cleanup --ephemeral", first_run_guide)
         self.assertIn("synrail cleanup --ephemeral --stale", first_run_guide)
         self.assertIn("prunes stale ephemeral runs older than 24 hours", first_run_guide)
+        self.assertIn("If you run from a subdirectory inside a git checkout, Synrail uses the git repository root as the default project root.", first_run_guide)
+        self.assertIn('synrail start --ephemeral --project-root path/to/target-repo "Describe the bounded local analysis."', first_run_guide)
+        self.assertIn("Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets there", first_run_guide)
+        template = subprocess.run(
+            ["python3", str(REPO_ROOT / "alpha.py"), "final-result-template", "--ephemeral"],
+            check=True,
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        ).stdout
+        self.assertIn("Keep diff_provenance.verification_command recheckable", template)
+        self.assertIn("Do not use pipes, &&, sed, awk, perl, subshells, or multi-command snippets.", template)
         self.assertIn("Use `--artifact-root ./.synrail` only when you intentionally want the run artifacts to stay inside the repository", first_run_guide)
         self.assertIn("On the normal happy path, treat it as the only proof surface you need to touch.", first_run_guide)
         self.assertIn("leave `readback.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
@@ -377,6 +447,9 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn(".venv/bin/synrail cleanup --ephemeral", public_readme)
         self.assertIn(".venv/bin/synrail cleanup --ephemeral --stale", public_readme)
         self.assertIn("prunes stale ephemeral runs older than 24 hours", public_readme)
+        self.assertIn("If you run from a subdirectory inside a git checkout, Synrail uses the git repository root as the default project root.", public_readme)
+        self.assertIn('.venv/bin/synrail start --ephemeral --project-root path/to/target-repo "Describe the bounded local analysis."', public_readme)
+        self.assertIn("Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets in that field.", public_readme)
         self.assertIn("`--ephemeral` keeps Synrail artifacts outside the project checkout while still resolving proof and verification paths against the project root.", public_readme)
         self.assertIn("Use this only when you want the repo-native installer path used by alpha testers.", public_readme)
         self.assertIn("It writes `CLAUDE.md`, `GEMINI.md`, and `AGENTS.md` for agent discovery in the target project.", public_readme)

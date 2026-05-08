@@ -136,6 +136,12 @@ synrail check --ephemeral
 synrail cleanup --ephemeral
 ```
 
+If you run from a subdirectory inside a git checkout, Synrail uses the git repository root as the default project root. If you are launching from a parent workspace that contains many repos, pass the target explicitly:
+
+```bash
+synrail start --ephemeral --project-root path/to/target-repo "Describe the bounded local analysis."
+```
+
 `start --ephemeral` prunes stale ephemeral runs older than 24 hours before creating the new run. You can also sweep old ephemeral cache runs manually:
 
 ```bash
@@ -155,6 +161,8 @@ Make the requested change. Run local verification. Then strengthen `final_result
 In `final_result.json`, use a trust-bearing status: `PROVEN` for an evidenced bounded edit, or `ALREADY_SATISFIED` only for a truthful no-op attestation where the requested state was already present before any edit.
 
 If `git` is unavailable in the project environment, leave `git_diff` empty. Use `diff_provenance` for a single-file change, or `diff_provenance_records` / `per_file_diff_provenance` with repo-relative paths and exact observed lines for a multi-file change, instead of trying to simulate a patch.
+
+For `diff_provenance.verification_command`, use one directly recheckable repo-relative read-only command: `grep -n`, `cat`, `head`, `tail`, `git diff -- <path>`, `git show -- <path>`, or `git log -- <path>`. Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets there; those can be valid manual investigation commands, but they are not stable closure recheck commands.
 
 In the normal `synrail check` path, you usually do not need to hand-copy run identity fields or a cleanup summary into `final_result.json` when the current controlled run context and doctor-ready workspace already provide that truth. Focus first on the status, changed files, and diff/provenance. Only spend extra steps on `readback.txt` or `scenario_proof.txt` if `check` still names them after `final_result.json` is already strong.
 

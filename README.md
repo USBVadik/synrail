@@ -129,11 +129,19 @@ Prefer a repo-clean artifact lane when you are using Synrail for QA/analysis acr
 .venv/bin/synrail cleanup --ephemeral
 ```
 
-`--ephemeral` keeps Synrail artifacts outside the project checkout while still resolving proof and verification paths against the project root. `start --ephemeral` also prunes stale ephemeral runs older than 24 hours. To sweep old cache runs manually:
+`--ephemeral` keeps Synrail artifacts outside the project checkout while still resolving proof and verification paths against the project root. If you run from a subdirectory inside a git checkout, Synrail uses the git repository root as the default project root. If you are launching from a parent workspace that contains many repos, pass the target explicitly:
+
+```bash
+.venv/bin/synrail start --ephemeral --project-root path/to/target-repo "Describe the bounded local analysis."
+```
+
+`start --ephemeral` also prunes stale ephemeral runs older than 24 hours. To sweep old cache runs manually:
 
 ```bash
 .venv/bin/synrail cleanup --ephemeral --stale
 ```
+
+For `diff_provenance.verification_command`, keep the command directly recheckable: use one repo-relative read-only command such as `grep -n`, `cat`, `head`, `tail`, `git diff -- <path>`, `git show -- <path>`, or `git log -- <path>`. Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets in that field.
 
 ## Alpha Tester Install Path
 

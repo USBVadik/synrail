@@ -397,7 +397,7 @@ def run_python(script: Path, args: list[str]) -> int:
         cmd = [sys.executable, "-m", REFERENCE_RUNNER_MODULE, script.stem, *args]
     else:
         cmd = [sys.executable, str(script), *args]
-    return subprocess.run(cmd, check=False).returncode
+    return subprocess.run(cmd, check=False, env=python_subprocess_env()).returncode
 
 
 def run_python_capture(script: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -405,9 +405,18 @@ def run_python_capture(script: Path, args: list[str]) -> subprocess.CompletedPro
         cmd = [sys.executable, "-m", REFERENCE_RUNNER_MODULE, script.stem, *args]
     else:
         cmd = [sys.executable, str(script), *args]
-    return subprocess.run(cmd, check=False, capture_output=True, text=True)
+    return subprocess.run(cmd, check=False, capture_output=True, text=True, env=python_subprocess_env())
 
 
+def python_subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    source_root = HERE.parents[1]
+    existing = env.get("PYTHONPATH", "")
+    paths = [str(source_root)]
+    if existing:
+        paths.append(existing)
+    env["PYTHONPATH"] = os.pathsep.join(paths)
+    return env
 
 
 
@@ -1318,8 +1327,7 @@ DOCTOR_PATH_SCOPES = {
 
 def alpha_root_from_args(args: argparse.Namespace, *, ensure: bool = False) -> Path | None:
     if getattr(args, "ephemeral", False):
-        project_root_value = getattr(args, "project_root", None)
-        project_root = Path(project_root_value).expanduser().resolve() if project_root_value else Path.cwd().resolve()
+        project_root = default_project_root_from_args(args)
         root = ephemeral_artifact_root(project_root=project_root)
         setattr(args, "artifact_root", str(root))
         if ensure:
@@ -1342,8 +1350,36 @@ def project_root_from_profile(root: Path | None) -> Path | None:
     return Path(project_root_text).expanduser().resolve()
 
 
+def discover_git_project_root(start: Path) -> Path | None:
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+    root_text = completed.stdout.strip()
+    if not root_text:
+        return None
+    return Path(root_text).expanduser().resolve()
+
+
 def current_project_root() -> Path:
-    return Path.cwd().resolve()
+    return discover_git_project_root(Path.cwd().resolve()) or Path.cwd().resolve()
+
+
+def default_project_root_from_args(args: argparse.Namespace) -> Path:
+    value = getattr(args, "project_root", None)
+    return Path(value).expanduser().resolve() if value else current_project_root()
+
+
+def ensure_default_project_root_arg(args: argparse.Namespace) -> None:
+    if not getattr(args, "project_root", None):
+        setattr(args, "project_root", str(current_project_root()))
 
 
 def validate_check_like_paths(args: argparse.Namespace, *, artifact_root: Path | None, project_root: Path | None) -> None:
@@ -2084,6 +2120,7 @@ def final_result_template_payload(*, root: Path | None) -> dict:
         "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers when you can produce one.",
         "If git is not installed, do not invent git_diff; leave git_diff empty and use structured diff_provenance instead.",
         "If git_diff is unavailable, keep structured provenance explicit: use diff_provenance for a single-file change, or diff_provenance_records/per_file_diff_provenance with one direct-observation record per modified file for a multi-file change. Each record should include method, changed_file, one exact added_line or removed_line, one stable context_before or context_after anchor, and verification command plus result. If method is omitted but the direct-observation record is otherwise complete, Synrail can normalize it to direct_file_observation during a normal check.",
+        "Keep diff_provenance.verification_command recheckable: use one repo-relative read-only command such as grep -n, cat, head, tail, git diff -- <path>, git show -- <path>, or git log -- <path>. Do not use pipes, &&, sed, awk, perl, subshells, or multi-command snippets.",
         "For tiny edits, do not leave the exact changed line and its stable neighbor only in readback or scenario_proof; copy those anchors into diff_provenance too.",
         "For an already_satisfied no-op, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.",
         "In the normal synrail check path, run identity is already carried from the current controlled context; only fill artifact_identity manually when you are doing a standalone bundle check without that context.",
@@ -2639,16 +2676,19 @@ def controlled_start_shell_context() -> ControlledStartShellContext:
 
 
 def cmd_init(args: argparse.Namespace) -> int:
+    ensure_default_project_root_arg(args)
     return extracted_cmd_init(args, context=controlled_start_shell_context())
 
 
 def cmd_start(args: argparse.Namespace) -> int:
+    ensure_default_project_root_arg(args)
     if getattr(args, "ephemeral", False):
         prune_stale_ephemeral_runs(max_age_seconds=ephemeral_max_age_seconds(args))
     return extracted_cmd_start(args, context=controlled_start_shell_context())
 
 
 def cmd_cleanup(args: argparse.Namespace) -> int:
+    ensure_default_project_root_arg(args)
     if getattr(args, "ephemeral", False) and getattr(args, "stale", False):
         removed = prune_stale_ephemeral_runs(max_age_seconds=ephemeral_max_age_seconds(args))
         print(f"Synrail stale ephemeral artifacts removed: {removed}")
@@ -2933,8 +2973,9 @@ def cmd_resume(args: argparse.Namespace) -> int:
 
 
 def cmd_check(args: argparse.Namespace) -> int:
+    ensure_default_project_root_arg(args)
     root = alpha_root_from_args(args)
-    project_root = Path(getattr(args, "project_root", "") or current_project_root()).expanduser().resolve()
+    project_root = default_project_root_from_args(args)
     if root:
         try:
             validate_root_within_project(

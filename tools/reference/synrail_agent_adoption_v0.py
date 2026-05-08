@@ -146,6 +146,13 @@ def policy_no_git_proof_line(artifact_root: str) -> str:
     )
 
 
+def policy_recheck_command_line() -> str:
+    return (
+        "Keep `diff_provenance.verification_command` recheckable: use one repo-relative read-only command such as `grep -n`, `cat`, `head`, `tail`, `git diff -- <path>`, `git show -- <path>`, or `git log -- <path>`. "
+        "Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets there."
+    )
+
+
 def render_local_workflow_policy(
     *,
     heading: str,
@@ -233,6 +240,7 @@ def render_local_workflow_policy(
         f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
         "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
         f"- {policy_no_git_proof_line(artifact_root)}",
+        f"- {policy_recheck_command_line()}",
         "",
         "## Finish",
         "",
@@ -360,6 +368,7 @@ def render_policy_markdown(
         f"3. Run the local commands needed to verify the change honestly, then edit `{artifact_root}/final_result.json` in place as the work becomes real. Only materialize readback or scenario proof if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
         "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
         f"5. {policy_no_git_proof_line(artifact_root)}",
+        f"6. {policy_recheck_command_line()}",
         "",
         *policy_run_loop_lines(artifact_root=artifact_root, command=command),
         "## Before You Claim Success",
