@@ -120,6 +120,17 @@ In that case, the baseline is probably better. Synrail becomes useful when verif
 # if non-green, fix what check says, then rerun .venv/bin/synrail check
 ```
 
+Prefer a repo-clean artifact lane when you are using Synrail for QA/analysis across many repositories:
+
+```bash
+.venv/bin/synrail start --ephemeral "Describe the bounded local analysis."
+# edit the reported final_result.json in the user-cache artifact root
+.venv/bin/synrail check --ephemeral
+.venv/bin/synrail cleanup --ephemeral
+```
+
+`--ephemeral` keeps Synrail artifacts outside the project checkout while still resolving proof and verification paths against the project root.
+
 ## Alpha Tester Install Path
 
 Use this only when you want the repo-native installer path used by alpha testers.

@@ -763,6 +763,11 @@ def current_project_root() -> Path:
     return Path.cwd().resolve()
 
 
+def project_root_for_args(args: argparse.Namespace) -> Path:
+    target_path = Path(args.target_path).expanduser().resolve()
+    return target_path if target_path.is_dir() else target_path.parent
+
+
 def target_contour_root_for(args: argparse.Namespace) -> Path:
     return Path(args.target_path).expanduser().parent.resolve()
 
@@ -819,6 +824,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         output_path = Path(args.output).expanduser()
+        project_root = project_root_for_args(args)
         target_contour_root = target_contour_root_for(args)
         artifact_root_for_errors = resolved_path_for_value(args.output).parent
         preflight_block = reject_path_surface(
@@ -828,7 +834,7 @@ def main() -> int:
             surface_label="output path",
             expected_surface="a direct machine-readable artifact surface",
             stop_at=target_contour_root,
-            project_root=current_project_root(),
+            project_root=project_root,
             artifact_root=artifact_root_for_errors,
         )
         if preflight_block is not None:
@@ -841,7 +847,7 @@ def main() -> int:
                 surface_label="state update path",
                 expected_surface="a direct machine-readable state surface",
                 stop_at=target_contour_root,
-                project_root=current_project_root(),
+                project_root=project_root,
                 artifact_root=artifact_root_for_errors,
             )
             if preflight_block is not None:
@@ -863,7 +869,7 @@ def main() -> int:
                 surface_label=surface_label,
                 expected_surface=expected_surface,
                 stop_at=target_contour_root,
-                project_root=current_project_root(),
+                project_root=project_root,
                 artifact_root=artifact_root_for_errors,
             )
             if preflight_block is not None:
@@ -875,14 +881,13 @@ def main() -> int:
             surface_label="output path",
             expected_surface="a direct machine-readable artifact surface",
             stop_at=target_contour_root,
-            project_root=current_project_root(),
+            project_root=project_root,
             artifact_root=artifact_root_for_errors,
         )
         if write_violation is not None:
             print(json.dumps(write_violation.as_payload(), ensure_ascii=True))
             return 2
         artifact_root = output_path.resolve().parent
-        project_root = current_project_root()
         validate_root_within_project(
             "output",
             args.output,

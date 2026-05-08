@@ -25,6 +25,7 @@ class InstallSmokeTests(unittest.TestCase):
             text=True,
         )
         self.assertIn("--project-root", help_result.stdout)
+        self.assertIn("--ephemeral", help_result.stdout)
         self.assertIn("--task-identity", help_result.stdout)
         self.assertIn("task_request", help_result.stdout)
 
@@ -106,6 +107,69 @@ class InstallSmokeTests(unittest.TestCase):
                 project_root,
             )
 
+    def test_ephemeral_artifact_root_stays_outside_project_and_can_be_cleaned(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_ephemeral_smoke_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = subprocess.run(
+                [
+                    "python3",
+                    str(REPO_ROOT / "alpha.py"),
+                    "start",
+                    "--ephemeral",
+                    "--project-root",
+                    str(project_root),
+                    "ephemeral smoke",
+                ],
+                check=True,
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+            )
+
+            artifact_line = next(line for line in start.stdout.splitlines() if line.startswith("Artifact root: "))
+            artifact_root = Path(artifact_line.split(": ", 1)[1]).expanduser().resolve()
+            self.assertTrue(artifact_root.exists())
+            self.assertTrue((artifact_root / "state.json").exists())
+            self.assertTrue((artifact_root / "final_result.json").exists())
+            self.assertFalse((project_root / ".synrail").exists())
+            self.assertNotEqual(artifact_root.parent, project_root)
+
+            check = subprocess.run(
+                [
+                    "python3",
+                    str(REPO_ROOT / "alpha.py"),
+                    "check",
+                    "--ephemeral",
+                    "--project-root",
+                    str(project_root),
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotIn("PATH_SCOPE_VIOLATION", check.stdout)
+            self.assertNotIn("PATH_SCOPE_VIOLATION", check.stderr)
+
+            cleanup = subprocess.run(
+                [
+                    "python3",
+                    str(REPO_ROOT / "alpha.py"),
+                    "cleanup",
+                    "--ephemeral",
+                    "--project-root",
+                    str(project_root),
+                ],
+                check=True,
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+            )
+            self.assertIn("Synrail artifacts removed.", cleanup.stdout)
+            self.assertFalse(artifact_root.exists())
+            self.assertFalse((project_root / ".synrail").exists())
+
     def test_supported_installer_can_install_agent_files_into_project(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_install_agent_files_smoke_") as tmpdir:
             root = Path(tmpdir)
@@ -179,6 +243,11 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("make install-dev", first_run_guide)
         self.assertIn("make install-local", first_run_guide)
         self.assertIn("This creates the local development venv and installs the `synrail` console script used by the public quickstart.", first_run_guide)
+        self.assertIn("If you are doing QA/analysis across many repositories and do not want Synrail artifacts inside each checkout", first_run_guide)
+        self.assertIn('synrail start --ephemeral "Describe the bounded local analysis."', first_run_guide)
+        self.assertIn("synrail check --ephemeral", first_run_guide)
+        self.assertIn("synrail cleanup --ephemeral", first_run_guide)
+        self.assertIn("Use `--artifact-root ./.synrail` only when you intentionally want the run artifacts to stay inside the repository", first_run_guide)
         self.assertIn("On the normal happy path, treat it as the only proof surface you need to touch.", first_run_guide)
         self.assertIn("leave `readback.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
         self.assertIn("leave `scenario_proof.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
@@ -245,6 +314,11 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn('.venv/bin/synrail start "Describe the bounded local change."', public_readme)
         self.assertIn(".venv/bin/synrail check", public_readme)
         self.assertIn("## Alpha Tester Install Path", public_readme)
+        self.assertIn("Prefer a repo-clean artifact lane when you are using Synrail for QA/analysis across many repositories:", public_readme)
+        self.assertIn('.venv/bin/synrail start --ephemeral "Describe the bounded local analysis."', public_readme)
+        self.assertIn(".venv/bin/synrail check --ephemeral", public_readme)
+        self.assertIn(".venv/bin/synrail cleanup --ephemeral", public_readme)
+        self.assertIn("`--ephemeral` keeps Synrail artifacts outside the project checkout while still resolving proof and verification paths against the project root.", public_readme)
         self.assertIn("Use this only when you want the repo-native installer path used by alpha testers.", public_readme)
         self.assertIn("It writes `CLAUDE.md`, `GEMINI.md`, and `AGENTS.md` for agent discovery in the target project.", public_readme)
         self.assertNotIn("python3 tools/reference/synrail_install_v0.py --venv .venv --project-root", public_readme)

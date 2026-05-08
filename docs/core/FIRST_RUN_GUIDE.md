@@ -123,6 +123,21 @@ synrail start "Describe the bounded change you are making."
 
 This creates `.synrail/` and opens one governed run for this bounded change.
 
+If you are doing QA/analysis across many repositories and do not want Synrail artifacts inside each checkout, use the repo-clean artifact lane:
+
+```bash
+synrail start --ephemeral "Describe the bounded local analysis."
+```
+
+That stores Synrail artifacts in the user cache for this project while keeping `project_root` and verification paths bound to the repository you launched from. Continue with:
+
+```bash
+synrail check --ephemeral
+synrail cleanup --ephemeral
+```
+
+Use `--artifact-root ./.synrail` only when you intentionally want the run artifacts to stay inside the repository for handoff or debugging.
+
 ### 2. Do the bounded work and keep proof honest
 
 Make the requested change. Run local verification. Then strengthen `final_result.json` first. On the normal happy path, treat it as the only proof surface you need to touch. Only expand fallback proof surfaces later if `synrail check` names them, or if `final_result.json` still cannot carry strong structured verification by itself:

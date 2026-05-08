@@ -2923,7 +2923,8 @@ def inferred_spine_artifact_root(args: argparse.Namespace) -> Path | None:
 
 def validate_spine_paths(args: argparse.Namespace) -> None:
     artifact_root = inferred_spine_artifact_root(args)
-    project_root = current_project_root()
+    target_path = getattr(args, "target_path", None)
+    project_root = Path(target_path).expanduser().resolve() if target_path else current_project_root()
     if artifact_root is not None:
         anchor_field = "state_file"
         anchor_value = getattr(args, "state_file", None)

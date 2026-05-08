@@ -7,6 +7,7 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -978,6 +979,7 @@ def build_project_profile(*, project_root: Path, root: Path, task_class: str) ->
     return {
         "schema_version": "alpha_project_profile_v0",
         "project_root": str(project_root),
+        "artifact_root": str(root.resolve()),
         "project_type": project_type,
         "prefers_runtime_evidence": project_prefers_runtime_evidence(project_root),
         "task_class": task_class,
@@ -1029,6 +1031,21 @@ def display_path_from_base(path: Path, *, base: Path) -> str:
 def default_workspace_artifact_root(*, project_root: Path | None = None) -> Path:
     base = (project_root or Path.cwd()).resolve()
     return (base / DEFAULT_ALPHA_ARTIFACT_ROOT).resolve()
+
+
+def default_cache_root() -> Path:
+    if sys.platform == "darwin":
+        return (Path.home() / "Library" / "Caches" / "synrail").resolve()
+    xdg_cache = os.environ.get("XDG_CACHE_HOME", "").strip()
+    if xdg_cache:
+        return (Path(xdg_cache).expanduser() / "synrail").resolve()
+    return (Path.home() / ".cache" / "synrail").resolve()
+
+
+def ephemeral_artifact_root(*, project_root: Path | None = None) -> Path:
+    base = (project_root or Path.cwd()).resolve()
+    key = hashlib.sha256(str(base).encode("utf-8")).hexdigest()[:16]
+    return (default_cache_root() / "runs" / key / "current").resolve()
 
 
 def is_default_workspace_artifact_root(root: Path, *, project_root: Path | None = None) -> bool:
@@ -1157,7 +1174,7 @@ def telemetry_flag_names(argv: list[str]) -> list[str]:
 
 def should_capture_alpha_telemetry(args: argparse.Namespace) -> bool:
     path = command_path_from_args(args)
-    return path[0] in {"init", "start", "check", "refresh-acceptance", "generate-prompt", "next-step", "repair-step", "restore", "resume", "continue", "checkpoint", "session-export", "bug-packet"}
+    return path[0] in {"init", "start", "check", "cleanup", "refresh-acceptance", "generate-prompt", "next-step", "repair-step", "restore", "resume", "continue", "checkpoint", "session-export", "bug-packet"}
 
 
 def maybe_capture_alpha_telemetry(
@@ -1253,6 +1270,14 @@ DOCTOR_PATH_SCOPES = {
 
 
 def alpha_root_from_args(args: argparse.Namespace, *, ensure: bool = False) -> Path | None:
+    if getattr(args, "ephemeral", False):
+        project_root_value = getattr(args, "project_root", None)
+        project_root = Path(project_root_value).expanduser().resolve() if project_root_value else Path.cwd().resolve()
+        root = ephemeral_artifact_root(project_root=project_root)
+        setattr(args, "artifact_root", str(root))
+        if ensure:
+            root.mkdir(parents=True, exist_ok=True)
+        return root
     value = getattr(args, "artifact_root", None)
     if not value:
         return None
@@ -2574,6 +2599,23 @@ def cmd_start(args: argparse.Namespace) -> int:
     return extracted_cmd_start(args, context=controlled_start_shell_context())
 
 
+def cmd_cleanup(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args)
+    if root is None:
+        root = default_workspace_artifact_root(project_root=Path(getattr(args, "project_root", "") or Path.cwd()).resolve())
+    if not root.exists():
+        print("Synrail artifacts already clean.")
+        print(f"Artifact root: {display_path(root)}")
+        return 0
+    if not root.is_dir():
+        print(json.dumps({"result": "ERROR", "reason": "ARTIFACT_ROOT_NOT_DIRECTORY", "artifact_root": str(root)}, ensure_ascii=True))
+        return 2
+    shutil.rmtree(root)
+    print("Synrail artifacts removed.")
+    print(f"Artifact root: {display_path(root)}")
+    return 0
+
+
 def cmd_refresh_acceptance(args: argparse.Namespace) -> int:
     return extracted_cmd_refresh_acceptance(args, context=controlled_start_shell_context())
 
@@ -2838,15 +2880,19 @@ def cmd_resume(args: argparse.Namespace) -> int:
 
 def cmd_check(args: argparse.Namespace) -> int:
     root = alpha_root_from_args(args)
-    project_root = current_project_root()
+    project_root = Path(getattr(args, "project_root", "") or current_project_root()).expanduser().resolve()
     if root:
-        validate_root_within_project(
-            "artifact_root",
-            getattr(args, "artifact_root", "") or DEFAULT_ALPHA_ARTIFACT_ROOT,
-            root=root,
-            project_root=project_root,
-            artifact_root=root,
-        )
+        try:
+            validate_root_within_project(
+                "artifact_root" if getattr(args, "artifact_root", None) else "state_file",
+                getattr(args, "artifact_root", None) or getattr(args, "state_file", ""),
+                root=root,
+                project_root=project_root,
+                artifact_root=root,
+            )
+        except PathScopeValidationError as exc:
+            print(json.dumps(exc.as_payload(), ensure_ascii=True))
+            return 2
         root.mkdir(parents=True, exist_ok=True)
     if root and not getattr(args, "state_file", None):
         args.state_file = str(alpha_file(root, "state"))
@@ -2998,16 +3044,26 @@ def cmd_check(args: argparse.Namespace) -> int:
                 if proof_request_file and proof_request_file.exists():
                     proof_request = load_bootstrap_json(proof_request_file)
                     preferred = proof_request.get("preferred_artifacts", {})
+                    check_command = (
+                        plain_shell_command("check", "--ephemeral", project_root=project_root)
+                        if getattr(args, "ephemeral", False)
+                        else plain_shell_command("check", project_root=project_root)
+                    )
+                    template_command = (
+                        plain_shell_command("final-result-template", "--ephemeral", project_root=project_root)
+                        if getattr(args, "ephemeral", False)
+                        else plain_shell_command("final-result-template", project_root=project_root)
+                    )
                     print("What is missing: Synrail is still waiting for explicit proof artifacts and local verification evidence for this controlled run.")
                     print(
                         "What to do next: make the bounded change, run local verification, then strengthen final_result.json first and rerun "
-                        + plain_shell_command("check", project_root=project_root)
+                        + check_command
                         + "."
                     )
                     if preferred.get("final_result", ""):
                         print(f"- final_result: {preferred['final_result']}")
                     print("- fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.")
-                    print("Need a canonical final_result shape? run " + plain_shell_command("final-result-template", project_root=project_root))
+                    print("Need a canonical final_result shape? run " + template_command)
                     profile = load_project_profile(root) or {}
                     if profile.get("prefers_runtime_evidence", False):
                         print("Need a small UI/runtime verification path? run " + plain_shell_command("runtime-helper", project_root=project_root))
@@ -3648,6 +3704,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--run-id")
     p_init.add_argument("--task-class", default=DEFAULT_ALPHA_TASK_CLASS)
     p_init.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_init.add_argument("--ephemeral", action="store_true", help="Store Synrail artifacts outside the repo in the user cache")
     p_init.add_argument("--project-root")
     p_init.add_argument("--task-identity")
     p_init.add_argument("--prompt-identity")
@@ -3661,6 +3718,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_start.add_argument("--run-id")
     p_start.add_argument("--task-class", default=DEFAULT_ALPHA_TASK_CLASS)
     p_start.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_start.add_argument("--ephemeral", action="store_true", help="Store Synrail artifacts outside the repo in the user cache")
     p_start.add_argument("--project-root")
     p_start.add_argument("--task-identity")
     p_start.add_argument("--prompt-identity")
@@ -3704,6 +3762,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_check = sub.add_parser("check", help="Run the full verification pipeline")
     p_check.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_check.add_argument("--ephemeral", action="store_true", help="Use the repo-keyed user-cache artifact root for this checkout")
+    p_check.add_argument("--project-root")
     p_check.add_argument("--state-file")
     p_check.add_argument("--report-file")
     p_check.add_argument("--doctor-file")
@@ -3764,35 +3824,47 @@ def build_parser() -> argparse.ArgumentParser:
     p_check.add_argument("--coverage-corpus-file")
     p_check.set_defaults(func=cmd_check)
 
+    p_cleanup = sub.add_parser("cleanup", help="Remove Synrail artifacts for this checkout")
+    p_cleanup.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_cleanup.add_argument("--ephemeral", action="store_true", help="Remove the repo-keyed user-cache artifact root for this checkout")
+    p_cleanup.add_argument("--project-root")
+    p_cleanup.set_defaults(func=cmd_cleanup)
+
     p_status = sub.add_parser("status", aliases=["dashboard"], help="Show current run state")
     p_status.add_argument("state_file", nargs="?")
     p_status.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_status.add_argument("--ephemeral", action="store_true", help="Use the repo-keyed user-cache artifact root for this checkout")
     p_status.add_argument("--json", action="store_true")
     p_status.set_defaults(func=cmd_status)
 
     p_explain_proof = sub.add_parser("explain-proof", aliases=["proof-explain"], help="Show what proof files are needed and why")
     p_explain_proof.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_explain_proof.add_argument("--ephemeral", action="store_true")
     p_explain_proof.add_argument("--bundle-file")
     p_explain_proof.add_argument("--json", action="store_true")
     p_explain_proof.set_defaults(func=cmd_explain_proof)
 
     p_final_result_template = sub.add_parser("final-result-template", help=argparse.SUPPRESS)
     p_final_result_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_final_result_template.add_argument("--ephemeral", action="store_true")
     p_final_result_template.add_argument("--output")
     p_final_result_template.set_defaults(func=cmd_final_result_template)
 
     p_readback_template = sub.add_parser("readback-template", help=argparse.SUPPRESS)
     p_readback_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_readback_template.add_argument("--ephemeral", action="store_true")
     p_readback_template.add_argument("--output")
     p_readback_template.set_defaults(func=cmd_readback_template)
 
     p_scenario_proof_template = sub.add_parser("scenario-proof-template", help=argparse.SUPPRESS)
     p_scenario_proof_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_scenario_proof_template.add_argument("--ephemeral", action="store_true")
     p_scenario_proof_template.add_argument("--output")
     p_scenario_proof_template.set_defaults(func=cmd_scenario_proof_template)
 
     p_runtime_helper = sub.add_parser("runtime-helper", help=argparse.SUPPRESS)
     p_runtime_helper.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_runtime_helper.add_argument("--ephemeral", action="store_true")
     p_runtime_helper.add_argument("--output")
     p_runtime_helper.set_defaults(func=cmd_runtime_helper)
 
@@ -4133,6 +4205,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_generate_prompt = sub.add_parser("generate-prompt", aliases=["next-step", "repair-step"], help=argparse.SUPPRESS)
     p_generate_prompt.add_argument("--artifact-root")
+    p_generate_prompt.add_argument("--ephemeral", action="store_true")
     p_generate_prompt.add_argument("--repair-packet-file")
     p_generate_prompt.add_argument("--mode", default="default", choices=["default", "dev"])
     p_generate_prompt.add_argument("--output")

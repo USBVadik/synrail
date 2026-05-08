@@ -62,6 +62,28 @@ def path_in_root(candidate: Path, root: Path) -> bool:
         return False
 
 
+def profile_allows_external_artifact_root(root: Path) -> bool:
+    profile_path = root / "project_profile.json"
+    if not profile_path.is_file():
+        return False
+    try:
+        profile = json.loads(profile_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(profile, dict):
+        return False
+    if str(profile.get("artifact_storage_mode", "") or "").strip() != "ephemeral_cache":
+        return False
+    artifact_root_text = str(profile.get("artifact_root", "") or "").strip()
+    artifact_path_text = str(profile.get("artifact_path", "") or "").strip()
+    allowed_roots: list[Path] = []
+    if artifact_root_text:
+        allowed_roots.append(Path(artifact_root_text).expanduser())
+    if artifact_path_text:
+        allowed_roots.append(Path(artifact_path_text).expanduser().parent)
+    return any(root.resolve() == allowed.resolve() for allowed in allowed_roots)
+
+
 def _resolved_path(value: str) -> Path:
     return Path(value).expanduser().resolve()
 
@@ -168,6 +190,8 @@ def validate_root_within_project(
     artifact_root: Path | None,
 ) -> None:
     resolved = root.resolve()
+    if artifact_root is not None and resolved == artifact_root.resolve() and profile_allows_external_artifact_root(resolved):
+        return
     if project_root is None:
         raise PathScopeValidationError(
             field=field,

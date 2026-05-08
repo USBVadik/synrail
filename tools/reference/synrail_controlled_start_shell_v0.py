@@ -72,10 +72,14 @@ def cmd_init(
         "--task-class", args.task_class,
         "--output", args.output,
     ]
+    profile = context.build_project_profile(project_root=project_root, root=root, task_class=args.task_class) if root else None
+    if profile is not None:
+        profile["artifact_storage_mode"] = "ephemeral_cache" if getattr(args, "ephemeral", False) else "workspace_artifact_root"
+    if root and profile:
+        context.save_project_profile(root, profile)
     if args.mode == "dev":
         code = context.run_python(context.spine_script, forwarded)
         if code == 0 and root:
-            context.save_project_profile(root, context.build_project_profile(project_root=project_root, root=root, task_class=args.task_class))
             context.save_alpha_identity_files(
                 root,
                 task_identity=getattr(args, "task_identity", ""),
@@ -89,7 +93,6 @@ def cmd_init(
     if completed.returncode != 0:
         return _print_completed_failure(completed)
     if root:
-        context.save_project_profile(root, context.build_project_profile(project_root=project_root, root=root, task_class=args.task_class))
         context.save_alpha_identity_files(
             root,
             task_identity=getattr(args, "task_identity", ""),
@@ -200,12 +203,13 @@ def cmd_start(
         "--task-class", args.task_class,
         "--output", args.output,
     ]
+    profile = context.build_project_profile(project_root=project_root, root=root, task_class=args.task_class)
+    profile["artifact_storage_mode"] = "ephemeral_cache" if getattr(args, "ephemeral", False) else "workspace_artifact_root"
+    context.save_project_profile(root, profile)
     completed = context.run_python_capture(context.spine_script, forwarded)
     if completed.returncode != 0:
         return _print_completed_failure(completed)
 
-    profile = context.build_project_profile(project_root=project_root, root=root, task_class=args.task_class)
-    context.save_project_profile(root, profile)
     context.clear_runtime_artifacts_for_start(root)
     context.save_alpha_identity_files(root, task_identity=task_identity, prompt_identity=prompt_identity)
     context.write_controlled_start_artifacts(
