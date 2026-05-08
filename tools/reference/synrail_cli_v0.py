@@ -12,6 +12,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 import uuid
 from pathlib import Path
 
@@ -351,6 +352,7 @@ REFERENCE_RUNNER_MODULE = "reference_runner"
 
 DEFAULT_ALPHA_ARTIFACT_ROOT = ".synrail"
 DEFAULT_ALPHA_TASK_CLASS = "bounded_change"
+DEFAULT_EPHEMERAL_STALE_SECONDS = 24 * 60 * 60
 SUPPORTED_ALPHA_TARGET_CLASSIFICATIONS = {"trusted_worktree", "resume_surface"}
 ALPHA_FILE_NAMES = {
     "state": "state.json",
@@ -1034,6 +1036,9 @@ def default_workspace_artifact_root(*, project_root: Path | None = None) -> Path
 
 
 def default_cache_root() -> Path:
+    explicit_cache = os.environ.get("SYNRAIL_CACHE_HOME", "").strip()
+    if explicit_cache:
+        return Path(explicit_cache).expanduser().resolve()
     if sys.platform == "darwin":
         return (Path.home() / "Library" / "Caches" / "synrail").resolve()
     xdg_cache = os.environ.get("XDG_CACHE_HOME", "").strip()
@@ -1046,6 +1051,48 @@ def ephemeral_artifact_root(*, project_root: Path | None = None) -> Path:
     base = (project_root or Path.cwd()).resolve()
     key = hashlib.sha256(str(base).encode("utf-8")).hexdigest()[:16]
     return (default_cache_root() / "runs" / key / "current").resolve()
+
+
+def artifact_root_last_activity(root: Path) -> float:
+    latest = root.stat().st_mtime
+    for path in root.rglob("*"):
+        try:
+            latest = max(latest, path.stat().st_mtime)
+        except OSError:
+            continue
+    return latest
+
+
+def ephemeral_max_age_seconds(args: argparse.Namespace) -> float:
+    hours = getattr(args, "ephemeral_max_age_hours", None)
+    if hours is None:
+        return float(DEFAULT_EPHEMERAL_STALE_SECONDS)
+    return max(0.0, float(hours) * 60 * 60)
+
+
+def prune_stale_ephemeral_runs(*, max_age_seconds: float) -> int:
+    runs_root = default_cache_root() / "runs"
+    if not runs_root.is_dir():
+        return 0
+    cutoff = time.time() - max_age_seconds
+    removed = 0
+    for current_root in runs_root.glob("*/current"):
+        if not current_root.is_dir():
+            continue
+        try:
+            stale = artifact_root_last_activity(current_root) < cutoff
+        except OSError:
+            stale = True
+        if not stale:
+            continue
+        shutil.rmtree(current_root, ignore_errors=True)
+        removed += 1
+        parent = current_root.parent
+        try:
+            parent.rmdir()
+        except OSError:
+            pass
+    return removed
 
 
 def is_default_workspace_artifact_root(root: Path, *, project_root: Path | None = None) -> bool:
@@ -2596,10 +2643,17 @@ def cmd_init(args: argparse.Namespace) -> int:
 
 
 def cmd_start(args: argparse.Namespace) -> int:
+    if getattr(args, "ephemeral", False):
+        prune_stale_ephemeral_runs(max_age_seconds=ephemeral_max_age_seconds(args))
     return extracted_cmd_start(args, context=controlled_start_shell_context())
 
 
 def cmd_cleanup(args: argparse.Namespace) -> int:
+    if getattr(args, "ephemeral", False) and getattr(args, "stale", False):
+        removed = prune_stale_ephemeral_runs(max_age_seconds=ephemeral_max_age_seconds(args))
+        print(f"Synrail stale ephemeral artifacts removed: {removed}")
+        print(f"Cache root: {display_path(default_cache_root())}")
+        return 0
     root = alpha_root_from_args(args)
     if root is None:
         root = default_workspace_artifact_root(project_root=Path(getattr(args, "project_root", "") or Path.cwd()).resolve())
@@ -3705,6 +3759,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--task-class", default=DEFAULT_ALPHA_TASK_CLASS)
     p_init.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_init.add_argument("--ephemeral", action="store_true", help="Store Synrail artifacts outside the repo in the user cache")
+    p_init.add_argument("--ephemeral-max-age-hours", type=float, default=24.0, help="Stale ephemeral cleanup horizon")
     p_init.add_argument("--project-root")
     p_init.add_argument("--task-identity")
     p_init.add_argument("--prompt-identity")
@@ -3719,6 +3774,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_start.add_argument("--task-class", default=DEFAULT_ALPHA_TASK_CLASS)
     p_start.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_start.add_argument("--ephemeral", action="store_true", help="Store Synrail artifacts outside the repo in the user cache")
+    p_start.add_argument("--ephemeral-max-age-hours", type=float, default=24.0, help="Prune older ephemeral cache runs before starting")
     p_start.add_argument("--project-root")
     p_start.add_argument("--task-identity")
     p_start.add_argument("--prompt-identity")
@@ -3827,6 +3883,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_cleanup = sub.add_parser("cleanup", help="Remove Synrail artifacts for this checkout")
     p_cleanup.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_cleanup.add_argument("--ephemeral", action="store_true", help="Remove the repo-keyed user-cache artifact root for this checkout")
+    p_cleanup.add_argument("--stale", action="store_true", help="With --ephemeral, remove stale cache runs for all checkouts")
+    p_cleanup.add_argument("--ephemeral-max-age-hours", type=float, default=24.0, help="Stale cleanup horizon")
     p_cleanup.add_argument("--project-root")
     p_cleanup.set_defaults(func=cmd_cleanup)
 

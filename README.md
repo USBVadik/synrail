@@ -129,7 +129,11 @@ Prefer a repo-clean artifact lane when you are using Synrail for QA/analysis acr
 .venv/bin/synrail cleanup --ephemeral
 ```
 
-`--ephemeral` keeps Synrail artifacts outside the project checkout while still resolving proof and verification paths against the project root.
+`--ephemeral` keeps Synrail artifacts outside the project checkout while still resolving proof and verification paths against the project root. `start --ephemeral` also prunes stale ephemeral runs older than 24 hours. To sweep old cache runs manually:
+
+```bash
+.venv/bin/synrail cleanup --ephemeral --stale
+```
 
 ## Alpha Tester Install Path
 

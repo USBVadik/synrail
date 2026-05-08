@@ -136,6 +136,12 @@ synrail check --ephemeral
 synrail cleanup --ephemeral
 ```
 
+`start --ephemeral` prunes stale ephemeral runs older than 24 hours before creating the new run. You can also sweep old ephemeral cache runs manually:
+
+```bash
+synrail cleanup --ephemeral --stale
+```
+
 Use `--artifact-root ./.synrail` only when you intentionally want the run artifacts to stay inside the repository for handoff or debugging.
 
 ### 2. Do the bounded work and keep proof honest

@@ -6,6 +6,7 @@ from __future__ import annotations
 import os
 import subprocess
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -170,6 +171,60 @@ class InstallSmokeTests(unittest.TestCase):
             self.assertFalse(artifact_root.exists())
             self.assertFalse((project_root / ".synrail").exists())
 
+    def test_ephemeral_start_prunes_stale_cache_runs(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_ephemeral_janitor_") as tmpdir:
+            root = Path(tmpdir)
+            project_root = root / "project"
+            cache_root = root / "cache"
+            stale_root = cache_root / "runs" / "stale-run" / "current"
+            project_root.mkdir(parents=True, exist_ok=True)
+            stale_root.mkdir(parents=True, exist_ok=True)
+            (stale_root / "state.json").write_text("{}\n")
+            old = time.time() - (3 * 24 * 60 * 60)
+            for path in [stale_root / "state.json", stale_root, stale_root.parent]:
+                os.utime(path, (old, old))
+            env = {**os.environ, "SYNRAIL_CACHE_HOME": str(cache_root)}
+
+            start = subprocess.run(
+                [
+                    "python3",
+                    str(REPO_ROOT / "alpha.py"),
+                    "start",
+                    "--ephemeral",
+                    "--project-root",
+                    str(project_root),
+                    "ephemeral janitor smoke",
+                ],
+                check=True,
+                cwd=REPO_ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+
+            artifact_line = next(line for line in start.stdout.splitlines() if line.startswith("Artifact root: "))
+            artifact_root = Path(artifact_line.split(": ", 1)[1]).expanduser().resolve()
+            self.assertTrue(artifact_root.exists())
+            self.assertFalse(stale_root.exists())
+            self.assertFalse((project_root / ".synrail").exists())
+
+            cleanup = subprocess.run(
+                [
+                    "python3",
+                    str(REPO_ROOT / "alpha.py"),
+                    "cleanup",
+                    "--ephemeral",
+                    "--project-root",
+                    str(project_root),
+                ],
+                check=True,
+                cwd=REPO_ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertIn("Synrail artifacts removed.", cleanup.stdout)
+
     def test_supported_installer_can_install_agent_files_into_project(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_install_agent_files_smoke_") as tmpdir:
             root = Path(tmpdir)
@@ -247,6 +302,8 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn('synrail start --ephemeral "Describe the bounded local analysis."', first_run_guide)
         self.assertIn("synrail check --ephemeral", first_run_guide)
         self.assertIn("synrail cleanup --ephemeral", first_run_guide)
+        self.assertIn("synrail cleanup --ephemeral --stale", first_run_guide)
+        self.assertIn("prunes stale ephemeral runs older than 24 hours", first_run_guide)
         self.assertIn("Use `--artifact-root ./.synrail` only when you intentionally want the run artifacts to stay inside the repository", first_run_guide)
         self.assertIn("On the normal happy path, treat it as the only proof surface you need to touch.", first_run_guide)
         self.assertIn("leave `readback.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
@@ -318,6 +375,8 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn('.venv/bin/synrail start --ephemeral "Describe the bounded local analysis."', public_readme)
         self.assertIn(".venv/bin/synrail check --ephemeral", public_readme)
         self.assertIn(".venv/bin/synrail cleanup --ephemeral", public_readme)
+        self.assertIn(".venv/bin/synrail cleanup --ephemeral --stale", public_readme)
+        self.assertIn("prunes stale ephemeral runs older than 24 hours", public_readme)
         self.assertIn("`--ephemeral` keeps Synrail artifacts outside the project checkout while still resolving proof and verification paths against the project root.", public_readme)
         self.assertIn("Use this only when you want the repo-native installer path used by alpha testers.", public_readme)
         self.assertIn("It writes `CLAUDE.md`, `GEMINI.md`, and `AGENTS.md` for agent discovery in the target project.", public_readme)
