@@ -34,6 +34,12 @@ def synrail_bin_for_venv(venv_root: Path) -> Path:
     return scripts_dir_for_venv(venv_root) / ("synrail.cmd" if is_windows() else "synrail")
 
 
+def synrail_command(synrail_bin: Path, *args: str) -> list[str]:
+    if is_windows():
+        return [os.environ.get("COMSPEC", "cmd.exe"), "/c", str(synrail_bin), *args]
+    return [str(synrail_bin), *args]
+
+
 def ensure_venv(venv_root: Path) -> Path:
     builder = venv.EnvBuilder(with_pip=True, clear=False, symlinks=not is_windows())
     builder.create(venv_root)
@@ -88,7 +94,7 @@ def install_synrail_script(venv_root: Path) -> Path:
 
 def verify_install(synrail_bin: Path) -> None:
     subprocess.run(
-        [str(synrail_bin), "start", "--help"],
+        synrail_command(synrail_bin, "start", "--help"),
         check=True,
         capture_output=True,
         text=True,
@@ -136,12 +142,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.project_root:
         project_root = Path(args.project_root).resolve()
         project_root.mkdir(parents=True, exist_ok=True)
-        install_cmd = [
-            str(synrail_bin),
+        install_cmd = synrail_command(
+            synrail_bin,
             "install-agent-files",
             "--project-root",
             str(project_root),
-        ]
+        )
         if args.force_agent_files:
             install_cmd.append("--force")
         subprocess.run(

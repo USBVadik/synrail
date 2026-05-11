@@ -25,6 +25,12 @@ def installed_synrail_bin(venv_dir: Path) -> Path:
     return venv_dir / "bin" / "synrail"
 
 
+def installed_synrail_command(synrail_bin: Path, *args: str) -> list[str]:
+    if os.name == "nt":
+        return [os.environ.get("COMSPEC", "cmd.exe"), "/c", str(synrail_bin), *args]
+    return [str(synrail_bin), *args]
+
+
 def json_load(path: Path) -> dict:
     return json.loads(path.read_text())
 
@@ -34,7 +40,7 @@ class InstallSmokeTests(unittest.TestCase):
         artifact_root = project_root / ".synrail"
 
         help_result = subprocess.run(
-            [str(synrail_bin), "start", "--help"],
+            installed_synrail_command(synrail_bin, "start", "--help"),
             check=True,
             capture_output=True,
             text=True,
@@ -46,11 +52,7 @@ class InstallSmokeTests(unittest.TestCase):
 
         project_root.mkdir(parents=True, exist_ok=True)
         start_result = subprocess.run(
-            [
-                str(synrail_bin),
-                "start",
-                "install smoke",
-            ],
+            installed_synrail_command(synrail_bin, "start", "install smoke"),
             check=True,
             cwd=project_root,
             capture_output=True,
