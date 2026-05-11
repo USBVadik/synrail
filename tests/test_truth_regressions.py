@@ -7397,6 +7397,75 @@ class TestDedicatedProofAttackPack(unittest.TestCase):
         self.assertEqual("command_path_out_of_scope", bundle["verification_recheck"]["skip_reason"])
         self.assertEqual("VERIFICATION_RECHECK_NOT_EXECUTED", verdict["blocking_reason"])
 
+    def test_recheck_rejects_changed_file_path_traversal_before_reading(self) -> None:
+        state = self._state()
+        final_payload = self._base_final_result(state)
+        final_payload["modified_files"] = ["../../etc/passwd"]
+        final_payload["diff_provenance"]["changed_file"] = "../../etc/passwd"
+        final_payload["diff_provenance"]["verification_command"] = "cat ../../etc/passwd"
+        final_payload["diff_provenance"]["verification_result"] = "root:x:0:0"
+
+        bundle = self._build_bundle_with_supporting_artifacts(
+            final_payload,
+            readback_text=self._valid_readback_text(),
+            scenario_text=self._valid_scenario_text(),
+            project_files={"src/app.py": "import logging\ndef run() -> None:\n    pass\n"},
+        )
+        verdict = build_live_verdict(state, bundle)
+
+        self.assertTrue(bundle["verification_recheck"]["required"])
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertFalse(bundle["verification_recheck"]["executed"])
+        self.assertFalse(bundle["verification_recheck"]["matched"])
+        self.assertEqual("changed_file_out_of_scope", bundle["verification_recheck"]["skip_reason"])
+        self.assertEqual("VERIFICATION_RECHECK_NOT_EXECUTED", verdict["blocking_reason"])
+
+    def test_recheck_rejects_git_global_config_rce_shape_without_executing(self) -> None:
+        state = self._state()
+        final_payload = self._base_final_result(state)
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_git_rce_") as tmpdir:
+            marker = Path(tmpdir) / "pwned"
+            final_payload["diff_provenance"]["verification_command"] = (
+                f"git -c core.sshCommand='sh -c \"touch {marker}\"' ls-remote ."
+            )
+            final_payload["diff_provenance"]["verification_result"] = "anything"
+            bundle = self._build_bundle_with_supporting_artifacts(
+                final_payload,
+                readback_text=self._valid_readback_text(),
+                scenario_text=self._valid_scenario_text(),
+                project_files={"src/app.py": "import logging\ndef run() -> None:\n    pass\n"},
+            )
+            verdict = build_live_verdict(state, bundle)
+            self.assertFalse(marker.exists())
+
+        self.assertTrue(bundle["verification_recheck"]["required"])
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertFalse(bundle["verification_recheck"]["executed"])
+        self.assertFalse(bundle["verification_recheck"]["matched"])
+        self.assertEqual("command_shape_unsupported", bundle["verification_recheck"]["skip_reason"])
+        self.assertEqual("VERIFICATION_RECHECK_NOT_EXECUTED", verdict["blocking_reason"])
+
+    def test_recheck_rejects_git_ext_diff_option_without_executing(self) -> None:
+        state = self._state()
+        final_payload = self._base_final_result(state)
+        final_payload["diff_provenance"]["verification_command"] = "git diff --ext-diff -- src/app.py"
+        final_payload["diff_provenance"]["verification_result"] = "diff --git a/src/app.py b/src/app.py"
+
+        bundle = self._build_bundle_with_supporting_artifacts(
+            final_payload,
+            readback_text=self._valid_readback_text(),
+            scenario_text=self._valid_scenario_text(),
+            project_files={"src/app.py": "import logging\ndef run() -> None:\n    pass\n"},
+        )
+        verdict = build_live_verdict(state, bundle)
+
+        self.assertTrue(bundle["verification_recheck"]["required"])
+        self.assertTrue(bundle["verification_recheck"]["command_allowed"])
+        self.assertFalse(bundle["verification_recheck"]["executed"])
+        self.assertFalse(bundle["verification_recheck"]["matched"])
+        self.assertEqual("command_shape_unsupported", bundle["verification_recheck"]["skip_reason"])
+        self.assertEqual("VERIFICATION_RECHECK_NOT_EXECUTED", verdict["blocking_reason"])
+
     def test_recheck_accepts_cat_changed_file_inside_project(self) -> None:
         state = self._state()
         final_payload = self._base_final_result(state)

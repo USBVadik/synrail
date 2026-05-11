@@ -7,6 +7,7 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import os
 import shlex
 import stat as stat_module
 import subprocess
@@ -291,15 +292,28 @@ def _parse_cat_operand_paths(argv: list[str]) -> tuple[list[str] | None, str]:
 
 def _parse_git_operand_paths(argv: list[str]) -> tuple[list[str] | None, str]:
     args = argv[1:]
-    if not args or args[0] not in {"diff", "show", "log"}:
+    if len(args) < 3 or args[0] not in {"diff", "show", "log"}:
         return None, "command_shape_unsupported"
-    if "--" not in args:
-        return [], ""
-    separator = args.index("--")
-    pathspecs = args[separator + 1 :]
+    if args[1] != "--":
+        return None, "command_shape_unsupported"
+    pathspecs = args[2:]
     if not pathspecs:
         return None, "command_shape_unsupported"
     return pathspecs, ""
+
+
+def _verification_recheck_env(executable: str) -> dict[str, str] | None:
+    if executable != "git":
+        return None
+    env = os.environ.copy()
+    env.update({
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_EXTERNAL_DIFF": "",
+        "GIT_PAGER": "cat",
+        "GIT_OPTIONAL_LOCKS": "0",
+    })
+    return env
 
 
 def validated_verification_command_operand_paths(
@@ -420,6 +434,7 @@ def verification_recheck_result(record: object, *, project_root: Path | None = N
             text=True,
             cwd=recheck_root,
             timeout=VERIFICATION_RECHECK_TIMEOUT_SECONDS,
+            env=_verification_recheck_env(executable),
         )
     except FileNotFoundError:
         result["skip_reason"] = "command_missing"

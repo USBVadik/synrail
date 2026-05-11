@@ -162,7 +162,7 @@ In `final_result.json`, use a trust-bearing status: `PROVEN` for an evidenced bo
 
 If `git` is unavailable in the project environment, leave `git_diff` empty. Use `diff_provenance` for a single-file change, or `diff_provenance_records` / `per_file_diff_provenance` with repo-relative paths and exact observed lines for a multi-file change, instead of trying to simulate a patch.
 
-For `diff_provenance.verification_command`, use one directly recheckable repo-relative read-only command: `grep -n`, `cat`, `head`, `tail`, `git diff -- <path>`, `git show -- <path>`, or `git log -- <path>`. Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets there; those can be valid manual investigation commands, but they are not stable closure recheck commands.
+For `diff_provenance.verification_command`, use one directly recheckable repo-relative read-only command: `grep -n`, `cat`, `head`, `tail`, `git diff -- <path>`, `git show -- <path>`, or `git log -- <path>`. Git recheck commands must use exactly `git diff/show/log -- <path>` with no `git -c`, `--ext-diff`, `--textconv`, or other options before `--`. Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets there; those can be valid manual investigation commands, but they are not stable closure recheck commands.
 
 On Windows, set UTF-8 mode before runs that touch localized paths such as `Рабочий стол`, and put Git for Windows `usr\bin` on `PATH` when your `verification_command` uses `grep`, `cat`, `head`, or `tail`:
 

@@ -149,6 +149,7 @@ def policy_no_git_proof_line(artifact_root: str) -> str:
 def policy_recheck_command_line() -> str:
     return (
         "Keep `diff_provenance.verification_command` recheckable: use one repo-relative read-only command such as `grep -n`, `cat`, `head`, `tail`, `git diff -- <path>`, `git show -- <path>`, or `git log -- <path>`. "
+        "Git recheck commands must use exactly `git diff/show/log -- <path>` with no `git -c`, `--ext-diff`, `--textconv`, or other options before `--`. "
         "Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets there."
     )
 

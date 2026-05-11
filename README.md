@@ -141,7 +141,7 @@ Prefer a repo-clean artifact lane when you are using Synrail for QA/analysis acr
 .venv/bin/synrail cleanup --ephemeral --stale
 ```
 
-For `diff_provenance.verification_command`, keep the command directly recheckable: use one repo-relative read-only command such as `grep -n`, `cat`, `head`, `tail`, `git diff -- <path>`, `git show -- <path>`, or `git log -- <path>`. Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets in that field.
+For `diff_provenance.verification_command`, keep the command directly recheckable: use one repo-relative read-only command such as `grep -n`, `cat`, `head`, `tail`, `git diff -- <path>`, `git show -- <path>`, or `git log -- <path>`. Git recheck commands must use exactly `git diff/show/log -- <path>` with no `git -c`, `--ext-diff`, `--textconv`, pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets in that field.
 
 Windows notes:
 
