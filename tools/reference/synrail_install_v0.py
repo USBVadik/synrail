@@ -92,6 +92,13 @@ def install_synrail_script(venv_root: Path) -> Path:
     return target
 
 
+def display_path(path: Path, start: Path | None = None) -> str:
+    try:
+        return os.path.relpath(path, start or Path.cwd())
+    except ValueError:
+        return str(path)
+
+
 def verify_install(synrail_bin: Path) -> None:
     subprocess.run(
         synrail_command(synrail_bin, "start", "--help"),
@@ -157,8 +164,8 @@ def main(argv: list[str] | None = None) -> int:
             text=True,
         )
 
-    rel_venv = os.path.relpath(venv_root, Path.cwd())
-    rel_synrail = os.path.relpath(synrail_bin, Path.cwd())
+    rel_venv = display_path(venv_root)
+    rel_synrail = display_path(synrail_bin)
     print("Synrail alpha install complete.")
     print(f"Virtualenv: {rel_venv}")
     print(f"Repo path linked via: {pth_file}")
@@ -166,7 +173,7 @@ def main(argv: list[str] | None = None) -> int:
     print(git_preflight_line())
     print("No-git proof path: leave git_diff empty and use structured provenance — diff_provenance for a single-file change, or diff_provenance_records/per_file_diff_provenance with one changed_file-backed record per modified file for a multi-file change.")
     if project_root is not None:
-        rel_project = os.path.relpath(project_root, Path.cwd())
+        rel_project = display_path(project_root)
         print(f"Agent files installed into: {rel_project}")
     print(f"Quick status: run `{rel_synrail}` inside your project.")
     print(f'Start a run: `{rel_synrail} start "Describe the bounded local change."`')
