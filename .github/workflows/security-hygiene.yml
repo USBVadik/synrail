@@ -79,9 +79,9 @@ jobs:
         shell: pwsh
         run: |
           "C:\Program Files\Git\usr\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - name: Upgrade pip
+      - name: Upgrade pip and build tooling
         shell: pwsh
-        run: python -m pip install --upgrade pip
+        run: python -m pip install --upgrade pip setuptools
       - name: Install Synrail dev dependencies
         shell: pwsh
         run: python -m pip install -e ".[dev]" -c constraints-dev.txt
