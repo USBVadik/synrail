@@ -365,6 +365,8 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("If you run from a subdirectory inside a git checkout, Synrail uses the git repository root as the default project root.", first_run_guide)
         self.assertIn('synrail start --ephemeral --project-root path/to/target-repo "Describe the bounded local analysis."', first_run_guide)
         self.assertIn("Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets there", first_run_guide)
+        self.assertIn('$env:PYTHONUTF8 = "1"', first_run_guide)
+        self.assertIn('$env:Path = "C:\\Program Files\\Git\\usr\\bin;" + $env:Path', first_run_guide)
         template = subprocess.run(
             ["python3", str(REPO_ROOT / "alpha.py"), "final-result-template", "--ephemeral"],
             check=True,
@@ -450,6 +452,8 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("If you run from a subdirectory inside a git checkout, Synrail uses the git repository root as the default project root.", public_readme)
         self.assertIn('.venv/bin/synrail start --ephemeral --project-root path/to/target-repo "Describe the bounded local analysis."', public_readme)
         self.assertIn("Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets in that field.", public_readme)
+        self.assertIn('$env:PYTHONUTF8 = "1"', public_readme)
+        self.assertIn('$env:Path = "C:\\Program Files\\Git\\usr\\bin;" + $env:Path', public_readme)
         self.assertIn("`--ephemeral` keeps Synrail artifacts outside the project checkout while still resolving proof and verification paths against the project root.", public_readme)
         self.assertIn("Use this only when you want the repo-native installer path used by alpha testers.", public_readme)
         self.assertIn("It writes `CLAUDE.md`, `GEMINI.md`, and `AGENTS.md` for agent discovery in the target project.", public_readme)

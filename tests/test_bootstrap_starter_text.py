@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import sys
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,7 +15,7 @@ TOOLS_ROOT = REPO_ROOT / "tools" / "reference"
 if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
-from synrail_bootstrap_v0 import build_proof_starter_contents  # noqa: E402
+from synrail_bootstrap_v0 import build_proof_request_record, build_proof_starter_contents, write_proof_starter_files  # noqa: E402
 
 
 class BootstrapStarterTextTests(unittest.TestCase):
@@ -102,6 +103,32 @@ class BootstrapStarterTextTests(unittest.TestCase):
             "Runtime hint: prefer a local request, rendered response, or observed runtime output over a source-only grep when possible; run `synrail runtime-helper` if you want a small curl or template-render path before browser automation",
             contents["scenario_proof"],
         )
+
+    def test_final_result_starter_hash_matches_written_bytes(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_bootstrap_hash_") as tmpdir:
+            root = Path(tmpdir) / "artifacts"
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True)
+            contents = build_proof_starter_contents(
+                run_id="RUN_123",
+                task_class="bounded_change",
+                task_identity="Windows starter hash regression",
+                project_root=project_root,
+            )
+
+            write_proof_starter_files(artifact_root=root, starter_contents=contents)
+            record = build_proof_request_record(
+                run_id="RUN_123",
+                task_class="bounded_change",
+                task_identity="Windows starter hash regression",
+                project_root=project_root,
+                artifact_root=root,
+            )
+
+            final_result_bytes = (root / "final_result.json").read_bytes()
+            expected_hash = hashlib.sha256(final_result_bytes).hexdigest()
+            self.assertEqual(record["starter_hashes"]["final_result"], expected_hash)
+            self.assertNotIn(b"\r\n", final_result_bytes)
 
 
 if __name__ == "__main__":

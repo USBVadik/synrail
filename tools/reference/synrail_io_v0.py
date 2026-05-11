@@ -12,6 +12,7 @@ def load_json(path: Path) -> dict:
 
 
 def save_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n")
 
 
@@ -25,5 +26,4 @@ def load_json_if_valid(path: Path | None) -> tuple[bool, dict]:
 
 
 def save_json_safe(path: Path, payload: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
     save_json(path, payload)

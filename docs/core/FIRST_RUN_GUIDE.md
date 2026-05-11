@@ -164,6 +164,13 @@ If `git` is unavailable in the project environment, leave `git_diff` empty. Use 
 
 For `diff_provenance.verification_command`, use one directly recheckable repo-relative read-only command: `grep -n`, `cat`, `head`, `tail`, `git diff -- <path>`, `git show -- <path>`, or `git log -- <path>`. Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets there; those can be valid manual investigation commands, but they are not stable closure recheck commands.
 
+On Windows, set UTF-8 mode before runs that touch localized paths such as `Рабочий стол`, and put Git for Windows `usr\bin` on `PATH` when your `verification_command` uses `grep`, `cat`, `head`, or `tail`:
+
+```powershell
+$env:PYTHONUTF8 = "1"
+$env:Path = "C:\Program Files\Git\usr\bin;" + $env:Path
+```
+
 In the normal `synrail check` path, you usually do not need to hand-copy run identity fields or a cleanup summary into `final_result.json` when the current controlled run context and doctor-ready workspace already provide that truth. Focus first on the status, changed files, and diff/provenance. Only spend extra steps on `readback.txt` or `scenario_proof.txt` if `check` still names them after `final_result.json` is already strong.
 
 If you need help with the default proof shape, use:

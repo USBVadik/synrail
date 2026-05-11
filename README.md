@@ -143,6 +143,16 @@ Prefer a repo-clean artifact lane when you are using Synrail for QA/analysis acr
 
 For `diff_provenance.verification_command`, keep the command directly recheckable: use one repo-relative read-only command such as `grep -n`, `cat`, `head`, `tail`, `git diff -- <path>`, `git show -- <path>`, or `git log -- <path>`. Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets in that field.
 
+Windows notes:
+
+```powershell
+# Helpful for localized paths such as "Рабочий стол"
+$env:PYTHONUTF8 = "1"
+
+# Needed when your verification_command uses grep/cat/head/tail from Git for Windows
+$env:Path = "C:\Program Files\Git\usr\bin;" + $env:Path
+```
+
 ## Alpha Tester Install Path
 
 Use this only when you want the repo-native installer path used by alpha testers.

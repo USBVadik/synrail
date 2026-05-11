@@ -169,7 +169,11 @@ def build_proof_starter_contents(*, run_id: str, task_class: str, task_identity:
 
 def write_proof_starter_files(*, artifact_root: Path, starter_contents: dict[str, str]) -> None:
     artifact_root.mkdir(parents=True, exist_ok=True)
-    (artifact_root / "final_result.json").write_text(starter_contents["final_result"])
+    (artifact_root / "final_result.json").write_text(
+        starter_contents["final_result"],
+        encoding="utf-8",
+        newline="\n",
+    )
 
 
 def build_bootstrap_record(
