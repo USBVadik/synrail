@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import sys
 import subprocess
 import tempfile
 import time
@@ -15,6 +16,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = REPO_ROOT / "tools" / "reference" / "synrail_install_v0.py"
+PYTHON = sys.executable
+
+
+def installed_synrail_bin(venv_dir: Path) -> Path:
+    if os.name == "nt":
+        return venv_dir / "Scripts" / "synrail.cmd"
+    return venv_dir / "bin" / "synrail"
 
 
 def json_load(path: Path) -> dict:
@@ -78,14 +86,14 @@ class InstallSmokeTests(unittest.TestCase):
             project_root = root / "project"
 
             subprocess.run(
-                ["python3", str(INSTALLER), "--venv", str(venv_dir)],
+                [PYTHON, str(INSTALLER), "--venv", str(venv_dir)],
                 check=True,
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
             )
             self._assert_installed_start_path(
-                venv_dir / "bin" / "synrail",
+                installed_synrail_bin(venv_dir),
                 project_root,
             )
 
@@ -96,21 +104,21 @@ class InstallSmokeTests(unittest.TestCase):
             project_root = root / "project"
 
             subprocess.run(
-                ["python3", str(INSTALLER), "--venv", str(venv_dir)],
+                [PYTHON, str(INSTALLER), "--venv", str(venv_dir)],
                 check=True,
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
             )
             subprocess.run(
-                ["python3", str(INSTALLER), "--venv", str(venv_dir)],
+                [PYTHON, str(INSTALLER), "--venv", str(venv_dir)],
                 check=True,
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
             )
             self._assert_installed_start_path(
-                venv_dir / "bin" / "synrail",
+                installed_synrail_bin(venv_dir),
                 project_root,
             )
 
@@ -121,7 +129,7 @@ class InstallSmokeTests(unittest.TestCase):
 
             start = subprocess.run(
                 [
-                    "python3",
+                    PYTHON,
                     str(REPO_ROOT / "alpha.py"),
                     "start",
                     "--ephemeral",
@@ -145,7 +153,7 @@ class InstallSmokeTests(unittest.TestCase):
 
             check = subprocess.run(
                 [
-                    "python3",
+                    PYTHON,
                     str(REPO_ROOT / "alpha.py"),
                     "check",
                     "--ephemeral",
@@ -161,7 +169,7 @@ class InstallSmokeTests(unittest.TestCase):
 
             cleanup = subprocess.run(
                 [
-                    "python3",
+                    PYTHON,
                     str(REPO_ROOT / "alpha.py"),
                     "cleanup",
                     "--ephemeral",
@@ -193,7 +201,7 @@ class InstallSmokeTests(unittest.TestCase):
 
             start = subprocess.run(
                 [
-                    "python3",
+                    PYTHON,
                     str(REPO_ROOT / "alpha.py"),
                     "start",
                     "--ephemeral",
@@ -216,7 +224,7 @@ class InstallSmokeTests(unittest.TestCase):
 
             cleanup = subprocess.run(
                 [
-                    "python3",
+                    PYTHON,
                     str(REPO_ROOT / "alpha.py"),
                     "cleanup",
                     "--ephemeral",
@@ -244,7 +252,7 @@ class InstallSmokeTests(unittest.TestCase):
 
             start = subprocess.run(
                 [
-                    "python3",
+                    PYTHON,
                     str(REPO_ROOT / "alpha.py"),
                     "start",
                     "--ephemeral",
@@ -266,7 +274,7 @@ class InstallSmokeTests(unittest.TestCase):
 
             cleanup = subprocess.run(
                 [
-                    "python3",
+                    PYTHON,
                     str(REPO_ROOT / "alpha.py"),
                     "cleanup",
                     "--ephemeral",
@@ -290,7 +298,7 @@ class InstallSmokeTests(unittest.TestCase):
 
             result = subprocess.run(
                 [
-                    "python3",
+                    PYTHON,
                     str(INSTALLER),
                     "--venv",
                     str(venv_dir),
@@ -368,7 +376,7 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn('$env:PYTHONUTF8 = "1"', first_run_guide)
         self.assertIn('$env:Path = "C:\\Program Files\\Git\\usr\\bin;" + $env:Path', first_run_guide)
         template = subprocess.run(
-            ["python3", str(REPO_ROOT / "alpha.py"), "final-result-template", "--ephemeral"],
+            [PYTHON, str(REPO_ROOT / "alpha.py"), "final-result-template", "--ephemeral"],
             check=True,
             cwd=REPO_ROOT,
             capture_output=True,

@@ -64,3 +64,37 @@ jobs:
                       print(f"Potential secret pattern detected: {path}")
                       sys.exit(1)
           PY
+  windows-smoke:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Add Git for Windows Unix tools
+        shell: pwsh
+        run: |
+          "C:\Program Files\Git\usr\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Upgrade pip
+        shell: pwsh
+        run: python -m pip install --upgrade pip
+      - name: Install Synrail dev dependencies
+        shell: pwsh
+        run: python -m pip install -e ".[dev]" -c constraints-dev.txt
+      - name: Compile Python files
+        shell: pwsh
+        run: |
+          python -c "import pathlib, py_compile; [py_compile.compile(str(path), doraise=True) for path in [pathlib.Path('alpha.py'), *pathlib.Path('tools/reference').glob('*.py')]]"
+      - name: Run Windows install and artifact smoke tests
+        shell: pwsh
+        run: python -m unittest tests.test_synrail_io tests.test_bootstrap_starter_text tests.test_install_smoke
+      - name: Run targeted Ruff checks
+        shell: pwsh
+        run: python -m ruff check tools/reference/synrail_io_v0.py tools/reference/synrail_bootstrap_v0.py tools/reference/synrail_cli_v0.py tests/test_synrail_io.py tests/test_bootstrap_starter_text.py tests/test_install_smoke.py
+      - name: Audit Python dependencies
+        shell: pwsh
+        run: python -m pip_audit
