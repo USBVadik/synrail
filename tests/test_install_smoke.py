@@ -35,6 +35,18 @@ def json_load(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
+def run_checked(args: list[str], **kwargs) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(args, capture_output=True, text=True, **kwargs)
+    if result.returncode != 0:
+        command = " ".join(args)
+        raise AssertionError(
+            f"command failed with exit code {result.returncode}: {command}\n"
+            f"--- stdout ---\n{result.stdout}\n"
+            f"--- stderr ---\n{result.stderr}"
+        )
+    return result
+
+
 class InstallSmokeTests(unittest.TestCase):
     def _assert_installed_start_path(self, synrail_bin: Path, project_root: Path) -> None:
         artifact_root = project_root / ".synrail"
@@ -87,12 +99,9 @@ class InstallSmokeTests(unittest.TestCase):
             venv_dir = root / "venv"
             project_root = root / "project"
 
-            subprocess.run(
+            run_checked(
                 [PYTHON, str(INSTALLER), "--venv", str(venv_dir)],
-                check=True,
                 cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
             )
             self._assert_installed_start_path(
                 installed_synrail_bin(venv_dir),
@@ -105,19 +114,13 @@ class InstallSmokeTests(unittest.TestCase):
             venv_dir = root / "venv"
             project_root = root / "project"
 
-            subprocess.run(
+            run_checked(
                 [PYTHON, str(INSTALLER), "--venv", str(venv_dir)],
-                check=True,
                 cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
             )
-            subprocess.run(
+            run_checked(
                 [PYTHON, str(INSTALLER), "--venv", str(venv_dir)],
-                check=True,
                 cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
             )
             self._assert_installed_start_path(
                 installed_synrail_bin(venv_dir),
@@ -298,7 +301,7 @@ class InstallSmokeTests(unittest.TestCase):
             (project_root / "alpha.py").write_text("print('stub')\n")
             (project_root / "GEMINI.md").write_text("# Existing Gemini Context\n\nKeep this repo focused.\n")
 
-            result = subprocess.run(
+            result = run_checked(
                 [
                     PYTHON,
                     str(INSTALLER),
@@ -307,10 +310,7 @@ class InstallSmokeTests(unittest.TestCase):
                     "--project-root",
                     str(project_root),
                 ],
-                check=True,
                 cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
             )
 
             self.assertIn("Agent adoption files are ready.", result.stdout)
