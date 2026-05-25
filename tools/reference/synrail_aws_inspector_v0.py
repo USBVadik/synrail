@@ -90,7 +90,7 @@ def _aws_session(region: str | None = None):
 
 
 def verify_s3_bucket(identifier: str, expected: dict[str, Any]) -> dict[str, Any]:
-    """Inspect a single S3 bucket's encryption + public-access-block state."""
+    """Inspect a single S3 bucket's encryption + public-access-block + versioning + replication state."""
     session = _aws_session()
     if session is None:
         raise RuntimeError("boto3 unavailable")
@@ -126,6 +126,29 @@ def verify_s3_bucket(identifier: str, expected: dict[str, Any]) -> dict[str, Any
         }
     except ClientError as exc:
         actual["public_access_block"] = {"error": str(exc)}
+    # Versioning state. Returns "Enabled", "Suspended", or absent (= "Disabled").
+    try:
+        ver = s3.get_bucket_versioning(Bucket=identifier)
+        actual["versioning_status"] = ver.get("Status", "Disabled")
+    except ClientError as exc:
+        actual["versioning_status"] = {"error": str(exc)}
+    # Cross-Region Replication. Absent = no rule configured.
+    try:
+        rep = s3.get_bucket_replication(Bucket=identifier)
+        rules = rep.get("ReplicationConfiguration", {}).get("Rules", [])
+        if rules:
+            first = rules[0]
+            actual["replication_rule_status"] = first.get("Status")
+            dest_bucket_arn = first.get("Destination", {}).get("Bucket")
+            actual["replication_destination_bucket_arn"] = dest_bucket_arn
+        else:
+            actual["replication_rule_status"] = "NotConfigured"
+    except ClientError as exc:
+        # NoSuchReplicationConfiguration is the normal "not configured" path.
+        if "NoSuchReplicationConfiguration" in str(exc):
+            actual["replication_rule_status"] = "NotConfigured"
+        else:
+            actual["replication_rule_status"] = {"error": str(exc)}
     return actual
 
 
@@ -233,6 +256,7 @@ def verify_kms_key(identifier: str, expected: dict[str, Any]) -> dict[str, Any]:
         "key_manager": metadata.get("KeyManager"),
         "key_spec": metadata.get("KeySpec"),
         "enabled": metadata.get("Enabled"),
+        "multi_region": metadata.get("MultiRegion", False),
         **rot,
     }
 
@@ -314,6 +338,109 @@ def verify_budgets_budget(
     }
 
 
+def verify_rds_global_cluster(
+    identifier: str, expected: dict[str, Any]
+) -> dict[str, Any]:
+    """Inspect an Aurora Global Database cluster. identifier = global cluster id."""
+    session = _aws_session()
+    if session is None:
+        raise RuntimeError("boto3 unavailable")
+    rds = session.client("rds")
+    resp = rds.describe_global_clusters(GlobalClusterIdentifier=identifier)
+    clusters = resp.get("GlobalClusters", [])
+    if not clusters:
+        return {"global_cluster_id": identifier, "exists": False}
+    cluster = clusters[0]
+    members = cluster.get("GlobalClusterMembers", [])
+    writer_member_arn = next(
+        (m.get("DBClusterArn") for m in members if m.get("IsWriter")), None
+    )
+    return {
+        "global_cluster_id": cluster.get("GlobalClusterIdentifier"),
+        "engine": cluster.get("Engine"),
+        "engine_version": cluster.get("EngineVersion"),
+        "status": cluster.get("Status"),
+        "members_count": len(members),
+        "writer_count": sum(1 for m in members if m.get("IsWriter")),
+        "reader_count": sum(1 for m in members if not m.get("IsWriter")),
+        "writer_cluster_arn": writer_member_arn,
+        "storage_encrypted": cluster.get("StorageEncrypted"),
+    }
+
+
+def verify_route53_record(
+    identifier: str, expected: dict[str, Any]
+) -> dict[str, Any]:
+    """Inspect a Route 53 record set.
+
+    identifier format: "<HostedZoneId>:<RecordName>" (e.g. "Z123ABC:app.example.com").
+    Returns aggregated info across all matching record sets (failover policy
+    typically yields 2 records under the same name with different SetIdentifier).
+    """
+    session = _aws_session()
+    if session is None:
+        raise RuntimeError("boto3 unavailable")
+    if ":" not in identifier:
+        raise ValueError(
+            f"route53_record identifier must be 'HostedZoneId:RecordName', got {identifier}"
+        )
+    zone_id, record_name = identifier.split(":", 1)
+    r53 = session.client("route53")
+    paginator = r53.get_paginator("list_resource_record_sets")
+    matching = []
+    target_name = record_name.rstrip(".") + "."
+    for page in paginator.paginate(HostedZoneId=zone_id):
+        for rrs in page.get("ResourceRecordSets", []):
+            if rrs.get("Name") == target_name:
+                matching.append(rrs)
+    failover_records = [r for r in matching if r.get("Failover")]
+    primary_record = next((r for r in failover_records if r.get("Failover") == "PRIMARY"), None)
+    secondary_record = next((r for r in failover_records if r.get("Failover") == "SECONDARY"), None)
+    return {
+        "record_name": record_name,
+        "hosted_zone_id": zone_id,
+        "record_set_count": len(matching),
+        "failover_routing_set_count": len(failover_records),
+        "primary_health_check_id": primary_record.get("HealthCheckId") if primary_record else None,
+        "secondary_health_check_id": secondary_record.get("HealthCheckId") if secondary_record else None,
+        "primary_health_check_id_present": bool(primary_record and primary_record.get("HealthCheckId")),
+        "secondary_health_check_id_present": bool(secondary_record and secondary_record.get("HealthCheckId")),
+        "primary_alias_target": (primary_record or {}).get("AliasTarget", {}).get("DNSName"),
+        "secondary_alias_target": (secondary_record or {}).get("AliasTarget", {}).get("DNSName"),
+    }
+
+
+def verify_alb_listener(
+    identifier: str, expected: dict[str, Any]
+) -> dict[str, Any]:
+    """Inspect an Application Load Balancer listener.
+
+    identifier = ALB ARN. Returns the ALB's state, DNS, and listener details.
+    """
+    session = _aws_session()
+    if session is None:
+        raise RuntimeError("boto3 unavailable")
+    elbv2 = session.client("elbv2")
+    resp = elbv2.describe_load_balancers(LoadBalancerArns=[identifier])
+    albs = resp.get("LoadBalancers", [])
+    if not albs:
+        return {"alb_arn": identifier, "exists": False}
+    alb = albs[0]
+    listeners_resp = elbv2.describe_listeners(LoadBalancerArn=identifier)
+    listeners = listeners_resp.get("Listeners", [])
+    https_listeners = [l for l in listeners if l.get("Protocol") == "HTTPS"]
+    return {
+        "alb_arn": identifier,
+        "alb_dns_name": alb.get("DNSName"),
+        "scheme": alb.get("Scheme"),
+        "state": alb.get("State", {}).get("Code"),
+        "vpc_id": alb.get("VpcId"),
+        "listener_count": len(listeners),
+        "https_listener_count": len(https_listeners),
+        "listener_protocols": sorted({l.get("Protocol") for l in listeners}),
+    }
+
+
 # --- Dispatcher -------------------------------------------------------------
 
 
@@ -321,10 +448,13 @@ RESOURCE_VERIFIERS: dict[str, Callable[[str, dict[str, Any]], dict[str, Any]]] =
     "s3_bucket": verify_s3_bucket,
     "wafv2_web_acl": verify_wafv2_web_acl,
     "route53_health_check": verify_route53_health_check,
+    "route53_record": verify_route53_record,
     "lambda_function": verify_lambda_function,
     "kms_key": verify_kms_key,
     "guardduty_detector": verify_guardduty_findings,
     "rds_cluster": verify_rds_cluster,
+    "rds_global_cluster": verify_rds_global_cluster,
+    "alb_listener": verify_alb_listener,
     "budgets_budget": verify_budgets_budget,
 }
 
