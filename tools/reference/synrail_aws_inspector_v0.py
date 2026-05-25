@@ -475,7 +475,7 @@ def verify_alb_listener(
     alb = albs[0]
     listeners_resp = elbv2.describe_listeners(LoadBalancerArn=identifier)
     listeners = listeners_resp.get("Listeners", [])
-    https_listeners = [l for l in listeners if l.get("Protocol") == "HTTPS"]
+    https_listeners = [lst for lst in listeners if lst.get("Protocol") == "HTTPS"]
     return {
         "alb_arn": identifier,
         "alb_dns_name": alb.get("DNSName"),
@@ -484,7 +484,7 @@ def verify_alb_listener(
         "vpc_id": alb.get("VpcId"),
         "listener_count": len(listeners),
         "https_listener_count": len(https_listeners),
-        "listener_protocols": sorted({l.get("Protocol") for l in listeners}),
+        "listener_protocols": sorted({lst.get("Protocol") for lst in listeners}),
     }
 
 
