@@ -216,6 +216,38 @@ Do not use Synrail when:
 Synrail is currently a narrow local alpha product.
 It is stronger on false-green prevention, bounded repair, and continuation than earlier versions, but it is not yet broad self-serve or broad production-ready.
 
+## AWS State Inspector (v0.1.1)
+
+Synrail v0.1.1 adds a generic AWS state inspector for cross-checking deployed infrastructure against bundle claims. The inspector ships with eleven resource verifiers and a bundle fingerprinting primitive.
+
+**Resource verifiers** (read-only AWS API calls, regional context parsed from ARNs where applicable):
+
+- `s3_bucket` — encryption, public-access-block, versioning, replication
+- `wafv2_web_acl` — by ARN, returns rule list and default action
+- `route53_health_check` — observation status across multiple checkers
+- `route53_record` — by `HostedZoneId:RecordName`, reports failover routing set count and per-record health-check IDs
+- `lambda_function` — runtime, memory, timeout, reserved concurrency, KMS key
+- `kms_key` — state, manager, rotation enabled, multi-region flag
+- `guardduty_detector` — finding count and finding ID samples
+- `rds_cluster` — regional cluster status, engine version, writer/reader counts, KMS encryption
+- `rds_global_cluster` — Aurora Global Database, members count, writer cluster ARN
+- `alb_listener` — Application Load Balancer state, scheme, listener protocols
+- `budgets_budget` — budget type, limits, notification configurations
+
+**Special expected-key suffix:**
+
+- `*_substring` — pass if the expected value is a substring of the actual value (handy for matching DNS aliases or ARNs against shorter human-readable forms)
+
+**CLI:**
+
+```bash
+synrail verify-aws-state          # cross-check aws_state_claims[] against AWS APIs
+synrail fingerprint               # compute and write SHA-256 over the bundle
+synrail fingerprint --verify      # recompute the fingerprint and compare to the stored value
+```
+
+**Reference deployment:** [aws-proof-gated-prompts](https://github.com/USBVadik/aws-proof-gated-prompts) — three submissions for the AWS Prompt the Planet Challenge, all using `synrail verify-aws-state` to cross-check live AWS state against bundle claims.
+
 ## License
 
 Synrail is licensed under the Apache License 2.0. See [LICENSE](LICENSE).

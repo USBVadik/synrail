@@ -62,9 +62,30 @@ def _resolve_value(actual: dict[str, Any], dotted_path: str) -> Any:
 
 
 def _compare_expected(actual: dict[str, Any], expected: dict[str, Any]) -> list[str]:
-    """Return list of diff strings. Empty list means full match."""
+    """Return list of diff strings. Empty list means full match.
+
+    Special expected-key suffix:
+      *_substring  -- look up the bare key (without the _substring suffix)
+                      in actual; pass if expected_value is a substring of
+                      the actual string. Useful when the verifier returns
+                      a longer canonical form (e.g. a DNS name with trailing
+                      dot) and the prompt only knows the human-readable
+                      portion.
+    """
     diffs: list[str] = []
     for key, expected_value in expected.items():
+        if key.endswith("_substring"):
+            bare_key = key[: -len("_substring")]
+            actual_value = _resolve_value(actual, bare_key)
+            if actual_value is None or expected_value is None:
+                diffs.append(
+                    f"{key}: expected {expected_value!r}, got {actual_value!r}"
+                )
+            elif str(expected_value) not in str(actual_value):
+                diffs.append(
+                    f"{key}: expected substring {expected_value!r}, got {actual_value!r}"
+                )
+            continue
         actual_value = _resolve_value(actual, key)
         if actual_value != expected_value:
             diffs.append(
@@ -84,6 +105,22 @@ def _aws_session(region: str | None = None):
     if profile:
         return boto3.Session(profile_name=profile, region_name=region_name)
     return boto3.Session(region_name=region_name)
+
+
+def _region_from_arn(arn: str) -> str | None:
+    """Parse the region segment out of an AWS ARN.
+
+    ARN format: arn:partition:service:region:account-id:resource
+    Some ARNs have an empty region (s3, iam) — return None in that case so
+    callers fall back to default-region behavior.
+    """
+    if not isinstance(arn, str) or not arn.startswith("arn:"):
+        return None
+    parts = arn.split(":", 5)
+    if len(parts) < 4:
+        return None
+    region = parts[3]
+    return region if region else None
 
 
 # --- Resource verifiers -----------------------------------------------------
@@ -237,7 +274,8 @@ def verify_lambda_function(
 
 def verify_kms_key(identifier: str, expected: dict[str, Any]) -> dict[str, Any]:
     """Inspect a KMS key. identifier may be a key id, alias, or ARN."""
-    session = _aws_session()
+    region = _region_from_arn(identifier)
+    session = _aws_session(region=region)
     if session is None:
         raise RuntimeError("boto3 unavailable")
     kms = session.client("kms")
@@ -283,12 +321,19 @@ def verify_guardduty_findings(
 def verify_rds_cluster(
     identifier: str, expected: dict[str, Any]
 ) -> dict[str, Any]:
-    """Inspect an RDS / Aurora cluster."""
-    session = _aws_session()
+    """Inspect an RDS / Aurora cluster.
+
+    identifier may be a cluster id (regional default) or a cluster ARN
+    (region parsed from the ARN).
+    """
+    region = _region_from_arn(identifier)
+    session = _aws_session(region=region)
     if session is None:
         raise RuntimeError("boto3 unavailable")
     rds = session.client("rds")
-    resp = rds.describe_db_clusters(DBClusterIdentifier=identifier)
+    # Strip ARN to cluster id for the describe call.
+    cluster_id = identifier.split(":")[-1] if identifier.startswith("arn:") else identifier
+    resp = rds.describe_db_clusters(DBClusterIdentifier=cluster_id)
     clusters = resp.get("DBClusters", [])
     if not clusters:
         return {"cluster_id": identifier, "exists": False}
@@ -416,8 +461,10 @@ def verify_alb_listener(
     """Inspect an Application Load Balancer listener.
 
     identifier = ALB ARN. Returns the ALB's state, DNS, and listener details.
+    Region is parsed from the ARN so cross-region ALBs are reachable.
     """
-    session = _aws_session()
+    region = _region_from_arn(identifier)
+    session = _aws_session(region=region)
     if session is None:
         raise RuntimeError("boto3 unavailable")
     elbv2 = session.client("elbv2")
@@ -428,7 +475,7 @@ def verify_alb_listener(
     alb = albs[0]
     listeners_resp = elbv2.describe_listeners(LoadBalancerArn=identifier)
     listeners = listeners_resp.get("Listeners", [])
-    https_listeners = [l for l in listeners if l.get("Protocol") == "HTTPS"]
+    https_listeners = [lst for lst in listeners if lst.get("Protocol") == "HTTPS"]
     return {
         "alb_arn": identifier,
         "alb_dns_name": alb.get("DNSName"),
@@ -437,7 +484,7 @@ def verify_alb_listener(
         "vpc_id": alb.get("VpcId"),
         "listener_count": len(listeners),
         "https_listener_count": len(https_listeners),
-        "listener_protocols": sorted({l.get("Protocol") for l in listeners}),
+        "listener_protocols": sorted({lst.get("Protocol") for lst in listeners}),
     }
 
 
