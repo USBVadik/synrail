@@ -4476,7 +4476,142 @@ def build_parser() -> argparse.ArgumentParser:
     p_resume.add_argument("--mode", default="default", choices=["default", "dev"])
     p_resume.set_defaults(func=cmd_resume)
 
+    p_verify_aws = sub.add_parser(
+        "verify-aws-state",
+        help="Cross-check AWS state claims in final_result.json against live AWS",
+    )
+    p_verify_aws.add_argument(
+        "--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT
+    )
+    p_verify_aws.add_argument(
+        "--final-result-file",
+        help="Path to final_result.json (defaults to <artifact-root>/final_result.json)",
+    )
+    p_verify_aws.add_argument(
+        "--report-file",
+        help="Where to write the verification report (defaults to <artifact-root>/aws_verification_report.json)",
+    )
+    p_verify_aws.add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit non-zero if any claim fails (default: report only)",
+    )
+    p_verify_aws.set_defaults(func=cmd_verify_aws_state)
+
+    p_fingerprint = sub.add_parser(
+        "fingerprint",
+        help="Compute or verify the SHA-256 reproducibility fingerprint for a bundle",
+    )
+    p_fingerprint.add_argument(
+        "--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT
+    )
+    p_fingerprint.add_argument(
+        "--final-result-file",
+        help="Path to final_result.json (defaults to <artifact-root>/final_result.json)",
+    )
+    p_fingerprint.add_argument(
+        "--verify",
+        action="store_true",
+        help="Verify a stored fingerprint instead of writing one",
+    )
+    p_fingerprint.set_defaults(func=cmd_fingerprint)
+
     return parser
+
+
+def cmd_verify_aws_state(args: argparse.Namespace) -> int:
+    """Cross-check aws_state_claims in final_result.json against live AWS."""
+    from tools.reference import synrail_aws_inspector_v0 as inspector
+
+    artifact_root = Path(
+        getattr(args, "artifact_root", "") or DEFAULT_ALPHA_ARTIFACT_ROOT
+    )
+    final_result_path = Path(
+        getattr(args, "final_result_file", None)
+        or (artifact_root / "final_result.json")
+    )
+    report_path = Path(
+        getattr(args, "report_file", None)
+        or (artifact_root / "aws_verification_report.json")
+    )
+
+    if not final_result_path.exists():
+        print(
+            f"Synrail verify-aws-state: final_result.json not found at {final_result_path}",
+            file=sys.stderr,
+        )
+        return 2
+
+    if not inspector.BOTO3_AVAILABLE:
+        print(
+            "Synrail verify-aws-state: boto3 unavailable. Install with `pip install boto3` "
+            "to enable cross-verification. Skipping.",
+            file=sys.stderr,
+        )
+        return 0 if not getattr(args, "strict", False) else 3
+
+    all_passed, results = inspector.verify_bundle(final_result_path)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    inspector.write_verification_report(results, report_path)
+
+    print(f"Synrail AWS state verification: {len(results)} claim(s) checked")
+    for result in results:
+        symbol = "OK " if result.passed else "FAIL"
+        print(f"  [{symbol}] {result.claim_id} ({result.resource_type})")
+        if result.error:
+            print(f"         error: {result.error}")
+        for d in result.diff:
+            print(f"         diff: {d}")
+
+    if all_passed:
+        print(f"Status: AWS State Verified  ({len(results)} claim(s) passed)")
+        print(f"Report: {report_path}")
+        return 0
+
+    print(
+        f"Status: AWS State Mismatch  "
+        f"({sum(1 for r in results if r.passed)}/{len(results)} claim(s) passed)"
+    )
+    print(f"Report: {report_path}")
+    return 3 if getattr(args, "strict", False) else 0
+
+
+def cmd_fingerprint(args: argparse.Namespace) -> int:
+    """Compute or verify the SHA-256 reproducibility fingerprint."""
+    from tools.reference import synrail_fingerprint_v0 as fp
+
+    artifact_root = Path(
+        getattr(args, "artifact_root", "") or DEFAULT_ALPHA_ARTIFACT_ROOT
+    )
+    final_result_path = Path(
+        getattr(args, "final_result_file", None)
+        or (artifact_root / "final_result.json")
+    )
+
+    if not final_result_path.exists():
+        print(
+            f"Synrail fingerprint: final_result.json not found at {final_result_path}",
+            file=sys.stderr,
+        )
+        return 2
+
+    if getattr(args, "verify", False):
+        matches, stored, computed = fp.verify_fingerprint(final_result_path)
+        print(f"Stored fingerprint:   sha256={stored or '<none>'}")
+        print(f"Computed fingerprint: sha256={computed}")
+        if matches:
+            print("Status: Fingerprint Verified")
+            return 0
+        if not stored:
+            print("Status: No Fingerprint Stored")
+            return 4
+        print("Status: Fingerprint Mismatch")
+        return 4
+
+    fingerprint, message = fp.write_fingerprint(final_result_path)
+    print(message)
+    print(f"Status: Fingerprint Written  sha256={fingerprint}")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
