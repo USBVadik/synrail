@@ -673,6 +673,7 @@ def normalized_modified_file_path(value: str) -> str:
 
 def git_diff_patch_paths(value: str) -> list[str]:
     paths: list[str] = []
+    seen: set[str] = set()
     for raw_line in value.splitlines():
         line = raw_line.strip()
         candidates: list[str] = []
@@ -686,7 +687,8 @@ def git_diff_patch_paths(value: str) -> list[str]:
             candidates.append(line[4:].strip())
         for candidate in candidates:
             normalized = normalize_diff_path(candidate)
-            if normalized and normalized not in paths:
+            if normalized and normalized not in seen:
+                seen.add(normalized)
                 paths.append(normalized)
     return paths
 

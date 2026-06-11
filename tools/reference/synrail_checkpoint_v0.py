@@ -283,9 +283,28 @@ def classify_workspace_family(workspace_snapshot: dict) -> str:
 
 
 # Directories to exclude from file-copy snapshots (relative to project root).
-_FILE_COPY_EXCLUDE_DIRS = {".synrail", ".git", "__pycache__", "node_modules", ".venv", "venv"}
+_FILE_COPY_EXCLUDE_DIRS = {
+    ".cache",
+    ".mypy_cache",
+    ".nox",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".synrail",
+    ".tox",
+    ".venv",
+    ".git",
+    "__pycache__",
+    "htmlcov",
+    "node_modules",
+    "venv",
+}
+_FILE_COPY_EXCLUDE_PREFIXES = (".tmp-",)
 # Maximum total size (bytes) we'll copy. Prevents accidental multi-GB snapshots.
 _FILE_COPY_MAX_BYTES = 50 * 1024 * 1024  # 50 MB
+
+
+def _file_copy_excluded_name(name: str) -> bool:
+    return name in _FILE_COPY_EXCLUDE_DIRS or name.startswith(_FILE_COPY_EXCLUDE_PREFIXES)
 
 
 def _file_copy_snapshot(project_root: Path, snapshot_dir: Path) -> tuple[bool, str, int]:
@@ -298,7 +317,7 @@ def _file_copy_snapshot(project_root: Path, snapshot_dir: Path) -> tuple[bool, s
     file_count = 0
     try:
         for item in sorted(project_root.iterdir()):
-            if item.name in _FILE_COPY_EXCLUDE_DIRS:
+            if _file_copy_excluded_name(item.name):
                 continue
             if item.is_file():
                 size = item.stat().st_size
@@ -311,7 +330,7 @@ def _file_copy_snapshot(project_root: Path, snapshot_dir: Path) -> tuple[bool, s
                 dir_dest = snapshot_dir / item.name
                 # Walk the subtree respecting limits
                 for root_dir, dirs, files in os.walk(item):
-                    dirs[:] = [d for d in dirs if d not in _FILE_COPY_EXCLUDE_DIRS]
+                    dirs[:] = [d for d in dirs if not _file_copy_excluded_name(d)]
                     rel = Path(root_dir).relative_to(project_root)
                     dest = snapshot_dir / rel
                     dest.mkdir(parents=True, exist_ok=True)
@@ -358,7 +377,7 @@ def _file_copy_restore(snapshot_dir: Path, project_root: Path) -> tuple[bool, st
             return False, "staged snapshot validation failed"
 
         for item in sorted(project_root.iterdir()):
-            if item.name in _FILE_COPY_EXCLUDE_DIRS:
+            if _file_copy_excluded_name(item.name):
                 continue
             os.replace(str(item), str(backup_root / item.name))
 

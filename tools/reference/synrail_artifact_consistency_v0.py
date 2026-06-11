@@ -88,6 +88,21 @@ def load_json_safe(path: Path) -> tuple[dict | None, str]:
 
 
 
+class OrderedIdList(list):
+    """List-shaped ordered ids with O(1) membership for consistency bookkeeping."""
+
+    def __init__(self, values: list[str] | None = None) -> None:
+        super().__init__(values or [])
+        self._seen = set(values or [])
+
+    def __contains__(self, value: object) -> bool:
+        return value in self._seen
+
+    def append(self, value: str) -> None:
+        super().append(value)
+        self._seen.add(value)
+
+
 def append_unique(values: list[str], value: str) -> None:
     if value and value not in values:
         values.append(value)
@@ -281,9 +296,9 @@ def build_record(
 ) -> dict:
     failures: list[dict] = []
     checked_artifacts: list[str] = ["state_file"]
-    stale_artifact_ids: list[str] = []
-    conflicting_artifact_ids: list[str] = []
-    corrupt_artifact_ids: list[str] = []
+    stale_artifact_ids: list[str] = OrderedIdList()
+    conflicting_artifact_ids: list[str] = OrderedIdList()
+    corrupt_artifact_ids: list[str] = OrderedIdList()
     artifact_actions: dict[str, str] = {"state_file": "TRUST_SOURCE_OF_TRUTH"}
     artifact_errors = artifact_errors or {}
     project_root = (project_root or current_project_root()).resolve()
@@ -750,9 +765,9 @@ def build_record(
         "result": result,
         "dominant_conflict": dominant,
         "failure_reasons": [failure["detail"] for failure in failures],
-        "stale_artifact_ids": stale_artifact_ids,
-        "conflicting_artifact_ids": conflicting_artifact_ids,
-        "corrupt_artifact_ids": corrupt_artifact_ids,
+        "stale_artifact_ids": list(stale_artifact_ids),
+        "conflicting_artifact_ids": list(conflicting_artifact_ids),
+        "corrupt_artifact_ids": list(corrupt_artifact_ids),
         "artifact_actions": artifact_actions,
         "next_action": next_action,
     }

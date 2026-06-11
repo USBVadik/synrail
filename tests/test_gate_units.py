@@ -76,6 +76,39 @@ def live_bound_verdict(state: dict, bundle: dict) -> dict:
         return build_verdict(live_state, live_bundle)
 
 
+class TestSmallComplexityHotspots(unittest.TestCase):
+    def test_git_diff_patch_paths_dedupes_with_stable_order(self) -> None:
+        from synrail_bundle_v0 import git_diff_patch_paths
+
+        git_diff = """diff --git a/src/a.py b/src/a.py
+--- a/src/a.py
++++ b/src/a.py
+@@ -1 +1 @@
+diff --git a/src/b.py b/src/b.py
+--- a/src/b.py
++++ b/src/b.py
+@@ -1 +1 @@
+diff --git a/src/a.py b/src/a.py
+--- a/src/a.py
++++ b/src/a.py
+@@ -2 +2 @@
+"""
+
+        self.assertEqual(["src/a.py", "src/b.py"], git_diff_patch_paths(git_diff))
+
+    def test_ordered_id_list_keeps_json_list_contract(self) -> None:
+        from synrail_artifact_consistency_v0 import OrderedIdList, append_unique
+
+        ids = OrderedIdList()
+        append_unique(ids, "bundle_file")
+        append_unique(ids, "bundle_file")
+        append_unique(ids, "closure_file")
+
+        self.assertEqual(["bundle_file", "closure_file"], list(ids))
+        self.assertIsInstance(list(ids), list)
+        self.assertIn("bundle_file", ids)
+
+
 # ---------------------------------------------------------------------------
 # Gate function tests
 # ---------------------------------------------------------------------------
@@ -1238,6 +1271,49 @@ class TestRestoreHonestyWithoutGit(unittest.TestCase):
             self.assertIn("workspace_snapshot", record)
             self.assertEqual("file_copy", record["workspace_snapshot"]["type"])
             self.assertGreater(record["workspace_snapshot"]["file_count"], 0)
+
+    def test_file_copy_snapshot_excludes_runtime_cache_dirs(self) -> None:
+        import argparse
+        import tempfile
+        from synrail_checkpoint_v0 import create_record
+        from synrail_spine_v0 import default_state as make_state
+
+        state = make_state("run1", "bounded_change")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "project"
+            project.mkdir()
+            (project / "hello.py").write_text('print("hello")\n')
+            for dirname in [".tmp-synrail-verify", ".pytest_cache", ".ruff_cache", "__pycache__"]:
+                ignored_dir = project / dirname
+                ignored_dir.mkdir()
+                (ignored_dir / "ignored.txt").write_text("ignored\n")
+            state_path = project / ".synrail" / "state.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(state))
+            checkpoint_root = project / ".synrail" / "checkpoints" / "working"
+            args = argparse.Namespace(
+                checkpoint_id="working",
+                checkpoint_root=str(checkpoint_root),
+                state_file=str(state_path),
+                project_root=str(project),
+                report_file=None, orchestration_file=None,
+                bundle_file=None, closure_file=None,
+                refresh_file=None, selection_file=None,
+                preparation_file=None, repair_packet_file=None,
+                repair_handoff_file=None, repair_receipt_file=None,
+            )
+
+            record = create_record(args)
+
+            self.assertEqual("OK", record["result"])
+            self.assertEqual("file_copy", record["workspace_snapshot"]["type"])
+            self.assertEqual(1, record["workspace_snapshot"]["file_count"])
+            snapshot_dir = Path(record["workspace_snapshot"]["snapshot_dir"])
+            self.assertTrue((snapshot_dir / "hello.py").exists())
+            self.assertFalse((snapshot_dir / ".tmp-synrail-verify").exists())
+            self.assertFalse((snapshot_dir / ".pytest_cache").exists())
+            self.assertFalse((snapshot_dir / ".ruff_cache").exists())
+            self.assertFalse((snapshot_dir / "__pycache__").exists())
 
     def test_no_commit_git_uses_file_copy_with_git_specific_preview(self) -> None:
         import argparse
