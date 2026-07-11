@@ -118,10 +118,11 @@ def direct_file_fingerprint(path: Path) -> tuple[int, int, int, int] | None:
 
 def artifact_binding_entry(*, artifact_id: str, path: Path | None, required: bool) -> dict:
     present = bool(path and path.is_file())
-    resolved_path = str(path.resolve()) if present else ""
+    # Preserve the submitted surface so closure can detect symlinked parents.
+    bound_path = str(path.expanduser().absolute()) if present else ""
     return {
         "artifact_id": artifact_id,
-        "path": resolved_path,
+        "path": bound_path,
         "required": required,
         "present": present,
         "sha256": file_sha256(path) if present else "",

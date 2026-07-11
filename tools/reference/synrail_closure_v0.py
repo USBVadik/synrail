@@ -16,9 +16,21 @@ except ImportError:
     from synrail_io_v0 import load_json, save_json
 
 try:
-    from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+    from .synrail_path_scope_v0 import (
+        ARTIFACT_SCOPE,
+        PathScopeValidationError,
+        symlinked_ancestor_within,
+        validate_namespace_paths,
+        validate_root_within_project,
+    )
 except ImportError:
-    from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
+    from synrail_path_scope_v0 import (
+        ARTIFACT_SCOPE,
+        PathScopeValidationError,
+        symlinked_ancestor_within,
+        validate_namespace_paths,
+        validate_root_within_project,
+    )
 
 
 CLOSURE_PATH_SCOPES = {
@@ -28,6 +40,16 @@ CLOSURE_PATH_SCOPES = {
     "certificate_output": ARTIFACT_SCOPE,
     "acceptance_validation_file": ARTIFACT_SCOPE,
 }
+
+CLOSURE_FRESHNESS_BINDING_SCHEMA_VERSION = "closure_freshness_binding_v0"
+CLOSURE_FRESHNESS_ARTIFACT_REQUIREMENTS = {
+    "final_result": True,
+    "readback": False,
+    "scenario_proof": False,
+    "doctor": False,
+}
+CLOSURE_FRESHNESS_BINDING_FIELDS = {"schema_version", "bound_at_utc", "artifacts"}
+CLOSURE_FRESHNESS_ARTIFACT_FIELDS = {"artifact_id", "path", "required", "present", "sha256"}
 
 
 def current_project_root() -> Path:
@@ -90,41 +112,219 @@ def file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def evaluate_closure_freshness_binding(binding: object, *, live_recheck: bool) -> dict:
-    artifacts = []
+def valid_sha256(value: str) -> bool:
+    return len(value) == 64 and all(character in "0123456789abcdefABCDEF" for character in value)
+
+
+def valid_utc_timestamp(value: str) -> bool:
+    if not value:
+        return False
+    try:
+        parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return parsed.tzinfo is not None and parsed.utcoffset() == dt.timedelta(0)
+
+
+def string_value(mapping: dict, key: str) -> str:
+    value = mapping.get(key, "")
+    return value.strip() if isinstance(value, str) else ""
+
+
+def path_within_root(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
+def closure_freshness_trusted_roots(state: dict, bundle: dict) -> tuple[Path, ...]:
+    project_root_value = state.get("_project_root", "")
+    project_root = (
+        Path(project_root_value).expanduser().resolve()
+        if isinstance(project_root_value, str) and project_root_value.strip()
+        else current_project_root()
+    )
+    roots: list[Path] = [project_root]
+    for value in (state.get("_state_file", ""), bundle.get("_bundle_file", "")):
+        if isinstance(value, str) and value.strip():
+            roots.append(Path(value).expanduser().absolute().parent)
+    unique_roots: list[Path] = []
+    for root in roots:
+        lexical_root = root.expanduser().absolute()
+        if lexical_root not in unique_roots:
+            unique_roots.append(lexical_root)
+    return tuple(unique_roots)
+
+
+def evaluate_closure_freshness_binding(
+    binding: object,
+    *,
+    live_recheck: bool,
+    trusted_roots: tuple[Path, ...] = (),
+) -> dict:
+    artifacts: list[dict] = []
+    validation_errors: list[str] = []
     all_required_present = True
     all_hashes_match = True
+    trusted_root_pairs: list[tuple[Path, Path]] = []
+    for root in trusted_roots:
+        # Keep both forms so macOS /var aliases work without hiding in-root symlinks.
+        lexical_root = root.expanduser().absolute()
+        try:
+            resolved_root = lexical_root.resolve(strict=True)
+        except OSError:
+            validation_errors.append("a trusted freshness root could not be resolved")
+            continue
+        pair = (lexical_root, resolved_root)
+        if pair not in trusted_root_pairs:
+            trusted_root_pairs.append(pair)
     if not isinstance(binding, dict):
         return {
             "present": False,
+            "structurally_valid": False,
             "schema_version": "",
             "bound_at_utc": "",
             "all_required_present": False,
             "all_hashes_match": False,
             "artifacts": [],
+            "validation_errors": ["binding must be an object"],
+            "live_recheck": live_recheck,
         }
-    for item in binding.get("artifacts", []):
+
+    unknown_binding_fields = set(binding) - CLOSURE_FRESHNESS_BINDING_FIELDS
+    for field in sorted(unknown_binding_fields):
+        validation_errors.append(f"unknown binding field: {field}")
+
+    schema_version = string_value(binding, "schema_version")
+    bound_at_utc = string_value(binding, "bound_at_utc")
+    if not isinstance(binding.get("schema_version"), str):
+        validation_errors.append("schema_version must be a string")
+    if schema_version != CLOSURE_FRESHNESS_BINDING_SCHEMA_VERSION:
+        validation_errors.append("schema_version is missing or unsupported")
+    if not isinstance(binding.get("bound_at_utc"), str):
+        validation_errors.append("bound_at_utc must be a string")
+    if not valid_utc_timestamp(bound_at_utc):
+        validation_errors.append("bound_at_utc is missing or not a UTC timestamp")
+
+    raw_artifacts = binding.get("artifacts", [])
+    if not isinstance(raw_artifacts, list) or not raw_artifacts:
+        validation_errors.append("artifacts must be a non-empty array")
+        raw_artifacts = []
+
+    seen_artifact_ids: set[str] = set()
+    for index, item in enumerate(raw_artifacts):
         if not isinstance(item, dict):
+            validation_errors.append(f"artifacts[{index}] must be an object")
+            all_hashes_match = False
             continue
-        artifact_id = (item.get("artifact_id", "") or "").strip()
-        path_text = (item.get("path", "") or "").strip()
-        required = bool(item.get("required", False))
-        expected_sha = (item.get("sha256", "") or "").strip()
-        bound_present = bool(item.get("present", False))
+        missing_fields = CLOSURE_FRESHNESS_ARTIFACT_FIELDS - set(item)
+        for field in sorted(missing_fields):
+            validation_errors.append(f"artifacts[{index}].{field} is missing")
+        unknown_fields = set(item) - CLOSURE_FRESHNESS_ARTIFACT_FIELDS
+        for field in sorted(unknown_fields):
+            validation_errors.append(f"artifacts[{index}] has unknown field: {field}")
+
+        artifact_id = string_value(item, "artifact_id")
+        path_text = string_value(item, "path")
+        required_value = item.get("required", False)
+        present_value = item.get("present", False)
+        required = required_value if isinstance(required_value, bool) else False
+        bound_present = present_value if isinstance(present_value, bool) else False
+        expected_sha = string_value(item, "sha256")
+        if not isinstance(item.get("artifact_id"), str):
+            validation_errors.append(f"artifacts[{index}].artifact_id must be a string")
+        if not isinstance(item.get("path"), str):
+            validation_errors.append(f"artifacts[{index}].path must be a string")
+        if not isinstance(required_value, bool):
+            validation_errors.append(f"artifacts[{index}].required must be a boolean")
+        if not isinstance(present_value, bool):
+            validation_errors.append(f"artifacts[{index}].present must be a boolean")
+        if not isinstance(item.get("sha256"), str):
+            validation_errors.append(f"artifacts[{index}].sha256 must be a string")
+        expected_required = CLOSURE_FRESHNESS_ARTIFACT_REQUIREMENTS.get(artifact_id)
+
+        if not artifact_id:
+            validation_errors.append(f"artifacts[{index}].artifact_id is missing")
+        elif artifact_id in seen_artifact_ids:
+            validation_errors.append(f"duplicate artifact_id: {artifact_id}")
+        else:
+            seen_artifact_ids.add(artifact_id)
+        if expected_required is None:
+            validation_errors.append(f"unknown artifact_id: {artifact_id or '<empty>'}")
+        elif required != expected_required:
+            validation_errors.append(f"artifact {artifact_id} has an invalid required flag")
+
         current_sha = ""
         present = bound_present
-        hashes_match = bool(bound_present and expected_sha)
-        if live_recheck and path_text:
+        hashes_match = False
+        if bound_present:
+            if not path_text:
+                validation_errors.append(f"artifact {artifact_id or index} is present without a path")
+            elif not Path(path_text).is_absolute():
+                validation_errors.append(f"artifact {artifact_id or index} path is not absolute")
+            if not valid_sha256(expected_sha):
+                validation_errors.append(f"artifact {artifact_id or index} has an invalid sha256")
+                all_hashes_match = False
+            hashes_match = bool(path_text and valid_sha256(expected_sha))
+        elif path_text or expected_sha:
+            validation_errors.append(f"artifact {artifact_id or index} is absent but still carries path or sha256")
+            all_hashes_match = False
+
+        if live_recheck and bound_present and path_text:
             candidate = Path(path_text)
-            present = candidate.exists() and candidate.is_file()
-            if present:
-                current_sha = file_sha256(candidate)
-                hashes_match = bool(expected_sha and current_sha == expected_sha)
-            else:
+            try:
+                present = candidate.exists() and candidate.is_file() and not candidate.is_symlink()
+                if present:
+                    surface_root = next(
+                        (
+                            lexical
+                            if path_within_root(candidate, lexical)
+                            else resolved
+                            for lexical, resolved in trusted_root_pairs
+                            if path_within_root(candidate, lexical)
+                            or path_within_root(candidate, resolved)
+                        ),
+                        None,
+                    )
+                    if trusted_root_pairs and surface_root is None:
+                        validation_errors.append(
+                            f"artifact {artifact_id or index} path escapes trusted roots"
+                        )
+                        present = False
+                        hashes_match = False
+                    elif surface_root is not None and symlinked_ancestor_within(
+                        candidate,
+                        stop_at=surface_root,
+                    ) is not None:
+                        validation_errors.append(
+                            f"artifact {artifact_id or index} path crosses a symlink surface"
+                        )
+                        present = False
+                        hashes_match = False
+                    resolved_candidate = candidate.resolve(strict=True)
+                    if present and trusted_root_pairs and not any(
+                        path_within_root(resolved_candidate, resolved)
+                        for _, resolved in trusted_root_pairs
+                    ):
+                        validation_errors.append(
+                            f"artifact {artifact_id or index} path escapes trusted roots"
+                        )
+                        present = False
+                        hashes_match = False
+                    elif present:
+                        current_sha = file_sha256(resolved_candidate)
+                        hashes_match = bool(expected_sha and current_sha == expected_sha)
+                else:
+                    hashes_match = False
+            except OSError:
+                validation_errors.append(f"artifact {artifact_id or index} could not be read safely")
+                present = False
                 hashes_match = False
         if required and not present:
             all_required_present = False
-        if present and expected_sha and not hashes_match:
+        if bound_present and not hashes_match:
             all_hashes_match = False
         artifacts.append({
             "artifact_id": artifact_id,
@@ -136,13 +336,23 @@ def evaluate_closure_freshness_binding(binding: object, *, live_recheck: bool) -
             "hashes_match": hashes_match,
             "live_recheck": live_recheck,
         })
+
+    missing_artifact_ids = set(CLOSURE_FRESHNESS_ARTIFACT_REQUIREMENTS) - seen_artifact_ids
+    for artifact_id in sorted(missing_artifact_ids):
+        validation_errors.append(f"missing artifact_id: {artifact_id}")
+        if CLOSURE_FRESHNESS_ARTIFACT_REQUIREMENTS[artifact_id]:
+            all_required_present = False
+
+    structurally_valid = not validation_errors
     return {
-        "present": True,
-        "schema_version": (binding.get("schema_version", "") or "").strip(),
-        "bound_at_utc": (binding.get("bound_at_utc", "") or "").strip(),
+        "present": bool(binding),
+        "structurally_valid": structurally_valid,
+        "schema_version": schema_version,
+        "bound_at_utc": bound_at_utc,
         "all_required_present": all_required_present,
         "all_hashes_match": all_hashes_match,
         "artifacts": artifacts,
+        "validation_errors": validation_errors,
         "live_recheck": live_recheck,
     }
 
@@ -152,6 +362,7 @@ def build_closure_certificate(*, state: dict, bundle: dict, verdict: dict, crite
     freshness = evaluate_closure_freshness_binding(
         bundle.get("closure_freshness_binding", {}),
         live_recheck=bool(state.get("_state_file") and bundle.get("_bundle_file")),
+        trusted_roots=closure_freshness_trusted_roots(state, bundle),
     )
     artifact_identity = dict(bundle.get("artifact_identity", {})) if isinstance(bundle.get("artifact_identity", {}), dict) else {}
     final_result = dict(bundle.get("final_result", {})) if isinstance(bundle.get("final_result", {}), dict) else {}
@@ -351,6 +562,7 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
     freshness = evaluate_closure_freshness_binding(
         bundle.get("closure_freshness_binding", {}),
         live_recheck=live_freshness_available,
+        trusted_roots=closure_freshness_trusted_roots(state, bundle),
     )
     if not live_freshness_available:
         verdict["closure_status"] = "REJECTED"
@@ -363,6 +575,13 @@ def build_verdict(state: dict, bundle: dict, criteria_validation: dict | None = 
         verdict["blocking_reason"] = "CLOSURE_FRESHNESS_BINDING_MISSING"
         verdict["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
         verdict["narrow_next_safe_step"] = "rebuild the proof bundle so closure can bind a fresh verified artifact set"
+        return verdict
+    if not freshness.get("structurally_valid", False):
+        verdict["closure_warnings"].append("closure_freshness_binding_invalid")
+        verdict["closure_status"] = "REJECTED"
+        verdict["blocking_reason"] = "CLOSURE_FRESHNESS_FAILED"
+        verdict["next_allowed_transition"] = "PROOF_BUNDLE_REPAIR"
+        verdict["narrow_next_safe_step"] = "rebuild the proof bundle with a complete freshness binding"
         return verdict
     if not freshness.get("all_required_present", False) or not freshness.get("all_hashes_match", False):
         verdict["closure_warnings"].append("closure_freshness_binding_mismatch")
@@ -447,6 +666,7 @@ def main() -> int:
         state = load_json(state_path)
         bundle = load_json(bundle_path)
         state["_state_file"] = str(state_path)
+        state["_project_root"] = str(project_root)
         bundle["_bundle_file"] = str(bundle_path)
         criteria_validation = load_json(Path(args.acceptance_validation_file)) if args.acceptance_validation_file else None
         verdict = build_verdict(

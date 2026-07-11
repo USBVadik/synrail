@@ -1,11 +1,13 @@
 Agent: done, tests passed
 
-$ python3 alpha.py check
+$ synrail check --artifact-root .synrail
 Synrail: Status: Proof Invalid
-Reason: verification command not executed / freshness mismatch
-Next: repair final_result.json
+Next: update the result payload in .synrail/final_result.json and rerun synrail check
 
-Agent: repaired final_result.json and ran the real verification
+$ grep -n 'hello from Synrail' greeting.txt
+2:hello from Synrail
 
-$ python3 alpha.py check --clean-surface
+$ synrail check --artifact-root .synrail
 Synrail: Status: Accepted
+
+Demo result: real weak proof blocked; real repaired proof accepted.

@@ -6,10 +6,10 @@ This demo shows the narrow Synrail wedge:
 
 1. Agent claims the task is done.
 2. The proof is weak or mismatched.
-3. `python3 alpha.py check` blocks acceptance.
+3. `synrail check` blocks acceptance.
 4. Synrail names the bounded repair step.
 5. The proof is repaired and real verification is run.
-6. `python3 alpha.py check --clean-surface` reaches `Status: Accepted`.
+6. `synrail check` reaches `Status: Accepted` without an operator bypass.
 
 ## Fast path
 
@@ -23,6 +23,11 @@ This demo shows the narrow Synrail wedge:
 ./run_demo.sh
 ```
 
+The script creates a disposable temporary project and invokes the real installed
+Synrail CLI twice. It asserts that the weak claim is non-green and that the
+repaired, locally rechecked proof reaches `Status: Accepted`; this is not a
+prewritten transcript printer.
+
 ## What you should see
 
 - `Synrail: Status: Proof Invalid` or another non-green blocker on the weak proof pass
@@ -32,7 +37,7 @@ This demo shows the narrow Synrail wedge:
 
 ## Files
 
-- `run_demo.sh` — printable two-minute walkthrough
+- `run_demo.sh` — executable two-minute proof loop in a disposable project
 - `transcript.txt` — short sample terminal transcript
 - `assets/synrail-false-green-hero.gif` — README-ready animated demo
 - `assets/synrail-false-green-hero.mp4` — social/posting version of the same demo

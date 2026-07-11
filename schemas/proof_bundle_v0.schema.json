@@ -13,103 +13,239 @@
     "semantic_status",
     "final_result",
     "modified_files",
+    "scope_alignment",
+    "presentation_alignment",
     "diff_provenance",
+    "verification_corroboration",
+    "verification_recheck",
+    "artifact_integrity_warning",
+    "closure_freshness_binding",
     "readback",
     "scenario_proof",
     "artifact_identity",
     "cleanup_status",
     "missing_sections",
+    "semantically_insufficient_sections",
+    "semantic_next_safe_step",
     "structural_decision_trace",
-    "semantic_decision_trace"
+    "semantic_decision_trace",
+    "shadow_observation_guard_results"
   ],
   "properties": {
-    "schema_version": {
-      "type": "string",
-      "const": "proof_bundle_v0"
-    },
-    "run_id": {
-      "type": "string"
-    },
-    "task_class": {
-      "type": "string"
-    },
+    "schema_version": {"type": "string", "const": "proof_bundle_v0"},
+    "run_id": {"type": "string"},
+    "task_class": {"type": "string"},
     "status": {
       "type": "string",
-      "enum": [
-        "COMPLETE",
-        "STRUCTURALLY_COMPLETE",
-        "PARTIAL",
-        "INVALID"
-      ]
+      "enum": ["COMPLETE", "STRUCTURALLY_COMPLETE", "PARTIAL", "INVALID"]
     },
     "structural_status": {
       "type": "string",
-      "enum": [
-        "COMPLETE",
-        "PARTIAL",
-        "INVALID",
-        "MISSING"
-      ]
+      "enum": ["COMPLETE", "PARTIAL", "INVALID", "MISSING"]
     },
     "semantic_status": {
       "type": "string",
-      "enum": [
-        "SUFFICIENT",
-        "INSUFFICIENT",
-        "NOT_EVALUATED",
-        "MISSING"
-      ]
+      "enum": ["SUFFICIENT", "INSUFFICIENT", "NOT_EVALUATED", "MISSING"]
     },
     "final_result": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["present", "status"],
+      "required": [
+        "present",
+        "parseable",
+        "status",
+        "normalized_status",
+        "expected_status",
+        "semantically_sufficient",
+        "request_id",
+        "change_disposition"
+      ],
       "properties": {
         "present": {"type": "boolean"},
+        "parseable": {"type": "boolean"},
         "status": {"type": "string"},
-        "parseable": {"type": "boolean"}
+        "normalized_status": {"type": "string"},
+        "expected_status": {"type": "string"},
+        "semantically_sufficient": {"type": "boolean"},
+        "request_id": {"type": "string"},
+        "change_disposition": {"type": "string"}
       }
     },
     "modified_files": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["present", "count"],
+      "required": ["present", "count", "semantically_sufficient"],
       "properties": {
         "present": {"type": "boolean"},
         "count": {"type": "integer", "minimum": 0},
         "semantically_sufficient": {"type": "boolean"}
       }
     },
+    "scope_alignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evaluated", "semantically_sufficient"],
+      "properties": {
+        "evaluated": {"type": "boolean"},
+        "semantically_sufficient": {"type": "boolean"}
+      }
+    },
+    "presentation_alignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evaluated", "semantically_sufficient", "suspicious_classes"],
+      "properties": {
+        "evaluated": {"type": "boolean"},
+        "semantically_sufficient": {"type": "boolean"},
+        "suspicious_classes": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
     "diff_provenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["present", "non_empty"],
+      "required": [
+        "present",
+        "non_empty",
+        "has_diff_markers",
+        "has_structured_record",
+        "record_count",
+        "patch_paths",
+        "patch_covers_modified_files",
+        "normalized_method",
+        "method_inferred",
+        "verification_command_present",
+        "structurally_complete",
+        "structured_record_sufficient",
+        "semantically_sufficient"
+      ],
       "properties": {
         "present": {"type": "boolean"},
         "non_empty": {"type": "boolean"},
         "has_diff_markers": {"type": "boolean"},
+        "has_structured_record": {"type": "boolean"},
+        "record_count": {"type": "integer", "minimum": 0},
+        "patch_paths": {"type": "array", "items": {"type": "string"}},
+        "patch_covers_modified_files": {"type": "boolean"},
+        "normalized_method": {"type": "string"},
+        "method_inferred": {"type": "boolean"},
+        "verification_command_present": {"type": "boolean"},
+        "structurally_complete": {"type": "boolean"},
+        "structured_record_sufficient": {"type": "boolean"},
         "semantically_sufficient": {"type": "boolean"}
+      }
+    },
+    "verification_corroboration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "semantically_sufficient",
+        "has_structured_runtime_verification",
+        "has_patch_runtime_verification",
+        "runtime_verification_sufficient",
+        "scenario_has_explicit_command",
+        "scenario_has_explicit_observation"
+      ],
+      "properties": {
+        "semantically_sufficient": {"type": "boolean"},
+        "has_structured_runtime_verification": {"type": "boolean"},
+        "has_patch_runtime_verification": {"type": "boolean"},
+        "runtime_verification_sufficient": {"type": "boolean"},
+        "scenario_has_explicit_command": {"type": "boolean"},
+        "scenario_has_explicit_observation": {"type": "boolean"}
+      }
+    },
+    "verification_recheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "executed", "command_allowed", "matched", "stdout_snippet", "skip_reason"],
+      "properties": {
+        "required": {"type": "boolean"},
+        "executed": {"type": "boolean"},
+        "command_allowed": {"type": "boolean"},
+        "matched": {"type": "boolean"},
+        "stdout_snippet": {"type": "string"},
+        "skip_reason": {"type": "string"}
+      }
+    },
+    "artifact_integrity_warning": {"type": "boolean"},
+    "closure_freshness_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "bound_at_utc", "artifacts"],
+      "properties": {
+        "schema_version": {"type": "string", "const": "closure_freshness_binding_v0"},
+        "bound_at_utc": {
+          "type": "string",
+          "minLength": 1,
+          "format": "date-time",
+          "pattern": "(?:Z|\\+00:00)$"
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["artifact_id", "path", "required", "present", "sha256"],
+            "properties": {
+              "artifact_id": {
+                "type": "string",
+                "enum": ["final_result", "readback", "scenario_proof", "doctor"]
+              },
+              "path": {"type": "string"},
+              "required": {"type": "boolean"},
+              "present": {"type": "boolean"},
+              "sha256": {"type": "string", "pattern": "^(|[0-9a-fA-F]{64})$"}
+            }
+          }
+        }
       }
     },
     "readback": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["present", "path"],
+      "required": [
+        "present",
+        "path",
+        "non_empty",
+        "content_semantically_sufficient",
+        "waived_by_runtime_corroboration",
+        "structurally_complete",
+        "semantically_sufficient"
+      ],
       "properties": {
         "present": {"type": "boolean"},
         "path": {"type": "string"},
         "non_empty": {"type": "boolean"},
+        "content_semantically_sufficient": {"type": "boolean"},
+        "waived_by_runtime_corroboration": {"type": "boolean"},
+        "structurally_complete": {"type": "boolean"},
         "semantically_sufficient": {"type": "boolean"}
       }
     },
     "scenario_proof": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["present", "path"],
+      "required": [
+        "present",
+        "path",
+        "non_empty",
+        "content_semantically_sufficient",
+        "waived_by_runtime_corroboration",
+        "structurally_complete",
+        "semantically_sufficient"
+      ],
       "properties": {
         "present": {"type": "boolean"},
         "path": {"type": "string"},
         "non_empty": {"type": "boolean"},
+        "content_semantically_sufficient": {"type": "boolean"},
+        "waived_by_runtime_corroboration": {"type": "boolean"},
+        "structurally_complete": {"type": "boolean"},
         "semantically_sufficient": {"type": "boolean"}
       }
     },
@@ -120,30 +256,44 @@
         "baseline_identity",
         "execution_surface_identity",
         "prompt_identity",
-        "task_identity"
+        "task_identity",
+        "from_final_result",
+        "semantically_sufficient"
       ],
       "properties": {
         "baseline_identity": {"type": "string"},
         "execution_surface_identity": {"type": "string"},
         "prompt_identity": {"type": "string"},
         "task_identity": {"type": "string"},
+        "from_final_result": {"type": "boolean"},
         "semantically_sufficient": {"type": "boolean"}
       }
     },
     "cleanup_status": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["present", "success"],
+      "required": [
+        "present",
+        "success",
+        "from_doctor",
+        "content_semantically_sufficient",
+        "waived_by_runtime_corroboration",
+        "structurally_complete",
+        "semantically_sufficient"
+      ],
       "properties": {
         "present": {"type": "boolean"},
         "success": {"type": "boolean"},
+        "from_doctor": {"type": "boolean"},
+        "content_semantically_sufficient": {"type": "boolean"},
+        "waived_by_runtime_corroboration": {"type": "boolean"},
+        "structurally_complete": {"type": "boolean"},
         "semantically_sufficient": {"type": "boolean"}
       }
     },
-    "missing_sections": {
-      "type": "array",
-      "items": {"type": "string"}
-    },
+    "missing_sections": {"type": "array", "items": {"type": "string"}},
+    "semantically_insufficient_sections": {"type": "array", "items": {"type": "string"}},
+    "semantic_next_safe_step": {"type": "string"},
     "structural_decision_trace": {
       "type": "array",
       "items": {
@@ -173,13 +323,6 @@
         }
       }
     },
-    "semantically_insufficient_sections": {
-      "type": "array",
-      "items": {"type": "string"}
-    },
-    "semantic_next_safe_step": {
-      "type": "string"
-    },
     "shadow_observation_guard_results": {
       "type": "object",
       "additionalProperties": false,
@@ -188,9 +331,6 @@
         "would_block": {"type": "boolean"},
         "lines_flagged": {"type": "integer", "minimum": 0}
       }
-    },
-    "artifact_integrity_warning": {
-      "type": "boolean"
     }
   }
 }

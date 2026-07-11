@@ -11,8 +11,8 @@ For the runnable two-minute version, start here:
 ```text
 Agent: done, tests passed
 Synrail: Status: Proof Invalid
-Reason: verification command not executed / freshness mismatch
-Next: repair final_result.json
+Reason: final_result.json is narrative, not machine-readable proof
+Next: replace it with structured evidence and rerun synrail check
 Agent: repaired final_result.json and ran the real verification
 Synrail: Status: Accepted
 ```

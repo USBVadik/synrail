@@ -21,7 +21,7 @@ except ImportError:
 try:
     from .synrail_artifact_consistency_v0 import build_record as build_artifact_consistency_record
     from .synrail_artifact_repair_receipt_v0 import build_receipt as build_artifact_repair_receipt
-    from .synrail_bundle_v0 import build_bundle
+    from .synrail_bundle_v0 import build_bundle, state_bound_project_root
     from .synrail_closure_v0 import apply_verdict_to_state, build_closure_certificate, build_verdict, persist_closure_certificate
     from .synrail_observability_v0 import build_record as build_observability_record
     from .synrail_repair_handoff_v0 import build_repair_handoff, build_resumability
@@ -29,7 +29,7 @@ try:
 except ImportError:
     from synrail_artifact_consistency_v0 import build_record as build_artifact_consistency_record
     from synrail_artifact_repair_receipt_v0 import build_receipt as build_artifact_repair_receipt
-    from synrail_bundle_v0 import build_bundle
+    from synrail_bundle_v0 import build_bundle, state_bound_project_root
     from synrail_closure_v0 import apply_verdict_to_state, build_closure_certificate, build_verdict, persist_closure_certificate
     from synrail_observability_v0 import build_record as build_observability_record
     from synrail_repair_handoff_v0 import build_repair_handoff, build_resumability
@@ -1451,6 +1451,24 @@ def enforce_atomic_closure_freshness(
     return rejected_verdict, rebound_certificate, block_report
 
 
+def bound_final_result_sha256(bundle: dict) -> str:
+    binding = bundle.get("closure_freshness_binding", {})
+    artifacts = binding.get("artifacts", []) if isinstance(binding, dict) else []
+    for artifact in artifacts:
+        if not isinstance(artifact, dict) or artifact.get("artifact_id") != "final_result":
+            continue
+        value = artifact.get("sha256", "")
+        if (
+            artifact.get("required") is True
+            and artifact.get("present") is True
+            and isinstance(value, str)
+            and len(value) == 64
+            and all(character in "0123456789abcdefABCDEF" for character in value)
+        ):
+            return value
+    return ""
+
+
 def build_transition_blocked_report(
     state: dict,
     *,
@@ -2666,6 +2684,7 @@ def _phase_closure(ctx: OrchestrationContext, args: argparse.Namespace) -> int |
     )
     live_bundle["_bundle_file"] = str(Path(args.bundle_output))
     closure_state["_state_file"] = str(ctx.state_path)
+    closure_state["_project_root"] = str(state_bound_project_root(args.state_file))
     ctx.bundle = live_bundle
     ctx.closure = build_verdict(closure_state, live_bundle, criteria_validation)
     code, ctx.state, block_report = apply_closure(load_state(ctx.state_path), ctx.closure)
@@ -2782,6 +2801,10 @@ def _phase_closure(ctx: OrchestrationContext, args: argparse.Namespace) -> int |
         print(json.dumps({"result": "BLOCKED", "stopping_stage": "closure_transition", "reason": rebound_block_report["dominant_blocker"]}, ensure_ascii=True))
         return 0
 
+    accepted_final_result_hash = bound_final_result_sha256(ctx.bundle)
+    if ctx.closure.get("closure_status") == "ACCEPTED" and accepted_final_result_hash:
+        ctx.state["last_known_final_result_hash"] = accepted_final_result_hash
+        save_state(ctx.state_path, ctx.state)
     save_json(Path(args.closure_output), ctx.closure)
     if getattr(args, "closure_certificate_output", None):
         persist_closure_certificate(

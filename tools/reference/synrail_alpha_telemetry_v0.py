@@ -14,8 +14,10 @@ from pathlib import Path
 
 try:
     from .synrail_io_v0 import load_json, save_json_safe as save_json
+    from .synrail_version_v0 import __version__ as DEVELOPMENT_VERSION
 except ImportError:
     from synrail_io_v0 import load_json, save_json_safe as save_json
+    from synrail_version_v0 import __version__ as DEVELOPMENT_VERSION
 
 CONFIG_BASENAME = "config.json"
 COMMAND_SEQUENCE_BASENAME = "command_sequence.jsonl"
@@ -57,7 +59,7 @@ def synrail_version() -> str:
     try:
         return importlib_metadata.version("synrail")
     except importlib_metadata.PackageNotFoundError:
-        return "0.1.0"
+        return DEVELOPMENT_VERSION
 
 
 def platform_record() -> dict:

@@ -10,8 +10,11 @@ import sys
 import subprocess
 import tempfile
 import time
+import tomllib
 import unittest
+from importlib import metadata as importlib_metadata
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -48,6 +51,57 @@ def run_checked(args: list[str], **kwargs) -> subprocess.CompletedProcess[str]:
 
 
 class InstallSmokeTests(unittest.TestCase):
+    def test_alpha_entrypoint_delegates_to_public_cli(self) -> None:
+        import alpha
+
+        with mock.patch("tools.reference.synrail_cli_v0.main", return_value=0) as cli_main:
+            self.assertEqual(0, alpha.main())
+        cli_main.assert_called_once_with()
+
+    def test_package_and_runtime_version_share_one_source(self) -> None:
+        project = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
+        from tools.reference.synrail_alpha_telemetry_v0 import synrail_version
+        from tools.reference.synrail_version_v0 import __version__
+
+        self.assertIn("version", project["project"]["dynamic"])
+        self.assertEqual(
+            "tools.reference.synrail_version_v0.__version__",
+            project["tool"]["setuptools"]["dynamic"]["version"]["attr"],
+        )
+        with mock.patch(
+            "tools.reference.synrail_alpha_telemetry_v0.importlib_metadata.version",
+            side_effect=importlib_metadata.PackageNotFoundError,
+        ):
+            self.assertEqual(__version__, synrail_version())
+
+    def test_public_cli_does_not_advertise_retired_contest_commands(self) -> None:
+        result = subprocess.run(
+            [PYTHON, str(REPO_ROOT / "alpha.py"), "--help"],
+            check=True,
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertNotIn("verify-aws-state", result.stdout)
+        self.assertNotIn("fingerprint", result.stdout)
+
+    def test_false_green_demo_executes_real_block_and_repair_loop(self) -> None:
+        result = subprocess.run(
+            [str(REPO_ROOT / "examples" / "false-green-demo" / "run_demo.sh")],
+            check=True,
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertIn("Synrail: Status: Proof Invalid", result.stdout)
+        self.assertIn("Synrail: Status: Accepted", result.stdout)
+        self.assertIn(
+            "Demo result: real weak proof blocked; real repaired proof accepted.",
+            result.stdout,
+        )
+
     def _assert_installed_start_path(self, synrail_bin: Path, project_root: Path) -> None:
         artifact_root = project_root / ".synrail"
 
@@ -360,8 +414,8 @@ class InstallSmokeTests(unittest.TestCase):
 
         self.assertIn("Agent: tests passed", first_run_guide)
         self.assertIn("Synrail: Status: Proof Invalid", first_run_guide)
-        self.assertIn("Reason: verification command not executed / freshness mismatch", first_run_guide)
-        self.assertIn("Next: repair final_result.json", first_run_guide)
+        self.assertIn("Reason: final_result.json is narrative, not machine-readable proof", first_run_guide)
+        self.assertIn("Next: replace it with structured evidence and rerun synrail check", first_run_guide)
         self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", first_run_guide)
         self.assertIn("make install-dev", first_run_guide)
         self.assertIn("make install-local", first_run_guide)
@@ -420,7 +474,7 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("Synrail: Status: Accepted", public_readme)
         self.assertIn("![Synrail false-green demo](examples/false-green-demo/assets/synrail-false-green-hero.gif)", public_readme)
         self.assertIn("[MP4 demo asset](examples/false-green-demo/assets/synrail-false-green-hero.mp4)", public_readme)
-        self.assertIn("A simulated false-green claim is blocked until the proof is repaired and verified.", public_readme)
+        self.assertIn("A simulated false-green claim is checked by the real CLI and blocked until the", public_readme)
         self.assertIn("[false-green demo](examples/false-green-demo/README.md)", public_readme)
         self.assertIn("[first tester protocol](docs/review/FIRST_TESTER_PROTOCOL_001.md)", public_readme)
         self.assertIn("If you only open three public surfaces, use them in this order:", public_readme)
@@ -538,7 +592,7 @@ class InstallSmokeTests(unittest.TestCase):
         security = (REPO_ROOT / "SECURITY.md").read_text()
         pull_request_template = (REPO_ROOT / ".github" / "pull_request_template.md").read_text()
         self.assertIn("# False-Green Demo", demo_readme)
-        self.assertIn("Next: repair final_result.json", demo_readme)
+        self.assertIn("Next: replace it with structured evidence and rerun synrail check", demo_readme)
         self.assertIn("Synrail: Status: Accepted", demo_readme)
         self.assertIn("only `Status: Accepted` closes the loop", demo_readme)
         self.assertIn("FIRST_TESTER_PROTOCOL_001.md", demo_readme)
@@ -549,6 +603,9 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("2. bounded repair names the next move", demo_pack_readme)
         self.assertIn("3. accepted closure appears only after real verification", demo_pack_readme)
         self.assertIn("./run_demo.sh", demo_pack_readme)
+        self.assertIn("invokes the real installed", demo_pack_readme)
+        self.assertIn("this is not a", demo_pack_readme)
+        self.assertIn("prewritten transcript printer", demo_pack_readme)
         self.assertIn("assets/synrail-false-green-hero.gif", demo_pack_readme)
         self.assertIn("assets/synrail-false-green-hero.mp4", demo_pack_readme)
         self.assertIn("assets/synrail-false-green-hero-poster.png", demo_pack_readme)
@@ -557,9 +614,11 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertTrue((demo_assets_root / "synrail-false-green-hero-poster.png").is_file())
         self.assertIn("FIRST_TESTER_PROTOCOL_001.md", demo_pack_readme)
         self.assertIn("GitHub issue templates", demo_pack_readme)
-        self.assertIn("python3 alpha.py check", demo_script)
+        self.assertIn('"$SYNRAIL" check --artifact-root .synrail', demo_script)
+        self.assertIn("Demo assertion failed", demo_script)
         self.assertIn("Synrail: Status: Proof Invalid", demo_transcript)
         self.assertIn("Synrail: Status: Accepted", demo_transcript)
+        self.assertIn("real weak proof blocked; real repaired proof accepted", demo_transcript)
         self.assertIn("false-green-demo/", examples_index)
         self.assertIn("false-green-benchmark/", examples_index)
         self.assertIn("`false_green_demo.md`", examples_index)
@@ -579,7 +638,8 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("Case family,Agent claim,Reality,Synrail result,Manual effort,Overhead notes", benchmark_cases)
         self.assertIn("Partial catch,\"done\",\"one issue caught, another still implied safe\",\"repair-needed\"", benchmark_cases)
         self.assertIn("name: Bug report", bug_template)
-        self.assertIn("synrail bug-packet --artifact-root .synrail", bug_template)
+        self.assertIn("do not attach secrets", bug_template)
+        self.assertIn("private path in `SECURITY.md`", bug_template)
         self.assertIn("current local alpha lane", bug_template)
         self.assertIn("name: Feature request", feature_template)
         self.assertIn("belongs in Synrail itself", feature_template)
@@ -598,8 +658,8 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("- [ ] trust/kernel", pull_request_template)
         self.assertIn("- [ ] This change is small enough to review.", pull_request_template)
         self.assertIn("# Security Policy", security)
-        self.assertIn("Please open a GitHub bug report only for issues that belong in Synrail itself.", security)
-        self.assertIn("synrail bug-packet --artifact-root .synrail", security)
+        self.assertIn("GitHub private vulnerability reporting", security)
+        self.assertIn("attach an unredacted `synrail bug-packet` to a public issue", security)
         self.assertIn("current local alpha support boundary", security)
         self.assertIn("# Public Launch Packet 001", launch_packet)
         self.assertIn("## Twitter/X thread", launch_packet)
