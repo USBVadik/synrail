@@ -9214,5 +9214,42 @@ class TestCleanupRuntimeWaiver(unittest.TestCase):
         self.assertIn("runtime verification", cleanup_trace[0]["why"])
 
 
+class VerificationRecheckEnvTests(unittest.TestCase):
+    def test_git_diff_recheck_env_does_not_kill_git_diff(self) -> None:
+        """Regression: GIT_EXTERNAL_DIFF="" made `git diff` die under the recheck env."""
+        from synrail_bundle_v0 import _verification_recheck_env
+
+        env = _verification_recheck_env("git")
+        self.assertIsNotNone(env)
+        # The external diff driver must never be handed an empty command; that
+        # makes git exec "" and abort with "external diff died".
+        self.assertNotEqual("", env.get("GIT_EXTERNAL_DIFF", "unset"))
+        self.assertNotIn("GIT_EXTERNAL_DIFF", env)
+
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_git_diff_env_") as tmpdir:
+            tmp = Path(tmpdir)
+            subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
+            subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=tmp, check=True)
+            subprocess.run(["git", "config", "user.name", "synrail-test"], cwd=tmp, check=True)
+            tracked = tmp / "gone.py"
+            tracked.write_text("first = 1\nsecond = 2\n")
+            subprocess.run(["git", "add", "gone.py"], cwd=tmp, check=True)
+            subprocess.run(["git", "commit", "-qm", "add gone.py"], cwd=tmp, check=True)
+            tracked.unlink()
+
+            result = subprocess.run(
+                ["git", "diff", "--", "gone.py"],
+                cwd=tmp,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            self.assertNotIn("external diff died", result.stderr)
+            self.assertIn("diff --git", result.stdout)
+            self.assertIn("deleted file mode", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

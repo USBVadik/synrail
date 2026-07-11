@@ -309,10 +309,14 @@ def _verification_recheck_env(executable: str) -> dict[str, str] | None:
     env.update({
         "GIT_CONFIG_NOSYSTEM": "1",
         "GIT_CONFIG_GLOBAL": os.devnull,
-        "GIT_EXTERNAL_DIFF": "",
         "GIT_PAGER": "cat",
         "GIT_OPTIONAL_LOCKS": "0",
     })
+    # Neutralize any user-configured external diff driver deterministically.
+    # Setting GIT_EXTERNAL_DIFF="" makes git try to exec an empty command and
+    # die ("external diff died"), which breaks every `git diff -- <path>`
+    # recheck; unset it so git falls back to its built-in diff.
+    env.pop("GIT_EXTERNAL_DIFF", None)
     return env
 
 
