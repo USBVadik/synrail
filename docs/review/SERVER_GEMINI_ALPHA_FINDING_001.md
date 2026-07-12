@@ -50,3 +50,19 @@ This is a useful alpha integration finding, not a clean success case.
 - Check why `--target-path` resolved to `/root`.
 - Ensure user-facing output distinguishes advisory diagnostics from blocking errors.
 - Improve Gemini/server workflow guidance around repo-relative paths and `git diff`.
+
+## Resolution (2026-07-12)
+
+A fresh single-process reproduction confirmed that an out-of-root `--target-path` itself exits with code 2 before doctor, proof, or closure evaluation. However, an adversarial follow-up reproduced the underlying mixed-output class with another spine-owned path field: after a prior accepted check, an out-of-root `--coverage-profile-file` produced `PATH_SCOPE_VIOLATION`, then reused the stale accepted report, printed `Status: Accepted`, and exited 0. The finding was therefore a real fail-open output bug even though the exact historical command boundary cannot be reconstructed from the aggregated server transcript.
+
+The bug is now closed without weakening path policy:
+
+- default `check` output renders `Status: Blocked` and `Blocking diagnostic: PATH_SCOPE_VIOLATION` on stderr;
+- machine-readable stdout remains one JSON object and now states `severity: BLOCKING`, `accepted: false`, and `closure_evaluated: false`;
+- CLI and spine use one canonical orchestration path-scope map, so spine-owned paths are prevalidated by the public command;
+- a new orchestration removes the previous derived `report.json`, so a failed child cannot reuse stale accepted output;
+- the bounded next step distinguishes target/project-root repair from artifact-root repair;
+- `--mode dev` preserves the machine-only JSON path;
+- README, first-run guidance, and generated agent policy explicitly forbid combining a blocked invocation with a later command's accepted result.
+
+Doctor overrides remain advisory warnings. They are not permitted to downgrade or bypass a path-scope violation.

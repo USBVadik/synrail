@@ -136,6 +136,8 @@ Prefer a repo-clean artifact lane when you are using Synrail for QA/analysis acr
 .venv/bin/synrail start --ephemeral --project-root path/to/target-repo "Describe the bounded local analysis."
 ```
 
+If `check` reports `Status: Blocked` with `Blocking diagnostic: PATH_SCOPE_VIOLATION`, that command stopped before closure and did not accept the task. Fix the named path or project root and rerun `check` as a new command; do not combine the blocked output with a later command's `Status: Accepted`.
+
 `start --ephemeral` also prunes stale ephemeral runs older than 24 hours. To sweep old cache runs manually:
 
 ```bash

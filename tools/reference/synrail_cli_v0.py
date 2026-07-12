@@ -289,6 +289,7 @@ try:
     from .synrail_path_scope_v0 import (
         ARTIFACT_SCOPE,
         DUAL_SCOPE,
+        ORCHESTRATION_PATH_SCOPES,
         PROJECT_SCOPE,
         PathScopeValidationError,
         validate_namespace_paths,
@@ -298,6 +299,7 @@ except ImportError:
     from synrail_path_scope_v0 import (
         ARTIFACT_SCOPE,
         DUAL_SCOPE,
+        ORCHESTRATION_PATH_SCOPES,
         PROJECT_SCOPE,
         PathScopeValidationError,
         validate_namespace_paths,
@@ -573,22 +575,19 @@ def maybe_apply_observed_git_scope_defaults(args: argparse.Namespace, *, state: 
     if not current_state or current_state in {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}:
         return
 
-    changed_files = list(getattr(args, "changed_file", []) or [])
-    allowed_scope_paths = list(getattr(args, "allowed_scope_path", []) or [])
-    if not changed_files:
-        observed_changed = git_status_changed_paths(target_path)
-        if observed_changed:
-            changed_files = filter_artifact_root_changes(
-                observed_changed,
-                getattr(args, "artifact_root", "") or "",
-            )
-    if not allowed_scope_paths:
-        allowed_scope_paths = proof_backed_scope_paths_from_final_result(Path(final_result_text))
+    observed_changed = git_status_changed_paths(target_path)
+    if observed_changed is None:
+        return
 
-    if changed_files:
-        args.changed_file = changed_files
-    if allowed_scope_paths:
-        args.allowed_scope_path = allowed_scope_paths
+    # Non-override readiness must come from live git observation plus proof-backed
+    # provenance, never from caller-supplied scope claims.
+    changed_files = filter_artifact_root_changes(
+        observed_changed,
+        getattr(args, "artifact_root", "") or "",
+    )
+    allowed_scope_paths = proof_backed_scope_paths_from_final_result(Path(final_result_text))
+    args.changed_file = changed_files
+    args.allowed_scope_path = allowed_scope_paths
     if observed_changes_within_allowed_scope(changed_files, allowed_scope_paths):
         args.clean_surface = True
 
@@ -1255,40 +1254,10 @@ def maybe_capture_alpha_telemetry(
 
 
 CHECK_PATH_SCOPES = {
-    "state_file": ARTIFACT_SCOPE,
+    **ORCHESTRATION_PATH_SCOPES,
     "report_file": ARTIFACT_SCOPE,
-    "doctor_file": ARTIFACT_SCOPE,
-    "repair_packet_file": ARTIFACT_SCOPE,
-    "repair_handoff_file": ARTIFACT_SCOPE,
-    "repair_handoff_output": ARTIFACT_SCOPE,
-    "repair_packet_output": ARTIFACT_SCOPE,
-    "repair_receipt_file": ARTIFACT_SCOPE,
-    "repair_receipt_output": ARTIFACT_SCOPE,
-    "mode_selection_receipt": ARTIFACT_SCOPE,
     "consistency_recovery_file": ARTIFACT_SCOPE,
     "checkpoint_record_file": ARTIFACT_SCOPE,
-    "output": ARTIFACT_SCOPE,
-    "plan_output": ARTIFACT_SCOPE,
-    "preparation_receipt_output": ARTIFACT_SCOPE,
-    "refresh_output": ARTIFACT_SCOPE,
-    "observability_output": ARTIFACT_SCOPE,
-    "artifact_consistency_output": ARTIFACT_SCOPE,
-    "worked_artifact_output": ARTIFACT_SCOPE,
-    "run_artifact_output": ARTIFACT_SCOPE,
-    "acceptance_criteria_file": ARTIFACT_SCOPE,
-    "acceptance_validation_output": ARTIFACT_SCOPE,
-    "project_profile_file": ARTIFACT_SCOPE,
-    "target_path": PROJECT_SCOPE,
-    "baseline_file": ARTIFACT_SCOPE,
-    "synrail_file": ARTIFACT_SCOPE,
-    "comparison_output": ARTIFACT_SCOPE,
-    "artifact_path": DUAL_SCOPE,
-    "helper_path": PROJECT_SCOPE,
-    "prompt_identity_file": ARTIFACT_SCOPE,
-    "target_identity_file": DUAL_SCOPE,
-    "final_result": DUAL_SCOPE,
-    "readback": DUAL_SCOPE,
-    "scenario_proof": DUAL_SCOPE,
 }
 
 REPAIR_PACKET_PATH_SCOPES = {
@@ -1386,6 +1355,36 @@ def validate_check_like_paths(args: argparse.Namespace, *, artifact_root: Path |
     validate_namespace_paths(
         args,
         field_scopes=CHECK_PATH_SCOPES,
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+
+
+def invalidate_prior_check_report(
+    report_file: str,
+    *,
+    artifact_root: Path | None,
+    project_root: Path | None,
+) -> None:
+    report_args = argparse.Namespace(report_file=report_file)
+    validate_namespace_paths(
+        report_args,
+        field_scopes={"report_file": ARTIFACT_SCOPE},
+        project_root=project_root,
+        artifact_root=artifact_root,
+    )
+    report_path = Path(report_file)
+    if not report_path.exists() and not report_path.is_symlink():
+        return
+    if report_path.is_file() or report_path.is_symlink():
+        report_path.unlink()
+        return
+    raise PathScopeValidationError(
+        field="report_file",
+        value=report_file,
+        resolved_path=report_path.resolve(),
+        scope=ARTIFACT_SCOPE,
+        detail="report path is not a file surface",
         project_root=project_root,
         artifact_root=artifact_root,
     )
@@ -1875,6 +1874,34 @@ def maybe_print_doctor_override_warning(doctor_file: Path | None, *, file = sys.
         if item:
             lines.append(f"- {item}")
     print("\n".join(lines), file=file)
+
+
+def print_path_scope_blocking_summary(error: PathScopeValidationError, *, file = None) -> None:
+    output = sys.stderr if file is None else file
+    path_arg = error.as_payload()["path_arg"]
+    if error.field in {"artifact_root", "state_file"}:
+        next_step = (
+            "keep artifacts inside the target repository, or rerun with --ephemeral "
+            "and an explicit --project-root pointing at that repository"
+        )
+    elif error.field in {"target_path", "helper_path"}:
+        next_step = (
+            "run from the target repository root or pass --project-root explicitly, "
+            f"then set {path_arg} to a path inside that repository"
+        )
+    else:
+        next_step = (
+            f"set {path_arg} to a direct, non-symlink path inside its required "
+            "project or artifact root, then rerun the command"
+        )
+    lines = [
+        "Status: Blocked",
+        "Blocking diagnostic: PATH_SCOPE_VIOLATION",
+        f"What happened: {path_arg} failed required path-scope validation: {error.detail}.",
+        "What it means: Synrail stopped before closure; this command did not accept the task.",
+        f"What to do next: {next_step}.",
+    ]
+    print("\n".join(lines), file=output)
 
 
 def print_prompt_summary(output_file: Path) -> None:
@@ -2977,17 +3004,13 @@ def cmd_check(args: argparse.Namespace) -> int:
     root = alpha_root_from_args(args)
     project_root = default_project_root_from_args(args)
     if root:
-        try:
-            validate_root_within_project(
-                "artifact_root" if getattr(args, "artifact_root", None) else "state_file",
-                getattr(args, "artifact_root", None) or getattr(args, "state_file", ""),
-                root=root,
-                project_root=project_root,
-                artifact_root=root,
-            )
-        except PathScopeValidationError as exc:
-            print(json.dumps(exc.as_payload(), ensure_ascii=True))
-            return 2
+        validate_root_within_project(
+            "artifact_root" if getattr(args, "artifact_root", None) else "state_file",
+            getattr(args, "artifact_root", None) or getattr(args, "state_file", ""),
+            root=root,
+            project_root=project_root,
+            artifact_root=root,
+        )
         root.mkdir(parents=True, exist_ok=True)
     if root and not getattr(args, "state_file", None):
         args.state_file = str(alpha_file(root, "state"))
@@ -3030,6 +3053,20 @@ def cmd_check(args: argparse.Namespace) -> int:
     project_profile = load_project_profile(root) or {} if root else {}
     project_root_text = (project_profile.get("project_root", "") or "").strip()
     project_root = Path(project_root_text).resolve() if project_root_text else project_root
+    runtime_requested = all(
+        [
+            getattr(args, "target_path", None),
+            getattr(args, "baseline_identity", None),
+            getattr(args, "execution_surface_identity", None),
+            getattr(args, "final_result", None),
+        ]
+    )
+    if runtime_requested:
+        invalidate_prior_check_report(
+            args.report_file,
+            artifact_root=root,
+            project_root=project_root,
+        )
     validate_check_like_paths(args, artifact_root=root, project_root=project_root)
 
     if (
@@ -3049,15 +3086,6 @@ def cmd_check(args: argparse.Namespace) -> int:
         and Path(getattr(args, "state_file", "")).exists()
     ):
         return write_remote_unsupported_block(args=args, root=root)
-
-    runtime_requested = all(
-        [
-            getattr(args, "target_path", None),
-            getattr(args, "baseline_identity", None),
-            getattr(args, "execution_surface_identity", None),
-            getattr(args, "final_result", None),
-        ]
-    )
 
     if runtime_requested:
         state = ensure_run_state_extensions(load_json(Path(args.state_file)))
@@ -4509,6 +4537,8 @@ def main(argv: list[str] | None = None) -> int:
     except Exception:
         pass
     if isinstance(caught, PathScopeValidationError):
+        if getattr(args, "cmd", None) == "check" and getattr(args, "mode", "default") == "default":
+            print_path_scope_blocking_summary(caught)
         print(json.dumps(caught.as_payload(), ensure_ascii=True))
         return 2
     if caught is not None:

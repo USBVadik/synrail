@@ -164,12 +164,22 @@ external tester both benefit from.
 - [x] **Module 2 — Remove dead code.** `tools/reference/synrail_doctor_v0.py`
       has zero import references anywhere in `tools/` or `tests/` (the live doctor
       is `synrail_doctor_v1.py`). Delete it and keep the suite green.
-- [ ] **Module 3 — Separate advisory from blocking output.** The one known live
-      finding (`SERVER_GEMINI_ALPHA_FINDING_001.md`) is that a run can print
-      `PATH_SCOPE_VIOLATION` and `Status: Accepted` in the same user-facing
-      output. Reproduce first, then make advisory diagnostics visually distinct
-      from blocking errors so a tester is not confused about whether the run is
-      clean. Scope carefully; may split into its own runs.
+- [x] **Module 3 — Separate advisory from blocking output.** The live finding
+      (`SERVER_GEMINI_ALPHA_FINDING_001.md`) was reproduced as a real stale-
+      report fail-open: a child-only path-scope failure could be followed by a
+      prior `Status: Accepted` and exit 0. CLI and spine now share one canonical
+      orchestration path-scope map, prior derived reports are removed before a
+      new orchestration, and default output renders path violations as explicit
+      blocking results. Machine stdout remains JSON and states `accepted: false`
+      plus `closure_evaluated: false`; doctor overrides remain warnings. The
+      observed-safe dirty-worktree path also ignores caller-supplied scope claims
+      and recomputes its non-override evidence from live git plus proof-backed
+      provenance.
+
+      Definition of done: the previously failing accepted-then-out-of-root
+      coverage-profile sequence exits 2 with `Status: Blocked`, no accepted
+      token, and regression coverage for parent-map parity plus stale-report
+      defense.
 
 ## Track B: Unblock External Signal
 
@@ -276,17 +286,25 @@ surfaces (`readback` / `scenario_proof`), which Synrail names explicitly. Module
 was closed that way. Worth a dedicated deletion-disposition proof path later
 (backlog, not this pass).
 
-### B (handoff) — Module 3, separate advisory from blocking output
+### B (done) — Module 3, separate advisory from blocking output
 
-Not started; still the next code target. Reproduce first (the live finding is
-`SERVER_GEMINI_ALPHA_FINDING_001.md`, where `--target-path` resolved outside the
-repo). Located seam in `tools/reference/synrail_cli_v0.py`:
+Completed on 2026-07-12. The initial handoff assumption was corrected during
+reproduction: `PATH_SCOPE_VIOLATION` is a blocking diagnostic, not an advisory.
+The exact out-of-root `--target-path` stops before closure, while a spine-only
+out-of-root path exposed the real historical class: a failed child could reuse a
+prior accepted report.
 
-- `~line 2994` — blocking path prints a raw `PathScopeValidationError` JSON and returns 2.
-- `~line 3039` — `validate_check_like_paths` is called without a try/except wrapper.
-- `~line 1872` — `maybe_print_doctor_override_warning` is the clean `Warning:` renderer
-  that advisory diagnostics should be routed through.
+Landed:
 
-Plan: build an out-of-repo path reproduction harness plus a regression test, then
-route advisory path-scope diagnostics through the `Warning:` renderer so they read
-as advisory, never as a blocking error sitting next to `Status: Accepted`.
+- one canonical CLI/spine orchestration path-scope map;
+- stale report invalidation before runtime validation and orchestration;
+- human `Status: Blocked` output plus one machine JSON object with
+  `accepted: false` and `closure_evaluated: false`;
+- fail-closed handling for malformed report surfaces;
+- independent live-git plus proof-backed scope derivation, so caller-supplied
+  `--changed-file` / `--allowed-scope-path` claims cannot hide another dirty file;
+- regression coverage for the accepted-then-path-failure sequence, map drift,
+  report corruption, scope-claim spoofing, and default/dev rendering.
+
+Final local verification for this tranche is recorded in its PR rather than
+retroactively changing the historical 2026-07-11 session counts above.

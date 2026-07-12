@@ -10,7 +10,10 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
 from pathlib import Path
+from unittest import mock
 
 
 def run(cmd: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -25,6 +28,7 @@ if str(REPO_ROOT / "tools" / "reference") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "tools" / "reference"))
 
 from synrail_io_v0 import load_json  # noqa: E402
+import synrail_cli_v0  # noqa: E402
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -52,6 +56,50 @@ class ControlledStartSmokeTests(unittest.TestCase):
             text=True,
             env=env,
         )
+
+    def _create_accepted_greeting_run(self, project_root: Path) -> Path:
+        artifact_root = project_root / ".synrail"
+        start = self.run_alpha(
+            "start",
+            "--artifact-root",
+            ".synrail",
+            "--project-root",
+            str(project_root),
+            "--task-identity",
+            "Create accepted state before a path failure.",
+            cwd=project_root,
+        )
+        self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+
+        target = project_root / "greeting.txt"
+        target.write_text("Greeting:\nhello from Synrail\nEnd greeting.\n")
+        verification_result = "2:hello from Synrail"
+        state = load_json(artifact_root / "state.json")
+        write_json(
+            artifact_root / "final_result.json",
+            {
+                "request_id": state["run_id"],
+                "task_class": state["task_class"],
+                "status": "PROVEN",
+                "change_disposition": "modified",
+                "summary": "Created and verified the bounded greeting.",
+                "modified_files": ["greeting.txt"],
+                "git_diff": "",
+                "diff_provenance": {
+                    "method": "direct_file_observation",
+                    "changed_file": "greeting.txt",
+                    "added_line": "hello from Synrail",
+                    "context_before": "Greeting:",
+                    "context_after": "End greeting.",
+                    "verification_command": "grep -n 'hello from Synrail' greeting.txt",
+                    "verification_result": verification_result,
+                },
+            },
+        )
+        accepted = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+        self.assertEqual(0, accepted.returncode, accepted.stdout + accepted.stderr)
+        self.assertIn("Status: Accepted", accepted.stdout)
+        return artifact_root
 
     def test_no_args_prints_dashboard_instead_of_help(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_dashboard_") as tmpdir:
@@ -1673,7 +1721,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertNotEqual("DOCTOR_OVERRIDE_PRESENT", report.get("reason", ""))
             self.assertEqual("ACCEPTED", thin_output["outcome_class"])
 
-    def test_check_rejects_git_worktree_when_modified_files_exceed_proven_scope(self) -> None:
+    def test_check_rejects_git_worktree_when_dirty_files_exceed_proven_scope(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_git_unproven_scope_") as tmpdir:
             project_root = Path(tmpdir) / "project"
             artifact_root = project_root / ".synrail"
@@ -1725,7 +1773,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
                     "status": "PROVEN",
                     "change_disposition": "modified",
                     "summary": "Implemented the bounded change and verified it locally.",
-                    "modified_files": ["intended.txt", "unrelated.txt"],
+                    "modified_files": ["intended.txt"],
                     "git_diff": "",
                     "diff_provenance": {
                         "method": "direct_file_observation",
@@ -1762,13 +1810,33 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(1, rejected_state["check_count"])
             self.assertEqual("", rejected_state["closure_timestamp_utc"])
 
+            spoofed_scope = self.run_alpha(
+                "check",
+                "--artifact-root",
+                ".synrail",
+                "--changed-file",
+                "intended.txt",
+                "--allowed-scope-path",
+                "intended.txt",
+                cwd=project_root,
+            )
+            self.assertEqual(0, spoofed_scope.returncode, spoofed_scope.stdout + spoofed_scope.stderr)
+            self.assertIn("Workspace Not Trusted", spoofed_scope.stdout)
+            self.assertNotIn("Status: Accepted", {line.strip() for line in spoofed_scope.stdout.splitlines()})
+
+            spoofed_doctor = load_json(artifact_root / "doctor.json")
+            spoofed_report = load_json(artifact_root / "report.json")
+            self.assertEqual("FAIL", spoofed_doctor["gate_results"]["clean_execution_surface"]["status"])
+            self.assertIn("unrelated.txt", spoofed_doctor["gate_results"]["clean_execution_surface"]["note"])
+            self.assertEqual("DOCTOR_NOT_GREEN", spoofed_report.get("reason", ""))
+
             retry = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, retry.returncode, retry.stdout + retry.stderr)
             self.assertIn("Workspace Not Trusted", retry.stdout)
             self.assertIn("--clean-surface", retry.stdout)
 
             retried_state = load_json(artifact_root / "state.json")
-            self.assertEqual(2, retried_state["check_count"])
+            self.assertEqual(3, retried_state["check_count"])
             self.assertEqual("", retried_state["closure_timestamp_utc"])
 
     def test_check_waives_cleanup_from_runtime_doctor_truth(self) -> None:
@@ -1995,8 +2063,151 @@ class ControlledStartSmokeTests(unittest.TestCase):
             payload = json.loads(result.stdout)
             self.assertEqual("ERROR", payload["result"])
             self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("BLOCKING", payload["severity"])
+            self.assertFalse(payload["accepted"])
+            self.assertFalse(payload["closure_evaluated"])
             self.assertEqual("--artifact-root", payload["path_arg"])
             self.assertIn("escapes project root", payload["detail"])
+            self.assertIn("Status: Blocked", result.stderr)
+            self.assertIn("Blocking diagnostic: PATH_SCOPE_VIOLATION", result.stderr)
+            self.assertIn("stopped before closure", result.stderr)
+            self.assertIn("--ephemeral", result.stderr)
+            self.assertNotIn("Status: Accepted", result.stdout + result.stderr)
+
+    def test_check_target_escape_is_blocking_and_never_rendered_as_accepted(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_target_output_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            outside = Path(tmpdir) / "outside"
+            project_root.mkdir(parents=True, exist_ok=True)
+            outside.mkdir(parents=True, exist_ok=True)
+
+            result = self.run_alpha(
+                "check",
+                "--artifact-root",
+                str(artifact_root),
+                "--project-root",
+                str(project_root),
+                "--target-path",
+                str(outside),
+                cwd=project_root,
+            )
+
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("BLOCKING", payload["severity"])
+            self.assertFalse(payload["accepted"])
+            self.assertFalse(payload["closure_evaluated"])
+            self.assertEqual("--target-path", payload["path_arg"])
+            self.assertIn("Status: Blocked", result.stderr)
+            self.assertIn("this command did not accept the task", result.stderr)
+            self.assertIn("run from the target repository root", result.stderr)
+            self.assertNotIn("Warning:", result.stderr)
+            self.assertNotIn("Status: Accepted", result.stdout + result.stderr)
+
+    def test_check_dev_mode_keeps_path_scope_failure_machine_only(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_dev_output_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            outside = Path(tmpdir) / "outside"
+            project_root.mkdir(parents=True, exist_ok=True)
+            outside.mkdir(parents=True, exist_ok=True)
+
+            result = self.run_alpha(
+                "check",
+                "--artifact-root",
+                str(outside),
+                "--mode",
+                "dev",
+                cwd=project_root,
+            )
+
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            self.assertEqual("PATH_SCOPE_VIOLATION", json.loads(result.stdout)["reason"])
+            self.assertEqual("", result.stderr)
+
+    def test_check_rejects_child_path_field_before_stale_accepted_report_can_render(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_stale_report_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root = self._create_accepted_greeting_run(project_root)
+            outside = Path(tmpdir) / "outside-profile.json"
+            outside.write_text("{}\n")
+
+            result = self.run_alpha(
+                "check",
+                "--artifact-root",
+                ".synrail",
+                "--coverage-profile-file",
+                str(outside),
+                cwd=project_root,
+            )
+
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("--coverage-profile-file", payload["path_arg"])
+            self.assertFalse(payload["accepted"])
+            self.assertIn("Status: Blocked", result.stderr)
+            self.assertNotIn("Status: Accepted", result.stdout + result.stderr)
+            self.assertFalse((artifact_root / "report.json").exists())
+
+    def test_check_blocks_corrupt_report_directory_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_report_directory_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root = self._create_accepted_greeting_run(project_root)
+            report_path = artifact_root / "report.json"
+            report_path.unlink()
+            report_path.mkdir()
+
+            result = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("PATH_SCOPE_VIOLATION", payload["reason"])
+            self.assertEqual("--report-file", payload["path_arg"])
+            self.assertIn("not a file surface", payload["detail"])
+            self.assertIn("Status: Blocked", result.stderr)
+            self.assertNotIn("Traceback", result.stdout + result.stderr)
+            self.assertNotIn("Status: Accepted", result.stdout + result.stderr)
+
+    def test_failed_child_cannot_reuse_stale_report_if_parent_scope_map_drifts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_path_scope_child_failure_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            artifact_root = self._create_accepted_greeting_run(project_root)
+            outside = Path(tmpdir) / "outside-profile.json"
+            outside.write_text("{}\n")
+            parent_scopes_without_coverage = dict(synrail_cli_v0.CHECK_PATH_SCOPES)
+            parent_scopes_without_coverage.pop("coverage_profile_file")
+            stdout = StringIO()
+            stderr = StringIO()
+
+            with mock.patch.object(
+                synrail_cli_v0,
+                "CHECK_PATH_SCOPES",
+                parent_scopes_without_coverage,
+            ), mock.patch.object(
+                synrail_cli_v0,
+                "current_project_root",
+                return_value=project_root,
+            ), redirect_stdout(stdout), redirect_stderr(stderr):
+                code = synrail_cli_v0.main(
+                    [
+                        "check",
+                        "--artifact-root",
+                        str(artifact_root),
+                        "--project-root",
+                        str(project_root),
+                        "--coverage-profile-file",
+                        str(outside),
+                    ]
+                )
+
+            self.assertEqual(2, code, stdout.getvalue() + stderr.getvalue())
+            self.assertIn("PATH_SCOPE_VIOLATION", stdout.getvalue())
+            self.assertNotIn("Status: Accepted", stdout.getvalue() + stderr.getvalue())
+            self.assertFalse((artifact_root / "report.json").exists())
 
     def test_direct_doctor_rejects_target_identity_escape_with_bounded_payload(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_path_scope_doctor_") as tmpdir:
