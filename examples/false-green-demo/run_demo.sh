@@ -15,6 +15,17 @@ else
   exit 2
 fi
 
+if [[ -n "${SYNRAIL_PYTHON:-}" ]]; then
+  PYTHON="$SYNRAIL_PYTHON"
+elif command -v python3 >/dev/null 2>&1; then
+  PYTHON="$(command -v python3)"
+elif command -v python >/dev/null 2>&1; then
+  PYTHON="$(command -v python)"
+else
+  echo "Synrail demo: Python is required to write the repaired proof." >&2
+  exit 2
+fi
+
 DEMO_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/synrail-false-green.XXXXXX")"
 DEMO_PROJECT="$DEMO_ROOT/project"
 mkdir -p "$DEMO_PROJECT"
@@ -58,7 +69,7 @@ verification_result="$(cd "$DEMO_PROJECT" && grep -n 'hello from Synrail' greeti
 printf '$ grep -n %s greeting.txt\n' "'hello from Synrail'"
 printf '%s\n' "$verification_result"
 
-DEMO_PROJECT="$DEMO_PROJECT" VERIFICATION_RESULT="$verification_result" python3 - <<'PY'
+DEMO_PROJECT="$DEMO_PROJECT" VERIFICATION_RESULT="$verification_result" "$PYTHON" - <<'PY'
 import json
 import os
 from pathlib import Path

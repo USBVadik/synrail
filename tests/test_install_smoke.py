@@ -87,12 +87,17 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertNotIn("fingerprint", result.stdout)
 
     def test_false_green_demo_executes_real_block_and_repair_loop(self) -> None:
+        bash = shutil.which("bash")
+        self.assertIsNotNone(bash, "the live false-green demo requires bash")
+        env = os.environ.copy()
+        env["SYNRAIL_PYTHON"] = PYTHON
         result = subprocess.run(
-            [str(REPO_ROOT / "examples" / "false-green-demo" / "run_demo.sh")],
+            [bash, str(REPO_ROOT / "examples" / "false-green-demo" / "run_demo.sh")],
             check=True,
             cwd=REPO_ROOT,
             capture_output=True,
             text=True,
+            env=env,
         )
 
         self.assertIn("Synrail: Status: Proof Invalid", result.stdout)
