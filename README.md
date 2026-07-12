@@ -99,11 +99,27 @@ In that case, the baseline is probably better. Synrail becomes useful when verif
 
 ## False-Green Cases Synrail Targets
 
-- tests claimed as passed but not actually run
 - proof that does not match the changed files
 - a plausible diff that does not satisfy the requested task
 - narrative completion instead of concrete runtime evidence
+- recorded verification evidence that fails read-only recheck
+- stale proof that no longer matches the live worktree
 - failed repair handoff without a bounded continuation path
+
+## Known Gap: Behavioral Claims Are Not Re-Executed Yet
+
+Synrail currently re-executes only read-only evidence commands
+(`grep`, `cat`, `head`, `tail`, `git diff/show/log`). It does not re-run
+test suites. A claim like "tests passed" is checked for proof shape,
+freshness, and diff binding, not by independently re-running the tests.
+An agent that substitutes a valid read-only proof for a behavioral claim
+can still reach `Status: Accepted` while the real tests fail.
+
+Closing this gap is the next roadmap priority: operator-owned
+verification profiles that let `synrail check` re-execute an approved
+test command and require a fresh receipt before acceptance. Until that
+lands, read `Status: Accepted` as "the recorded proof is real, fresh,
+and in scope," not as "the program behaves as claimed."
 
 ## Quick Start
 
