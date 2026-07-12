@@ -82,6 +82,12 @@ Use the GitHub issue templates to keep bug reports and feature requests bounded.
 - feature requests should explain why the change belongs in Synrail itself and what should stay out of scope
 - broad remote-host, downstream-agent, or production workflow asks should be labeled explicitly as outside the current support boundary unless the request is about tightening that boundary honestly
 
+Before implementation, reproduce each alpha report on current `main` and assign
+one primary owner: `ownership:product`, `ownership:operator`, or
+`ownership:harness`. New reports begin at `ownership:needs-triage`; remove that
+label after classification. Split mixed-owner reports, and require a failing
+regression before a product-owned kernel fix.
+
 Never attach an unredacted bug packet, secret, private source excerpt, or absolute
 path to a public issue. Use the private vulnerability-reporting path in
 `SECURITY.md` for suspected security issues.

@@ -15,11 +15,25 @@ Only `Status: Accepted` means the task may be reported as complete.
 
 ## Install
 
+macOS / Linux:
+
 ```bash
 make install-dev
 ```
 
+Windows PowerShell:
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]" -c constraints-dev.txt
+$env:Path = "$(Resolve-Path .venv\Scripts);$env:Path"
+synrail.exe --help
+```
+
 This creates the local development venv and installs the `synrail` console script used by the public quickstart.
+The current animated demo is a Bash harness. On Windows, run it from Git Bash
+after completing the PowerShell install above.
 
 ## Optional One-Time Repo Setup For Local Agents
 
