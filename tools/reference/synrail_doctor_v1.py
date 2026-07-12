@@ -66,6 +66,11 @@ except ImportError:
         validate_root_within_project,
     )
 
+try:
+    from .synrail_safe_git_v0 import SafeGitError, run_safe_git
+except ImportError:
+    from synrail_safe_git_v0 import SafeGitError, run_safe_git
+
 
 DOCTOR_PATH_SCOPES = {
     "output": ARTIFACT_SCOPE,
@@ -363,12 +368,10 @@ def probe_clean_execution_surface(args: argparse.Namespace) -> dict:
         return gate("FAIL", "target execution surface does not exist")
 
     if (target / ".git").exists():
-        completed = subprocess.run(
-            ["git", "-C", str(target), "status", "--porcelain"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+        try:
+            completed = run_safe_git(target, ["status", "--porcelain"])
+        except SafeGitError:
+            return gate("FAIL", "git status could not inspect the target surface safely")
         if completed.returncode != 0:
             return gate("FAIL", "git status could not inspect the target surface")
         if completed.stdout.strip():

@@ -1951,7 +1951,12 @@ class TruthRegressionTests(unittest.TestCase):
             original_run = subprocess.run
 
             def mutating_run(cmd: object, *run_args: object, **run_kwargs: object) -> subprocess.CompletedProcess:
-                if isinstance(cmd, list) and cmd[:2] == ["grep", "-n"]:
+                if (
+                    isinstance(cmd, list)
+                    and len(cmd) >= 2
+                    and Path(cmd[0]).name == "grep"
+                    and cmd[1] == "-n"
+                ):
                     target.write_text("import logging\nimport logging changed\n")
                 return original_run(cmd, *run_args, **run_kwargs)
 
@@ -2013,7 +2018,12 @@ class TruthRegressionTests(unittest.TestCase):
             original_run = subprocess.run
 
             def mutating_run(cmd: object, *run_args: object, **run_kwargs: object) -> subprocess.CompletedProcess:
-                if isinstance(cmd, list) and cmd[:2] == ["grep", "-n"]:
+                if (
+                    isinstance(cmd, list)
+                    and len(cmd) >= 2
+                    and Path(cmd[0]).name == "grep"
+                    and cmd[1] == "-n"
+                ):
                     target.unlink()
                     target.symlink_to(outside)
                 return original_run(cmd, *run_args, **run_kwargs)

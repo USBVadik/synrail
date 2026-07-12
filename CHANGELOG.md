@@ -22,6 +22,19 @@ All notable changes to the public Synrail alpha are recorded here.
 - Make first-tester runs repo-clean by default and require ownership triage before
   an alpha report can trigger a kernel change.
 - Move repo-owned and generated GitHub workflows to Node 24 action releases.
+- Add a fail-closed `synrail record` happy path for one tracked changed file:
+  capture a real patch plus recheckable evidence without hand-authoring JSON,
+  while leaving acceptance exclusively to `synrail check`.
+- Keep `--ephemeral --project-root` usable across status, proof guidance,
+  templates, record, check, and cleanup, and hide internal orchestration flags
+  from public `check --help`.
+- Harden every Git subprocess against local execution config: inherited config
+  injection, hooks, fsmonitor, external diff/textconv, and clean/smudge/process
+  filters are neutralized; filtered workspace mutation fails closed. Reject
+  allowed recheck binaries resolved from inside the target repository.
+- Bind the thin recorder to the clean worktree and `HEAD` observed at `start`,
+  then rebind its saved patch to the live worktree during `check`, so
+  pre-existing or post-record edits cannot be relabeled as current-run proof.
 
 ## 0.1.2 — 2026-06-11
 

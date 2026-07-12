@@ -63,11 +63,19 @@ with the repo-clean lane:
 
 ```bash
 synrail start --ephemeral "Describe the bounded local change."
-# edit the final_result.json path printed by start
+# for one existing tracked changed file:
+synrail record path/to/file --ephemeral \
+  --summary "Describe the concrete bounded result." \
+  --verify "grep -n 'needle' path/to/file"
+# otherwise edit the final_result.json path printed by start
 synrail check --ephemeral
 # follow only the named repair step until Status: Accepted
 synrail cleanup --ephemeral
 ```
+
+The `record` fast path requires a clean git worktree at `start` and an unchanged
+`HEAD`. If the repository already carries work, use explicit manual proof rather
+than allowing Synrail to attribute old changes to the new run.
 
 ## What kind of task to try
 

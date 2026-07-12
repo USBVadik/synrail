@@ -53,12 +53,20 @@ def policy_command_examples_for_binary(*, artifact_root: str, command: str) -> d
         return {
             "status": command,
             "start": f'{command} start "Describe the bounded local change."',
+            "record": (
+                f'{command} record path/to/file --summary "Describe the concrete bounded result." '
+                '--verify "grep -n \'expected text\' path/to/file"'
+            ),
             "check": f"{command} check",
             "repair": f"{command} repair-step",
         }
     return {
         "status": f"{command} status --artifact-root {quoted_root}",
         "start": f'{command} start --artifact-root {quoted_root} "Describe the bounded local change."',
+        "record": (
+            f'{command} record path/to/file --summary "Describe the concrete bounded result." '
+            f'--verify "grep -n \'expected text\' path/to/file" --artifact-root {quoted_root}'
+        ),
         "check": f"{command} check --artifact-root {quoted_root}",
         "repair": f"{command} repair-step --artifact-root {quoted_root}",
     }
@@ -114,15 +122,19 @@ def policy_explicit_artifact_root(artifact_root: str) -> str:
 
 def policy_run_loop_lines(*, artifact_root: str, command: str) -> list[str]:
     explicit_root = policy_explicit_artifact_root(artifact_root)
+    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
     return [
         "## Run Loop",
         "",
         "```bash",
         f'{command} start "TASK" --artifact-root {explicit_root}',
-        "# work",
+        "# make one bounded change and run the real local verification",
+        commands["record"],
         f"{command} check --artifact-root {explicit_root}",
         "# only stop on Status: Accepted",
         "```",
+        "",
+        "Use `record` only when the run started with a clean git worktree, `HEAD` did not change, and exactly one tracked regular file changed. For multi-file, untracked, deleted, no-op, no-git, pre-dirty, or revision-changing work, update `final_result.json` with complete structured proof instead. `record` never accepts the task; `check` remains the acceptance gate.",
         "",
     ]
 
@@ -245,7 +257,8 @@ def render_local_workflow_policy(
         "## Work",
         "",
         "- Keep edits bounded and local to this repo.",
-        f"- Run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+        f"- For a clean-start change to exactly one tracked regular file, run the real local verification and use `{commands['record']}` to record recheckable proof without hand-authoring JSON.",
+        f"- For every other contour, run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
         "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
         f"- {policy_no_git_proof_line(artifact_root)}",
         f"- {policy_recheck_command_line()}",
@@ -374,11 +387,12 @@ def render_policy_markdown(
         "```",
         "",
         "2. Keep the change local and bounded to the stated task.",
-        f"3. Run the local commands needed to verify the change honestly, then edit `{artifact_root}/final_result.json` in place as the work becomes real. Only materialize readback or scenario proof if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
-        "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
-        f"5. {policy_no_git_proof_line(artifact_root)}",
-        f"6. {policy_recheck_command_line()}",
-        f"7. {policy_path_scope_block_line()}",
+        f"3. For a clean-start change to exactly one tracked regular file, run the real local verification and use `{commands['record']}`. `record` writes proof only; it does not accept the task.",
+        f"4. For every other contour, run the local commands needed to verify the change honestly, then edit `{artifact_root}/final_result.json` in place as the work becomes real. Only materialize readback or scenario proof if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+        "5. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
+        f"6. {policy_no_git_proof_line(artifact_root)}",
+        f"7. {policy_recheck_command_line()}",
+        f"8. {policy_path_scope_block_line()}",
         "",
         *policy_run_loop_lines(artifact_root=artifact_root, command=command),
         "## Before You Claim Success",

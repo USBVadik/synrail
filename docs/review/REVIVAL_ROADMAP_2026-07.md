@@ -213,6 +213,34 @@ overhead. Sourced from `LAST.md`, unchanged in intent:
 - change-impact invalidation for cheaper retry
 - shell pruning to felt-thin first loop
 
+## Track C: Thin First Run
+
+Owner-directed product work resumed before the external tester ledger was full.
+The bounded goal is to reduce ceremony without changing what `Accepted` means.
+
+- [x] Preserve explicit `--project-root` across every public-shell command that
+      resolves an ephemeral artifact root.
+- [x] Reduce public `check --help` to user-facing locator/mode options while
+      preserving internal parser compatibility.
+- [x] Add `synrail record` for the cheapest honest contour: exactly one direct,
+      existing, tracked changed file with a real git patch and one command that
+      the existing closure policy can recheck.
+- [x] Bind that contour to a clean git baseline and unchanged `HEAD`, and route
+      Git subprocesses through a shared layer that blocks local executable Git
+      config, hooks, fsmonitor, external diff/textconv, filters, inherited
+      `GIT_*` redirection, and repo-local command-binary substitution.
+- [x] Rebind recorder-generated proof to the live `HEAD`-to-worktree patch at
+      closure time, so a post-record edit becomes non-green until proof is
+      recorded again.
+- [x] Keep ambiguous contours fail closed. Multi-file, untracked, deleted,
+      already-satisfied/no-op, no-git, oversized patch, symlink, concurrent
+      mutation, and unsupported verification-command cases remain on the
+      explicit proof path.
+
+Definition of done: a real cross-repo ephemeral run reaches `Accepted` through
+`start -> edit -> record -> check` without an override; negative cases do not
+overwrite the starter proof; the full release gate and adversarial review pass.
+
 ## Do Not Do Yet
 
 - No typed-evidence-graph or VSA closure-certificate rewrite.

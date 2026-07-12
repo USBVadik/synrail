@@ -110,19 +110,31 @@ In that case, the baseline is probably better. Synrail becomes useful when verif
 ```bash
 # after make install-dev
 
-# Workflow: start → verify locally → strengthen final_result.json first → check → fix → check again
+# Tracked single-file workflow: start → change → record → check
 .venv/bin/synrail start "Describe the bounded local change."
-# run local verification, strengthen .synrail/final_result.json first,
-# leave readback/scenario_proof untouched unless synrail check names them, then:
+.venv/bin/synrail record path/to/file \
+  --summary "Describe the concrete bounded result." \
+  --verify "grep -n 'needle' path/to/file"
 .venv/bin/synrail check
 # if non-green, fix what check says, then rerun .venv/bin/synrail check
 ```
+
+`record` is the cheap path for exactly one existing tracked file in a run that
+started from a clean git worktree and kept the same `HEAD`. It captures a
+real `HEAD`-to-worktree patch and runs the same read-only command policy that
+closure will recheck. It writes proof, not acceptance; only the following
+`check` may return `Status: Accepted`. For multi-file, untracked, deleted, no-op,
+pre-dirty, revision-changing, or no-git work, use the explicit
+`final_result.json` path described in the
+[First Run Guide](docs/core/FIRST_RUN_GUIDE.md).
 
 Prefer a repo-clean artifact lane when you are using Synrail for QA/analysis across many repositories:
 
 ```bash
 .venv/bin/synrail start --ephemeral "Describe the bounded local analysis."
-# edit the reported final_result.json in the user-cache artifact root
+.venv/bin/synrail record path/to/file --ephemeral \
+  --summary "Describe the concrete bounded result." \
+  --verify "grep -n 'needle' path/to/file"
 .venv/bin/synrail check --ephemeral
 .venv/bin/synrail cleanup --ephemeral
 ```

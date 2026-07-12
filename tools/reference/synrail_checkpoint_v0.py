@@ -7,7 +7,6 @@ import argparse
 import json
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -25,6 +24,11 @@ except ImportError:
     from synrail_path_scope_v0 import PROJECT_SCOPE, PathScopeValidationError, path_in_root, symlinked_ancestor_within, validate_namespace_paths, validate_root_within_project
     from synrail_repair_handoff_v0 import build_resumability
     from synrail_validate_v0 import load_json as load_json_document, validate_document
+
+try:
+    from .synrail_safe_git_v0 import SafeGitError, run_safe_git
+except ImportError:
+    from synrail_safe_git_v0 import SafeGitError, run_safe_git
 
 
 HERE = Path(__file__).resolve().parent
@@ -109,16 +113,10 @@ def validate_checkpoint_restore_paths(args: argparse.Namespace, *, project_root:
 def _git_head_ref(project_root: Path) -> str:
     """Return the current git HEAD commit hash, or empty string if not in a git repo."""
     try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=str(project_root),
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = run_safe_git(project_root, ["rev-parse", "HEAD"])
         if result.returncode == 0:
             return result.stdout.strip()
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except SafeGitError:
         pass
     return ""
 
@@ -126,16 +124,14 @@ def _git_head_ref(project_root: Path) -> str:
 def _git_is_repository(project_root: Path) -> bool:
     """Return True when project_root is inside a git work tree, even without commits."""
     try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--is-inside-work-tree"],
-            cwd=str(project_root),
-            capture_output=True,
-            text=True,
-            timeout=10,
+        result = run_safe_git(
+            project_root,
+            ["rev-parse", "--is-inside-work-tree"],
+            disable_filters=False,
         )
         if result.returncode == 0:
             return result.stdout.strip() == "true"
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except SafeGitError:
         pass
     return False
 
@@ -143,16 +139,10 @@ def _git_is_repository(project_root: Path) -> bool:
 def _git_has_uncommitted(project_root: Path) -> bool:
     """Return True if the workspace has tracked staged/unstaged changes."""
     try:
-        result = subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=no"],
-            cwd=str(project_root),
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = run_safe_git(project_root, ["status", "--porcelain", "--untracked-files=no"])
         if result.returncode == 0:
             return bool(result.stdout.strip())
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except SafeGitError:
         pass
     return False
 
@@ -160,13 +150,7 @@ def _git_has_uncommitted(project_root: Path) -> bool:
 def _git_has_untracked(project_root: Path) -> bool:
     """Return True if the workspace has untracked files (not covered by git stash create)."""
     try:
-        result = subprocess.run(
-            ["git", "ls-files", "--others", "--exclude-standard"],
-            cwd=str(project_root),
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = run_safe_git(project_root, ["ls-files", "--others", "--exclude-standard"])
         if result.returncode == 0:
             visible_untracked = [
                 line.strip()
@@ -174,7 +158,7 @@ def _git_has_untracked(project_root: Path) -> bool:
                 if line.strip() and not line.strip().startswith(".synrail/")
             ]
             return bool(visible_untracked)
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except SafeGitError:
         pass
     return False
 
@@ -182,16 +166,15 @@ def _git_has_untracked(project_root: Path) -> bool:
 def _git_stash_create(project_root: Path) -> str:
     """Create a git stash entry without modifying the working tree. Returns stash ref or empty."""
     try:
-        result = subprocess.run(
-            ["git", "stash", "create", "synrail pre-run snapshot"],
-            cwd=str(project_root),
-            capture_output=True,
-            text=True,
+        result = run_safe_git(
+            project_root,
+            ["stash", "create", "synrail pre-run snapshot"],
             timeout=30,
+            reject_configured_filters=True,
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except SafeGitError:
         pass
     return ""
 
@@ -202,44 +185,40 @@ def _git_restore_snapshot(project_root: Path, *, head_ref: str, stash_ref: str) 
         rollback_head_ref = _git_head_ref(project_root)
         rollback_stash_ref = _git_stash_create(project_root)
 
-        reset = subprocess.run(
-            ["git", "checkout", head_ref, "--force"],
-            cwd=str(project_root),
-            capture_output=True,
-            text=True,
+        reset = run_safe_git(
+            project_root,
+            ["checkout", head_ref, "--force"],
             timeout=30,
+            reject_configured_filters=True,
         )
         if reset.returncode != 0:
             return False, f"git checkout failed: {reset.stderr.strip()}"
         if stash_ref:
-            apply = subprocess.run(
-                ["git", "stash", "apply", stash_ref],
-                cwd=str(project_root),
-                capture_output=True,
-                text=True,
+            apply = run_safe_git(
+                project_root,
+                ["stash", "apply", stash_ref],
                 timeout=30,
+                reject_configured_filters=True,
             )
             if apply.returncode != 0:
                 rollback_failures: list[str] = []
                 if rollback_head_ref:
-                    rollback_reset = subprocess.run(
-                        ["git", "checkout", rollback_head_ref, "--force"],
-                        cwd=str(project_root),
-                        capture_output=True,
-                        text=True,
+                    rollback_reset = run_safe_git(
+                        project_root,
+                        ["checkout", rollback_head_ref, "--force"],
                         timeout=30,
+                        reject_configured_filters=True,
                     )
                     if rollback_reset.returncode != 0:
                         rollback_failures.append(f"git rollback checkout failed: {rollback_reset.stderr.strip()}")
                 else:
                     rollback_failures.append("git rollback checkout failed: current HEAD is unavailable")
                 if rollback_stash_ref:
-                    rollback_apply = subprocess.run(
-                        ["git", "stash", "apply", rollback_stash_ref],
-                        cwd=str(project_root),
-                        capture_output=True,
-                        text=True,
+                    rollback_apply = run_safe_git(
+                        project_root,
+                        ["stash", "apply", rollback_stash_ref],
                         timeout=30,
+                        reject_configured_filters=True,
                     )
                     if rollback_apply.returncode != 0:
                         rollback_failures.append(f"git rollback stash apply failed: {rollback_apply.stderr.strip()}")
@@ -248,7 +227,7 @@ def _git_restore_snapshot(project_root: Path, *, head_ref: str, stash_ref: str) 
                     error += " | rollback restore failed: " + "; ".join(rollback_failures)
                 return False, error
         return True, ""
-    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+    except SafeGitError as exc:
         return False, str(exc)
 
 

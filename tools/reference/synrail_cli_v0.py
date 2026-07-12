@@ -306,6 +306,24 @@ except ImportError:
         validate_root_within_project,
     )
 
+try:
+    from .synrail_proof_recorder_v0 import (
+        ProofRecordError,
+        capture_record_baseline,
+        record_single_file_proof,
+    )
+except ImportError:
+    from synrail_proof_recorder_v0 import (
+        ProofRecordError,
+        capture_record_baseline,
+        record_single_file_proof,
+    )
+
+try:
+    from .synrail_safe_git_v0 import SafeGitError, run_safe_git
+except ImportError:
+    from synrail_safe_git_v0 import SafeGitError, run_safe_git
+
 
 HERE = Path(__file__).resolve().parent
 SPINE = HERE / "synrail_spine_v0.py"
@@ -455,12 +473,13 @@ def filter_artifact_root_changes(changed_files: list[str], artifact_root: str) -
 
 
 def git_status_changed_paths(target: Path) -> list[str] | None:
-    completed = subprocess.run(
-        ["git", "-C", str(target), "status", "--porcelain", "--untracked-files=all"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        completed = run_safe_git(
+            target,
+            ["status", "--porcelain", "--untracked-files=all"],
+        )
+    except SafeGitError:
+        return None
     if completed.returncode != 0:
         return None
 
@@ -1002,6 +1021,10 @@ def build_project_profile(*, project_root: Path, root: Path, task_class: str) ->
         "final_result_candidates": candidate_paths(project_root, root, ["final_result.json", "final_result.txt", "result.json", "result.txt"]),
         "readback_candidates": candidate_paths(project_root, root, ["readback.json", "readback.txt"]),
         "scenario_proof_candidates": candidate_paths(project_root, root, ["scenario_proof.json", "scenario_proof.md", "scenario_proof.txt"]),
+        "thin_record_baseline": capture_record_baseline(
+            project_root=project_root,
+            artifact_root=root,
+        ),
         **git_context,
     }
 
@@ -1130,7 +1153,12 @@ def plain_shell_command(*parts: str, project_root: Path | None = None) -> str:
 
 def shell_command(root: Path | None, *parts: str, project_root: Path | None = None) -> str:
     command = [preferred_cli_executable(project_root=project_root), *parts]
-    if root is not None and not is_default_workspace_artifact_root(root, project_root=project_root):
+    profile = load_project_profile(root) if root is not None else None
+    if profile and profile.get("artifact_storage_mode") == "ephemeral_cache":
+        command.append("--ephemeral")
+        if project_root is not None:
+            command.extend(["--project-root", display_path(project_root)])
+    elif root is not None and not is_default_workspace_artifact_root(root, project_root=project_root):
         command.extend(["--artifact-root", display_path(root)])
     return " ".join(shlex.quote(part) for part in command)
 
@@ -1229,7 +1257,7 @@ def telemetry_flag_names(argv: list[str]) -> list[str]:
 
 def should_capture_alpha_telemetry(args: argparse.Namespace) -> bool:
     path = command_path_from_args(args)
-    return path[0] in {"init", "start", "check", "cleanup", "refresh-acceptance", "generate-prompt", "next-step", "repair-step", "restore", "resume", "continue", "checkpoint", "session-export", "bug-packet"}
+    return path[0] in {"init", "start", "record", "check", "cleanup", "refresh-acceptance", "generate-prompt", "next-step", "repair-step", "restore", "resume", "continue", "checkpoint", "session-export", "bug-packet"}
 
 
 def maybe_capture_alpha_telemetry(
@@ -1321,13 +1349,13 @@ def project_root_from_profile(root: Path | None) -> Path | None:
 
 def discover_git_project_root(start: Path) -> Path | None:
     try:
-        completed = subprocess.run(
-            ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
+        completed = run_safe_git(
+            start,
+            ["rev-parse", "--show-toplevel"],
             timeout=2,
+            disable_filters=False,
         )
-    except (OSError, subprocess.SubprocessError):
+    except SafeGitError:
         return None
     if completed.returncode != 0:
         return None
@@ -1976,19 +2004,30 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
     profile = load_project_profile(root) or {}
     lines = [
         "Controlled run started.",
-        "Do this now: make the bounded change, run local verification, then strengthen final_result.json first.",
+        "Do this now: make the bounded change and run local verification; then use synrail record for one tracked file or strengthen final_result.json for other contours.",
         f"Artifact root: {display_path(root)}",
         f"Run id: {state.get('run_id', '')}",
         "Starter proof surface is ready for this run.",
         f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
         "- fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.",
-        "Need a canonical final_result shape? run " + plain_shell_command("final-result-template", project_root=project_root),
+        "Fast tracked single-file path: "
+        + shell_command(
+            root,
+            "record",
+            "path/to/file",
+            "--summary",
+            "Describe the concrete bounded result.",
+            "--verify",
+            "grep -n 'needle' path/to/file",
+            project_root=project_root,
+        ),
+        "Need a canonical final_result shape? run " + shell_command(root, "final-result-template", project_root=project_root),
         "Then run: " + shell_command(root, "check", project_root=project_root),
     ]
     if profile.get("workspace_isolation_note", ""):
         lines.append("Workspace note: " + profile["workspace_isolation_note"])
     if profile.get("prefers_runtime_evidence", False):
-        lines.append("Runtime helper: " + plain_shell_command("runtime-helper", project_root=project_root))
+        lines.append("Runtime helper: " + shell_command(root, "runtime-helper", project_root=project_root))
     print("\n".join(lines))
 
 
@@ -2002,14 +2041,25 @@ def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Pa
         "What happened: this artifact root still points at the current untouched run, so Synrail did not start a second one.",
         f"Artifact root: {display_path(root)}",
         f"Run id: {state.get('run_id', '')}",
-        "Continue this run by making the bounded change, running local verification, and strengthening final_result.json first.",
+        "Continue this run by making the bounded change and running local verification; then use synrail record for one tracked file or strengthen final_result.json for other contours.",
         f"- final result: {preferred.get('final_result', display_path_from_base(root / 'final_result.json', base=project_root))}",
         "- fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.",
-        "Need a canonical final_result shape? run " + plain_shell_command("final-result-template", project_root=project_root),
+        "Fast tracked single-file path: "
+        + shell_command(
+            root,
+            "record",
+            "path/to/file",
+            "--summary",
+            "Describe the concrete bounded result.",
+            "--verify",
+            "grep -n 'needle' path/to/file",
+            project_root=project_root,
+        ),
+        "Need a canonical final_result shape? run " + shell_command(root, "final-result-template", project_root=project_root),
         "Next command: " + shell_command(root, "check", project_root=project_root),
     ]
     if profile.get("prefers_runtime_evidence", False):
-        lines.append("Runtime helper: " + plain_shell_command("runtime-helper", project_root=project_root))
+        lines.append("Runtime helper: " + shell_command(root, "runtime-helper", project_root=project_root))
     print("\n".join(lines))
 
 
@@ -2629,6 +2679,8 @@ def print_save_summary(record_file: Path, verify_file: Path, *, root: Path | Non
 def public_shell_context() -> PublicShellContext:
     return PublicShellContext(
         alpha_root_from_args=alpha_root_from_args,
+        default_project_root_from_args=default_project_root_from_args,
+        project_root_from_profile=project_root_from_profile,
         default_workspace_artifact_root=default_workspace_artifact_root,
         alpha_file=alpha_file,
         load_json=load_json,
@@ -2712,6 +2764,57 @@ def cmd_start(args: argparse.Namespace) -> int:
     if getattr(args, "ephemeral", False):
         prune_stale_ephemeral_runs(max_age_seconds=ephemeral_max_age_seconds(args))
     return extracted_cmd_start(args, context=controlled_start_shell_context())
+
+
+def cmd_record(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args)
+    requested_project_root = default_project_root_from_args(args)
+    try:
+        profile_project_root = project_root_from_profile(root)
+    except (OSError, json.JSONDecodeError):
+        profile_project_root = None
+    project_root = profile_project_root or requested_project_root
+    if root is None:
+        error = ProofRecordError(
+            "ARTIFACT_ROOT_REQUIRED",
+            "record could not resolve the active Synrail artifact root.",
+            "Run synrail start first and reuse the same artifact mode.",
+        )
+        result = error.as_payload()
+    else:
+        try:
+            result = record_single_file_proof(
+                artifact_root=root,
+                project_root=project_root,
+                changed_file=args.changed_file,
+                summary=args.summary,
+                verification_command=args.verification_command,
+            )
+        except ProofRecordError as error:
+            result = error.as_payload()
+
+    if result.get("result") == "ERROR":
+        if getattr(args, "json", False):
+            print(json.dumps(result, indent=2, ensure_ascii=True))
+        else:
+            print("Synrail could not record this proof yet.")
+            print(f"Reason: {result.get('reason', 'PROOF_RECORD_FAILED')}")
+            print(f"What happened: {result.get('detail', '')}")
+            print(f"What to do next: {result.get('next_step', '')}")
+        return 2
+
+    next_command = shell_command(root, "check", project_root=project_root)
+    result["next_command"] = next_command
+    if getattr(args, "json", False):
+        print(json.dumps(result, indent=2, ensure_ascii=True))
+    else:
+        print("Synrail recorded recheckable proof for one tracked changed file.")
+        print("Acceptance has not been evaluated yet.")
+        print(f"Changed file: {result['changed_file']}")
+        print(f"Verification: {result['verification_command']}")
+        print(f"Final result: {display_path(Path(result['final_result']))}")
+        print("Next command: " + next_command)
+    return 0
 
 
 def cmd_cleanup(args: argparse.Namespace) -> int:
@@ -3179,7 +3282,7 @@ def cmd_check(args: argparse.Namespace) -> int:
                     )
                     print("What is missing: Synrail is still waiting for explicit proof artifacts and local verification evidence for this controlled run.")
                     print(
-                        "What to do next: make the bounded change, run local verification, then strengthen final_result.json first and rerun "
+                        "What to do next: make the bounded change and run local verification; then use synrail record for one tracked file or strengthen final_result.json for other contours, and rerun "
                         + check_command
                         + "."
                     )
@@ -3813,6 +3916,16 @@ class _SuppressingHelpFormatter(argparse.HelpFormatter):
         return super()._format_usage(usage, actions, groups, prefix)
 
 
+def hide_internal_options(parser: argparse.ArgumentParser, *, visible: set[str]) -> None:
+    """Keep compatibility flags parseable without presenting them as first-run UX."""
+    for action in parser._actions:
+        if not action.option_strings:
+            continue
+        if any(option in visible for option in action.option_strings):
+            continue
+        action.help = argparse.SUPPRESS
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="synrail", formatter_class=_SuppressingHelpFormatter)
     sub = parser.add_subparsers(dest="cmd")
@@ -3847,6 +3960,29 @@ def build_parser() -> argparse.ArgumentParser:
     p_start.add_argument("--output")
     p_start.add_argument("task_request", nargs="?")
     p_start.set_defaults(func=cmd_start)
+
+    p_record = sub.add_parser(
+        "record",
+        help="Record recheckable proof for one tracked changed file",
+        description=(
+            "Record proof for exactly one tracked regular file after a clean-worktree start. "
+            "HEAD must stay unchanged. This command writes proof only; synrail check decides acceptance."
+        ),
+    )
+    p_record.add_argument("changed_file", help="Repository-relative path to the only changed file")
+    p_record.add_argument("--summary", required=True, help="Concrete summary of the bounded result")
+    p_record.add_argument(
+        "--verify",
+        "--verification-command",
+        dest="verification_command",
+        required=True,
+        help="One read-only command that closure can recheck against the changed file",
+    )
+    p_record.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_record.add_argument("--ephemeral", action="store_true", help="Use the repo-keyed user-cache artifact root for this checkout")
+    p_record.add_argument("--project-root")
+    p_record.add_argument("--json", action="store_true")
+    p_record.set_defaults(func=cmd_record)
 
     p_init_agent = sub.add_parser("init-agent", help="Write agent onboarding files for one supported agent")
     p_init_agent.add_argument("--agent", required=True, choices=["claude", "gemini", "codex", "cursor"])
@@ -3941,6 +4077,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_check.add_argument("--target-identity-file")
     p_check.add_argument("--coverage-profile-file")
     p_check.add_argument("--coverage-corpus-file")
+    hide_internal_options(
+        p_check,
+        visible={"-h", "--help", "--artifact-root", "--ephemeral", "--project-root", "--mode"},
+    )
     p_check.set_defaults(func=cmd_check)
 
     p_cleanup = sub.add_parser("cleanup", help="Remove Synrail artifacts for this checkout")
@@ -3955,12 +4095,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_status.add_argument("state_file", nargs="?")
     p_status.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_status.add_argument("--ephemeral", action="store_true", help="Use the repo-keyed user-cache artifact root for this checkout")
+    p_status.add_argument("--project-root")
     p_status.add_argument("--json", action="store_true")
     p_status.set_defaults(func=cmd_status)
 
     p_explain_proof = sub.add_parser("explain-proof", aliases=["proof-explain"], help="Show what proof files are needed and why")
     p_explain_proof.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_explain_proof.add_argument("--ephemeral", action="store_true")
+    p_explain_proof.add_argument("--project-root")
     p_explain_proof.add_argument("--bundle-file")
     p_explain_proof.add_argument("--json", action="store_true")
     p_explain_proof.set_defaults(func=cmd_explain_proof)
@@ -3968,24 +4110,28 @@ def build_parser() -> argparse.ArgumentParser:
     p_final_result_template = sub.add_parser("final-result-template", help=argparse.SUPPRESS)
     p_final_result_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_final_result_template.add_argument("--ephemeral", action="store_true")
+    p_final_result_template.add_argument("--project-root")
     p_final_result_template.add_argument("--output")
     p_final_result_template.set_defaults(func=cmd_final_result_template)
 
     p_readback_template = sub.add_parser("readback-template", help=argparse.SUPPRESS)
     p_readback_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_readback_template.add_argument("--ephemeral", action="store_true")
+    p_readback_template.add_argument("--project-root")
     p_readback_template.add_argument("--output")
     p_readback_template.set_defaults(func=cmd_readback_template)
 
     p_scenario_proof_template = sub.add_parser("scenario-proof-template", help=argparse.SUPPRESS)
     p_scenario_proof_template.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_scenario_proof_template.add_argument("--ephemeral", action="store_true")
+    p_scenario_proof_template.add_argument("--project-root")
     p_scenario_proof_template.add_argument("--output")
     p_scenario_proof_template.set_defaults(func=cmd_scenario_proof_template)
 
     p_runtime_helper = sub.add_parser("runtime-helper", help=argparse.SUPPRESS)
     p_runtime_helper.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_runtime_helper.add_argument("--ephemeral", action="store_true")
+    p_runtime_helper.add_argument("--project-root")
     p_runtime_helper.add_argument("--output")
     p_runtime_helper.set_defaults(func=cmd_runtime_helper)
 
@@ -4327,6 +4473,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_generate_prompt = sub.add_parser("generate-prompt", aliases=["next-step", "repair-step"], help=argparse.SUPPRESS)
     p_generate_prompt.add_argument("--artifact-root")
     p_generate_prompt.add_argument("--ephemeral", action="store_true")
+    p_generate_prompt.add_argument("--project-root")
     p_generate_prompt.add_argument("--repair-packet-file")
     p_generate_prompt.add_argument("--mode", default="default", choices=["default", "dev"])
     p_generate_prompt.add_argument("--output")

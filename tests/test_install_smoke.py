@@ -132,7 +132,7 @@ class InstallSmokeTests(unittest.TestCase):
 
         self.assertIn("Controlled run started.", start_result.stdout)
         self.assertIn(
-            "Do this now: make the bounded change, run local verification, then strengthen final_result.json first.",
+            "Do this now: make the bounded change and run local verification; then use synrail record for one tracked file or strengthen final_result.json for other contours.",
             start_result.stdout,
         )
         self.assertIn("Starter proof surface is ready for this run.", start_result.stdout)
@@ -140,6 +140,8 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.", start_result.stdout)
         self.assertIn("Need a canonical final_result shape? run synrail final-result-template", start_result.stdout)
         self.assertIn("Then run: synrail check", start_result.stdout)
+        self.assertIn("Fast tracked single-file path:", start_result.stdout)
+        self.assertIn("record path/to/file", start_result.stdout)
         self.assertTrue((artifact_root / "state.json").exists())
         self.assertTrue((artifact_root / "acceptance_criteria.json").exists())
         self.assertTrue((artifact_root / "project_profile.json").exists())
@@ -463,6 +465,11 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn('python3 alpha.py start "Describe the bounded local change."', first_run_guide)
         self.assertIn("python3 alpha.py check", first_run_guide)
         self.assertIn("Repeat until `synrail check` prints `Status: Accepted`.", first_run_guide)
+        self.assertIn("synrail record path/to/file", first_run_guide)
+        self.assertIn("requires one direct, existing, repository-relative tracked file", first_run_guide)
+        self.assertIn("requires a clean git worktree at `start` and the same `HEAD` at `record`", first_run_guide)
+        self.assertIn("never invokes closure and never reports the task as accepted", first_run_guide)
+        self.assertIn("Use manual `final_result.json` proof for multi-file, untracked, deleted", first_run_guide)
         self.assertIn("`Status: Accepted` means the proof bundle is complete", first_run_guide)
         self.assertIn("`Proof Too Thin To Trust` -- structure is there but evidence is thin.", first_run_guide)
         self.assertIn("`Cannot Continue This Run` -- this run reached a terminal rejected state.", first_run_guide)
@@ -519,6 +526,8 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("narrative completion instead of concrete runtime evidence", public_readme)
         self.assertIn("# after make install-dev", public_readme)
         self.assertIn('.venv/bin/synrail start "Describe the bounded local change."', public_readme)
+        self.assertIn(".venv/bin/synrail record path/to/file", public_readme)
+        self.assertIn("It writes proof, not acceptance", public_readme)
         self.assertIn(".venv/bin/synrail check", public_readme)
         self.assertIn("## Alpha Tester Install Path", public_readme)
         self.assertIn("Prefer a repo-clean artifact lane when you are using Synrail for QA/analysis across many repositories:", public_readme)
@@ -711,6 +720,7 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("Use the GitHub issue templates:", first_tester_protocol)
         self.assertIn("False-green case", first_tester_protocol)
         self.assertIn('synrail start --ephemeral "Describe the bounded local change."', first_tester_protocol)
+        self.assertIn("synrail record path/to/file --ephemeral", first_tester_protocol)
         self.assertIn("## Maintainer triage before any kernel change", first_tester_protocol)
         self.assertIn("ownership:product", first_tester_protocol)
         self.assertIn("ownership:operator", first_tester_protocol)
@@ -721,6 +731,7 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("python.exe -m pip install --upgrade pip", first_tester_checklist)
         self.assertIn("from Git Bash", first_tester_checklist)
         self.assertIn('synrail start --ephemeral "one sentence describing the change"', first_tester_checklist)
+        self.assertIn("synrail record path/to/file --ephemeral", first_tester_checklist)
         self.assertIn("synrail cleanup --ephemeral", first_tester_checklist)
         self.assertIn("uses: actions/checkout@v6", ci_workflow)
         self.assertIn("uses: actions/setup-python@v6", ci_workflow)
