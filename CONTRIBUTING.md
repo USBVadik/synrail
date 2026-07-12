@@ -78,8 +78,10 @@ If a change mainly benefits one downstream agent or one proving-ground environme
 
 Use the GitHub issue templates to keep bug reports and feature requests bounded.
 
-- bug reports should name the observed status or misleading outcome and point to the smallest repro or artifact path
+- bug reports should name the observed status or misleading outcome and include the smallest redacted repro
 - feature requests should explain why the change belongs in Synrail itself and what should stay out of scope
 - broad remote-host, downstream-agent, or production workflow asks should be labeled explicitly as outside the current support boundary unless the request is about tightening that boundary honestly
 
-If the normal feedback export is not enough for a bug report, attach `synrail bug-packet --artifact-root .synrail`.
+Never attach an unredacted bug packet, secret, private source excerpt, or absolute
+path to a public issue. Use the private vulnerability-reporting path in
+`SECURITY.md` for suspected security issues.

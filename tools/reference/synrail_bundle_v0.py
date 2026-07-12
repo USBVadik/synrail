@@ -118,10 +118,11 @@ def direct_file_fingerprint(path: Path) -> tuple[int, int, int, int] | None:
 
 def artifact_binding_entry(*, artifact_id: str, path: Path | None, required: bool) -> dict:
     present = bool(path and path.is_file())
-    resolved_path = str(path.resolve()) if present else ""
+    # Preserve the submitted surface so closure can detect symlinked parents.
+    bound_path = str(path.expanduser().absolute()) if present else ""
     return {
         "artifact_id": artifact_id,
-        "path": resolved_path,
+        "path": bound_path,
         "required": required,
         "present": present,
         "sha256": file_sha256(path) if present else "",
@@ -309,10 +310,14 @@ def _verification_recheck_env(executable: str) -> dict[str, str] | None:
     env.update({
         "GIT_CONFIG_NOSYSTEM": "1",
         "GIT_CONFIG_GLOBAL": os.devnull,
-        "GIT_EXTERNAL_DIFF": "",
         "GIT_PAGER": "cat",
         "GIT_OPTIONAL_LOCKS": "0",
     })
+    # Neutralize any user-configured external diff driver deterministically.
+    # Setting GIT_EXTERNAL_DIFF="" makes git try to exec an empty command and
+    # die ("external diff died"), which breaks every `git diff -- <path>`
+    # recheck; unset it so git falls back to its built-in diff.
+    env.pop("GIT_EXTERNAL_DIFF", None)
     return env
 
 

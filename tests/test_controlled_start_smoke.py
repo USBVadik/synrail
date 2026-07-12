@@ -1272,6 +1272,88 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertFalse(checked_state["proof_bundle"]["artifact_integrity_warning"])
             self.assertIn(report.get("reason", ""), {"", "NONE"})
 
+    def test_named_final_result_repair_can_reach_accepted_on_same_run(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_named_proof_repair_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            artifact_root = project_root / ".synrail"
+            project_root.mkdir(parents=True, exist_ok=True)
+
+            start = self.run_alpha(
+                "start",
+                "--artifact-root",
+                ".synrail",
+                "--project-root",
+                str(project_root),
+                "--task-identity",
+                "Add a verified greeting.",
+                cwd=project_root,
+            )
+            self.assertEqual(0, start.returncode, start.stdout + start.stderr)
+            started_state = load_json(artifact_root / "state.json")
+            starter_hash = started_state["last_known_final_result_hash"]
+
+            write_json(
+                artifact_root / "final_result.json",
+                {
+                    "request_id": started_state["run_id"],
+                    "task_class": started_state["task_class"],
+                    "status": "PROVEN",
+                    "change_disposition": "modified",
+                    "summary": "Done. Tests passed.",
+                    "modified_files": ["greeting.txt"],
+                    "git_diff": "",
+                    "diff_provenance": "Done. Tests passed.",
+                },
+            )
+
+            weak_check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(0, weak_check.returncode, weak_check.stdout + weak_check.stderr)
+            self.assertIn("Status: Proof Incomplete", weak_check.stdout)
+            repairable_state = load_json(artifact_root / "state.json")
+            self.assertEqual("PROOF_BUNDLE_PARTIAL", repairable_state["state"])
+            self.assertEqual(starter_hash, repairable_state["last_known_final_result_hash"])
+
+            (project_root / "greeting.txt").write_text(
+                "Greeting:\nhello from Synrail\nEnd greeting.\n"
+            )
+            verification_result = "2:hello from Synrail"
+            write_json(
+                artifact_root / "final_result.json",
+                {
+                    "request_id": started_state["run_id"],
+                    "task_class": started_state["task_class"],
+                    "status": "PROVEN",
+                    "change_disposition": "modified",
+                    "summary": "Added the bounded greeting and verified the exact line locally.",
+                    "modified_files": ["greeting.txt"],
+                    "git_diff": "",
+                    "diff_provenance": {
+                        "method": "direct_file_observation",
+                        "changed_file": "greeting.txt",
+                        "added_line": "hello from Synrail",
+                        "context_before": "Greeting:",
+                        "context_after": "End greeting.",
+                        "verification_command": "grep -n 'hello from Synrail' greeting.txt",
+                        "verification_result": verification_result,
+                    },
+                },
+            )
+
+            accepted_check = self.run_alpha(
+                "check",
+                "--artifact-root",
+                ".synrail",
+                cwd=project_root,
+            )
+            self.assertEqual(0, accepted_check.returncode, accepted_check.stdout + accepted_check.stderr)
+            self.assertIn("Status: Accepted", accepted_check.stdout)
+            accepted_state = load_json(artifact_root / "state.json")
+            self.assertEqual("CLOSURE_ACCEPTED", accepted_state["state"])
+            self.assertEqual(
+                hashlib.sha256((artifact_root / "final_result.json").read_bytes()).hexdigest(),
+                accepted_state["last_known_final_result_hash"],
+            )
+
     def test_repair_step_synthesizes_missing_packet_with_final_result_first_before_scenario_gap(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_repair_step_scenario_packet_") as tmpdir:
             project_root = Path(tmpdir) / "project"

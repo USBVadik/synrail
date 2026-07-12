@@ -38,7 +38,7 @@ coverage: $(DEV_STAMP)
 audit: $(DEV_STAMP)
 	$(BIN)/pip-audit
 
-demo:
+demo: $(DEV_STAMP)
 	./examples/false-green-demo/run_demo.sh
 
 verify: compile test lint coverage audit

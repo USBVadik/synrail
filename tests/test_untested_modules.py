@@ -1004,6 +1004,29 @@ class TestValidateDocument(unittest.TestCase):
         self.assertEqual(1, len(errors))
         self.assertIn("expected string", errors[0])
 
+    def test_array_minimum_and_maximum_size(self) -> None:
+        schema = {"type": "array", "minItems": 2, "maxItems": 3, "items": {"type": "string"}}
+        too_short = validate_document(["one"], schema)
+        too_long = validate_document(["one", "two", "three", "four"], schema)
+        self.assertEqual(1, len(too_short))
+        self.assertIn("minItems", too_short[0])
+        self.assertEqual(1, len(too_long))
+        self.assertIn("maxItems", too_long[0])
+
+    def test_string_pattern_validation(self) -> None:
+        schema = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        self.assertEqual([], validate_document("a" * 64, schema))
+        errors = validate_document("not-a-hash", schema)
+        self.assertEqual(1, len(errors))
+        self.assertIn("pattern", errors[0])
+
+    def test_date_time_format_requires_timezone(self) -> None:
+        schema = {"type": "string", "format": "date-time"}
+        self.assertEqual([], validate_document("2026-07-12T12:34:56Z", schema))
+        errors = validate_document("2026-07-12T12:34:56", schema)
+        self.assertEqual(1, len(errors))
+        self.assertIn("date-time", errors[0])
+
     def test_const_validation(self) -> None:
         schema = {"type": "object", "properties": {"version": {"type": "string", "const": "v1"}}}
         errors = validate_document({"version": "v2"}, schema)

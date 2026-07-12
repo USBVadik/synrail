@@ -7,8 +7,8 @@ Synrail governs one bounded change at a time. It blocks false-green closure and 
 ```text
 Agent: tests passed
 Synrail: Status: Proof Invalid
-Reason: verification command not executed / freshness mismatch
-Next: repair final_result.json
+Reason: final_result.json is narrative, not machine-readable proof
+Next: replace it with structured evidence and rerun synrail check
 ```
 
 Only `Status: Accepted` means the task may be reported as complete.

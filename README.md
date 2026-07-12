@@ -26,15 +26,16 @@ Synrail keeps that boundary explicit.
 ```text
 Agent: done, tests passed
 Synrail: Status: Proof Invalid
-Reason: verification command not executed / freshness mismatch
-Next: repair final_result.json
+Reason: final_result.json is narrative, not machine-readable proof
+Next: replace it with structured evidence and rerun synrail check
 Agent: repaired final_result.json and ran the real verification
 Synrail: Status: Accepted
 ```
 
 ![Synrail false-green demo](examples/false-green-demo/assets/synrail-false-green-hero.gif)
 
-A simulated false-green claim is blocked until the proof is repaired and verified.
+A simulated false-green claim is checked by the real CLI and blocked until the
+proof is repaired and verified.
 For social posts or embeds that prefer video, use the [MP4 demo asset](examples/false-green-demo/assets/synrail-false-green-hero.mp4).
 
 That is the product wedge: block plausible-but-unproven closure, name the exact blocker, and keep the next repair step bounded.
@@ -215,38 +216,6 @@ Do not use Synrail when:
 
 Synrail is currently a narrow local alpha product.
 It is stronger on false-green prevention, bounded repair, and continuation than earlier versions, but it is not yet broad self-serve or broad production-ready.
-
-## AWS State Inspector (v0.1.1)
-
-Synrail v0.1.1 adds a generic AWS state inspector for cross-checking deployed infrastructure against bundle claims. The inspector ships with eleven resource verifiers and a bundle fingerprinting primitive.
-
-**Resource verifiers** (read-only AWS API calls, regional context parsed from ARNs where applicable):
-
-- `s3_bucket` — encryption, public-access-block, versioning, replication
-- `wafv2_web_acl` — by ARN, returns rule list and default action
-- `route53_health_check` — observation status across multiple checkers
-- `route53_record` — by `HostedZoneId:RecordName`, reports failover routing set count and per-record health-check IDs
-- `lambda_function` — runtime, memory, timeout, reserved concurrency, KMS key
-- `kms_key` — state, manager, rotation enabled, multi-region flag
-- `guardduty_detector` — finding count and finding ID samples
-- `rds_cluster` — regional cluster status, engine version, writer/reader counts, KMS encryption
-- `rds_global_cluster` — Aurora Global Database, members count, writer cluster ARN
-- `alb_listener` — Application Load Balancer state, scheme, listener protocols
-- `budgets_budget` — budget type, limits, notification configurations
-
-**Special expected-key suffix:**
-
-- `*_substring` — pass if the expected value is a substring of the actual value (handy for matching DNS aliases or ARNs against shorter human-readable forms)
-
-**CLI:**
-
-```bash
-synrail verify-aws-state          # cross-check aws_state_claims[] against AWS APIs
-synrail fingerprint               # compute and write SHA-256 over the bundle
-synrail fingerprint --verify      # recompute the fingerprint and compare to the stored value
-```
-
-**Reference deployment:** [aws-proof-gated-prompts](https://github.com/USBVadik/aws-proof-gated-prompts) — three submissions for the AWS Prompt the Planet Challenge, all using `synrail verify-aws-state` to cross-check live AWS state against bundle claims.
 
 ## License
 

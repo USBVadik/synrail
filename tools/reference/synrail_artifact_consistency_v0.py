@@ -303,11 +303,16 @@ def build_record(
     artifact_errors = artifact_errors or {}
     project_root = (project_root or current_project_root()).resolve()
     artifact_root = (artifact_root or (state_file.parent if state_file is not None else project_root)).resolve()
+    freshness_trusted_roots = [project_root, artifact_root]
+    for live_path in (state_file, bundle_file):
+        if live_path is not None:
+            freshness_trusted_roots.append(live_path.expanduser().absolute().parent)
     current_verification_recheck = dict(bundle.get("verification_recheck", {})) if isinstance(bundle, dict) else {}
     current_closure_freshness_binding = (
         evaluate_closure_freshness_binding(
             bundle.get("closure_freshness_binding", {}),
             live_recheck=bool(state_file and bundle_file),
+            trusted_roots=tuple(freshness_trusted_roots),
         )
         if isinstance(bundle, dict)
         else {}

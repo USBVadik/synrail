@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import sys
 import tempfile
@@ -35,9 +36,10 @@ from synrail_spine_v0 import (
     gate_proof_bundle,
     gate_recovery,
     gate_target_surface,
+    bound_final_result_sha256,
     transition,
 )
-from synrail_closure_v0 import build_verdict
+from synrail_closure_v0 import build_verdict, evaluate_closure_freshness_binding
 from synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
 
 
@@ -62,15 +64,42 @@ def ready_state(run_id: str = "R1", task_class: str = "bounded_change") -> dict:
     return state
 
 
-def live_bound_verdict(state: dict, bundle: dict) -> dict:
+def canonical_freshness_binding(final_result_path: Path, payload: bytes) -> dict:
+    return {
+        "schema_version": "closure_freshness_binding_v0",
+        "bound_at_utc": "2026-07-11T00:00:00Z",
+        "artifacts": [
+            {
+                "artifact_id": "final_result",
+                "path": str(final_result_path),
+                "required": True,
+                "present": True,
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            },
+            {"artifact_id": "readback", "path": "", "required": False, "present": False, "sha256": ""},
+            {"artifact_id": "scenario_proof", "path": "", "required": False, "present": False, "sha256": ""},
+            {"artifact_id": "doctor", "path": "", "required": False, "present": False, "sha256": ""},
+        ],
+    }
+
+
+def live_bound_verdict(state: dict, bundle: dict, *, bind_freshness: bool = True) -> dict:
     with tempfile.TemporaryDirectory(prefix="synrail_gate_units_live_") as tmpdir:
         tmp = Path(tmpdir)
         state_path = tmp / "state.json"
         bundle_path = tmp / "bundle.json"
+        final_result_path = tmp / "final_result.json"
+        final_result_payload = b"{}\n"
+        final_result_path.write_bytes(final_result_payload)
         state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
-        bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
         live_state = copy.deepcopy(state)
         live_bundle = copy.deepcopy(bundle)
+        if bind_freshness:
+            live_bundle["closure_freshness_binding"] = canonical_freshness_binding(
+                final_result_path,
+                final_result_payload,
+            )
+        bundle_path.write_text(json.dumps(live_bundle, indent=2, ensure_ascii=True) + "\n")
         live_state["_state_file"] = str(state_path)
         live_bundle["_bundle_file"] = str(bundle_path)
         return build_verdict(live_state, live_bundle)
@@ -505,10 +534,166 @@ class TestBuildVerdict(unittest.TestCase):
             verdict["narrow_next_safe_step"],
         )
 
-    def test_build_verdict_accepts_complete_bundle_with_live_freshness_files(self) -> None:
+    def test_build_verdict_accepts_complete_bundle_with_valid_live_freshness_binding(self) -> None:
         verdict = live_bound_verdict(self._full_state(), self._complete_bundle())
         self.assertEqual("ACCEPTED", verdict["closure_status"])
         self.assertEqual("", verdict["blocking_reason"])
+
+    def test_bound_final_result_hash_comes_from_canonical_binding(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_bound_final_hash_") as tmpdir:
+            final_result_path = Path(tmpdir) / "final_result.json"
+            payload = b"{}\n"
+            final_result_path.write_bytes(payload)
+            binding = canonical_freshness_binding(final_result_path, payload)
+
+        self.assertEqual(
+            hashlib.sha256(payload).hexdigest(),
+            bound_final_result_sha256({"closure_freshness_binding": binding}),
+        )
+        tampered = copy.deepcopy(binding)
+        tampered["artifacts"][0]["sha256"] = "not-a-hash"
+        self.assertEqual(
+            "",
+            bound_final_result_sha256({"closure_freshness_binding": tampered}),
+        )
+
+    def test_build_verdict_rejects_live_files_without_freshness_binding(self) -> None:
+        verdict = live_bound_verdict(
+            self._full_state(),
+            self._complete_bundle(),
+            bind_freshness=False,
+        )
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("CLOSURE_FRESHNESS_BINDING_MISSING", verdict["blocking_reason"])
+
+    def test_build_verdict_rejects_empty_freshness_binding(self) -> None:
+        bundle = self._complete_bundle()
+        bundle["closure_freshness_binding"] = {}
+        verdict = live_bound_verdict(
+            self._full_state(),
+            bundle,
+            bind_freshness=False,
+        )
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("CLOSURE_FRESHNESS_BINDING_MISSING", verdict["blocking_reason"])
+
+    def test_build_verdict_rejects_structurally_incomplete_freshness_binding(self) -> None:
+        bundle = self._complete_bundle()
+        bundle["closure_freshness_binding"] = {
+            "schema_version": "closure_freshness_binding_v0",
+            "bound_at_utc": "2026-07-11T00:00:00Z",
+            "artifacts": [],
+        }
+        verdict = live_bound_verdict(
+            self._full_state(),
+            bundle,
+            bind_freshness=False,
+        )
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("CLOSURE_FRESHNESS_FAILED", verdict["blocking_reason"])
+        self.assertIn("closure_freshness_binding_invalid", verdict["closure_warnings"])
+
+    def test_freshness_evaluator_rejects_malformed_binding_variants(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_gate_binding_shapes_") as tmpdir:
+            final_result_path = Path(tmpdir) / "final_result.json"
+            payload = b"{}\n"
+            final_result_path.write_bytes(payload)
+            valid = canonical_freshness_binding(final_result_path, payload)
+
+            self.assertTrue(
+                evaluate_closure_freshness_binding(valid, live_recheck=True)["structurally_valid"]
+            )
+
+            variants = {}
+            missing_doctor = copy.deepcopy(valid)
+            missing_doctor["artifacts"] = missing_doctor["artifacts"][:-1]
+            variants["missing artifact"] = missing_doctor
+
+            duplicate_final = copy.deepcopy(valid)
+            duplicate_final["artifacts"][3] = copy.deepcopy(duplicate_final["artifacts"][0])
+            variants["duplicate artifact"] = duplicate_final
+
+            invalid_hash = copy.deepcopy(valid)
+            invalid_hash["artifacts"][0]["sha256"] = "not-a-sha256"
+            variants["invalid hash"] = invalid_hash
+
+            invalid_required = copy.deepcopy(valid)
+            invalid_required["artifacts"][0]["required"] = False
+            variants["invalid required flag"] = invalid_required
+
+            invalid_timestamp = copy.deepcopy(valid)
+            invalid_timestamp["bound_at_utc"] = "yesterday"
+            variants["invalid timestamp"] = invalid_timestamp
+
+            relative_path = copy.deepcopy(valid)
+            relative_path["artifacts"][0]["path"] = "final_result.json"
+            variants["relative path"] = relative_path
+
+            wrong_types = copy.deepcopy(valid)
+            wrong_types["schema_version"] = 1
+            wrong_types["artifacts"][0]["required"] = "false"
+            wrong_types["artifacts"][0]["present"] = "true"
+            variants["wrong field types"] = wrong_types
+
+            unknown_fields = copy.deepcopy(valid)
+            unknown_fields["trusted"] = True
+            unknown_fields["artifacts"][0]["trusted"] = True
+            variants["unknown fields"] = unknown_fields
+
+            for label, binding in variants.items():
+                with self.subTest(label=label):
+                    result = evaluate_closure_freshness_binding(binding, live_recheck=True)
+                    self.assertFalse(result["structurally_valid"])
+                    self.assertTrue(result["validation_errors"])
+
+    def test_build_verdict_rejects_freshness_source_outside_trusted_roots(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_outside_binding_") as tmpdir:
+            outside_path = Path(tmpdir) / "outside.json"
+            payload = b"{}\n"
+            outside_path.write_bytes(payload)
+            bundle = self._complete_bundle()
+            bundle["closure_freshness_binding"] = canonical_freshness_binding(
+                outside_path,
+                payload,
+            )
+
+            verdict = live_bound_verdict(
+                self._full_state(),
+                bundle,
+                bind_freshness=False,
+            )
+
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("CLOSURE_FRESHNESS_FAILED", verdict["blocking_reason"])
+        self.assertIn("closure_freshness_binding_invalid", verdict["closure_warnings"])
+
+    def test_freshness_evaluator_rejects_symlinked_parent_inside_trusted_root(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_symlink_binding_") as tmpdir:
+            trusted_root = Path(tmpdir).resolve()
+            real_parent = trusted_root / "real"
+            real_parent.mkdir()
+            payload = b"{}\n"
+            final_result_path = real_parent / "final_result.json"
+            final_result_path.write_bytes(payload)
+            linked_parent = trusted_root / "linked"
+            linked_parent.symlink_to(real_parent, target_is_directory=True)
+            binding = canonical_freshness_binding(
+                linked_parent / "final_result.json",
+                payload,
+            )
+
+            freshness = evaluate_closure_freshness_binding(
+                binding,
+                live_recheck=True,
+                trusted_roots=(trusted_root,),
+            )
+
+        self.assertFalse(freshness["structurally_valid"])
+        self.assertFalse(freshness["all_required_present"])
+        self.assertFalse(freshness["all_hashes_match"])
+        self.assertTrue(
+            any("symlink surface" in error for error in freshness["validation_errors"])
+        )
 
     def test_closure_certificate_not_issued_as_accepted_when_freshness_not_live(self) -> None:
         verdict = build_verdict(self._full_state(), self._complete_bundle())

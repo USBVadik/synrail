@@ -15,7 +15,7 @@ about: Report a bounded Synrail bug or misleading proof outcome
 
 - 
 
-## Repro or artifact path
+## Redacted repro or artifact description
 
 - 
 
@@ -26,4 +26,5 @@ about: Report a bounded Synrail bug or misleading proof outcome
 ## Support boundary check
 
 - confirm this is about the current local alpha lane, not broad remote-host or production-target orchestration
-- if the normal feedback export was not enough, attach `synrail bug-packet --artifact-root .synrail`
+- do not attach secrets, private source, absolute paths, or an unredacted Synrail bug packet
+- report suspected vulnerabilities through the private path in `SECURITY.md`, not this public template

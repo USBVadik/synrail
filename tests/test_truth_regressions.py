@@ -30,11 +30,17 @@ from synrail_artifact_consistency_v0 import build_record as build_artifact_consi
 from synrail_io_v0 import load_json
 from synrail_bundle_v0 import artifact_binding_entry, build_bundle
 from synrail_checkpoint_v0 import restore_preview, restore_record, restore_target_path_errors, verify_record
-from synrail_closure_v0 import build_closure_certificate, build_verdict, persist_closure_certificate
+from synrail_closure_v0 import (
+    build_closure_certificate,
+    build_verdict,
+    evaluate_closure_freshness_binding,
+    persist_closure_certificate,
+)
 from synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
 from synrail_doctor_v1 import build_record as build_doctor_record
 from synrail_second_operator_v0 import build_record as build_second_operator
 from synrail_spine_v0 import OrchestrationContext, _phase_closure, build_canonical_run_artifact
+from synrail_validate_v0 import validate_document
 from synrail_cli_v0 import load_repair_packet as load_cli_repair_packet
 from synrail_spine_v0 import load_repair_packet as load_spine_repair_packet
 import synrail_doctor_v1
@@ -4191,7 +4197,13 @@ class TruthRegressionTests(unittest.TestCase):
     def test_closure_accepts_with_doctor_override_warning_on_otherwise_valid_bundle(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
         state["doctor"]["override_gates"] = ["clean_execution_surface", "artifact_viability"]
-        bundle = load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "bundle_valid.json")
+        bundle = build_bundle(
+            bundle_args(
+                final_result=FIXTURES_ROOT
+                / "semantic_proof_hardening_run_001"
+                / "final_result_valid.json"
+            )
+        )
 
         verdict = build_live_verdict(state, bundle)
 
@@ -4202,6 +4214,51 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertIn(
             "doctor_override_present: clean_execution_surface, artifact_viability",
             verdict["closure_warnings"],
+        )
+
+    def test_current_generated_bundle_conforms_to_packaged_schema(self) -> None:
+        schema = load_json(REPO_ROOT / "schemas" / "proof_bundle_v0.schema.json")
+        bundle = build_bundle(
+            bundle_args(
+                final_result=FIXTURES_ROOT
+                / "semantic_proof_hardening_run_001"
+                / "final_result_valid.json"
+            )
+        )
+
+        self.assertEqual([], validate_document(bundle, schema))
+
+        missing_binding = copy.deepcopy(bundle)
+        missing_binding.pop("closure_freshness_binding")
+        self.assertIn(
+            "$.closure_freshness_binding: missing required field",
+            validate_document(missing_binding, schema),
+        )
+
+        incomplete_binding = copy.deepcopy(bundle)
+        incomplete_binding["closure_freshness_binding"]["artifacts"].pop()
+        self.assertIn(
+            "$.closure_freshness_binding.artifacts: array shorter than minItems 4",
+            validate_document(incomplete_binding, schema),
+        )
+
+        non_utc_binding = copy.deepcopy(bundle)
+        non_utc_binding["closure_freshness_binding"]["bound_at_utc"] = (
+            "2026-07-12T12:00:00+03:00"
+        )
+        self.assertTrue(
+            any(
+                "$.closure_freshness_binding.bound_at_utc" in error
+                and "pattern" in error
+                for error in validate_document(non_utc_binding, schema)
+            )
+        )
+
+        unknown_field = copy.deepcopy(bundle)
+        unknown_field["future_unversioned_field"] = True
+        self.assertIn(
+            "$.future_unversioned_field: additional property not allowed",
+            validate_document(unknown_field, schema),
         )
 
     def test_closure_rejects_artifact_integrity_drift_on_otherwise_valid_bundle(self) -> None:
@@ -4266,6 +4323,42 @@ class TruthRegressionTests(unittest.TestCase):
         self.assertEqual("REJECTED", verdict["closure_status"])
         self.assertEqual("CLOSURE_FRESHNESS_FAILED", verdict["blocking_reason"])
         self.assertIn("closure_freshness_binding_mismatch", verdict["closure_warnings"])
+
+    def test_builder_preserves_symlink_surface_for_closure_rejection(self) -> None:
+        state = controlled_state(
+            load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json")
+        )
+
+        with tempfile.TemporaryDirectory(prefix="synrail_bundle_symlink_binding_") as tmpdir:
+            tmp = Path(tmpdir).resolve()
+            real_parent = tmp / "real"
+            real_parent.mkdir()
+            real_final_result = real_parent / "final_result.json"
+            real_final_result.write_text(
+                (
+                    FIXTURES_ROOT
+                    / "semantic_proof_hardening_run_001"
+                    / "final_result_valid.json"
+                ).read_text()
+            )
+            linked_parent = tmp / "linked"
+            linked_parent.symlink_to(real_parent, target_is_directory=True)
+            linked_final_result = linked_parent / "final_result.json"
+            bundle = build_bundle(bundle_args(final_result=linked_final_result))
+            bundle_path = tmp / "bundle.json"
+            state_path = tmp / "state.json"
+            bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
+            state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+            state["_state_file"] = str(state_path)
+            state["_project_root"] = str(tmp)
+            bundle["_bundle_file"] = str(bundle_path)
+
+            verdict = build_verdict(state, bundle)
+
+        bound_path = bundle["closure_freshness_binding"]["artifacts"][0]["path"]
+        self.assertEqual(str(linked_final_result), bound_path)
+        self.assertEqual("REJECTED", verdict["closure_status"])
+        self.assertEqual("CLOSURE_FRESHNESS_FAILED", verdict["blocking_reason"])
 
     def test_build_verdict_rejects_complete_bundle_without_live_freshness_files(self) -> None:
         state = controlled_state(load_json(FIXTURES_ROOT / "semantic_proof_hardening_run_001" / "state_valid.json"))
@@ -5208,21 +5301,25 @@ class TruthRegressionTests(unittest.TestCase):
             final_result = artifact_root / "final_result.json"
             final_result.write_text(json.dumps({"status": "PROVEN"}, indent=2, ensure_ascii=True) + "\n")
             state_path.write_text(json.dumps(state, indent=2, ensure_ascii=True) + "\n")
+            freshness_binding = {
+                "schema_version": "closure_freshness_binding_v0",
+                "bound_at_utc": "2026-05-03T00:00:00Z",
+                "artifacts": [
+                    {
+                        "artifact_id": "final_result",
+                        "path": str(final_result),
+                        "required": True,
+                        "present": True,
+                        "sha256": hashlib.sha256(final_result.read_bytes()).hexdigest(),
+                    },
+                    {"artifact_id": "readback", "path": "", "required": False, "present": False, "sha256": ""},
+                    {"artifact_id": "scenario_proof", "path": "", "required": False, "present": False, "sha256": ""},
+                    {"artifact_id": "doctor", "path": "", "required": False, "present": False, "sha256": ""},
+                ],
+            }
             bundle = {
                 "run_id": state["run_id"],
-                "closure_freshness_binding": {
-                    "schema_version": "closure_freshness_binding_v0",
-                    "bound_at_utc": "2026-05-03T00:00:00Z",
-                    "artifacts": [
-                        {
-                            "artifact_id": "final_result",
-                            "path": str(final_result),
-                            "required": True,
-                            "present": True,
-                            "sha256": hashlib.sha256(final_result.read_bytes()).hexdigest(),
-                        }
-                    ],
-                },
+                "closure_freshness_binding": freshness_binding,
             }
             bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=True) + "\n")
             final_result_hash = hashlib.sha256(final_result.read_bytes()).hexdigest()
@@ -5232,26 +5329,10 @@ class TruthRegressionTests(unittest.TestCase):
                 "task_class": state["task_class"],
                 "closure_status": state["closure"]["status"],
                 "final_result_sha256": final_result_hash,
-                "closure_freshness_binding": {
-                    "present": True,
-                    "schema_version": "closure_freshness_binding_v0",
-                    "bound_at_utc": "2026-05-03T00:00:00Z",
-                    "all_required_present": True,
-                    "all_hashes_match": True,
-                    "artifacts": [
-                        {
-                            "artifact_id": "final_result",
-                            "path": str(final_result),
-                            "required": True,
-                            "present": True,
-                            "expected_sha256": final_result_hash,
-                            "current_sha256": final_result_hash,
-                            "hashes_match": True,
-                            "live_recheck": True,
-                        }
-                    ],
-                    "live_recheck": True,
-                },
+                "closure_freshness_binding": evaluate_closure_freshness_binding(
+                    freshness_binding,
+                    live_recheck=True,
+                ),
             }
 
             record = build_artifact_consistency_record(
@@ -9212,6 +9293,43 @@ class TestCleanupRuntimeWaiver(unittest.TestCase):
         self.assertEqual(1, len(cleanup_trace))
         self.assertIn("waived", cleanup_trace[0]["why"])
         self.assertIn("runtime verification", cleanup_trace[0]["why"])
+
+
+class VerificationRecheckEnvTests(unittest.TestCase):
+    def test_git_diff_recheck_env_does_not_kill_git_diff(self) -> None:
+        """Regression: GIT_EXTERNAL_DIFF="" made `git diff` die under the recheck env."""
+        from synrail_bundle_v0 import _verification_recheck_env
+
+        env = _verification_recheck_env("git")
+        self.assertIsNotNone(env)
+        # The external diff driver must never be handed an empty command; that
+        # makes git exec "" and abort with "external diff died".
+        self.assertNotEqual("", env.get("GIT_EXTERNAL_DIFF", "unset"))
+        self.assertNotIn("GIT_EXTERNAL_DIFF", env)
+
+        with tempfile.TemporaryDirectory(prefix="synrail_recheck_git_diff_env_") as tmpdir:
+            tmp = Path(tmpdir)
+            subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
+            subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=tmp, check=True)
+            subprocess.run(["git", "config", "user.name", "synrail-test"], cwd=tmp, check=True)
+            tracked = tmp / "gone.py"
+            tracked.write_text("first = 1\nsecond = 2\n")
+            subprocess.run(["git", "add", "gone.py"], cwd=tmp, check=True)
+            subprocess.run(["git", "commit", "-qm", "add gone.py"], cwd=tmp, check=True)
+            tracked.unlink()
+
+            result = subprocess.run(
+                ["git", "diff", "--", "gone.py"],
+                cwd=tmp,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            self.assertNotIn("external diff died", result.stderr)
+            self.assertIn("diff --git", result.stdout)
+            self.assertIn("deleted file mode", result.stdout)
 
 
 if __name__ == "__main__":

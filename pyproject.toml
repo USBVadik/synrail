@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "synrail"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Catch false-green claims from AI coding agents before accepting local changes."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -38,6 +38,9 @@ zip-safe = false
 
 [tool.setuptools.packages.find]
 include = ["tools*", "schemas"]
+
+[tool.setuptools.dynamic]
+version = {attr = "tools.reference.synrail_version_v0.__version__"}
 
 [tool.setuptools.package-data]
 tools = ["reference/*.json", "reference/*.sh"]
