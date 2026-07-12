@@ -154,6 +154,13 @@ def policy_recheck_command_line() -> str:
     )
 
 
+def policy_path_scope_block_line() -> str:
+    return (
+        "Treat `PATH_SCOPE_VIOLATION` as blocking for that command: Synrail stopped before closure and did not accept the task. "
+        "Fix the named path or `--project-root`, rerun `check` as a separate command, and never combine the blocked output with a later command's `Status: Accepted`."
+    )
+
+
 def render_local_workflow_policy(
     *,
     heading: str,
@@ -242,6 +249,7 @@ def render_local_workflow_policy(
         "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
         f"- {policy_no_git_proof_line(artifact_root)}",
         f"- {policy_recheck_command_line()}",
+        f"- {policy_path_scope_block_line()}",
         "",
         "## Finish",
         "",
@@ -370,6 +378,7 @@ def render_policy_markdown(
         "4. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
         f"5. {policy_no_git_proof_line(artifact_root)}",
         f"6. {policy_recheck_command_line()}",
+        f"7. {policy_path_scope_block_line()}",
         "",
         *policy_run_loop_lines(artifact_root=artifact_root, command=command),
         "## Before You Claim Success",

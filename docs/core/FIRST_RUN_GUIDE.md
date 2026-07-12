@@ -142,6 +142,8 @@ If you run from a subdirectory inside a git checkout, Synrail uses the git repos
 synrail start --ephemeral --project-root path/to/target-repo "Describe the bounded local analysis."
 ```
 
+If `check` reports `Status: Blocked` with `Blocking diagnostic: PATH_SCOPE_VIOLATION`, that invocation stopped before closure and did not accept the task. Correct the named path or `--project-root`, then run `check` again as a separate command. Never merge a blocked invocation's output with a later command's `Status: Accepted`.
+
 `start --ephemeral` prunes stale ephemeral runs older than 24 hours before creating the new run. You can also sweep old ephemeral cache runs manually:
 
 ```bash

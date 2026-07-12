@@ -37,65 +37,21 @@ except ImportError:
 
 try:
     from .synrail_path_scope_v0 import (
-        ARTIFACT_SCOPE,
-        DUAL_SCOPE,
-        PROJECT_SCOPE,
+        ORCHESTRATION_PATH_SCOPES,
         PathScopeValidationError,
         validate_namespace_paths,
         validate_root_within_project,
     )
 except ImportError:
     from synrail_path_scope_v0 import (
-        ARTIFACT_SCOPE,
-        DUAL_SCOPE,
-        PROJECT_SCOPE,
+        ORCHESTRATION_PATH_SCOPES,
         PathScopeValidationError,
         validate_namespace_paths,
         validate_root_within_project,
     )
 
 
-SPINE_PATH_SCOPES = {
-    "output": ARTIFACT_SCOPE,
-    "state_file": ARTIFACT_SCOPE,
-    "bundle_file": ARTIFACT_SCOPE,
-    "doctor_file": ARTIFACT_SCOPE,
-    "closure_file": ARTIFACT_SCOPE,
-    "closure_certificate_output": ARTIFACT_SCOPE,
-    "repair_handoff_file": ARTIFACT_SCOPE,
-    "repair_handoff_output": ARTIFACT_SCOPE,
-    "repair_packet_file": ARTIFACT_SCOPE,
-    "repair_packet_output": ARTIFACT_SCOPE,
-    "repair_receipt_file": ARTIFACT_SCOPE,
-    "repair_receipt_output": ARTIFACT_SCOPE,
-    "mode_selection_receipt": ARTIFACT_SCOPE,
-    "doctor_output": ARTIFACT_SCOPE,
-    "final_result": DUAL_SCOPE,
-    "readback": DUAL_SCOPE,
-    "scenario_proof": DUAL_SCOPE,
-    "plan_output": ARTIFACT_SCOPE,
-    "preparation_receipt_output": ARTIFACT_SCOPE,
-    "preparation_artifact_root": ARTIFACT_SCOPE,
-    "refresh_output": ARTIFACT_SCOPE,
-    "observability_output": ARTIFACT_SCOPE,
-    "artifact_consistency_output": ARTIFACT_SCOPE,
-    "baseline_file": ARTIFACT_SCOPE,
-    "synrail_file": ARTIFACT_SCOPE,
-    "comparison_output": ARTIFACT_SCOPE,
-    "worked_artifact_output": ARTIFACT_SCOPE,
-    "run_artifact_output": ARTIFACT_SCOPE,
-    "artifact_path": DUAL_SCOPE,
-    "helper_path": PROJECT_SCOPE,
-    "prompt_identity_file": ARTIFACT_SCOPE,
-    "target_identity_file": DUAL_SCOPE,
-    "coverage_profile_file": PROJECT_SCOPE,
-    "coverage_corpus_file": PROJECT_SCOPE,
-    "acceptance_criteria_file": ARTIFACT_SCOPE,
-    "acceptance_validation_output": ARTIFACT_SCOPE,
-    "project_profile_file": ARTIFACT_SCOPE,
-    "report_output": ARTIFACT_SCOPE,
-    "target_path": PROJECT_SCOPE,
-}
+SPINE_PATH_SCOPES = dict(ORCHESTRATION_PATH_SCOPES)
 
 
 TERMINAL_STATES = {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}

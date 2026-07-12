@@ -13,6 +13,10 @@ All notable changes to the public Synrail alpha are recorded here.
 - Move vulnerability reporting to a private-first path.
 - Replace the canned false-green transcript script with a real disposable
   `Proof Invalid` to `Accepted` CLI loop.
+- Fail closed on path-scope errors before rendering closure, and prevent a
+  failed check from reusing a prior accepted report.
+- Derive observed-safe dirty-worktree scope only from live git observation and
+  proof-backed provenance, never from caller-supplied scope claims.
 
 ## 0.1.2 — 2026-06-11
 

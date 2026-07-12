@@ -21,6 +21,7 @@ if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
 from synrail_spine_v0 import (
+    SPINE_PATH_SCOPES,
     TERMINAL_STATES,
     TRANSITION_PRECEDENCE,
     apply_bundle,
@@ -39,6 +40,7 @@ from synrail_spine_v0 import (
     bound_final_result_sha256,
     transition,
 )
+from synrail_cli_v0 import CHECK_PATH_SCOPES
 from synrail_closure_v0 import build_verdict, evaluate_closure_freshness_binding
 from synrail_continuation_arbiter_v0 import build_record as build_continuation_arbiter
 
@@ -103,6 +105,17 @@ def live_bound_verdict(state: dict, bundle: dict, *, bind_freshness: bool = True
         live_state["_state_file"] = str(state_path)
         live_bundle["_bundle_file"] = str(bundle_path)
         return build_verdict(live_state, live_bundle)
+
+
+class TestSharedPathScopeContract(unittest.TestCase):
+    def test_public_check_prevalidates_every_spine_path_field(self) -> None:
+        mismatches = {
+            field: (scope, CHECK_PATH_SCOPES.get(field))
+            for field, scope in SPINE_PATH_SCOPES.items()
+            if CHECK_PATH_SCOPES.get(field) != scope
+        }
+
+        self.assertEqual({}, mismatches)
 
 
 class TestSmallComplexityHotspots(unittest.TestCase):
