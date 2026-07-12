@@ -166,15 +166,51 @@ synrail cleanup --ephemeral --stale
 
 Use `--artifact-root ./.synrail` only when you intentionally want the run artifacts to stay inside the repository for handoff or debugging.
 
-### 2. Do the bounded work and keep proof honest
+### 2. Do the bounded work and record proof
 
-Make the requested change. Run local verification. Then strengthen `final_result.json` first. On the normal happy path, treat it as the only proof surface you need to touch. Only expand fallback proof surfaces later if `synrail check` names them, or if `final_result.json` still cannot carry strong structured verification by itself:
+Make the requested change and run the project's normal tests. If the bounded
+change touches exactly one existing tracked file, use the thin recorder instead
+of constructing JSON by hand:
+
+```bash
+synrail record path/to/file \
+  --summary "Describe the concrete bounded result." \
+  --verify "grep -n 'needle' path/to/file"
+```
+
+With `--ephemeral`, repeat the same artifact locator used by `start`:
+
+```bash
+synrail record path/to/file --ephemeral \
+  --summary "Describe the concrete bounded result." \
+  --verify "grep -n 'needle' path/to/file"
+```
+
+`record` is deliberately narrow. It:
+
+- requires one direct, existing, repository-relative tracked file
+- requires a clean git worktree at `start` and the same `HEAD` at `record`
+- rejects any second dirty file instead of hiding it
+- captures the real `HEAD`-to-worktree patch with external diff/textconv disabled
+- runs only the existing closure-recheck command policy and rejects allowed
+  command binaries resolved from inside the target repository
+- writes `final_result.json` with `accepted: false` semantics
+- never invokes closure and never reports the task as accepted
+- requires the recorded patch to still match the live worktree at `check`
+
+Use manual `final_result.json` proof for multi-file, untracked, deleted,
+already-satisfied/no-op, pre-dirty, revision-changing, no-git, or large-patch
+work. On that path, treat
+`final_result.json` as the first proof surface and only expand fallback proof
+surfaces later if `synrail check` names them:
+
+On the normal happy path, treat it as the only proof surface you need to touch.
 
 - `final_result.json` for the trust-bearing status, changed files, and diff/provenance record
 - `readback.txt` is fallback-only; if `final_result.json` already carries strong structured verification, leave `readback.txt` untouched unless `synrail check` explicitly names it
 - `scenario_proof.txt` is fallback-only; if `final_result.json` already carries strong structured verification, leave `scenario_proof.txt` untouched unless `synrail check` explicitly names it
 
-In `final_result.json`, use a trust-bearing status: `PROVEN` for an evidenced bounded edit, or `ALREADY_SATISFIED` only for a truthful no-op attestation where the requested state was already present before any edit.
+In a manually authored `final_result.json`, use a trust-bearing status: `PROVEN` for an evidenced bounded edit, or `ALREADY_SATISFIED` only for a truthful no-op attestation where the requested state was already present before any edit.
 
 If `git` is unavailable in the project environment, leave `git_diff` empty. Use `diff_provenance` for a single-file change, or `diff_provenance_records` / `per_file_diff_provenance` with repo-relative paths and exact observed lines for a multi-file change, instead of trying to simulate a patch.
 

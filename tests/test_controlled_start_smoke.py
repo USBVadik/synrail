@@ -118,6 +118,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
         help_result = self.run_alpha("--help")
         self.assertEqual(0, help_result.returncode, help_result.stdout + help_result.stderr)
         self.assertIn("start", help_result.stdout)
+        self.assertIn("record", help_result.stdout)
         self.assertIn("check", help_result.stdout)
         self.assertIn("status (dashboard)", help_result.stdout)
         self.assertIn("explain-proof (proof-explain)", help_result.stdout)
@@ -369,7 +370,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(0, start.returncode, start.stdout + start.stderr)
             self.assertIn("Controlled run started.", start.stdout)
             self.assertIn(
-                "Do this now: make the bounded change, run local verification, then strengthen final_result.json first.",
+                "Do this now: make the bounded change and run local verification; then use synrail record for one tracked file or strengthen final_result.json for other contours.",
                 start.stdout,
             )
             self.assertIn("fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.", start.stdout)
@@ -631,7 +632,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertIn("waiting for explicit proof artifacts and local verification evidence", check.stdout)
             self.assertIn("run local verification", check.stdout)
-            self.assertIn("strengthen final_result.json first", check.stdout)
+            self.assertIn("use synrail record for one tracked file or strengthen final_result.json for other contours", check.stdout)
             self.assertIn("final_result: .synrail/final_result.json", check.stdout)
             self.assertIn("fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.", check.stdout)
             self.assertIn("synrail final-result-template", check.stdout)

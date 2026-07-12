@@ -40,6 +40,23 @@ except ImportError:
         validate_root_within_project,
     )
 
+try:
+    from .synrail_safe_git_v0 import (
+        SafeGitError,
+        run_safe_git,
+        safe_git_argv,
+        safe_git_env,
+        trusted_external_executable,
+    )
+except ImportError:
+    from synrail_safe_git_v0 import (
+        SafeGitError,
+        run_safe_git,
+        safe_git_argv,
+        safe_git_env,
+        trusted_external_executable,
+    )
+
 
 REQUIRED_SECTION_NAMES = [
     "final_result",
@@ -56,6 +73,7 @@ SEMANTIC_SECTION_STEPS = {
     "scope_alignment": "keep the implementation inside the requested additive scope and remove unrelated adjacent rewrites or spacing tweaks",
     "presentation_alignment": "keep the newly added surface visually plain and close to the requested text-only intent; remove extra emphasis styling unless the task asked for it",
     "diff_provenance": "prove the patch on the changed files with a patch-shaped git_diff or a structured diff_provenance record, or use a truthful already_satisfied observation record when no edit was required",
+    "recorded_patch_binding": "rerun synrail record so its saved patch matches the live HEAD-to-worktree diff",
     "verification_corroboration": "tie acceptance to explicit local verification evidence inside the current proof surfaces instead of prose-only readback and scenario text",
     "final_result_status": "state a trust-bearing final_result.status: use PROVEN for an evidenced modification run, or ALREADY_SATISFIED for a truthful no-op attestation",
     "readback": "record substantive readback from the changed sections on the attested surface",
@@ -146,6 +164,88 @@ def build_closure_freshness_binding(
             artifact_binding_entry(artifact_id="doctor", path=doctor_path, required=False),
         ],
     }
+
+
+def recorded_patch_binding_result(final: dict, *, project_root: Path) -> dict:
+    metadata = final.get("_synrail", {})
+    required = isinstance(metadata, dict) and metadata.get("recorded_by") == "synrail record"
+    result = {
+        "required": required,
+        "evaluated": False,
+        "matched": not required,
+        "changed_file": "",
+        "expected_patch_sha256": "",
+        "live_patch_sha256": "",
+        "skip_reason": "",
+    }
+    if not required:
+        return result
+
+    result["evaluated"] = True
+    expected_hash = non_empty_string(metadata.get("patch_sha256", ""))
+    modified_files = final.get("modified_files", [])
+    saved_patch = final.get("git_diff", "")
+    if (
+        len(expected_hash) != 64
+        or any(character not in "0123456789abcdefABCDEF" for character in expected_hash)
+        or not isinstance(modified_files, list)
+        or len(modified_files) != 1
+        or not isinstance(modified_files[0], str)
+        or not modified_files[0].strip()
+        or not isinstance(saved_patch, str)
+        or not saved_patch
+    ):
+        result["skip_reason"] = "recorded_patch_metadata_invalid"
+        return result
+
+    changed_file = modified_files[0].strip().replace("\\", "/")
+    result["changed_file"] = changed_file
+    result["expected_patch_sha256"] = expected_hash.lower()
+    changed_path = project_root / changed_file
+    if not path_within_scope(
+        str(changed_path),
+        scope=DUAL_SCOPE,
+        project_root=project_root,
+        artifact_root=project_root / ".synrail",
+    ):
+        result["skip_reason"] = "recorded_patch_path_out_of_scope"
+        return result
+    violation = path_surface_violation(
+        str(changed_path),
+        field="final_result",
+        scope=DUAL_SCOPE,
+        surface_label="recorded patch changed file",
+        expected_surface="a direct in-scope tracked file",
+        stop_at=project_root,
+        project_root=project_root,
+        artifact_root=project_root / ".synrail",
+    )
+    if violation is not None:
+        result["skip_reason"] = "recorded_patch_path_out_of_scope"
+        return result
+
+    try:
+        completed = run_safe_git(project_root, ["diff", "HEAD", "--", changed_file])
+    except SafeGitError as exc:
+        result["skip_reason"] = exc.reason.lower()
+        return result
+    if completed.returncode != 0:
+        result["skip_reason"] = "recorded_patch_live_diff_failed"
+        return result
+
+    live_patch = completed.stdout
+    live_hash = hashlib.sha256(live_patch.encode("utf-8")).hexdigest()
+    saved_hash = hashlib.sha256(saved_patch.encode("utf-8")).hexdigest()
+    result["live_patch_sha256"] = live_hash
+    result["matched"] = bool(
+        live_patch
+        and live_patch == saved_patch
+        and saved_hash == expected_hash.lower()
+        and live_hash == expected_hash.lower()
+    )
+    if not result["matched"]:
+        result["skip_reason"] = "recorded_patch_no_longer_matches_worktree"
+    return result
 
 
 def starter_final_result_replacement_is_sanctioned(
@@ -306,19 +406,7 @@ def _parse_git_operand_paths(argv: list[str]) -> tuple[list[str] | None, str]:
 def _verification_recheck_env(executable: str) -> dict[str, str] | None:
     if executable != "git":
         return None
-    env = os.environ.copy()
-    env.update({
-        "GIT_CONFIG_NOSYSTEM": "1",
-        "GIT_CONFIG_GLOBAL": os.devnull,
-        "GIT_PAGER": "cat",
-        "GIT_OPTIONAL_LOCKS": "0",
-    })
-    # Neutralize any user-configured external diff driver deterministically.
-    # Setting GIT_EXTERNAL_DIFF="" makes git try to exec an empty command and
-    # die ("external diff died"), which breaks every `git diff -- <path>`
-    # recheck; unset it so git falls back to its built-in diff.
-    env.pop("GIT_EXTERNAL_DIFF", None)
-    return env
+    return safe_git_env()
 
 
 def validated_verification_command_operand_paths(
@@ -429,11 +517,23 @@ def verification_recheck_result(record: object, *, project_root: Path | None = N
         result["skip_reason"] = skip_reason
         return result
 
+    try:
+        if executable == "git":
+            execution_argv = safe_git_argv(recheck_root, argv[1:])
+        else:
+            execution_argv = [
+                trusted_external_executable(executable, recheck_root),
+                *argv[1:],
+            ]
+    except SafeGitError as exc:
+        result["skip_reason"] = exc.reason.lower()
+        return result
+
     result["executed"] = True
 
     try:
         completed = subprocess.run(
-            argv,
+            execution_argv,
             check=False,
             capture_output=True,
             text=True,
@@ -2039,6 +2139,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
         scenario_path=Path(scenario_path) if scenario_present and scenario_path else None,
         doctor_path=doctor_path if doctor_present and doctor_parseable else None,
     )
+    project_root = state_bound_project_root(getattr(args, "state_file", ""))
 
     modified_files_semantically_sufficient = False
     if isinstance(modified_files, list) and all(isinstance(item, str) for item in modified_files):
@@ -2130,9 +2231,12 @@ def build_bundle(args: argparse.Namespace) -> dict:
     )
     verification_recheck = verification_recheck_results(
         diff_provenance_records,
-        project_root=state_bound_project_root(getattr(args, "state_file", "")),
+        project_root=project_root,
     )
     verification_recheck["required"] = bool(runtime_verification_semantically_sufficient)
+    # Evaluate the live patch after command recheck so a concurrent edit between
+    # the two phases cannot inherit an earlier matching patch snapshot.
+    recorded_patch_binding = recorded_patch_binding_result(final, project_root=project_root)
     final_result_status_semantically_sufficient = final_result_status_is_semantically_sufficient(
         status=normalized_status,
         change_disposition=change_disposition,
@@ -2261,6 +2365,7 @@ def build_bundle(args: argparse.Namespace) -> dict:
         },
         "shadow_observation_guard_results": shadow_observation_guard,
         "verification_recheck": verification_recheck,
+        "recorded_patch_binding": recorded_patch_binding,
         "artifact_integrity_warning": artifact_integrity_warning,
         "closure_freshness_binding": closure_freshness_binding,
         "readback": {
@@ -2446,6 +2551,8 @@ def build_bundle(args: argparse.Namespace) -> dict:
             semantically_insufficient_sections.append("cleanup_status")
         if not final_result_status_semantically_sufficient:
             semantically_insufficient_sections.append("final_result_status")
+        if recorded_patch_binding["required"] and not recorded_patch_binding["matched"]:
+            semantically_insufficient_sections.append("recorded_patch_binding")
 
     bundle["semantically_insufficient_sections"] = semantically_insufficient_sections
     bundle["semantic_next_safe_step"] = (
@@ -2538,6 +2645,17 @@ def build_bundle(args: argparse.Namespace) -> dict:
                 semantically_sufficient=final_result_status_semantically_sufficient,
             ),
             recommended_action=SEMANTIC_SECTION_STEPS["final_result_status"],
+        ),
+        semantic_trace_entry(
+            section="recorded_patch_binding",
+            evaluated=not missing and recorded_patch_binding["required"],
+            semantically_sufficient=recorded_patch_binding["matched"],
+            why=(
+                "the patch recorded by synrail record still matches the live HEAD-to-worktree diff"
+                if recorded_patch_binding["matched"]
+                else "the patch recorded by synrail record no longer matches the live HEAD-to-worktree diff"
+            ),
+            recommended_action=SEMANTIC_SECTION_STEPS["recorded_patch_binding"],
         ),
         semantic_trace_entry(
             section="readback",

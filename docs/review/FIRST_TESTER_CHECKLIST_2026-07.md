@@ -33,9 +33,14 @@ short runnable version.
 
 - [ ] Pick one small real change in any local repo (a typo fix, a small function)
 - [ ] Change directory to that target repository root
+- [ ] For the `record` fast path, confirm `git status --short` is empty before
+      `start`; otherwise use the explicit manual proof path
 - [ ] `synrail start --ephemeral "one sentence describing the change"`
 - [ ] Make the change with your coding agent
-- [ ] Put the proof in the `final_result.json` path printed by `start`
+- [ ] For one existing tracked changed file, run
+      `synrail record path/to/file --ephemeral --summary "concrete result" --verify "grep -n 'needle' path/to/file"`
+- [ ] For multi-file, untracked, deleted, or no-op work, put explicit proof in
+      the `final_result.json` path printed by `start` instead
 - [ ] `synrail check --ephemeral`
 - [ ] If non-green, follow only the one repair step it names, then run
       `synrail check --ephemeral` again

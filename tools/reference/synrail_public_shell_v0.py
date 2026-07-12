@@ -13,6 +13,8 @@ from typing import Callable
 @dataclass(frozen=True)
 class PublicShellContext:
     alpha_root_from_args: Callable[..., Path | None]
+    default_project_root_from_args: Callable[[argparse.Namespace], Path]
+    project_root_from_profile: Callable[[Path | None], Path | None]
     default_workspace_artifact_root: Callable[..., Path]
     alpha_file: Callable[[Path, str], Path]
     load_json: Callable[[Path], dict]
@@ -29,7 +31,17 @@ class PublicShellContext:
 
 
 def default_public_shell_root(args: argparse.Namespace, *, context: PublicShellContext) -> Path:
-    return context.alpha_root_from_args(args) or context.default_workspace_artifact_root(project_root=Path.cwd().resolve())
+    project_root = context.default_project_root_from_args(args)
+    return context.alpha_root_from_args(args) or context.default_workspace_artifact_root(project_root=project_root)
+
+
+def public_shell_project_root(
+    args: argparse.Namespace,
+    *,
+    root: Path | None,
+    context: PublicShellContext,
+) -> Path:
+    return context.project_root_from_profile(root) or context.default_project_root_from_args(args)
 
 
 def cmd_status(
@@ -37,8 +49,9 @@ def cmd_status(
     *,
     context: PublicShellContext,
 ) -> int:
-    project_root = Path.cwd().resolve()
-    root = context.alpha_root_from_args(args) or context.default_workspace_artifact_root(project_root=project_root)
+    root = context.alpha_root_from_args(args)
+    project_root = public_shell_project_root(args, root=root, context=context)
+    root = root or context.default_workspace_artifact_root(project_root=project_root)
     state_path: Path | None = None
     if getattr(args, "state_file", None):
         state_path = Path(args.state_file).expanduser().resolve()

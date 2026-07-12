@@ -18,6 +18,7 @@
     "diff_provenance",
     "verification_corroboration",
     "verification_recheck",
+    "recorded_patch_binding",
     "artifact_integrity_warning",
     "closure_freshness_binding",
     "readback",
@@ -167,6 +168,28 @@
         "command_allowed": {"type": "boolean"},
         "matched": {"type": "boolean"},
         "stdout_snippet": {"type": "string"},
+        "skip_reason": {"type": "string"}
+      }
+    },
+    "recorded_patch_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "evaluated",
+        "matched",
+        "changed_file",
+        "expected_patch_sha256",
+        "live_patch_sha256",
+        "skip_reason"
+      ],
+      "properties": {
+        "required": {"type": "boolean"},
+        "evaluated": {"type": "boolean"},
+        "matched": {"type": "boolean"},
+        "changed_file": {"type": "string"},
+        "expected_patch_sha256": {"type": "string", "pattern": "^(|[0-9a-fA-F]{64})$"},
+        "live_patch_sha256": {"type": "string", "pattern": "^(|[0-9a-fA-F]{64})$"},
         "skip_reason": {"type": "string"}
       }
     },
