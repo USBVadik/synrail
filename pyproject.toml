@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "synrail"
 dynamic = ["version"]
-description = "Catch false-green claims from AI coding agents before accepting local changes."
+description = "Local acceptance gate that blocks false-green coding-agent claims until task-scoped proof is rechecked."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }

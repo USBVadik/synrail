@@ -8,10 +8,12 @@ if [[ -n "${SYNRAIL_BIN:-}" ]]; then
   SYNRAIL="$SYNRAIL_BIN"
 elif [[ -x "$REPO_ROOT/.venv/bin/synrail" ]]; then
   SYNRAIL="$REPO_ROOT/.venv/bin/synrail"
+elif [[ -x "$REPO_ROOT/.venv/Scripts/synrail.exe" ]]; then
+  SYNRAIL="$REPO_ROOT/.venv/Scripts/synrail.exe"
 elif command -v synrail >/dev/null 2>&1; then
   SYNRAIL="$(command -v synrail)"
 else
-  echo "Synrail demo: install the development CLI first with 'make install-dev'." >&2
+  echo "Synrail demo: install the development CLI first; see the First Run Guide." >&2
   exit 2
 fi
 

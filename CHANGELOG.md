@@ -17,6 +17,11 @@ All notable changes to the public Synrail alpha are recorded here.
   failed check from reusing a prior accepted report.
 - Derive observed-safe dirty-worktree scope only from live git observation and
   proof-backed provenance, never from caller-supplied scope claims.
+- Position Synrail explicitly as a local acceptance gate that complements CI and
+  AI code review instead of competing with either one.
+- Make first-tester runs repo-clean by default and require ownership triage before
+  an alpha report can trigger a kernel change.
+- Move repo-owned and generated GitHub workflows to Node 24 action releases.
 
 ## 0.1.2 — 2026-06-11
 

@@ -314,6 +314,10 @@ def cmd_init_agent(
     return 0
 
 
+GITHUB_CHECKOUT_ACTION = "actions/checkout@v6"
+GITHUB_SETUP_PYTHON_ACTION = "actions/setup-python@v6"
+
+
 def render_github_action_ci_adapter(*, artifact_root: str, invocation_command: str) -> str:
     return "\n".join(
         [
@@ -350,9 +354,9 @@ def render_github_action_ci_workflow(*, artifact_root: str) -> str:
             "    runs-on: ubuntu-latest",
             "    steps:",
             "      - name: Checkout repo",
-            "        uses: actions/checkout@v4",
+            f"        uses: {GITHUB_CHECKOUT_ACTION}",
             "      - name: Set up Python",
-            "        uses: actions/setup-python@v5",
+            f"        uses: {GITHUB_SETUP_PYTHON_ACTION}",
             "        with:",
             "          python-version: \"3.11\"",
             "      - name: Upgrade pip",
@@ -390,9 +394,9 @@ def render_security_hygiene_workflow() -> str:
             "    runs-on: ubuntu-latest",
             "    steps:",
             "      - name: Checkout repo",
-            "        uses: actions/checkout@v4",
+            f"        uses: {GITHUB_CHECKOUT_ACTION}",
             "      - name: Set up Python",
-            "        uses: actions/setup-python@v5",
+            f"        uses: {GITHUB_SETUP_PYTHON_ACTION}",
             "        with:",
             "          python-version: \"3.11\"",
             "      - name: Upgrade pip",

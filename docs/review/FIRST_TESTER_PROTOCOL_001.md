@@ -41,11 +41,32 @@ Then:
 ./examples/false-green-demo/run_demo.sh
 ```
 
-Then try one real small task in a local repo with the normal lane:
+On Windows, create and install the venv from PowerShell as documented in the
+First Run Guide, then run the demo command above from Git Bash. The demo harness
+detects both `.venv/bin/synrail` and `.venv/Scripts/synrail.exe`.
+
+Before leaving the Synrail checkout, make its installed console script available
+to the current shell:
 
 ```bash
-synrail start "Describe the bounded local change."
-synrail check
+# macOS / Linux
+export PATH="$PWD/.venv/bin:$PATH"
+```
+
+```powershell
+# Windows PowerShell
+$env:Path = "$(Resolve-Path .venv\Scripts);$env:Path"
+```
+
+Then change directory to the target repository root and try one real small task
+with the repo-clean lane:
+
+```bash
+synrail start --ephemeral "Describe the bounded local change."
+# edit the final_result.json path printed by start
+synrail check --ephemeral
+# follow only the named repair step until Status: Accepted
+synrail cleanup --ephemeral
 ```
 
 ## What kind of task to try
@@ -77,6 +98,26 @@ Use the GitHub issue templates:
 - `Alpha feedback`
 - `False-green case`
 - `Confusing output`
+
+The reporter should provide facts, not diagnose ownership. Ask for the Synrail
+version or commit, OS, agent, exact command, redacted working directory, artifact
+mode, and whether the standalone demo passed.
+
+## Maintainer triage before any kernel change
+
+Every new alpha report starts as `ownership:needs-triage`. Reproduce it on current
+`main`, then assign exactly one primary owner:
+
+- `ownership:product` - the supported public CLI violates a documented contract;
+  add a failing regression before changing the implementation
+- `ownership:operator` - the command, working directory, dependency, agent policy,
+  or unsupported usage caused the failure; improve guidance or diagnostics first
+- `ownership:harness` - the demo, fixture, CI adapter, wrapper, or tester protocol
+  fails while the equivalent direct public CLI path works
+
+If one report contains multiple owners, split it before implementation. Do not
+change proof or closure policy merely to make an operator- or harness-owned case
+green. Remove `ownership:needs-triage` when the primary owner is assigned.
 
 ## Honest boundary
 

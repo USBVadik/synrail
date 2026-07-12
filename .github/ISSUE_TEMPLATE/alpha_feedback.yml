@@ -2,7 +2,39 @@ name: Alpha feedback
 description: Share first-use feedback after trying the demo or one real small task
 labels:
   - alpha-feedback
+  - ownership:needs-triage
 body:
+  - type: markdown
+    attributes:
+      value: Do not paste secrets, private source, absolute paths, or unredacted Synrail artifacts. Use SECURITY.md for suspected vulnerabilities.
+  - type: input
+    id: environment
+    attributes:
+      label: Synrail version / commit, OS, and coding agent
+      placeholder: 0.1.3.dev0 / a01ed42, Windows 11, Codex
+    validations:
+      required: true
+  - type: dropdown
+    id: lane
+    attributes:
+      label: Which lane did you try?
+      options:
+        - standalone false-green demo
+        - real task with --ephemeral artifacts
+        - real task with repo-local .synrail artifacts
+        - other
+    validations:
+      required: true
+  - type: dropdown
+    id: demo_result
+    attributes:
+      label: Did the standalone demo pass first?
+      options:
+        - yes
+        - no
+        - not run
+    validations:
+      required: true
   - type: textarea
     id: confusion
     attributes:

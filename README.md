@@ -5,19 +5,15 @@
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Status: Alpha](https://img.shields.io/badge/status-alpha-orange)
 
-Synrail catches false-green AI-agent work before you accept it.
+Synrail is a local acceptance gate for coding agents: it blocks false-green
+"done" until task-scoped proof is rechecked.
 
-Your coding agent says the task is done.
-Synrail checks whether the proof is real.
+CI asks whether configured jobs passed. AI code review asks what looks wrong in
+a diff. Synrail asks whether this bounded agent run earned an accepted result.
 
-If the proof is weak, mismatched, or unverified,
-Synrail blocks acceptance and gives one bounded repair step.
-
-The failure mode is simple: an agent says "done", the tests look plausible, and the operator is still missing trustworthy proof.
-Synrail exists to hold that line between execution and acceptance.
-
-An agent saying "done" is not the same thing as an accepted result.
-Synrail keeps that boundary explicit.
+If the proof is weak, mismatched, or unverified, Synrail blocks acceptance and
+names one bounded repair step. It does not replace CI or review; it governs the
+transition from an agent's claim to accepted local work.
 
 **New here?** Start with [Your First Synrail Run](docs/core/FIRST_RUN_GUIDE.md).
 
@@ -72,6 +68,7 @@ make demo
 ```
 
 This is the fastest way to see Synrail block a simulated false-green claim and then accept the repaired proof.
+On Windows, use the PowerShell install path in the [First Run Guide](docs/core/FIRST_RUN_GUIDE.md), then run the current demo harness from Git Bash.
 
 ## Verify The Local Install
 
@@ -182,18 +179,20 @@ docker run --rm synrail-demo synrail --help
 
 ## Give Feedback
 
-- Real false-green caught or missed? Open a `False-green case` issue.
-- Confusing install, check, repair, or acceptance output? Open a `Confusing output` issue.
-- Tried the demo or one real small task? Open an `Alpha feedback` issue.
+- Real false-green caught or missed? Open a [False-green case](https://github.com/USBVadik/synrail/issues/new?template=false_green_case.yml).
+- Confusing install, check, repair, or acceptance output? Open [Confusing output](https://github.com/USBVadik/synrail/issues/new?template=confusing_output.yml).
+- Tried the demo or one real small task? Open [Alpha feedback](https://github.com/USBVadik/synrail/issues/new?template=alpha_feedback.yml).
 
-## Comparison Table
+## Where It Fits
 
-| Scenario | Manual checks | Agent rules | CI alone | Synrail |
-| --- | --- | --- | --- | --- |
-| Agent claims tests passed but never ran them | easy to miss | usually trusts the claim | maybe later | blocks acceptance until verified |
-| Agent shows a plausible diff but proof does not match the task | manual line audit | weak | no | names the exact proof repair |
-| Second operator inherits a failed repair | manual reconstruction | weak | no | bounded continuation from artifacts |
-| Several bounded agent runs happen in sequence | expensive to re-check each run | weak | late branch signal | proof gate per run |
+These layers answer different questions and work best together.
+
+| Layer | Primary question | Typical output | Relationship to Synrail |
+| --- | --- | --- | --- |
+| Agent instructions or skills | How should the agent work? | guidance inside the agent session | useful input, but still self-reported |
+| CI | Did the configured jobs pass? | branch or pull-request checks | strong runtime evidence; not task acceptance by itself |
+| AI code review | What looks risky or wrong in this diff? | findings and suggested fixes | complementary review, not run closure |
+| Synrail | Did this bounded agent run earn the right to say done? | `Accepted` or a blocking reason plus one repair step | binds task, changed scope, rechecked proof, and closure |
 
 ## When To Use It
 

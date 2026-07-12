@@ -189,10 +189,18 @@ The actual strategic priority from `ROADMAP.md` P0.
       for 3-5 real users of Claude Code / Cursor / Codex / Aider to run the demo
       plus one real task and file feedback, using the existing
       `FIRST_TESTER_PROTOCOL_001.md` and issue templates.
-- [ ] Recruit and run 3-5 external testers.
-- [ ] Sharpen the one-sentence positioning against the now-crowded CI-gate field.
-- [ ] Classify each report as product- / operator- / harness-owned before any
-      kernel change.
+- [ ] Recruit and run 3-5 external testers. Issues #7 and #8 are now classified
+      historical alpha signal, but they predate this tester flow and do not prove
+      it. Require at least three fresh real-task runs on current `main`.
+- [x] **Sharpen the one-sentence positioning against the now-crowded CI-gate
+      field.** Synrail is now presented as a local acceptance gate: CI asks
+      whether configured jobs passed, AI code review asks what looks wrong in a
+      diff, and Synrail asks whether this bounded run earned `done` through
+      task-scoped rechecked proof.
+- [x] **Classify each report as product- / operator- / harness-owned before any
+      kernel change.** Issue forms now collect reproduction facts and start at
+      `ownership:needs-triage`; the first-tester protocol defines the three
+      mutually exclusive primary owners and requires mixed reports to be split.
 
 ## Deeper Backlog (Only After External Signal)
 
@@ -252,6 +260,30 @@ Verification: 897 tests pass in unittest and pytest, coverage visibility is 53%,
 Ruff and `git diff --check` are clean, `pip-audit` reports no known
 vulnerabilities, the wheel metadata is `0.1.3.dev0`, and the Python 3.11 Docker
 install/CLI path passes.
+
+### Track B positioning and report triage
+
+Implemented in the isolated `codex/positioning-triage-2026-07` worktree after
+Module 3 merged cleanly to `main`.
+
+Landed locally:
+
+- a first-screen category claim that distinguishes local run acceptance from CI
+  execution and AI diff review;
+- a repo-clean `--ephemeral` first-tester path, with explicit macOS/Linux and
+  Windows install/demo guidance;
+- ownership triage in existing issue forms, tester protocol, and contributor
+  guidance, without adding another audit document;
+- materialized GitHub labels plus retrospective `ownership:product`
+  classification for issues #7 and #8;
+- Node 24 GitHub Actions in both this repository and generated `init-ci`
+  workflows.
+
+Verification: 903 unittest tests and 903 pytest tests pass, coverage visibility
+is 54%, Ruff and `git diff --check` are clean, `pip-audit` reports no known
+vulnerabilities, issue-form YAML parses, the cross-repo ephemeral setup/cleanup
+smoke passes, and the live false-green demo reaches `Proof Invalid` then
+`Accepted`.
 
 ## Session Log — 2026-07-11
 

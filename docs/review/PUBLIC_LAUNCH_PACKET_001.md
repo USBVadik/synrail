@@ -13,7 +13,9 @@ But often:
 - proof is narrative
 - handoff state is unclear
 
-I built Synrail to separate claimed_done from accepted_done.
+I built Synrail as a local acceptance gate between claimed_done and accepted_done.
+CI can tell me whether configured jobs passed. Synrail checks whether this agent
+run's task-scoped proof actually earned "done".
 Demo below.
 
 ## LinkedIn post
@@ -21,9 +23,10 @@ Demo below.
 The hardest part of using coding agents is not generation.
 It is knowing when their work is safe to accept.
 
-Synrail is my attempt to turn agent claims into verifiable closure:
+Synrail is a local acceptance gate that turns agent claims into verifiable closure:
 claim -> evidence -> verification -> accept/block/repair.
 
+It complements CI and code review; it does not replace either one.
 It is a narrow local alpha lane, not a broad workflow platform.
 The wedge is simple: catch false-green closure before it gets accepted as truth.
 
@@ -31,8 +34,8 @@ The wedge is simple: catch false-green closure before it gets accepted as truth.
 
 Show HN: Synrail — catches false-green claims from AI coding agents
 
-Synrail is a proof-first local control layer for coding-agent work.
-It separates claimed done from accepted done.
+Synrail is a local acceptance gate for coding-agent work.
+It blocks false-green "done" until task-scoped proof is rechecked.
 
 If the proof is weak, mismatched, or unverified, Synrail blocks acceptance and points to one bounded repair step.
 

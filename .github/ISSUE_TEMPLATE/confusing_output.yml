@@ -3,7 +3,25 @@ description: Report output that was hard to interpret during install, check, rep
 labels:
   - alpha-feedback
   - output
+  - ownership:needs-triage
 body:
+  - type: markdown
+    attributes:
+      value: Do not paste secrets, private source, absolute paths, or unredacted Synrail artifacts. Use SECURITY.md for suspected vulnerabilities.
+  - type: input
+    id: environment
+    attributes:
+      label: Synrail version / commit, OS, and coding agent
+      placeholder: 0.1.3.dev0 / a01ed42, macOS 15, Claude Code
+    validations:
+      required: true
+  - type: textarea
+    id: invocation
+    attributes:
+      label: Exact command, redacted working directory, and artifact mode
+      placeholder: synrail check --ephemeral; target repo root; ephemeral
+    validations:
+      required: true
   - type: textarea
     id: confusing_output
     attributes:
@@ -23,5 +41,15 @@ body:
     attributes:
       label: Context
       placeholder: What command were you running and what were you trying to do?
+    validations:
+      required: true
+  - type: dropdown
+    id: demo_result
+    attributes:
+      label: Did the standalone demo pass on the same install?
+      options:
+        - yes
+        - no
+        - not run
     validations:
       required: true

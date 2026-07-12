@@ -11,9 +11,17 @@ short runnable version.
 
 - [ ] `git clone https://github.com/USBVadik/synrail`
 - [ ] `cd synrail`
-- [ ] `make install-dev`
-- [ ] `.venv/bin/synrail --help` prints the command list
-- [ ] `make demo` runs and shows a blocked false-green claim becoming accepted
+- [ ] macOS/Linux: `make install-dev`
+- [ ] Windows PowerShell: `py -3 -m venv .venv`, then upgrade pip and install:
+      `.\.venv\Scripts\python.exe -m pip install --upgrade pip` and
+      `.\.venv\Scripts\python.exe -m pip install -e ".[dev]" -c constraints-dev.txt`
+- [ ] Add this checkout's venv scripts directory to the current shell `PATH`
+      (`export PATH="$PWD/.venv/bin:$PATH"` on macOS/Linux, or
+      `$env:Path = "$(Resolve-Path .venv\Scripts);$env:Path"` in PowerShell)
+- [ ] `synrail --help` prints the command list
+- [ ] macOS/Linux: `make demo`; Windows: run
+      `./examples/false-green-demo/run_demo.sh` from Git Bash
+- [ ] The demo shows a blocked false-green claim becoming accepted
 
 ## Read the wedge (about 1 minute)
 
@@ -24,12 +32,15 @@ short runnable version.
 ## One real bounded task (about 5 minutes)
 
 - [ ] Pick one small real change in any local repo (a typo fix, a small function)
-- [ ] `synrail start "one sentence describing the change"`
+- [ ] Change directory to that target repository root
+- [ ] `synrail start --ephemeral "one sentence describing the change"`
 - [ ] Make the change with your coding agent
-- [ ] Put the proof in `.synrail/final_result.json`
-- [ ] `synrail check`
-- [ ] If non-green, follow only the one repair step it names, then `synrail check` again
+- [ ] Put the proof in the `final_result.json` path printed by `start`
+- [ ] `synrail check --ephemeral`
+- [ ] If non-green, follow only the one repair step it names, then run
+      `synrail check --ephemeral` again
 - [ ] Stop only when it prints `Status: Accepted`
+- [ ] `synrail cleanup --ephemeral` removes the test artifacts
 
 ## Tell us what happened (about 2 minutes)
 
