@@ -324,6 +324,19 @@ try:
 except ImportError:
     from synrail_safe_git_v0 import SafeGitError, run_safe_git
 
+try:
+    from .synrail_verification_profile_v0 import (
+        VERIFICATION_GATE_REASONS,
+        run_verification_profiles,
+        verification_lock_from_profile,
+    )
+except ImportError:
+    from synrail_verification_profile_v0 import (
+        VERIFICATION_GATE_REASONS,
+        run_verification_profiles,
+        verification_lock_from_profile,
+    )
+
 
 HERE = Path(__file__).resolve().parent
 SPINE = HERE / "synrail_spine_v0.py"
@@ -2817,6 +2830,78 @@ def cmd_record(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_verify(args: argparse.Namespace) -> int:
+    root = alpha_root_from_args(args)
+    requested_project_root = default_project_root_from_args(args)
+    try:
+        profile_project_root = project_root_from_profile(root)
+    except (OSError, json.JSONDecodeError):
+        profile_project_root = None
+    project_root = profile_project_root or requested_project_root
+    state_path = alpha_file(root, "state") if root else None
+    if root is None or state_path is None or not state_path.exists():
+        result = {
+            "result": "ERROR",
+            "reason": "NO_ACTIVE_RUN",
+            "detail": "verify needs an active controlled run so receipts can bind to its run id.",
+            "next_step": "run synrail start, make the bounded change, then rerun synrail verify.",
+        }
+        if getattr(args, "json", False):
+            print(json.dumps(result, indent=2, ensure_ascii=True))
+        else:
+            print("Synrail could not verify yet.")
+            print(f"Reason: {result['reason']}")
+            print(f"What happened: {result['detail']}")
+            print(f"What to do next: {result['next_step']}")
+        return 2
+    lock = verification_lock_from_profile(load_project_profile(root) or {})
+    if not lock.get("present", False):
+        result = {
+            "result": "ERROR",
+            "reason": "VERIFICATION_NOT_CONFIGURED",
+            "detail": "no verification profiles were locked when this run started.",
+            "next_step": "add [verification.<name>] tables to synrail.toml, then start a new run.",
+        }
+        if getattr(args, "json", False):
+            print(json.dumps(result, indent=2, ensure_ascii=True))
+        else:
+            print("Synrail has no verification profiles for this run.")
+            print(f"What happened: {result['detail']}")
+            print(f"What to do next: {result['next_step']}")
+        return 2
+    state = load_json(state_path)
+    outcome = run_verification_profiles(
+        project_root=project_root,
+        artifact_root=root,
+        lock=lock,
+        run_id=state.get("run_id", ""),
+        profile_names=list(getattr(args, "profile", [])) or None,
+    )
+    if outcome["status"] != "OK":
+        if getattr(args, "json", False):
+            print(json.dumps(outcome, indent=2, ensure_ascii=True))
+        else:
+            print("Synrail could not run verification yet.")
+            print(f"Reason: {outcome.get('reason', 'VERIFICATION_ERROR')}")
+            print(f"What happened: {outcome.get('detail', '')}")
+        return 2
+    next_command = shell_command(root, "check", project_root=project_root)
+    outcome["next_command"] = next_command
+    if getattr(args, "json", False):
+        print(json.dumps(outcome, indent=2, ensure_ascii=True))
+        return 0 if outcome["all_green"] else 2
+    for item in outcome["results"]:
+        verdict = "GREEN" if item["green"] else ("TIMEOUT" if item["timed_out"] else f"FAIL (exit {item['exit_code']})")
+        print(f"Verification {item['profile']}: {verdict} in {item['duration_seconds']}s")
+    print(f"Receipts: {display_path(Path(outcome['receipts_file']))}")
+    if outcome["all_green"]:
+        print("All required verification profiles are green for the current workspace.")
+        print("Next command: " + next_command)
+        return 0
+    print("Verification is not green. Fix the change until the command passes, then rerun synrail verify.")
+    return 2
+
+
 def cmd_cleanup(args: argparse.Namespace) -> int:
     ensure_default_project_root_arg(args)
     if getattr(args, "ephemeral", False) and getattr(args, "stale", False):
@@ -3324,7 +3409,8 @@ def cmd_check(args: argparse.Namespace) -> int:
             return thin_code
         if Path(args.report_file).exists():
             report_payload = load_json(Path(args.report_file))
-            if report_payload.get("reason", "") in {"CONTROLLED_BOOTSTRAP_NOT_CONFIRMED", "REMOTE_TARGET_UNSUPPORTED"}:
+            skip_prompt_reasons = {"CONTROLLED_BOOTSTRAP_NOT_CONFIRMED", "REMOTE_TARGET_UNSUPPORTED"} | VERIFICATION_GATE_REASONS
+            if report_payload.get("reason", "") in skip_prompt_reasons:
                 return thin_code
         if outcome_class not in {"ACCEPTED", ""} and getattr(args, "repair_packet_file", None):
             prompt_output = str(alpha_file(root, "prompt")) if root else str(Path(args.output).with_name("prompt.json"))
@@ -3983,6 +4069,22 @@ def build_parser() -> argparse.ArgumentParser:
     p_record.add_argument("--project-root")
     p_record.add_argument("--json", action="store_true")
     p_record.set_defaults(func=cmd_record)
+
+    p_verify = sub.add_parser(
+        "verify",
+        help="Run the operator-approved verification profiles and write receipts",
+        description=(
+            "Re-execute the verification commands locked at start (from synrail.toml) "
+            "without a shell, and write signed receipts that synrail check requires "
+            "before acceptance."
+        ),
+    )
+    p_verify.add_argument("--profile", action="append", default=[], help="Run only this profile (repeatable)")
+    p_verify.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_verify.add_argument("--ephemeral", action="store_true", help="Use the repo-keyed user-cache artifact root for this checkout")
+    p_verify.add_argument("--project-root")
+    p_verify.add_argument("--json", action="store_true")
+    p_verify.set_defaults(func=cmd_verify)
 
     p_init_agent = sub.add_parser("init-agent", help="Write agent onboarding files for one supported agent")
     p_init_agent.add_argument("--agent", required=True, choices=["claude", "gemini", "codex", "cursor"])
