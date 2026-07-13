@@ -60,6 +60,7 @@ class InstallSmokeTests(unittest.TestCase):
 
     def test_package_and_runtime_version_share_one_source(self) -> None:
         project = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
+        makefile = (REPO_ROOT / "Makefile").read_text()
         from tools.reference.synrail_alpha_telemetry_v0 import synrail_version
         from tools.reference.synrail_version_v0 import __version__
 
@@ -67,6 +68,10 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertEqual(
             "tools.reference.synrail_version_v0.__version__",
             project["tool"]["setuptools"]["dynamic"]["version"]["attr"],
+        )
+        self.assertIn(
+            "$(DEV_STAMP): pyproject.toml constraints-dev.txt tools/reference/synrail_version_v0.py $(PYTHON)",
+            makefile,
         )
         with mock.patch(
             "tools.reference.synrail_alpha_telemetry_v0.importlib_metadata.version",
@@ -428,6 +433,11 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("Verification unit: GREEN", first_run_guide)
         self.assertIn("Agent: repaired the behavior, not the story", first_run_guide)
         self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", first_run_guide)
+        self.assertIn("synrail init-verification --name unit -- python -m pytest -q", first_run_guide)
+        self.assertIn("This command does not run the argv, infer your test framework, or trust the", first_run_guide)
+        self.assertIn("writes a `REVIEW REQUIRED` scaffold", first_run_guide)
+        self.assertIn("exact timestamped backup", first_run_guide)
+        self.assertIn("Never put secrets in profile argv", first_run_guide)
         self.assertIn("make install-dev", first_run_guide)
         self.assertIn("py -3 -m venv .venv", first_run_guide)
         self.assertIn('.\\.venv\\Scripts\\python.exe -m pip install -e ".[dev]" -c constraints-dev.txt', first_run_guide)
@@ -531,6 +541,11 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertNotIn("tests claimed as passed but not actually run", public_readme)
         self.assertIn("recorded verification evidence that fails read-only recheck", public_readme)
         self.assertIn("## Behavioral Verification: Operator-Owned Profiles", public_readme)
+        self.assertIn("synrail init-verification --name unit -- python -m pytest -q", public_readme)
+        self.assertIn("without guessing the project ecosystem or\nexecuting the command", public_readme)
+        self.assertIn("generated `synrail.toml` is marked `REVIEW REQUIRED`", public_readme)
+        self.assertIn("exact timestamped backup", public_readme)
+        self.assertIn("Do not put secrets in profile argv", public_readme)
         self.assertIn("[verification.unit]", public_readme)
         self.assertIn("git-tracked config that matches `HEAD`", public_readme)
         self.assertIn(

@@ -326,16 +326,25 @@ except ImportError:
 
 try:
     from .synrail_verification_profile_v0 import (
+        DEFAULT_TIMEOUT_SECONDS,
+        MAX_TIMEOUT_SECONDS,
         VERIFICATION_GATE_REASONS,
         run_verification_profiles,
         verification_lock_from_profile,
     )
 except ImportError:
     from synrail_verification_profile_v0 import (
+        DEFAULT_TIMEOUT_SECONDS,
+        MAX_TIMEOUT_SECONDS,
         VERIFICATION_GATE_REASONS,
         run_verification_profiles,
         verification_lock_from_profile,
     )
+
+try:
+    from .synrail_verification_init_v0 import VerificationInitError, write_verification_scaffold
+except ImportError:
+    from synrail_verification_init_v0 import VerificationInitError, write_verification_scaffold
 
 
 HERE = Path(__file__).resolve().parent
@@ -2902,6 +2911,40 @@ def cmd_verify(args: argparse.Namespace) -> int:
     return 2
 
 
+def cmd_init_verification(args: argparse.Namespace) -> int:
+    project_root = default_project_root_from_args(args)
+    command = list(getattr(args, "verification_argv", []))
+    if command and command[0] == "--":
+        command = command[1:]
+    try:
+        result = write_verification_scaffold(
+            project_root=project_root,
+            profile_name=args.name,
+            argv=command,
+            timeout_seconds=args.timeout_seconds,
+            force=args.force,
+        )
+    except VerificationInitError as exc:
+        print("Synrail did not write a verification profile.")
+        print(f"Reason: {exc.reason}")
+        print(f"What happened: {exc.detail}")
+        print(f"What to do next: {exc.next_step}")
+        return 2
+
+    print("Synrail verification profile scaffold is ready for operator review.")
+    print(f"Project root: {project_root}")
+    print(f"Config: {result.path}")
+    print(f"State: {result.state}")
+    print(f"Profile: {result.profile_name}")
+    print(f"Argv: {json.dumps(list(result.argv), ensure_ascii=False)}")
+    print(f"Timeout: {result.timeout_seconds}s")
+    if result.backup_path:
+        print(f"Exact backup: {result.backup_path}")
+    print("Trust state: REVIEW REQUIRED; this command did not execute or trust the argv.")
+    print("Next: review synrail.toml, commit it, then start a new controlled run.")
+    return 0
+
+
 def cmd_cleanup(args: argparse.Namespace) -> int:
     ensure_default_project_root_arg(args)
     if getattr(args, "ephemeral", False) and getattr(args, "stale", False):
@@ -4085,6 +4128,42 @@ def build_parser() -> argparse.ArgumentParser:
     p_verify.add_argument("--project-root")
     p_verify.add_argument("--json", action="store_true")
     p_verify.set_defaults(func=cmd_verify)
+
+    p_init_verification = sub.add_parser(
+        "init-verification",
+        help="Scaffold one operator-reviewed verification profile",
+        description=(
+            "Write a review-required synrail.toml profile without executing its argv. "
+            "The profile becomes trusted only after it is reviewed, tracked, committed, "
+            "and unchanged at the start of a new controlled run."
+        ),
+    )
+    p_init_verification.add_argument(
+        "--name",
+        default="unit",
+        help="Profile name using letters, digits, underscores, or hyphens (default: unit)",
+    )
+    p_init_verification.add_argument(
+        "--timeout-seconds",
+        type=int,
+        default=DEFAULT_TIMEOUT_SECONDS,
+        help=(
+            f"Bounded command timeout from 1 through {MAX_TIMEOUT_SECONDS} seconds "
+            f"(default: {DEFAULT_TIMEOUT_SECONDS})"
+        ),
+    )
+    p_init_verification.add_argument("--project-root", help="Project root; defaults to the current git root")
+    p_init_verification.add_argument(
+        "--force",
+        action="store_true",
+        help="Back up and replace a different existing synrail.toml",
+    )
+    p_init_verification.add_argument(
+        "verification_argv",
+        nargs=argparse.REMAINDER,
+        help="Exact verification argv after --, for example: -- python -m pytest -q",
+    )
+    p_init_verification.set_defaults(func=cmd_init_verification)
 
     p_init_agent = sub.add_parser("init-agent", help="Write agent onboarding files for one supported agent")
     p_init_agent.add_argument("--agent", required=True, choices=["claude", "gemini", "codex", "cursor"])

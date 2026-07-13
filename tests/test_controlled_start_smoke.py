@@ -126,6 +126,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
         self.assertIn("restore", help_result.stdout)
         self.assertIn("init-agent", help_result.stdout)
         self.assertIn("init-ci", help_result.stdout)
+        self.assertIn("init-verification", help_result.stdout)
         self.assertIn("preflight", help_result.stdout)
         self.assertNotIn("install-agent-files", help_result.stdout)
         self.assertNotIn("session-export", help_result.stdout)
