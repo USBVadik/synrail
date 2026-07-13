@@ -137,6 +137,21 @@ manual editing when an existing config already contains profiles you need.
 Do not put secrets in profile argv: the config is intended to be reviewed and
 committed, and the scaffold also prints the argv for confirmation.
 
+Before creating a controlled run, inspect the exact start-time readiness
+without executing the configured command:
+
+```bash
+synrail preflight
+```
+
+`Behavioral verification: READY` means the config is valid, tracked, clean at
+`HEAD`, contains at least one required profile, and every `argv[0]` resolves
+to a readable regular executable that `start` can lock. `REVIEW_REQUIRED` or `BLOCKED` exits non-zero and names the next safe
+step. `NOT_CONFIGURED` keeps the non-behavioral install preflight green but
+warns that behavioral claims are not gated. Preflight never executes profile
+argv or creates a trusted verification lock. From a repository subdirectory,
+it discovers the git root and resolves its default artifact path there.
+
 ```toml
 [verification.unit]
 argv = ["python", "-m", "pytest", "-q"]

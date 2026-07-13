@@ -17,6 +17,7 @@ try:
     from .synrail_verification_profile_v0 import (
         GATE_BLOCKED,
         evaluate_verification_gate,
+        inspect_verification_readiness,
         verification_lock_from_profile,
         write_verification_gate_block,
     )
@@ -24,6 +25,7 @@ except ImportError:
     from synrail_verification_profile_v0 import (
         GATE_BLOCKED,
         evaluate_verification_gate,
+        inspect_verification_readiness,
         verification_lock_from_profile,
         write_verification_gate_block,
     )
@@ -1156,9 +1158,23 @@ def _preflight_wrapper_available(project_root: Path) -> bool:
 
 
 def _artifact_root_writable(artifact_root: Path) -> bool:
+    if artifact_root.exists():
+        if artifact_root.is_symlink() or not artifact_root.is_dir():
+            return False
+        try:
+            with tempfile.NamedTemporaryFile(dir=artifact_root, delete=True):
+                pass
+            return True
+        except OSError:
+            return False
+
+    existing_parent = artifact_root.parent
+    while not existing_parent.exists() and existing_parent != existing_parent.parent:
+        existing_parent = existing_parent.parent
+    if not existing_parent.is_dir():
+        return False
     try:
-        artifact_root.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(dir=artifact_root, delete=True):
+        with tempfile.TemporaryDirectory(prefix=".synrail-preflight-", dir=existing_parent):
             pass
         return True
     except OSError:
@@ -1173,6 +1189,41 @@ def _parent_git_repo_above(project_root: Path, current_dir: Path, workspace_git_
         if parent_root:
             return parent_root
     return ""
+
+
+def _verification_preflight_next_step(readiness: dict[str, object], command: str) -> str:
+    action = readiness.get("next_action", "")
+    if action == "CONFIGURE":
+        return (
+            "Behavioral claims are not gated yet. Create an operator-reviewed profile with "
+            f"`{command} init-verification --name unit -- <verification argv>`, then review and commit synrail.toml."
+        )
+    if action == "REVIEW_AND_COMMIT":
+        return (
+            "Review synrail.toml, track and commit the operator-approved profile, then rerun "
+            f"`{command} preflight`."
+        )
+    if action == "INITIALIZE_AND_COMMIT":
+        return (
+            "Create the repository's first commit including the reviewed synrail.toml, then rerun "
+            f"`{command} preflight`."
+        )
+    if action == "FIX_PROJECT_ROOT":
+        return f"Pass the git repository that owns synrail.toml with `--project-root`, then rerun `{command} preflight`."
+    if action == "FIX_GIT_PROVENANCE":
+        return f"Fix the reported git provenance failure, then rerun `{command} preflight`."
+    if action == "FIX_EXECUTABLE":
+        return f"Install or correct the configured executable, then rerun `{command} preflight`."
+    if action == "MAKE_PROFILE_REQUIRED":
+        return (
+            "Review synrail.toml and mark at least one behavioral profile `required = true`, "
+            f"commit it, then rerun `{command} preflight`."
+        )
+    if action == "FIX_CONFIG":
+        return f"Fix synrail.toml, then rerun `{command} preflight`."
+    if action == "START":
+        return f"Verification is ready. Start a bounded run with `{command} start \"Describe the bounded local change.\"`."
+    return "Synrail could not determine a safe next step. Do not start a run; inspect the machine-readable preflight report."
 
 
 def build_preflight_report(
@@ -1195,6 +1246,13 @@ def build_preflight_report(
     fallback_command = preferred_synrail_fallback_command()
     wrapper_available = _preflight_wrapper_available(project_root)
     artifact_root_writable = _artifact_root_writable(artifact_root)
+    verification = inspect_verification_readiness(project_root)
+    effective_command = (
+        wrapper_command
+        if wrapper_available
+        else fallback_command or repo_native_alpha_command or wrapper_command
+    )
+    verification["next_step"] = _verification_preflight_next_step(verification, effective_command)
     report = {
         "status": "PASS",
         "project_root": str(project_root),
@@ -1219,8 +1277,9 @@ def build_preflight_report(
             "available": repo_native_alpha_command is not None,
             "command": repo_native_alpha_command or "",
         },
+        "behavioral_verification": verification,
     }
-    if not artifact_root_writable:
+    if not artifact_root_writable or verification["status"] in {"BLOCKED", "REVIEW_REQUIRED"}:
         report["status"] = "FAIL"
     return report
 
@@ -1229,6 +1288,7 @@ def _print_preflight_human(report: dict[str, object]) -> None:
     git = report["git"]
     wrapper = report["synrail_wrapper"]
     alpha_fallback = report["repo_native_alpha_fallback"]
+    verification = report["behavioral_verification"]
     print("Synrail preflight")
     print(f"Python version: {report['python_version']}")
     if git["available"]:
@@ -1249,7 +1309,22 @@ def _print_preflight_human(report: dict[str, object]) -> None:
     print(f"Repo-native alpha fallback available: {'yes' if alpha_fallback['available'] else 'no'}")
     if alpha_fallback["command"]:
         print(f"Repo-native alpha command: {alpha_fallback['command']}")
-    if report["status"] != "PASS":
+    print(f"Behavioral verification: {verification['status']}")
+    if verification.get("reason"):
+        print(f"Verification blocker: {verification['reason']}: {verification['detail']}")
+    if verification["status"] == "READY":
+        print(
+            "Verification profiles: "
+            f"{verification['profile_count']} configured, {verification['required_profile_count']} required"
+        )
+        for profile in verification["profiles"]:
+            requirement = "required" if profile["required"] else "optional"
+            print(
+                f"- {profile['name']}: {profile['argv0']} -> {profile['argv0_realpath']} "
+                f"({requirement}, timeout {profile['timeout_seconds']}s)"
+            )
+    print(f"Verification next step: {verification['next_step']}")
+    if not report["artifact_root_writable"]:
         print("What to do next: fix the failing local preflight surface before relying on the normal install path.")
 
 
@@ -1258,9 +1333,15 @@ def cmd_preflight(
     *,
     context: CiPreflightContext,
 ) -> int:
-    current_dir = context.current_project_root()
-    project_root = Path(getattr(args, "project_root", "") or current_dir).expanduser().resolve()
-    artifact_root = Path(getattr(args, "artifact_root", "") or (project_root / ".synrail")).expanduser().resolve()
+    current_dir = Path.cwd().resolve()
+    project_root = Path(
+        getattr(args, "project_root", "") or context.current_project_root()
+    ).expanduser().resolve()
+    artifact_root_arg = getattr(args, "artifact_root", "")
+    artifact_root = Path(artifact_root_arg).expanduser() if artifact_root_arg else project_root / ".synrail"
+    if not artifact_root.is_absolute():
+        artifact_root = project_root / artifact_root
+    artifact_root = artifact_root.resolve()
     report = build_preflight_report(
         project_root=project_root,
         current_dir=current_dir,

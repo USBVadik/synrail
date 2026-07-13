@@ -1,6 +1,6 @@
 # Synrail Roadmap
 
-Current as of 2026-05-06.
+Current as of 2026-07-13.
 
 This file is the public current roadmap. Older kernel-hardening detail lives in `docs/review/ROADMAP_STATUS_001.md` and the review archive; do not treat the old sprint notes as the active source of truth.
 
@@ -40,6 +40,8 @@ The following tranches are considered closed enough for public-alpha pressure:
 - public repo readiness: `pyproject.toml`, CI, coverage visibility, `Makefile`, Docker smoke path, dev constraints, and Apache-2.0 license
 - agent adoption files for Claude, Gemini, and generic agent hosts
 - local benchmark/discussion starter surfaces for false-green cases
+- operator-owned behavioral verification profiles, a real red-to-green demo,
+  and fail-safe profile scaffolding/readiness inspection before controlled start
 
 These are not proofs of broad product maturity. They are enough to stop self-curating and collect external signal.
 
@@ -86,6 +88,9 @@ Known current finding:
   closed by operator-owned verification profiles (`synrail.toml`, `synrail verify`,
   fail-closed receipt gate in `check`) with regression coverage in
   `tests/test_behavioral_claim_gap.py`
+- first-run profile setup no longer depends on memorizing TOML: `init-verification`
+  writes an untrusted review scaffold, while verification-aware `preflight`
+  reports whether config/git/executable inputs are actually ready for `start`
 
 Follow-up:
 

@@ -4179,9 +4179,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_init_ci.add_argument("--force", action="store_true")
     p_init_ci.set_defaults(func=cmd_init_ci)
 
-    p_preflight = sub.add_parser("preflight", aliases=["doctor-install"], help="Check local install and fallback readiness")
-    p_preflight.add_argument("--project-root", default=".")
-    p_preflight.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_preflight = sub.add_parser(
+        "preflight",
+        aliases=["doctor-install"],
+        help="Check local install and behavioral-verification readiness",
+    )
+    p_preflight.add_argument("--project-root", help="Project root; defaults to the current git root")
+    p_preflight.add_argument(
+        "--artifact-root",
+        help="Artifact root; relative paths resolve from the project root (default: .synrail)",
+    )
     p_preflight.add_argument("--json", action="store_true")
     p_preflight.set_defaults(func=cmd_preflight)
 
