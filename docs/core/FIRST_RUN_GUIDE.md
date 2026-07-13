@@ -249,6 +249,21 @@ verification command once in `synrail.toml` at the project root, before
 `synrail start`. Commit the file first: v1 requires a regular, git-tracked
 `synrail.toml` that matches `HEAD` when the run starts.
 
+Use the fail-safe scaffold instead of writing the first profile from memory:
+
+```bash
+synrail init-verification --name unit -- python -m pytest -q
+```
+
+This command does not run the argv, infer your test framework, or trust the
+resulting file. It writes a `REVIEW REQUIRED` scaffold and refuses to replace
+a different `synrail.toml` by default. Review the exact argv and timeout,
+commit the file, and only then start a new controlled run. If you explicitly
+use `--force`, Synrail creates an exact timestamped backup before replacing
+the whole config; edit manually when you need to preserve other profiles.
+Never put secrets in profile argv: `synrail.toml` is intended to be reviewed
+and committed, and the scaffold prints the argv for confirmation.
+
 ```toml
 [verification.unit]
 argv = ["python", "-m", "pytest", "-q"]

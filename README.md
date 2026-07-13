@@ -122,6 +122,21 @@ project root. Commit that file before the controlled run: Verification
 Profiles v1 only treats a regular, git-tracked config that matches `HEAD` as
 operator-owned.
 
+Scaffold one required profile without guessing the project ecosystem or
+executing the command:
+
+```bash
+synrail init-verification --name unit -- python -m pytest -q
+```
+
+The generated `synrail.toml` is marked `REVIEW REQUIRED`. Inspect the exact
+argv and timeout, then commit it before `synrail start`. The scaffold is
+idempotent and refuses to replace a different existing config. `--force`
+creates an exact timestamped backup before replacing the whole file; prefer
+manual editing when an existing config already contains profiles you need.
+Do not put secrets in profile argv: the config is intended to be reviewed and
+committed, and the scaffold also prints the argv for confirmation.
+
 ```toml
 [verification.unit]
 argv = ["python", "-m", "pytest", "-q"]
