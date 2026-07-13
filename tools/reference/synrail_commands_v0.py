@@ -1195,8 +1195,9 @@ def _verification_preflight_next_step(readiness: dict[str, object], command: str
     action = readiness.get("next_action", "")
     if action == "CONFIGURE":
         return (
-            "Behavioral claims are not gated yet. Create an operator-reviewed profile with "
-            f"`{command} init-verification --name unit -- <verification argv>`, then review and commit synrail.toml."
+            "Behavioral claims are not gated yet. Run "
+            f"`{command} suggest-verification` for read-only candidates, then create an operator-reviewed "
+            f"profile with `{command} init-verification --name NAME -- <exact argv>` and commit synrail.toml."
         )
     if action == "REVIEW_AND_COMMIT":
         return (

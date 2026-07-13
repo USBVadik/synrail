@@ -346,6 +346,17 @@ try:
 except ImportError:
     from synrail_verification_init_v0 import VerificationInitError, write_verification_scaffold
 
+try:
+    from .synrail_verification_suggestions_v0 import (
+        VerificationSuggestionError,
+        discover_verification_suggestions,
+    )
+except ImportError:
+    from synrail_verification_suggestions_v0 import (
+        VerificationSuggestionError,
+        discover_verification_suggestions,
+    )
+
 
 HERE = Path(__file__).resolve().parent
 SPINE = HERE / "synrail_spine_v0.py"
@@ -2945,6 +2956,60 @@ def cmd_init_verification(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_suggest_verification(args: argparse.Namespace) -> int:
+    project_root = default_project_root_from_args(args)
+    try:
+        report = discover_verification_suggestions(
+            project_root,
+            command=preferred_synrail_command(),
+        )
+    except VerificationSuggestionError as exc:
+        if args.json:
+            print(
+                json.dumps(
+                    {
+                        "schema_version": "verification_suggestions_v0",
+                        "status": "BLOCKED",
+                        "reason": exc.reason,
+                        "detail": exc.detail,
+                        "next_step": exc.next_step,
+                    },
+                    indent=2,
+                    ensure_ascii=True,
+                )
+            )
+        else:
+            print("Synrail could not inspect verification suggestions.")
+            print(f"Reason: {exc.reason}")
+            print(f"What happened: {exc.detail}")
+            print(f"What to do next: {exc.next_step}")
+        return 2
+
+    if args.json:
+        print(json.dumps(report, indent=2, ensure_ascii=True))
+        return 0
+
+    print("Synrail verification suggestions")
+    print(f"Project root: {report['project_root']}")
+    print("Trust state: REVIEW REQUIRED")
+    print("Safety: no suggested verification command was executed and no files were written.")
+    candidates = report["candidates"]
+    if not candidates:
+        print("Candidates: none found from the bounded root markers.")
+    for index, candidate in enumerate(candidates, start=1):
+        print("")
+        print(f"Candidate {index}: {candidate['candidate_id']}")
+        print(f"Profile: {candidate['profile_name']}")
+        print(f"Detected from: {', '.join(candidate['detected_from'])}")
+        print(f"Why: {candidate['rationale']}")
+        print(f"Argv: {json.dumps(candidate['argv'], ensure_ascii=False)}")
+        print(f"Scaffold: {shlex.join(candidate['scaffold_argv'])}")
+    for warning in report["warnings"]:
+        print(f"Warning: {warning['path']}: {warning['reason']}: {warning['detail']}")
+    print(f"Next: {report['next_step']}")
+    return 0
+
+
 def cmd_cleanup(args: argparse.Namespace) -> int:
     ensure_default_project_root_arg(args)
     if getattr(args, "ephemeral", False) and getattr(args, "stale", False):
@@ -4164,6 +4229,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Exact verification argv after --, for example: -- python -m pytest -q",
     )
     p_init_verification.set_defaults(func=cmd_init_verification)
+
+    p_suggest_verification = sub.add_parser(
+        "suggest-verification",
+        help="Suggest review-required verification profiles without executing them",
+        description=(
+            "Inspect a bounded set of conventional project-root markers and suggest exact "
+            "verification argv. This command never executes a candidate or writes synrail.toml."
+        ),
+    )
+    p_suggest_verification.add_argument("--project-root", help="Project root; defaults to the current git root")
+    p_suggest_verification.add_argument("--json", action="store_true")
+    p_suggest_verification.set_defaults(func=cmd_suggest_verification)
 
     p_init_agent = sub.add_parser("init-agent", help="Write agent onboarding files for one supported agent")
     p_init_agent.add_argument("--agent", required=True, choices=["claude", "gemini", "codex", "cursor"])

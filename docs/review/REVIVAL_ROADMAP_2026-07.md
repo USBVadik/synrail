@@ -267,6 +267,11 @@ actually passed under a command the operator approved before the agent run.
       `synrail.toml` operator-owned, blocks mutation starts on review/block states,
       labels `NOT_CONFIGURED` as behaviorally ungated, and forbids replacing a
       failed profile with narrative or read-only proof.
+- [x] Add read-only `suggest-verification` discovery for conventional
+      Python/Node/Go/Rust root markers. Suggestions expose exact argv and a
+      copyable scaffold command, but execute nothing, write nothing, and remain
+      `REVIEW_REQUIRED` until the operator explicitly chooses and commits a
+      profile.
 
 Definition of done: the public demo, direct CLI, preflight, and generated agent
 onboarding all express the same behavioral gate; config/executable/workspace drift
