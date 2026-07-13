@@ -11,6 +11,15 @@ All notable changes to the public Synrail alpha are recorded here.
   `synrail verify` that re-executes the locked commands without a shell and
   writes signed receipts, and make `check` fail closed while any required
   profile lacks a fresh green receipt for the current workspace.
+- Fail closed around the new profile trust boundary: require `synrail.toml`
+  to be tracked and clean at start, bind resolved executable content, reject
+  incomplete workspace fingerprints, and reject verification commands that
+  mutate visible workspace content. Authenticate the profile lock and strip
+  common environment override/injection variables during execution. Sign the
+  no-profile decision to prevent lock downgrade, stream output through bounded
+  capture, and perform best-effort verifier process-tree cleanup after success
+  or timeout. Bind the signed lock and receipts to the original project/git root
+  so a sibling checkout cannot supply verification for the governed worktree.
 - Narrow the README false-green claims to what check actually enforces and
   document the same-machine tamper limit and the CI required-check boundary.
 - Make closure freshness binding validation fail closed.

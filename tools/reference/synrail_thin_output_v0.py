@@ -628,6 +628,10 @@ def status_label(outcome_class: str, *, report: dict, repair_packet: dict | None
         return "Remote Target Not Supported Yet"
     if outcome_class == "NON_GREEN" and reason == "VERIFICATION_FAILED":
         return "Verification Failed"
+    if outcome_class == "NON_GREEN" and reason == "VERIFICATION_LOCK_INVALID":
+        return "Verification Lock Invalid"
+    if outcome_class == "NON_GREEN" and reason == "VERIFICATION_PROJECT_ROOT_CHANGED":
+        return "Verification Project Changed"
     if outcome_class == "NON_GREEN" and reason in VERIFICATION_CONFIG_REASONS:
         return "Verification Config Changed"
     if outcome_class == "NON_GREEN" and reason in VERIFICATION_GATE_REASONS:

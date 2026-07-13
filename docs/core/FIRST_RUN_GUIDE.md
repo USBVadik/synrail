@@ -243,7 +243,8 @@ synrail scenario-proof-template
 Read-only proof shows the change is real; it does not show the program
 behaves as claimed. If the task claims behavior ("tests pass"), approve the
 verification command once in `synrail.toml` at the project root, before
-`synrail start`:
+`synrail start`. Commit the file first: v1 requires a regular, git-tracked
+`synrail.toml` that matches `HEAD` when the run starts.
 
 ```toml
 [verification.unit]
@@ -252,18 +253,31 @@ timeout_seconds = 300
 required = true
 ```
 
-`start` locks that config for the run. After the bounded change, run:
+`start` locally authenticates a lock containing the project/git root, raw
+config hash, and each resolved executable's path and SHA-256. After the bounded
+change, run:
 
 ```bash
 synrail verify
 ```
 
-Synrail re-executes the locked command without a shell and writes a signed
-receipt. `check` refuses acceptance while any required profile lacks a
-fresh green receipt, and editing files after a green verify makes the
-receipt stale until you run `synrail verify` again. Changing
-`synrail.toml` mid-run blocks the run; start a new run to adopt a new
-config.
+Synrail rechecks the lock and clean git provenance, strips common runtime
+override/injection variables, re-executes the locked command without a shell,
+hashes all output while retaining only bounded diagnostic excerpts, performs
+best-effort verifier process-tree cleanup after success or timeout, and writes a locally
+authenticated receipt. `check` refuses acceptance while any required profile
+lacks a fresh green receipt, and editing files after a green verify makes the
+receipt stale until you run `synrail verify` again. Changing the project root,
+`synrail.toml`, the authenticated lock, or the resolved executable mid-run blocks the run;
+start a new run to adopt a legitimate change. Verification also blocks if the
+command mutates visible workspace content or if Synrail cannot safely
+content-bind the visible git workspace. New runs authenticate the no-profile decision too,
+so an old active run without a lock must restart instead of silently
+downgrading verification. This local receipt detects drift and direct artifact
+edits; it is not a security boundary against an agent sharing the operator account.
+If a profile genuinely needs one of the stripped variables, put that setup in
+an operator-reviewed wrapper and use the wrapper as `argv[0]` so its content is
+locked too.
 
 ### 3. Check
 

@@ -411,6 +411,7 @@ class InstallSmokeTests(unittest.TestCase):
     def test_first_run_guide_mentions_preflight_and_git_missing_path(self) -> None:
         first_run_guide = (REPO_ROOT / "docs" / "core" / "FIRST_RUN_GUIDE.md").read_text()
         public_readme = (REPO_ROOT / "README.md").read_text()
+        public_readme_normalized = " ".join(public_readme.split())
         docs_readme = (REPO_ROOT / "docs" / "README.md").read_text()
         review_readme = (REPO_ROOT / "docs" / "review" / "README.md").read_text()
         reference_readme = (REPO_ROOT / "tools" / "reference" / "README.md").read_text()
@@ -526,9 +527,16 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("recorded verification evidence that fails read-only recheck", public_readme)
         self.assertIn("## Behavioral Verification: Operator-Owned Profiles", public_readme)
         self.assertIn("[verification.unit]", public_readme)
-        self.assertIn("refuses acceptance while any\nrequired profile lacks a fresh green receipt", public_readme)
+        self.assertIn("git-tracked config that matches `HEAD`", public_readme)
+        self.assertIn(
+            "refuses acceptance while any required profile lacks a fresh green receipt",
+            public_readme_normalized,
+        )
         self.assertIn("An agent cannot substitute a\nconvenient read-only proof for a failing test suite", public_readme)
-        self.assertIn("The tamper-proof lane is a CI required check on a surface the agent cannot\nwrite to.", public_readme)
+        self.assertIn("realpath and SHA-256 of each `argv[0]`", public_readme)
+        self.assertIn("`PYTEST_ADDOPTS`, `NODE_OPTIONS`, and preload hooks", public_readme)
+        self.assertIn("it is not a hostile same-user security\nboundary", public_readme)
+        self.assertIn("The tamper-resistant lane is a required CI check", public_readme)
         self.assertIn("narrative completion instead of concrete runtime evidence", public_readme)
         self.assertIn("# after make install-dev", public_readme)
         self.assertIn('.venv/bin/synrail start "Describe the bounded local change."', public_readme)
