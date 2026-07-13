@@ -20,18 +20,24 @@ transition from an agent's claim to accepted local work.
 ## 30-Second Demo
 
 ```text
-Agent: done, tests passed
-Synrail: Status: Proof Invalid
-Reason: final_result.json is narrative, not machine-readable proof
-Next: replace it with structured evidence and rerun synrail check
-Agent: repaired final_result.json and ran the real verification
+Agent: fixed add(); tests pass
+Agent proof: grep found the new fast-path line
+$ synrail verify
+Verification unit: FAIL (exit 1)
+$ synrail check
+Synrail: Status: Verification Failed
+Agent: repaired the behavior, not the story
+$ synrail verify
+Verification unit: GREEN
+$ synrail check
 Synrail: Status: Accepted
 ```
 
 ![Synrail false-green demo](examples/false-green-demo/assets/synrail-false-green-hero.gif)
 
-A simulated false-green claim is checked by the real CLI and blocked until the
-proof is repaired and verified.
+A real failing unit test and a structurally valid `grep` proof are checked by
+the real CLI. The operator-owned profile keeps the claim blocked until the
+behavior is repaired and reverified.
 For social posts or embeds that prefer video, use the [MP4 demo asset](examples/false-green-demo/assets/synrail-false-green-hero.mp4).
 
 That is the product wedge: block plausible-but-unproven closure, name the exact blocker, and keep the next repair step bounded.
@@ -67,7 +73,7 @@ make install-dev
 make demo
 ```
 
-This is the fastest way to see Synrail block a simulated false-green claim and then accept the repaired proof.
+This is the fastest way to see Synrail block plausible proof while required tests are red, then accept only the verified repair.
 On Windows, use the PowerShell install path in the [First Run Guide](docs/core/FIRST_RUN_GUIDE.md), then run the current demo harness from Git Bash.
 
 ## Verify The Local Install

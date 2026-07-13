@@ -4,18 +4,18 @@ Run it in under two minutes.
 
 This demo shows the narrow Synrail wedge:
 
-1. Agent claims the task is done.
-2. The proof is weak or mismatched.
-3. `synrail check` blocks acceptance.
-4. Synrail names the bounded repair step.
-5. The proof is repaired and real verification is run.
+1. The operator commits a required unit-test profile in `synrail.toml`.
+2. The agent claims the fix is done and records an allowed `grep` proof.
+3. The proof is structurally valid, but the required unit test is still red.
+4. `synrail verify` records the failure and `synrail check` blocks acceptance.
+5. The behavior is repaired and the operator-owned test is rerun.
 6. `synrail check` reaches `Status: Accepted` without an operator bypass.
 
 ## Fast path
 
-1. weak proof attempt gets blocked
-2. bounded repair names the next move
-3. accepted closure appears only after real verification
+1. plausible proof cannot hide a red required test
+2. behavioral repair turns the operator-owned profile green
+3. accepted closure appears only after fresh verification
 
 ## Run
 
@@ -23,25 +23,36 @@ This demo shows the narrow Synrail wedge:
 ./run_demo.sh
 ```
 
-The script creates a disposable temporary project and invokes the real installed
-Synrail CLI twice. It asserts that the weak claim is non-green and that the
-repaired, locally rechecked proof reaches `Status: Accepted`; this is not a
-prewritten transcript printer.
+The script creates a disposable git repository with a buggy function, a real
+`unittest`, and a tracked Verification Profile. It invokes the real installed
+Synrail CLI to record proof, run the required test, check closure, repair the
+behavior, and reverify it. The script asserts both the blocked and accepted
+states; this is not a prewritten transcript printer.
 
 ## What you should see
 
-- `Synrail: Status: Proof Invalid` or another non-green blocker on the weak proof pass
-- a concrete reason, not a vague failure
-- a bounded next repair step
-- `Status: Accepted` only after the proof and verification match
+- `Verification unit: FAIL (exit 1)` while the agent's convenient proof matches
+- `Synrail: Status: Verification Failed` instead of false acceptance
+- `Verification unit: GREEN` after the real code repair
+- `Synrail: Status: Accepted` only after fresh behavioral verification
 
 ## Files
 
 - `run_demo.sh` — executable two-minute proof loop in a disposable project
+- `hero.tape` — reproducible VHS source for the public terminal recording
 - `transcript.txt` — short sample terminal transcript
 - `assets/synrail-false-green-hero.gif` — README-ready animated demo
 - `assets/synrail-false-green-hero.mp4` — social/posting version of the same demo
 - `assets/synrail-false-green-hero-poster.png` — static preview frame
+
+Regenerate the public recording from this directory with:
+
+```bash
+vhs hero.tape
+ffmpeg -y -sseof -0.25 \
+  -i assets/synrail-false-green-hero.mp4 \
+  -frames:v 1 assets/synrail-false-green-hero-poster.png
+```
 
 ## Next step
 

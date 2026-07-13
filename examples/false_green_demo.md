@@ -9,18 +9,19 @@ For the runnable two-minute version, start here:
 ## Transcript
 
 ```text
-Agent: done, tests passed
-Synrail: Status: Proof Invalid
-Reason: final_result.json is narrative, not machine-readable proof
-Next: replace it with structured evidence and rerun synrail check
-Agent: repaired final_result.json and ran the real verification
+Agent: fixed add(); tests pass
+Agent proof: grep found the new fast-path line
+Verification unit: FAIL (exit 1)
+Synrail: Status: Verification Failed
+Agent: repaired the behavior, not the story
+Verification unit: GREEN
 Synrail: Status: Accepted
 ```
 
 ## What this shows
 
-- the agent can sound finished before the proof is trustworthy
-- Synrail rejects that false-green state explicitly
+- structurally valid proof can coexist with behavior that is still wrong
+- an operator-owned Verification Profile rejects that false-green state
 - the repair target stays bounded
 - only `Status: Accepted` closes the loop
 
