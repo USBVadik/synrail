@@ -122,8 +122,20 @@ project root. Commit that file before the controlled run: Verification
 Profiles v1 only treats a regular, git-tracked config that matches `HEAD` as
 operator-owned.
 
-Scaffold one required profile without guessing the project ecosystem or
-executing the command:
+If you do not already know the repository's exact test command, ask Synrail
+for bounded, review-required candidates first:
+
+```bash
+synrail suggest-verification
+```
+
+Suggestion discovery recognizes conventional Python/Node/Go/Rust root markers.
+It never runs a discovered command, writes `synrail.toml`, or marks a candidate
+trusted. It prints the exact argv and a copyable scaffold command; the operator
+must still choose, review, and commit the policy. Unknown or custom ecosystems
+fall back to explicit manual argv rather than a guess.
+
+Then scaffold one required profile without executing the command:
 
 ```bash
 synrail init-verification --name unit -- python -m pytest -q
@@ -148,7 +160,8 @@ synrail preflight
 `HEAD`, contains at least one required profile, and every `argv[0]` resolves
 to a readable regular executable that `start` can lock. `REVIEW_REQUIRED` or `BLOCKED` exits non-zero and names the next safe
 step. `NOT_CONFIGURED` keeps the non-behavioral install preflight green but
-warns that behavioral claims are not gated. Preflight never executes profile
+warns that behavioral claims are not gated and points to
+`suggest-verification`. Preflight never executes profile
 argv or creates a trusted verification lock. From a repository subdirectory,
 it discovers the git root and resolves its default artifact path there.
 

@@ -265,7 +265,20 @@ verification command once in `synrail.toml` at the project root, before
 `synrail start`. Commit the file first: v1 requires a regular, git-tracked
 `synrail.toml` that matches `HEAD` when the run starts.
 
-Use the fail-safe scaffold instead of writing the first profile from memory:
+If the exact repository test command is not already known, inspect bounded
+review-required candidates first:
+
+```bash
+synrail suggest-verification
+```
+
+This read-only command recognizes conventional Python/Node/Go/Rust root
+markers. It does not execute package scripts or test commands, does not create
+`synrail.toml`, and does not trust its own suggestion. Review the exact argv it
+prints. If there is no suitable candidate, use the real project command
+manually rather than broadening a guess.
+
+Use the fail-safe scaffold instead of writing the selected profile from memory:
 
 ```bash
 synrail init-verification --name unit -- python -m pytest -q

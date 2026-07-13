@@ -77,6 +77,7 @@ class VerificationPreflightTests(unittest.TestCase):
             payload = json.loads(preflight.stdout)
             self.assertEqual("PASS", payload["status"])
             self.assertEqual("NOT_CONFIGURED", payload["behavioral_verification"]["status"])
+            self.assertIn("suggest-verification", payload["behavioral_verification"]["next_step"])
             self.assertIn("init-verification", payload["behavioral_verification"]["next_step"])
             self.assertFalse((project_root / ".synrail").exists(), "preflight must not leave an artifact directory behind")
 

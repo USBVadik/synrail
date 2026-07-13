@@ -53,6 +53,7 @@ def policy_command_examples_for_binary(*, artifact_root: str, command: str) -> d
         return {
             "status": command,
             "preflight": f"{command} preflight",
+            "suggest_verification": f"{command} suggest-verification",
             "start": f'{command} start "Describe the bounded local change."',
             "record": (
                 f'{command} record path/to/file --summary "Describe the concrete bounded result." '
@@ -65,6 +66,7 @@ def policy_command_examples_for_binary(*, artifact_root: str, command: str) -> d
     return {
         "status": f"{command} status --artifact-root {quoted_root}",
         "preflight": f"{command} preflight --artifact-root {quoted_root}",
+        "suggest_verification": f"{command} suggest-verification",
         "start": f'{command} start --artifact-root {quoted_root} "Describe the bounded local change."',
         "record": (
             f'{command} record path/to/file --summary "Describe the concrete bounded result." '
@@ -193,7 +195,7 @@ def policy_behavioral_verification_lines(commands: dict[str, str]) -> list[str]:
         "Interpret the behavioral-verification status exactly:",
         "",
         f"- `READY`: start the run, then run the required profiles with `{commands['verify']}` after the change and before `{commands['check']}`.",
-        "- `NOT_CONFIGURED`: only a task that does not require behavioral acceptance may continue. Claims such as tests passing are not Synrail-gated; do not make or attribute them to Synrail. If behavior matters, report the missing gate so the operator can configure it outside the run.",
+        f"- `NOT_CONFIGURED`: only a task that does not require behavioral acceptance may continue. Claims such as tests passing are not Synrail-gated; do not make or attribute them to Synrail. If behavior matters, report the missing gate and suggest that the operator run `{commands['suggest_verification']}` outside the controlled run.",
         "- `REVIEW_REQUIRED` or `BLOCKED`: do not start a mutation run. Follow only the named safe setup step or report the blocker.",
         "- Any missing, malformed, or unrecognized status is blocking: do not start.",
         "",

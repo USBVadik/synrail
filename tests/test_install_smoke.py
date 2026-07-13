@@ -90,6 +90,17 @@ class InstallSmokeTests(unittest.TestCase):
 
         self.assertNotIn("verify-aws-state", result.stdout)
         self.assertNotIn("fingerprint", result.stdout)
+        self.assertIn("suggest-verification", result.stdout)
+
+    def test_tracked_agent_policies_expose_current_behavioral_lifecycle(self) -> None:
+        for name in ("AGENTS.md", "CLAUDE.md", "GEMINI.md"):
+            policy = (REPO_ROOT / name).read_text(encoding="utf-8")
+            with self.subTest(policy=name):
+                self.assertIn("## Behavioral Verification Gate", policy)
+                self.assertIn("synrail preflight", policy)
+                self.assertIn("synrail suggest-verification", policy)
+                self.assertIn("synrail verify", policy)
+                self.assertIn("Never change it during an active run to evade a failed profile", policy)
 
     def test_false_green_demo_executes_real_block_and_repair_loop(self) -> None:
         bash = shutil.which("bash")
@@ -433,6 +444,7 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("Verification unit: GREEN", first_run_guide)
         self.assertIn("Agent: repaired the behavior, not the story", first_run_guide)
         self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", first_run_guide)
+        self.assertIn("synrail suggest-verification", first_run_guide)
         self.assertIn("synrail init-verification --name unit -- python -m pytest -q", first_run_guide)
         self.assertIn("This command does not run the argv, infer your test framework, or trust the", first_run_guide)
         self.assertIn("writes a `REVIEW REQUIRED` scaffold", first_run_guide)
@@ -546,8 +558,11 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertNotIn("tests claimed as passed but not actually run", public_readme)
         self.assertIn("recorded verification evidence that fails read-only recheck", public_readme)
         self.assertIn("## Behavioral Verification: Operator-Owned Profiles", public_readme)
+        self.assertIn("synrail suggest-verification", public_readme)
+        self.assertIn("recognizes conventional Python/Node/Go/Rust root markers", public_readme)
+        self.assertIn("never runs a discovered command, writes `synrail.toml`, or marks a candidate\ntrusted", public_readme)
         self.assertIn("synrail init-verification --name unit -- python -m pytest -q", public_readme)
-        self.assertIn("without guessing the project ecosystem or\nexecuting the command", public_readme)
+        self.assertIn("scaffold one required profile without executing the command", public_readme)
         self.assertIn("generated `synrail.toml` is marked `REVIEW REQUIRED`", public_readme)
         self.assertIn("exact timestamped backup", public_readme)
         self.assertIn("Do not put secrets in profile argv", public_readme)

@@ -48,6 +48,7 @@ class AgentAdoptionTests(unittest.TestCase):
         self.assertIn("synrail preflight", content)
         self.assertIn("`READY`: start the run", content)
         self.assertIn("`NOT_CONFIGURED`: only a task that does not require behavioral acceptance may continue", content)
+        self.assertIn("operator run `synrail suggest-verification` outside the controlled run", content)
         self.assertIn("`REVIEW_REQUIRED` or `BLOCKED`: do not start a mutation run", content)
         self.assertIn("Any missing, malformed, or unrecognized status is blocking", content)
         self.assertIn("Treat `synrail.toml` as operator-owned policy", content)
@@ -256,6 +257,7 @@ class AgentAdoptionTests(unittest.TestCase):
         )
 
         self.assertIn("./bin/synrail preflight --artifact-root '.control artifacts'", policy)
+        self.assertIn("operator run `./bin/synrail suggest-verification` outside the controlled run", policy)
         self.assertIn("./bin/synrail verify --artifact-root '.control artifacts'", policy)
         self.assertIn("./bin/synrail preflight --artifact-root './.control artifacts'", policy)
         self.assertIn("# continue on READY; NOT_CONFIGURED only for non-behavioral tasks", policy)
