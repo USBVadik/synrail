@@ -16,9 +16,17 @@ except ImportError:
 try:
     from .synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
     from .synrail_repair_focus_v0 import focused_repair_action_instruction, focused_repair_summary
+    from .synrail_verification_profile_v0 import VERIFICATION_GATE_REASONS
 except ImportError:
     from synrail_path_scope_v0 import ARTIFACT_SCOPE, PathScopeValidationError, validate_namespace_paths, validate_root_within_project
     from synrail_repair_focus_v0 import focused_repair_action_instruction, focused_repair_summary
+    from synrail_verification_profile_v0 import VERIFICATION_GATE_REASONS
+
+VERIFICATION_CONFIG_REASONS = {
+    "VERIFICATION_CONFIG_INVALID",
+    "VERIFICATION_CONFIG_CHANGED",
+    "VERIFICATION_BINARY_CHANGED",
+}
 
 
 THIN_OUTPUT_PATH_SCOPES = {
@@ -335,6 +343,21 @@ def summary_for(outcome_class: str, *, restore_available: bool, recovery: dict |
             "This alpha lane does not support remote or ops targets yet.",
             "Run this contour on a local trusted worktree on the machine where the agent acts, or wait for an explicitly supported remote lane.",
         )
+    if outcome_class == "NON_GREEN" and reason == "VERIFICATION_FAILED":
+        return (
+            "The operator-approved verification command is not green.",
+            "Fix the change until the verification command passes, run synrail verify, then rerun synrail check.",
+        )
+    if outcome_class == "NON_GREEN" and reason in VERIFICATION_CONFIG_REASONS:
+        return (
+            "The verification config no longer matches what was locked at start.",
+            "Restore the synrail.toml and binaries locked at start, or start a new run to adopt the new verification config.",
+        )
+    if outcome_class == "NON_GREEN" and reason in VERIFICATION_GATE_REASONS:
+        return (
+            "Acceptance is blocked until the operator-approved verification is re-executed on this workspace.",
+            "Run synrail verify to produce a fresh receipt, then rerun synrail check.",
+        )
     if outcome_class in {"NON_GREEN", "NON_RESUMABLE"} and continuation_arbiter_unresolved(repair_packet):
         return (
             "Synrail cannot resolve the current continuation path confidently yet.",
@@ -603,6 +626,16 @@ def status_label(outcome_class: str, *, report: dict, repair_packet: dict | None
         return "Controlled Run Required"
     if outcome_class == "NON_GREEN" and reason == "REMOTE_TARGET_UNSUPPORTED":
         return "Remote Target Not Supported Yet"
+    if outcome_class == "NON_GREEN" and reason == "VERIFICATION_FAILED":
+        return "Verification Failed"
+    if outcome_class == "NON_GREEN" and reason == "VERIFICATION_LOCK_INVALID":
+        return "Verification Lock Invalid"
+    if outcome_class == "NON_GREEN" and reason == "VERIFICATION_PROJECT_ROOT_CHANGED":
+        return "Verification Project Changed"
+    if outcome_class == "NON_GREEN" and reason in VERIFICATION_CONFIG_REASONS:
+        return "Verification Config Changed"
+    if outcome_class == "NON_GREEN" and reason in VERIFICATION_GATE_REASONS:
+        return "Verification Required"
     return "Needs Review"
 
 

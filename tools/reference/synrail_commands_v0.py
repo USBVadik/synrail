@@ -13,6 +13,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+try:
+    from .synrail_verification_profile_v0 import (
+        GATE_BLOCKED,
+        evaluate_verification_gate,
+        verification_lock_from_profile,
+        write_verification_gate_block,
+    )
+except ImportError:
+    from synrail_verification_profile_v0 import (
+        GATE_BLOCKED,
+        evaluate_verification_gate,
+        verification_lock_from_profile,
+        write_verification_gate_block,
+    )
+
 
 @dataclass(frozen=True)
 class TelemetryContext:
@@ -2225,6 +2240,29 @@ def cmd_orchestrate(
     if not getattr(args, "state_file", None):
         print(json.dumps({"result": "ERROR", "reason": "STATE_FILE_REQUIRED"}, ensure_ascii=True))
         return 2
+    state_path = Path(args.state_file)
+    if root and state_path.exists() and getattr(args, "report_output", None):
+        try:
+            project_profile = json.loads((root / "project_profile.json").read_text())
+        except (OSError, json.JSONDecodeError):
+            project_profile = {}
+        try:
+            run_id = json.loads(state_path.read_text()).get("run_id", "")
+        except (OSError, json.JSONDecodeError):
+            run_id = ""
+        gate = evaluate_verification_gate(
+            project_root=project_root,
+            artifact_root=root,
+            lock=verification_lock_from_profile(project_profile),
+            run_id=run_id,
+        )
+        if gate["status"] == GATE_BLOCKED:
+            write_verification_gate_block(
+                gate=gate,
+                state_file=state_path,
+                report_file=Path(args.report_output),
+            )
+            return 0
     forwarded = [
         "--state-file", args.state_file,
         "--doctor-run-id", args.doctor_run_id,

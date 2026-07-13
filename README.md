@@ -99,11 +99,60 @@ In that case, the baseline is probably better. Synrail becomes useful when verif
 
 ## False-Green Cases Synrail Targets
 
-- tests claimed as passed but not actually run
 - proof that does not match the changed files
 - a plausible diff that does not satisfy the requested task
 - narrative completion instead of concrete runtime evidence
+- recorded verification evidence that fails read-only recheck
+- stale proof that no longer matches the live worktree
 - failed repair handoff without a bounded continuation path
+
+## Behavioral Verification: Operator-Owned Profiles
+
+Read-only proof (`grep`, `cat`, `head`, `tail`, `git diff/show/log`) shows
+that a change is real, fresh, and in scope. It does not show that the
+program behaves as claimed. For behavioral claims like "tests pass", the
+operator approves the verification command once, in `synrail.toml` at the
+project root. Commit that file before the controlled run: Verification
+Profiles v1 only treats a regular, git-tracked config that matches `HEAD` as
+operator-owned.
+
+```toml
+[verification.unit]
+argv = ["python", "-m", "pytest", "-q"]
+timeout_seconds = 300
+required = true
+```
+
+`synrail start` locally authenticates a lock containing the project/git root,
+the raw and normalized config hashes, and the realpath and SHA-256 of each `argv[0]`.
+`synrail verify` rechecks that lock and the config's clean git provenance,
+then executes without a shell or common runtime override variables such as
+`PYTEST_ADDOPTS`, `NODE_OPTIONS`, and preload hooks. It writes locally
+authenticated receipts bound to the run, config, executable, and a
+git-visible workspace fingerprint. Output is hashed while only bounded
+diagnostic excerpts are retained, and Synrail performs best-effort verifier
+process-tree cleanup after success or timeout.
+`synrail check` refuses acceptance while any required profile lacks a fresh
+green receipt, and blocks the run if the project root, lock, config,
+executable, or workspace binding changes. Verification also fails closed if a command
+mutates visible workspace content or if the visible untracked surface is
+too large or contains a path Synrail cannot safely content-bind. An agent cannot substitute a
+convenient read-only proof for a failing test suite, and editing the code
+after a green `synrail verify` makes the receipt stale until verify runs
+again.
+
+Without a `synrail.toml`, the behavioral lane is not enforced: read
+`Status: Accepted` as "the recorded proof is real, fresh, and in scope."
+Even this no-profile decision is authenticated for new runs; an older active
+run without a verification lock must be restarted rather than silently
+downgrading the gate.
+
+Honest limit: this local lane requires a git-backed project, and on a single
+machine where the agent shares the operator account, both project-owned
+test code and the local receipt key remain reachable. The receipt detects
+drift and direct artifact edits; it is not a hostile same-user security
+boundary. The tamper-resistant lane is a required CI check on a surface the
+agent cannot write to.
 
 ## Quick Start
 

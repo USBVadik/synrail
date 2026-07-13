@@ -1,6 +1,8 @@
 Case family,Agent claim,Reality,Synrail result,Manual effort,Overhead notes
 Template rename,"done","missed 3 files","blocked","4 min","scope drift visible before accept"
-Test claim,"tests passed","command never ran","blocked","2 min","verification mismatch"
+Test claim with weak proof,"tests passed","command never ran; proof left narrative","blocked","2 min","blocked for proof shape, not for test re-execution"
+Test claim with substituted proof and no profile,"tests passed","tests fail; agent recorded a valid read-only grep instead","accepted","2 min","behavioral lane unenforced without synrail.toml; read accepted as proof-shape only"
+Test claim with substituted proof and required profile,"tests passed","tests fail; required verification profile has no fresh green receipt","blocked","2 min","verification gate demands a fresh green receipt before acceptance"
 Small text fix,"done","correct","accepted","30 sec","cheap accepted path"
 Batch edit,"done","extra file touched","blocked","5 min","bounded repair"
 Weak proof,"done","proof narrative only","blocked","3 min","final_result too thin"

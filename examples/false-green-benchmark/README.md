@@ -6,7 +6,7 @@ The goal is to make the false-green problem concrete before external alpha repor
 
 ## What it contains
 
-- `cases.csv` — 16 starter cases across common false-green and bounded-acceptance shapes
+- `cases.csv` — 18 starter cases across common false-green and bounded-acceptance shapes
 - a compact table format for:
   - case family
   - agent claim
@@ -26,7 +26,7 @@ Use this starter pack in the cheapest honest order:
 
 ## Case families included now
 
-- tests claimed but not run
+- tests claimed but not run (blocked by the verification gate when a required profile is configured; without a profile only proof shape is checked)
 - wrong file changed
 - weak proof / narrative-only proof
 - diff/claim mismatch

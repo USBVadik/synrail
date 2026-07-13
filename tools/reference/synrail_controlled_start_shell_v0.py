@@ -10,6 +10,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+try:
+    from .synrail_verification_profile_v0 import lock_verification_profiles
+except ImportError:
+    from synrail_verification_profile_v0 import lock_verification_profiles
+
 
 @dataclass(frozen=True)
 class ControlledStartShellContext:
@@ -197,6 +202,26 @@ def cmd_start(
                 print("What to do next: clear those proof artifacts or begin a fresh run before trusting Synrail acceptance.")
             return 2
 
+    verification_lock = lock_verification_profiles(project_root)
+    if verification_lock.get("status", "") == "ERROR":
+        if args.mode == "dev":
+            print(
+                json.dumps(
+                    {
+                        "result": "ERROR",
+                        "reason": verification_lock.get("reason", "VERIFICATION_CONFIG_INVALID"),
+                        "detail": verification_lock.get("detail", ""),
+                    },
+                    ensure_ascii=True,
+                )
+            )
+        else:
+            print("Synrail could not start this run in controlled mode yet.")
+            print("What happened: the verification profile config could not be locked.")
+            print(f"Detail: {verification_lock.get('detail', '')}")
+            print("What to do next: fix synrail.toml, then rerun synrail start.")
+        return 2
+
     forwarded = [
         "init",
         "--run-id", args.run_id,
@@ -205,6 +230,7 @@ def cmd_start(
     ]
     profile = context.build_project_profile(project_root=project_root, root=root, task_class=args.task_class)
     profile["artifact_storage_mode"] = "ephemeral_cache" if getattr(args, "ephemeral", False) else "workspace_artifact_root"
+    profile["verification_profiles"] = verification_lock
     context.save_project_profile(root, profile)
     completed = context.run_python_capture(context.spine_script, forwarded)
     if completed.returncode != 0:
@@ -232,6 +258,9 @@ def cmd_start(
         Path(args.output),
         context.preferred_proof_artifact_paths(root)["final_result"],
     )
+    if verification_lock.get("present", False) and args.mode == "default":
+        locked_names = ", ".join(sorted(verification_lock.get("profiles", {})))
+        print(f"Verification profiles locked for this run: {locked_names}")
     context.print_start_summary(root=root, state_file=Path(args.output), project_root=project_root)
     return 0
 

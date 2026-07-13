@@ -91,7 +91,16 @@ class ClosureRuntimeWiringTests(unittest.TestCase):
 
             completed = mock.Mock(returncode=0)
             run_python_capture = mock.Mock(return_value=completed)
-            with mock.patch("tools.reference.synrail_commands_v0.emit_completed_capture", return_value=None):
+            with (
+                mock.patch(
+                    "tools.reference.synrail_commands_v0.evaluate_verification_gate",
+                    return_value={"status": "NOT_CONFIGURED"},
+                ),
+                mock.patch(
+                    "tools.reference.synrail_commands_v0.emit_completed_capture",
+                    return_value=None,
+                ),
+            ):
                 rc = extracted_cmd_orchestrate(
                     args,
                     alpha_root_from_args=lambda provided: artifact_root,

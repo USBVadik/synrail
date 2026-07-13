@@ -99,6 +99,7 @@ def _raw_git(
             check=False,
             capture_output=True,
             text=True,
+            errors="surrogateescape",
             timeout=timeout,
             env=safe_git_env(),
         )
@@ -224,6 +225,7 @@ def run_safe_git(
             check=False,
             capture_output=True,
             text=True,
+            errors="surrogateescape",
             timeout=timeout,
             env=safe_git_env(),
         )

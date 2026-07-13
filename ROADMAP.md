@@ -81,6 +81,11 @@ Known current finding:
 
 - Gemini/server alpha run surfaced `PATH_SCOPE_VIOLATION` and doctor overrides while also reaching `Status: Accepted`
 - one attempted finding file was written outside the repo before being copied back inside
+- an external black-box run on 82f3d71 reached `Status: Accepted` with a failing
+  test suite by substituting a valid read-only grep for the claimed test run;
+  closed by operator-owned verification profiles (`synrail.toml`, `synrail verify`,
+  fail-closed receipt gate in `check`) with regression coverage in
+  `tests/test_behavioral_claim_gap.py`
 
 Follow-up:
 
