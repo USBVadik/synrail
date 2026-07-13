@@ -106,20 +106,39 @@ In that case, the baseline is probably better. Synrail becomes useful when verif
 - stale proof that no longer matches the live worktree
 - failed repair handoff without a bounded continuation path
 
-## Known Gap: Behavioral Claims Are Not Re-Executed Yet
+## Behavioral Verification: Operator-Owned Profiles
 
-Synrail currently re-executes only read-only evidence commands
-(`grep`, `cat`, `head`, `tail`, `git diff/show/log`). It does not re-run
-test suites. A claim like "tests passed" is checked for proof shape,
-freshness, and diff binding, not by independently re-running the tests.
-An agent that substitutes a valid read-only proof for a behavioral claim
-can still reach `Status: Accepted` while the real tests fail.
+Read-only proof (`grep`, `cat`, `head`, `tail`, `git diff/show/log`) shows
+that a change is real, fresh, and in scope. It does not show that the
+program behaves as claimed. For behavioral claims like "tests pass", the
+operator approves the verification command once, in `synrail.toml` at the
+project root:
 
-Closing this gap is the next roadmap priority: operator-owned
-verification profiles that let `synrail check` re-execute an approved
-test command and require a fresh receipt before acceptance. Until that
-lands, read `Status: Accepted` as "the recorded proof is real, fresh,
-and in scope," not as "the program behaves as claimed."
+```toml
+[verification.unit]
+argv = ["python", "-m", "pytest", "-q"]
+timeout_seconds = 300
+required = true
+```
+
+`synrail start` locks that config (content hash plus the realpath of each
+`argv[0]`) for the run. `synrail verify` re-executes the locked commands
+without a shell and writes signed receipts bound to the run, the config,
+and a workspace fingerprint. `synrail check` refuses acceptance while any
+required profile lacks a fresh green receipt, and blocks the run if the
+config or a resolved binary changes mid-run. An agent cannot substitute a
+convenient read-only proof for a failing test suite, and editing the code
+after a green `synrail verify` makes the receipt stale until verify runs
+again.
+
+Without a `synrail.toml`, the behavioral lane is not enforced: read
+`Status: Accepted` as "the recorded proof is real, fresh, and in scope."
+
+Honest limit: on a single machine where the agent can write project files,
+verification profiles raise the cost of forgery; they cannot make it
+impossible, because the verified command still loads project-owned code.
+The tamper-proof lane is a CI required check on a surface the agent cannot
+write to.
 
 ## Quick Start
 

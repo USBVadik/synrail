@@ -238,6 +238,33 @@ synrail readback-template
 synrail scenario-proof-template
 ```
 
+### 2b. Verify behavioral claims when profiles are configured
+
+Read-only proof shows the change is real; it does not show the program
+behaves as claimed. If the task claims behavior ("tests pass"), approve the
+verification command once in `synrail.toml` at the project root, before
+`synrail start`:
+
+```toml
+[verification.unit]
+argv = ["python", "-m", "pytest", "-q"]
+timeout_seconds = 300
+required = true
+```
+
+`start` locks that config for the run. After the bounded change, run:
+
+```bash
+synrail verify
+```
+
+Synrail re-executes the locked command without a shell and writes a signed
+receipt. `check` refuses acceptance while any required profile lacks a
+fresh green receipt, and editing files after a green verify makes the
+receipt stale until you run `synrail verify` again. Changing
+`synrail.toml` mid-run blocks the run; start a new run to adopt a new
+config.
+
 ### 3. Check
 
 ```bash
