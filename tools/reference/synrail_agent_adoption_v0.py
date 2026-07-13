@@ -52,21 +52,25 @@ def policy_command_examples_for_binary(*, artifact_root: str, command: str) -> d
     if artifact_root == DEFAULT_ALPHA_ARTIFACT_ROOT:
         return {
             "status": command,
+            "preflight": f"{command} preflight",
             "start": f'{command} start "Describe the bounded local change."',
             "record": (
                 f'{command} record path/to/file --summary "Describe the concrete bounded result." '
                 '--verify "grep -n \'expected text\' path/to/file"'
             ),
+            "verify": f"{command} verify",
             "check": f"{command} check",
             "repair": f"{command} repair-step",
         }
     return {
         "status": f"{command} status --artifact-root {quoted_root}",
+        "preflight": f"{command} preflight --artifact-root {quoted_root}",
         "start": f'{command} start --artifact-root {quoted_root} "Describe the bounded local change."',
         "record": (
             f'{command} record path/to/file --summary "Describe the concrete bounded result." '
             f'--verify "grep -n \'expected text\' path/to/file" --artifact-root {quoted_root}'
         ),
+        "verify": f"{command} verify --artifact-root {quoted_root}",
         "check": f"{command} check --artifact-root {quoted_root}",
         "repair": f"{command} repair-step --artifact-root {quoted_root}",
     }
@@ -127,14 +131,17 @@ def policy_run_loop_lines(*, artifact_root: str, command: str) -> list[str]:
         "## Run Loop",
         "",
         "```bash",
+        f"{command} preflight --artifact-root {explicit_root}",
+        "# continue on READY; NOT_CONFIGURED only for non-behavioral tasks",
         f'{command} start "TASK" --artifact-root {explicit_root}',
         "# make one bounded change and run the real local verification",
         commands["record"],
+        f"# READY only: {command} verify --artifact-root {explicit_root}",
         f"{command} check --artifact-root {explicit_root}",
         "# only stop on Status: Accepted",
         "```",
         "",
-        "Use `record` only when the run started with a clean git worktree, `HEAD` did not change, and exactly one tracked regular file changed. For multi-file, untracked, deleted, no-op, no-git, pre-dirty, or revision-changing work, update `final_result.json` with complete structured proof instead. `record` never accepts the task; `check` remains the acceptance gate.",
+        "Use `record` only when the run started with a clean git worktree, `HEAD` did not change, and exactly one tracked regular file changed. For multi-file, untracked, deleted, no-op, no-git, pre-dirty, or revision-changing work, update `final_result.json` with complete structured proof instead. `record` never accepts the task; behavioral `verify` and final `check` remain separate gates.",
         "",
     ]
 
@@ -171,6 +178,36 @@ def policy_path_scope_block_line() -> str:
         "Treat `PATH_SCOPE_VIOLATION` as blocking for that command: Synrail stopped before closure and did not accept the task. "
         "Fix the named path or `--project-root`, rerun `check` as a separate command, and never combine the blocked output with a later command's `Status: Accepted`."
     )
+
+
+def policy_behavioral_verification_lines(commands: dict[str, str]) -> list[str]:
+    return [
+        "## Behavioral Verification Gate",
+        "",
+        "Before starting any mutation run, inspect the operator-owned verification policy:",
+        "",
+        "```bash",
+        commands["preflight"],
+        "```",
+        "",
+        "Interpret the behavioral-verification status exactly:",
+        "",
+        f"- `READY`: start the run, then run the required profiles with `{commands['verify']}` after the change and before `{commands['check']}`.",
+        "- `NOT_CONFIGURED`: only a task that does not require behavioral acceptance may continue. Claims such as tests passing are not Synrail-gated; do not make or attribute them to Synrail. If behavior matters, report the missing gate so the operator can configure it outside the run.",
+        "- `REVIEW_REQUIRED` or `BLOCKED`: do not start a mutation run. Follow only the named safe setup step or report the blocker.",
+        "- Any missing, malformed, or unrecognized status is blocking: do not start.",
+        "",
+        "Treat `synrail.toml` as operator-owned policy. Do not create, edit, commit, weaken, or replace it unless the user explicitly asks to configure verification and no controlled run is active. Never change it during an active run to evade a failed profile.",
+        "",
+        "When preflight reported `READY`, run behavioral verification before closure:",
+        "",
+        "```bash",
+        commands["verify"],
+        "```",
+        "",
+        f"If verification fails, repair the behavior and rerun `{commands['verify']}`. Do not replace a failing behavioral profile with `grep`, narrative proof, or another convenient read-only check. Any later code or config change makes prior verification stale, so rerun it before `{commands['check']}`.",
+        "",
+    ]
 
 
 def render_local_workflow_policy(
@@ -226,6 +263,7 @@ def render_local_workflow_policy(
     lines.extend(orientation_lines)
     if include_gemini_orientation_note:
         lines.extend(policy_gemini_orientation_lines())
+    lines.extend(policy_behavioral_verification_lines(commands))
     if repo_native_commands:
         lines.extend(
             [
@@ -235,7 +273,9 @@ def render_local_workflow_policy(
                 "",
                 "```bash",
                 repo_native_commands["status"],
+                repo_native_commands["preflight"],
                 repo_native_commands["start"],
+                repo_native_commands["verify"],
                 repo_native_commands["check"],
                 f"{repo_native_alpha_command} runtime-helper",
                 "```",
@@ -360,6 +400,7 @@ def render_policy_markdown(
         "",
     ]
     lines.extend(orientation_lines)
+    lines.extend(policy_behavioral_verification_lines(commands))
     if repo_native_commands:
         lines.extend(
             [
@@ -369,7 +410,9 @@ def render_policy_markdown(
                 "",
                 "```bash",
                 repo_native_commands["status"],
+                repo_native_commands["preflight"],
                 repo_native_commands["start"],
+                repo_native_commands["verify"],
                 repo_native_commands["check"],
                 f"{repo_native_alpha_command} runtime-helper",
                 "```",

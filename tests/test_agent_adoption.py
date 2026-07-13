@@ -23,7 +23,13 @@ TOOLS_ROOT = REPO_ROOT / "tools" / "reference"
 if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
-from synrail_agent_adoption_v0 import render_claude_policy_block, render_claude_policy_markdown, render_gemini_policy_block, render_gemini_policy_markdown, render_local_workflow_policy
+from synrail_agent_adoption_v0 import (
+    render_claude_policy_block,
+    render_claude_policy_markdown,
+    render_gemini_policy_block,
+    render_gemini_policy_markdown,
+    render_local_workflow_policy,
+)
 from synrail_cli_v0 import (
     cmd_check,
     cmd_init_agent,
@@ -37,6 +43,19 @@ from synrail_commands_v0 import render_security_hygiene_workflow
 
 
 class AgentAdoptionTests(unittest.TestCase):
+    def assert_behavioral_verification_policy(self, content: str) -> None:
+        self.assertIn("## Behavioral Verification Gate", content)
+        self.assertIn("synrail preflight", content)
+        self.assertIn("`READY`: start the run", content)
+        self.assertIn("`NOT_CONFIGURED`: only a task that does not require behavioral acceptance may continue", content)
+        self.assertIn("`REVIEW_REQUIRED` or `BLOCKED`: do not start a mutation run", content)
+        self.assertIn("Any missing, malformed, or unrecognized status is blocking", content)
+        self.assertIn("Treat `synrail.toml` as operator-owned policy", content)
+        self.assertIn("Never change it during an active run to evade a failed profile", content)
+        self.assertIn("synrail verify", content)
+        self.assertIn("Do not replace a failing behavioral profile with `grep`", content)
+        self.assertIn("Any later code or config change makes prior verification stale", content)
+
     def run_alpha(self, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
         existing = env.get("PYTHONPATH", "")
@@ -71,6 +90,9 @@ class AgentAdoptionTests(unittest.TestCase):
             agents = (project_root / "AGENTS.md").read_text()
             gemini = (project_root / "GEMINI.md").read_text()
             claude = (project_root / "CLAUDE.md").read_text()
+
+            for content in [agents, gemini, claude]:
+                self.assert_behavioral_verification_policy(content)
 
             self.assertIn("First Step On Every New Task", agents)
             self.assertIn("synrail", agents)
@@ -171,6 +193,7 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertFalse((project_root / "GEMINI.md").exists())
             self.assertTrue((project_root / "CLAUDE.md").exists())
             claude = (project_root / "CLAUDE.md").read_text()
+            self.assert_behavioral_verification_policy(claude)
             self.assertIn("Use Synrail as the default local control path", claude)
             self.assertIn("python3 alpha.py check", claude)
             self.assertIn("Only `Status: Accepted` means the task may be reported as complete. If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", claude)
@@ -194,9 +217,9 @@ class AgentAdoptionTests(unittest.TestCase):
             )
             self.assertEqual(0, codex.returncode, codex.stdout + codex.stderr)
             self.assertIn("Agent adoption files are ready.", codex.stdout)
-            self.assertTrue((project_root / "AGENTS.md").exists())
-            self.assertTrue((project_root / "GEMINI.md").exists())
-            self.assertTrue((project_root / "CLAUDE.md").exists())
+            for name in ["AGENTS.md", "GEMINI.md", "CLAUDE.md"]:
+                content = (project_root / name).read_text()
+                self.assert_behavioral_verification_policy(content)
 
             cursor_root = Path(tmpdir) / "cursor_project"
             cursor_root.mkdir(parents=True, exist_ok=True)
@@ -212,9 +235,32 @@ class AgentAdoptionTests(unittest.TestCase):
             )
             self.assertEqual(0, cursor.returncode, cursor.stdout + cursor.stderr)
             self.assertIn("Agent adoption files are ready.", cursor.stdout)
-            self.assertTrue((cursor_root / "AGENTS.md").exists())
-            self.assertTrue((cursor_root / "GEMINI.md").exists())
-            self.assertTrue((cursor_root / "CLAUDE.md").exists())
+            for name in ["AGENTS.md", "GEMINI.md", "CLAUDE.md"]:
+                content = (cursor_root / name).read_text()
+                self.assert_behavioral_verification_policy(content)
+
+    def test_behavioral_lifecycle_uses_custom_command_and_artifact_root(self) -> None:
+        policy = render_local_workflow_policy(
+            heading="# Agent Workflow",
+            intro="Use the bounded control loop.",
+            artifact_root=".control artifacts",
+            command="./bin/synrail",
+            fallback_command=None,
+            repo_native_alpha_command=None,
+            workspace_isolation_note="",
+            prefer_runtime_helper=False,
+            first_command_heading="## First Step",
+            first_command_intro="Inspect the current state.",
+            show_cli_kernel_note=False,
+            start_intro="Start only after preflight.",
+        )
+
+        self.assertIn("./bin/synrail preflight --artifact-root '.control artifacts'", policy)
+        self.assertIn("./bin/synrail verify --artifact-root '.control artifacts'", policy)
+        self.assertIn("./bin/synrail preflight --artifact-root './.control artifacts'", policy)
+        self.assertIn("# continue on READY; NOT_CONFIGURED only for non-behavioral tasks", policy)
+        self.assertIn("# READY only: ./bin/synrail verify --artifact-root './.control artifacts'", policy)
+        self.assertNotIn("\n./bin/synrail verify --artifact-root './.control artifacts'\n", policy)
 
     def test_generated_agent_policy_forbids_done_after_non_accepted_check(self) -> None:
         agents = render_local_workflow_policy(
@@ -278,6 +324,7 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
             for name in ["AGENTS.md", "GEMINI.md", "CLAUDE.md"]:
                 content = (project_root / name).read_text()
+                self.assert_behavioral_verification_policy(content)
                 self.assertEqual(1, content.count("Only `Status: Accepted` means the task may be reported as complete."), name)
                 self.assertIn("If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", content)
                 self.assertIn('synrail start "TASK" --artifact-root ./.synrail', content)
@@ -306,6 +353,7 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("GEMINI.md: appended", rendered)
             self.assertNotIn("AGENTS.md:", rendered)
             gemini = (project_root / "GEMINI.md").read_text()
+            self.assert_behavioral_verification_policy(gemini)
             self.assertIn("# Existing Gemini Context", gemini)
             self.assertIn("<!-- SYNRAIL_GEMINI_START -->", gemini)
             self.assertIn("Use Synrail as the default local control path", gemini)

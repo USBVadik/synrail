@@ -1,6 +1,6 @@
 # Synrail Revival Roadmap
 
-Date: 2026-07-11
+Updated: 2026-07-13
 Base commit: `abf213c Restart bounded revival: hygiene, tester checklist, recheck fix`
 Purpose: restart bounded development after a pause, without broadening scope.
 
@@ -240,6 +240,38 @@ The bounded goal is to reduce ceremony without changing what `Accepted` means.
 Definition of done: a real cross-repo ephemeral run reaches `Accepted` through
 `start -> edit -> record -> check` without an override; negative cases do not
 overwrite the starter proof; the full release gate and adversarial review pass.
+
+## Track D: Operator-Owned Behavioral Verification
+
+The thin proof loop establishes that evidence is real, fresh, and in scope. This
+track closes the separate product question: whether behavior such as a test suite
+actually passed under a command the operator approved before the agent run.
+
+- [x] Replace the transcript-only public story with a real disposable behavioral
+      demo: weak read-only proof is blocked while the approved test profile is red,
+      then the same run reaches `Accepted` only after behavioral repair and a green
+      receipt.
+- [x] Add authenticated Verification Profiles v1. `synrail start` locks a tracked,
+      clean `synrail.toml`, executable identity, and project/git root; `synrail
+      verify` runs exact argv without a shell and writes run/config/executable/
+      workspace-bound receipts; `synrail check` requires fresh green receipts for
+      every required profile.
+- [x] Add fail-safe `init-verification`: scaffold one review-required profile
+      without guessing the ecosystem or executing the command, refuse silent
+      replacement, and back up explicit `--force` replacement.
+- [x] Extend `synrail preflight` with `NOT_CONFIGURED`, `REVIEW_REQUIRED`,
+      `BLOCKED`, and `READY` verification readiness without executing commands or
+      creating a trusted lock. Start reuses the same preparation contract.
+- [x] Teach generated Codex/Cursor, Claude, and Gemini policies the full
+      `preflight -> start -> verify -> check` lifecycle. The policy keeps
+      `synrail.toml` operator-owned, blocks mutation starts on review/block states,
+      labels `NOT_CONFIGURED` as behaviorally ungated, and forbids replacing a
+      failed profile with narrative or read-only proof.
+
+Definition of done: the public demo, direct CLI, preflight, and generated agent
+onboarding all express the same behavioral gate; config/executable/workspace drift
+fails closed; targeted policy tests plus the full release gate and adversarial
+review pass.
 
 ## Do Not Do Yet
 
