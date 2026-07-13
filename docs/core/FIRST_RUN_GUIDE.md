@@ -5,10 +5,13 @@ Synrail governs one bounded change at a time. It blocks false-green closure and 
 ## False-Green Demo
 
 ```text
-Agent: tests passed
-Synrail: Status: Proof Invalid
-Reason: final_result.json is narrative, not machine-readable proof
-Next: replace it with structured evidence and rerun synrail check
+Agent: fixed add(); tests pass
+Agent proof: grep found the new fast-path line
+Verification unit: FAIL (exit 1)
+Synrail: Status: Verification Failed
+Agent: repaired the behavior, not the story
+Verification unit: GREEN
+Synrail: Status: Accepted
 ```
 
 Only `Status: Accepted` means the task may be reported as complete.

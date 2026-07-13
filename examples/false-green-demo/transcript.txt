@@ -1,13 +1,15 @@
-Agent: done, tests passed
+Agent: fixed add(); tests pass
+Agent proof: grep found the new fast-path line
+
+$ synrail verify --artifact-root .synrail
+Verification unit: FAIL (exit 1)
 
 $ synrail check --artifact-root .synrail
-Synrail: Status: Proof Invalid
-Next: update the result payload in .synrail/final_result.json and rerun synrail check
+Synrail: Status: Verification Failed
 
-$ grep -n 'hello from Synrail' greeting.txt
-2:hello from Synrail
-
+$ synrail verify --artifact-root .synrail
+Verification unit: GREEN
 $ synrail check --artifact-root .synrail
 Synrail: Status: Accepted
 
-Demo result: real weak proof blocked; real repaired proof accepted.
+Demo result: plausible proof blocked while tests were red; verified behavior accepted.
