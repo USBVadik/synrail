@@ -259,6 +259,11 @@ It writes `CLAUDE.md`, `GEMINI.md`, and `AGENTS.md` for agent discovery in the t
 make install-local
 ```
 
+The generated `AGENTS.md`, `GEMINI.md`, and `CLAUDE.md` policy teaches agents
+the full `preflight -> start -> verify -> check` lifecycle. It keeps
+`synrail.toml` operator-owned and forbids replacing a failed behavioral profile
+with convenient narrative or read-only proof.
+
 ## Developer Checks
 
 ```bash
