@@ -66,6 +66,22 @@ Start here:
 synrail preflight
 ```
 
+Preflight now checks two separate surfaces:
+
+- local install/artifact readiness
+- behavioral-verification readiness from `synrail.toml`
+
+It reports one of `NOT_CONFIGURED`, `REVIEW_REQUIRED`, `BLOCKED`, or `READY`
+for behavioral verification and prints one next safe step. A present but
+untracked, dirty, invalid, unsafe, or unresolved profile makes preflight exit
+non-zero before a run is created. An absent profile stays install-ready, but
+behavioral claims are explicitly ungated. Preflight inspects config, clean git
+provenance, and executable identity; it does not execute profile argv or sign a
+verification lock. When run inside a repository subdirectory, it discovers the
+git root and places the default `.synrail` artifact root there. `READY` also
+requires at least one `required = true` profile; an optional-only config does
+not enforce a behavioral acceptance gate.
+
 If the checkout-local wrapper is blocked on this host, use the repo-local fallback instead:
 
 ```bash
@@ -263,6 +279,18 @@ use `--force`, Synrail creates an exact timestamped backup before replacing
 the whole config; edit manually when you need to preserve other profiles.
 Never put secrets in profile argv: `synrail.toml` is intended to be reviewed
 and committed, and the scaffold prints the argv for confirmation.
+
+After review and commit, confirm that controlled start will accept the profile:
+
+```bash
+synrail preflight
+```
+
+Continue only when it reports `Behavioral verification: READY`. If it reports
+`REVIEW_REQUIRED` or `BLOCKED`, perform only the named next step and rerun
+preflight. This command never runs the configured verification command; the
+first execution still happens only after `start`, when you invoke
+`synrail verify`.
 
 ```toml
 [verification.unit]

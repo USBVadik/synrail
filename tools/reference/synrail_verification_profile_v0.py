@@ -36,6 +36,7 @@ import os
 import secrets
 import signal
 import shutil
+import stat
 import subprocess
 import sys
 import threading
@@ -125,6 +126,29 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def sha256_regular_file(path: Path) -> str:
+    """Hash one regular file without blocking on a configured special file."""
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    descriptor = os.open(path, flags)
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode):
+            raise OSError(f"not a regular file: {path}")
+        digest = hashlib.sha256()
+        with os.fdopen(descriptor, "rb") as handle:
+            descriptor = -1
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
 
 
 def canonical_json(payload: dict) -> str:
@@ -352,12 +376,18 @@ def _verification_config_git_provenance(project_root: Path) -> dict:
         top = run_safe_git(project_root, ["rev-parse", "--show-toplevel"])
         head = run_safe_git(project_root, ["rev-parse", "HEAD"])
     except SafeGitError as exc:
-        return {"status": "ERROR", "reason": "VERIFICATION_CONFIG_UNTRUSTED", "detail": exc.detail}
+        return {
+            "status": "ERROR",
+            "reason": "VERIFICATION_CONFIG_UNTRUSTED",
+            "detail": exc.detail,
+            "next_action": "FIX_GIT_PROVENANCE",
+        }
     if top.returncode != 0 or head.returncode != 0:
         return {
             "status": "ERROR",
             "reason": "VERIFICATION_CONFIG_UNTRUSTED",
             "detail": "verification profiles require a git-backed project with an existing HEAD commit",
+            "next_action": "INITIALIZE_AND_COMMIT",
         }
     git_root = Path(top.stdout.strip()).resolve()
     try:
@@ -367,23 +397,31 @@ def _verification_config_git_provenance(project_root: Path) -> dict:
             "status": "ERROR",
             "reason": "VERIFICATION_CONFIG_UNTRUSTED",
             "detail": "synrail.toml must live inside the git repository that owns the controlled run",
+            "next_action": "FIX_PROJECT_ROOT",
         }
     try:
         tracked = run_safe_git(project_root, ["ls-files", "--error-unmatch", "--", relative])
         clean = run_safe_git(project_root, ["diff", "--quiet", "HEAD", "--", relative])
     except SafeGitError as exc:
-        return {"status": "ERROR", "reason": "VERIFICATION_CONFIG_UNTRUSTED", "detail": exc.detail}
+        return {
+            "status": "ERROR",
+            "reason": "VERIFICATION_CONFIG_UNTRUSTED",
+            "detail": exc.detail,
+            "next_action": "FIX_GIT_PROVENANCE",
+        }
     if tracked.returncode != 0:
         return {
             "status": "ERROR",
             "reason": "VERIFICATION_CONFIG_UNTRUSTED",
             "detail": "synrail.toml must be tracked in git before it can be treated as operator-owned",
+            "next_action": "REVIEW_AND_COMMIT",
         }
     if clean.returncode != 0:
         return {
             "status": "ERROR",
             "reason": "VERIFICATION_CONFIG_UNTRUSTED",
             "detail": "synrail.toml must match HEAD at controlled start; commit or restore the operator-approved profile first",
+            "next_action": "REVIEW_AND_COMMIT",
         }
     return {
         "status": "OK",
@@ -432,7 +470,7 @@ def _resolved_binary_state(locked_profile: dict, *, project_root: Path) -> dict:
             ),
         }
     try:
-        current_sha256 = sha256_file(Path(current_realpath))
+        current_sha256 = sha256_regular_file(Path(current_realpath))
     except OSError as exc:
         return {"status": "ERROR", "detail": f"the locked verification binary is unreadable: {exc}"}
     locked_sha256 = locked_profile.get("argv0_sha256", "")
@@ -444,10 +482,133 @@ def _resolved_binary_state(locked_profile: dict, *, project_root: Path) -> dict:
     return {"status": "OK", "realpath": current_realpath, "sha256": current_sha256}
 
 
-def lock_verification_profiles(project_root: Path) -> dict:
-    """Snapshot the config for one run; called once at controlled start."""
+def _prepare_verification_profiles(project_root: Path) -> dict:
+    """Validate the exact profile inputs that controlled start would lock."""
     config = load_verification_config(project_root)
     if config["status"] == "ABSENT":
+        return {"status": "ABSENT", "stage": "config"}
+    if config["status"] == "ERROR":
+        return {
+            "status": "ERROR",
+            "stage": "config",
+            "reason": config["reason"],
+            "detail": config["detail"],
+        }
+    provenance = _verification_config_git_provenance(project_root)
+    if provenance["status"] != "OK":
+        return {
+            "status": "ERROR",
+            "stage": "provenance",
+            "reason": provenance["reason"],
+            "detail": provenance["detail"],
+            "next_action": provenance.get("next_action", "FIX_GIT_PROVENANCE"),
+        }
+    locked_profiles: dict[str, dict] = {}
+    for name, profile in config["profiles"].items():
+        realpath = _resolve_argv0(profile["argv"][0], project_root=project_root)
+        if not realpath:
+            return {
+                "status": "ERROR",
+                "stage": "executable",
+                "reason": "VERIFICATION_BINARY_UNRESOLVED",
+                "detail": f"verification profile '{name}' argv[0] '{profile['argv'][0]}' does not resolve to an executable",
+            }
+        try:
+            binary_sha256 = sha256_regular_file(Path(realpath))
+        except OSError as exc:
+            return {
+                "status": "ERROR",
+                "stage": "executable",
+                "reason": "VERIFICATION_BINARY_UNRESOLVED",
+                "detail": f"verification profile '{name}' argv[0] could not be hashed: {exc}",
+            }
+        locked_profiles[name] = dict(
+            profile,
+            argv0_realpath=realpath,
+            argv0_sha256=binary_sha256,
+        )
+    return {
+        "status": "OK",
+        "stage": "ready",
+        "config": config,
+        "provenance": provenance,
+        "profiles": locked_profiles,
+    }
+
+
+def inspect_verification_readiness(project_root: Path) -> dict:
+    """Report start-time verification readiness without executing or signing."""
+    prepared = _prepare_verification_profiles(project_root)
+    if prepared["status"] == "ABSENT":
+        return {
+            "status": "NOT_CONFIGURED",
+            "configured": False,
+            "profile_count": 0,
+            "required_profile_count": 0,
+            "profiles": [],
+            "next_action": "CONFIGURE",
+        }
+    if prepared["status"] == "ERROR":
+        stage = prepared.get("stage", "config")
+        if stage == "provenance":
+            next_action = prepared.get("next_action", "FIX_GIT_PROVENANCE")
+        elif stage == "executable":
+            next_action = "FIX_EXECUTABLE"
+        else:
+            next_action = "FIX_CONFIG"
+        return {
+            "status": (
+                "REVIEW_REQUIRED"
+                if next_action in {"REVIEW_AND_COMMIT", "INITIALIZE_AND_COMMIT"}
+                else "BLOCKED"
+            ),
+            "configured": True,
+            "reason": prepared["reason"],
+            "detail": prepared["detail"],
+            "profile_count": 0,
+            "required_profile_count": 0,
+            "profiles": [],
+            "next_action": next_action,
+        }
+
+    profiles = [
+        {
+            "name": name,
+            "argv0": profile["argv"][0],
+            "argv0_realpath": profile["argv0_realpath"],
+            "required": profile["required"],
+            "timeout_seconds": profile["timeout_seconds"],
+        }
+        for name, profile in sorted(prepared["profiles"].items())
+    ]
+    required_profile_count = sum(1 for profile in profiles if profile["required"])
+    if required_profile_count == 0:
+        return {
+            "status": "REVIEW_REQUIRED",
+            "configured": True,
+            "reason": "VERIFICATION_NO_REQUIRED_PROFILES",
+            "detail": "synrail.toml has no required verification profile, so behavioral acceptance would remain ungated",
+            "profile_count": len(profiles),
+            "required_profile_count": 0,
+            "profiles": profiles,
+            "next_action": "MAKE_PROFILE_REQUIRED",
+        }
+    return {
+        "status": "READY",
+        "configured": True,
+        "profile_count": len(profiles),
+        "required_profile_count": required_profile_count,
+        "profiles": profiles,
+        "config_repo_path": prepared["provenance"]["repo_path"],
+        "config_git_head": prepared["provenance"]["head_commit"],
+        "next_action": "START",
+    }
+
+
+def lock_verification_profiles(project_root: Path) -> dict:
+    """Snapshot the config for one run; called once at controlled start."""
+    prepared = _prepare_verification_profiles(project_root)
+    if prepared["status"] == "ABSENT":
         return sign_verification_lock(
             {
                 "schema_version": LOCK_SCHEMA_VERSION,
@@ -457,49 +618,17 @@ def lock_verification_profiles(project_root: Path) -> dict:
                 "project_root_realpath": str(project_root.resolve()),
             }
         )
-    if config["status"] == "ERROR":
+    if prepared["status"] == "ERROR":
         return {
             "schema_version": LOCK_SCHEMA_VERSION,
             "present": False,
             "status": "ERROR",
-            "reason": config["reason"],
-            "detail": config["detail"],
+            "reason": prepared["reason"],
+            "detail": prepared["detail"],
         }
-    provenance = _verification_config_git_provenance(project_root)
-    if provenance["status"] != "OK":
-        return {
-            "schema_version": LOCK_SCHEMA_VERSION,
-            "present": False,
-            "status": "ERROR",
-            "reason": provenance["reason"],
-            "detail": provenance["detail"],
-        }
-    locked_profiles: dict[str, dict] = {}
-    for name, profile in config["profiles"].items():
-        realpath = _resolve_argv0(profile["argv"][0], project_root=project_root)
-        if not realpath:
-            return {
-                "schema_version": LOCK_SCHEMA_VERSION,
-                "present": False,
-                "status": "ERROR",
-                "reason": "VERIFICATION_BINARY_UNRESOLVED",
-                "detail": f"verification profile '{name}' argv[0] '{profile['argv'][0]}' does not resolve to an executable",
-            }
-        try:
-            binary_sha256 = sha256_file(Path(realpath))
-        except OSError as exc:
-            return {
-                "schema_version": LOCK_SCHEMA_VERSION,
-                "present": False,
-                "status": "ERROR",
-                "reason": "VERIFICATION_BINARY_UNRESOLVED",
-                "detail": f"verification profile '{name}' argv[0] could not be hashed: {exc}",
-            }
-        locked_profiles[name] = dict(
-            profile,
-            argv0_realpath=realpath,
-            argv0_sha256=binary_sha256,
-        )
+
+    config = prepared["config"]
+    provenance = prepared["provenance"]
     return sign_verification_lock({
         "schema_version": LOCK_SCHEMA_VERSION,
         "present": True,
@@ -511,7 +640,7 @@ def lock_verification_profiles(project_root: Path) -> dict:
         "config_repo_path": provenance["repo_path"],
         "environment_policy": ENV_POLICY_VERSION,
         "project_root_realpath": str(project_root.resolve()),
-        "profiles": locked_profiles,
+        "profiles": prepared["profiles"],
     })
 
 
