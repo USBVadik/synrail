@@ -291,12 +291,13 @@ repositories, not whether another local fixture can be made green.
       run/report/final-result/receipt hashes, require a preserved same-run
       blocked report before claiming a false-green prevention, and exclude raw
       verifier output and absolute local paths.
-- [ ] Complete 3-5 maintainer-run pilots on disposable clones from different
+- [x] Complete 3-5 maintainer-run pilots on disposable clones from different
       repositories. Measure setup time, first useful blocker, verification
       time, time to acceptance, interventions, and confusion moments.
-- [ ] Keep those records labelled `INTERNAL_CROSS_REPO_DOGFOOD` and
+- [x] Keep those records labelled `INTERNAL_CROSS_REPO_DOGFOOD` and
       `NOT_EXTERNAL_EMPIRICAL_EVIDENCE`; do not move them into the external
-      alpha ledger.
+      alpha ledger. The three seeded records and their hash-bound blocked
+      reports live in `fixtures/internal_cross_repo_pilots/`.
 - [ ] Collect 3-5 new human-operated external reports using the existing
       external template, then prioritize UX changes from repeated friction
       rather than another broad internal audit.

@@ -1,0 +1,52 @@
+{
+  "schema_version": "internal_cross_repo_pilot_v0",
+  "evidence_class": "INTERNAL_CROSS_REPO_DOGFOOD",
+  "claim_scope": "NOT_EXTERNAL_EMPIRICAL_EVIDENCE",
+  "captured_at": "2026-07-14T17:04:52.243236+00:00",
+  "run_id": "ALPHA_RUN_20260714T170446831781Z_e6a629",
+  "repository": {
+    "label": "pypa-sampleproject",
+    "revision": "28a0dc8846c7dbbf99009b197ce9d7c82ef32dbb",
+    "ecosystem": "python"
+  },
+  "task": {
+    "summary": "Preserve add_one(number) behavior while adding a bounded implementation marker.",
+    "class": "bounded-behavior-fix"
+  },
+  "timing": {
+    "setup_seconds": 2.664,
+    "time_to_first_blocker_seconds": 3.083,
+    "verification_seconds": 0.083,
+    "time_to_accepted_seconds": 5.0,
+    "total_operator_seconds": 8.787
+  },
+  "outcome": {
+    "accepted": true,
+    "closure_status": "ACCEPTED",
+    "report_result": "OK",
+    "report_reason": "NONE",
+    "false_green_prevented": "yes",
+    "first_blocker_reason": "VERIFICATION_FAILED",
+    "operator_interventions": [
+      "No bounded suggestion was available; reviewed and committed the existing unittest command manually."
+    ],
+    "confusion_moments": []
+  },
+  "verification_profiles": [
+    {
+      "profile": "unit",
+      "duration_seconds": 0.083,
+      "exit_code": 0,
+      "green": true
+    }
+  ],
+  "artifact_bindings": {
+    "state_sha256": "73c4c18b877d41e85dabded19e4ef3b4196755fbe34cbb6dcb1f1a51d735349d",
+    "project_profile_sha256": "1e153c2c52f1c31fe56ff87c27c43d020e763c44cf0e91dd0a46e0293ce22ef4",
+    "report_sha256": "e642072391365b3dac33875aec98a6c6e0366fdb32f71af585e1745fda9920b7",
+    "final_result_sha256": "d953bcb158c96649a0d1d6cb09b2ce17d1f8e864bf7a77c44d5e91e0ecefd770",
+    "verification_receipts_sha256": "eec58e9647f8bcac8952f9de20c78b6683e49eeab586aa67666dca7a3fbb8514",
+    "blocked_report_sha256": "c57f09c4a4e685d23a55a60ababdeae3b2799e1cf50023c76542886e03d1a677"
+  },
+  "notes": "Maintainer-operated disposable clone; not external empirical evidence."
+}

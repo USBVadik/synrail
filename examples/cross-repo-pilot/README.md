@@ -67,3 +67,7 @@ claim_scope = NOT_EXTERNAL_EMPIRICAL_EVIDENCE
 Do not copy these records into `fixtures/external_alpha_runs` and do not report
 their outcomes as outside-user false-green rates. Real external runs still use
 the [external alpha run template](../../docs/review/EXTERNAL_ALPHA_RUN_TEMPLATE_001.md).
+
+Three seeded maintainer-run examples, their paired blocked reports, measured
+setup/repair timings, and the exact claim boundary are preserved in
+[`fixtures/internal_cross_repo_pilots`](../../fixtures/internal_cross_repo_pilots/README.md).

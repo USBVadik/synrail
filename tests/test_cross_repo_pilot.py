@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import tempfile
@@ -19,11 +20,59 @@ from tools.pilots.capture_cross_repo_run import (
 from tools.reference.synrail_validate_v0 import validate_document
 
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+PILOT_FIXTURES = REPO_ROOT / "fixtures" / "internal_cross_repo_pilots"
+
+
 def run(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(command, cwd=cwd, check=False, capture_output=True, text=True)
 
 
 class CrossRepoPilotTests(unittest.TestCase):
+    def test_committed_pilots_are_bound_internal_evidence(self) -> None:
+        schema = json.loads(
+            (REPO_ROOT / "schemas" / "internal_cross_repo_pilot_v0.schema.json").read_text()
+        )
+        records = sorted(
+            path
+            for path in PILOT_FIXTURES.glob("*.json")
+            if not path.name.endswith("-blocked-report.json")
+        )
+        self.assertEqual(3, len(records))
+
+        for record_path in records:
+            with self.subTest(record=record_path.name):
+                record = json.loads(record_path.read_text())
+                self.assertEqual([], validate_document(record, schema))
+                self.assertEqual(EVIDENCE_CLASS, record["evidence_class"])
+                self.assertEqual(CLAIM_SCOPE, record["claim_scope"])
+                self.assertTrue(record["outcome"]["accepted"])
+                self.assertEqual("yes", record["outcome"]["false_green_prevented"])
+                self.assertEqual(
+                    "VERIFICATION_FAILED",
+                    record["outcome"]["first_blocker_reason"],
+                )
+                self.assertTrue(all(profile["green"] for profile in record["verification_profiles"]))
+
+                blocked_path = record_path.with_name(
+                    f"{record_path.stem}-blocked-report.json"
+                )
+                blocked_bytes = blocked_path.read_bytes()
+                self.assertEqual(
+                    hashlib.sha256(blocked_bytes).hexdigest(),
+                    record["artifact_bindings"]["blocked_report_sha256"],
+                )
+                blocked = json.loads(blocked_bytes)
+                self.assertEqual(record["run_id"], blocked["run_id"])
+                self.assertEqual("BLOCKED", blocked["result"])
+                self.assertEqual("VERIFICATION_FAILED", blocked["reason"])
+
+                serialized = record_path.read_text() + blocked_path.read_text()
+                self.assertNotIn("/Users/", serialized)
+                self.assertNotIn("/tmp/", serialized)
+                self.assertNotIn("stdout", serialized)
+                self.assertNotIn("stderr", serialized)
+
     def seed(self, tmpdir: str) -> tuple[Path, Path]:
         project = Path(tmpdir) / "project"
         artifacts = Path(tmpdir) / "artifacts"
@@ -133,7 +182,7 @@ class CrossRepoPilotTests(unittest.TestCase):
             self.assertEqual("VERIFICATION_FAILED", record["outcome"]["first_blocker_reason"])
             self.assertTrue(record["artifact_bindings"]["blocked_report_sha256"])
             schema = json.loads(
-                (Path(__file__).resolve().parents[1] / "schemas" / "internal_cross_repo_pilot_v0.schema.json").read_text()
+                (REPO_ROOT / "schemas" / "internal_cross_repo_pilot_v0.schema.json").read_text()
             )
             self.assertEqual([], validate_document(record, schema))
             serialized = json.dumps(record)
