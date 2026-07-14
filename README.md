@@ -148,10 +148,11 @@ creates an exact timestamped backup before replacing the whole file; prefer
 manual editing when an existing config already contains profiles you need.
 Do not put secrets in profile argv: the config is intended to be reviewed and
 committed, and the scaffold also prints the argv for confirmation.
-`@synrail-python` is the one reserved executable alias: it resolves to the
-Python interpreter running Synrail, then that interpreter's realpath and bytes
-are locked like any other `argv[0]`. This keeps a reviewed Python profile
-portable across macOS, Linux, and Windows without trusting `PATH` aliases.
+`@synrail-python` is the one reserved executable alias: it locks both the exact
+Python invocation path running Synrail and that interpreter's realpath and
+bytes. This preserves virtualenv-installed packages while keeping a reviewed
+Python profile portable across macOS, Linux, and Windows without trusting
+`PATH` aliases.
 
 Before creating a controlled run, inspect the exact start-time readiness
 without executing the configured command:

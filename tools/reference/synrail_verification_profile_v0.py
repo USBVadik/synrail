@@ -372,6 +372,16 @@ def _resolve_argv0(argv0: str, *, project_root: Path) -> str:
     return str(Path(located).resolve())
 
 
+def _execution_argv0(argv0: str, *, project_root: Path) -> str:
+    """Preserve interpreter environment semantics while identity-locking its target."""
+    if argv0 == SYNRAIL_PYTHON_ARGV0:
+        candidate = Path(os.path.abspath(sys.executable))
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate)
+        return ""
+    return _resolve_argv0(argv0, project_root=project_root)
+
+
 def _verification_config_git_provenance(project_root: Path) -> dict:
     """Require the operator profile to be tracked and unchanged from HEAD."""
     path = config_path(project_root)
@@ -472,6 +482,28 @@ def _resolved_binary_state(locked_profile: dict, *, project_root: Path) -> dict:
                 f"but was locked to '{locked_realpath}' at start"
             ),
         }
+    execution_path = current_realpath
+    if argv[0] == SYNRAIL_PYTHON_ARGV0:
+        execution_path = _execution_argv0(argv[0], project_root=project_root)
+        locked_execution_path = locked_profile.get("argv0_execution_path", "")
+        if not locked_execution_path:
+            return {
+                "status": "ERROR",
+                "detail": "the @synrail-python lock predates virtualenv execution binding; start a new controlled run",
+            }
+        if execution_path != locked_execution_path:
+            return {
+                "status": "ERROR",
+                "detail": (
+                    f"@synrail-python now invokes '{execution_path or 'nothing'}' "
+                    f"but was locked to '{locked_execution_path}' at start"
+                ),
+            }
+        if str(Path(execution_path).resolve()) != current_realpath:
+            return {
+                "status": "ERROR",
+                "detail": "the locked @synrail-python invocation no longer resolves to its authenticated binary",
+            }
     try:
         current_sha256 = sha256_regular_file(Path(current_realpath))
     except OSError as exc:
@@ -482,7 +514,12 @@ def _resolved_binary_state(locked_profile: dict, *, project_root: Path) -> dict:
             "status": "ERROR",
             "detail": f"the executable content at '{current_realpath}' changed after controlled start",
         }
-    return {"status": "OK", "realpath": current_realpath, "sha256": current_sha256}
+    return {
+        "status": "OK",
+        "execution_path": execution_path,
+        "realpath": current_realpath,
+        "sha256": current_sha256,
+    }
 
 
 def _prepare_verification_profiles(project_root: Path) -> dict:
@@ -508,8 +545,9 @@ def _prepare_verification_profiles(project_root: Path) -> dict:
         }
     locked_profiles: dict[str, dict] = {}
     for name, profile in config["profiles"].items():
+        execution_path = _execution_argv0(profile["argv"][0], project_root=project_root)
         realpath = _resolve_argv0(profile["argv"][0], project_root=project_root)
-        if not realpath:
+        if not execution_path or not realpath:
             return {
                 "status": "ERROR",
                 "stage": "executable",
@@ -527,6 +565,7 @@ def _prepare_verification_profiles(project_root: Path) -> dict:
             }
         locked_profiles[name] = dict(
             profile,
+            argv0_execution_path=execution_path,
             argv0_realpath=realpath,
             argv0_sha256=binary_sha256,
         )
@@ -578,6 +617,7 @@ def inspect_verification_readiness(project_root: Path) -> dict:
         {
             "name": name,
             "argv0": profile["argv"][0],
+            "argv0_execution_path": profile["argv0_execution_path"],
             "argv0_realpath": profile["argv0_realpath"],
             "required": profile["required"],
             "timeout_seconds": profile["timeout_seconds"],
@@ -988,7 +1028,7 @@ def execute_profile(
         }
     started = time.monotonic()
     execution = _execute_bounded_process(
-        [current_realpath, *argv[1:]],
+        [binary["execution_path"], *argv[1:]],
         project_root=project_root,
         timeout_seconds=locked_profile["timeout_seconds"],
     )
@@ -1027,6 +1067,7 @@ def execute_profile(
         "environment_policy": ENV_POLICY_VERSION,
         "project_root_realpath": str(project_root.resolve()),
         "argv": argv,
+        "argv0_execution_path": binary["execution_path"],
         "argv0_realpath": current_realpath,
         "argv0_sha256": binary["sha256"],
         "executed_at": now_iso(),
@@ -1267,6 +1308,12 @@ def evaluate_verification_gate(
             return _gate_block(
                 "VERIFICATION_RECEIPT_INVALID",
                 f"the receipt for profile '{name}' is not bound to the executable locked at start",
+                "run synrail verify to regenerate the receipt, then rerun synrail check",
+            )
+        if receipt.get("argv0_execution_path", "") != required[name].get("argv0_execution_path", ""):
+            return _gate_block(
+                "VERIFICATION_RECEIPT_INVALID",
+                f"the receipt for profile '{name}' used a different executable invocation path",
                 "run synrail verify to regenerate the receipt, then rerun synrail check",
             )
         if not fingerprints_match(receipt.get("workspace_fingerprint"), current_fingerprint):
