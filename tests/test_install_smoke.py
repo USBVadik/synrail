@@ -79,6 +79,21 @@ class InstallSmokeTests(unittest.TestCase):
         ):
             self.assertEqual(__version__, synrail_version())
 
+    def test_dev_build_backend_is_locked_and_audited(self) -> None:
+        constraints = (REPO_ROOT / "constraints-dev.txt").read_text()
+        makefile = (REPO_ROOT / "Makefile").read_text()
+        workflow = (REPO_ROOT / ".github" / "workflows" / "security-hygiene.yml").read_text()
+
+        self.assertIn("setuptools==83.0.0", constraints)
+        self.assertIn(
+            "$(PYTHON) -m pip install --upgrade setuptools -c $(CONSTRAINTS)",
+            makefile,
+        )
+        self.assertIn(
+            "python -m pip install --upgrade pip setuptools -c constraints-dev.txt",
+            workflow,
+        )
+
     def test_public_cli_does_not_advertise_retired_contest_commands(self) -> None:
         result = subprocess.run(
             [PYTHON, str(REPO_ROOT / "alpha.py"), "--help"],

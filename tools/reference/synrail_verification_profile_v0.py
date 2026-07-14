@@ -893,13 +893,23 @@ def _terminate_process_tree(process: subprocess.Popen[bytes]) -> None:
             return
         except OSError:
             if process.poll() is None:
-                process.kill()
+                try:
+                    process.kill()
+                except OSError:
+                    pass
             return
         time.sleep(PROCESS_TERMINATION_GRACE_SECONDS)
         try:
             os.killpg(process.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
+        except OSError:
+            # The process group can disappear or change ownership between signals.
+            if process.poll() is None:
+                try:
+                    process.kill()
+                except OSError:
+                    pass
         return
     if os.name == "nt":
         system_root = Path(os.environ.get("SystemRoot", r"C:\Windows"))
@@ -916,7 +926,10 @@ def _terminate_process_tree(process: subprocess.Popen[bytes]) -> None:
             except (OSError, subprocess.TimeoutExpired):
                 pass
     if process.poll() is None:
-        process.kill()
+        try:
+            process.kill()
+        except OSError:
+            pass
 
 
 def _execute_bounded_process(

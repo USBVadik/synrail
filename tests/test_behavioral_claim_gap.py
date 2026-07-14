@@ -26,10 +26,12 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tools.reference.synrail_verification_profile_v0 import (
     OUTPUT_EXCERPT_BYTES,
     SYNRAIL_PYTHON_ARGV0,
+    _terminate_process_tree,
     fingerprints_match,
     workspace_fingerprint,
 )
@@ -87,6 +89,23 @@ def stdout_lines(completed: subprocess.CompletedProcess[str]) -> set[str]:
 
 
 class BehavioralClaimGapTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "posix", "process-group cleanup is POSIX-specific")
+    def test_process_group_cleanup_treats_permission_error_as_best_effort(self) -> None:
+        process = mock.Mock()
+        process.pid = 12345
+        process.poll.return_value = 0
+
+        with (
+            mock.patch(
+                "tools.reference.synrail_verification_profile_v0.os.killpg",
+                side_effect=[None, PermissionError(1, "operation not permitted")],
+            ),
+            mock.patch("tools.reference.synrail_verification_profile_v0.time.sleep"),
+        ):
+            _terminate_process_tree(process)
+
+        process.kill.assert_not_called()
+
     def run_alpha(
         self,
         *args: str,

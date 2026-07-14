@@ -12,6 +12,7 @@ $(PYTHON):
 	$(PYTHON) -m pip install --upgrade pip
 
 $(DEV_STAMP): pyproject.toml constraints-dev.txt tools/reference/synrail_version_v0.py $(PYTHON)
+	$(PYTHON) -m pip install --upgrade setuptools -c $(CONSTRAINTS)
 	$(PYTHON) -m pip install -e ".[dev]" -c $(CONSTRAINTS)
 	touch $(DEV_STAMP)
 
