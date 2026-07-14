@@ -1755,6 +1755,17 @@ def apply_bootstrap_defaults(args: argparse.Namespace, *, root: Path | None) -> 
     return validation
 
 
+def check_process_exit_code(*, thin_code: int, output_file: Path) -> int:
+    """Return success only when the rendered check outcome is accepted."""
+    if thin_code != 0 or not output_file.is_file():
+        return thin_code or 2
+    try:
+        outcome_class = load_json(output_file).get("outcome_class", "")
+    except (OSError, ValueError, json.JSONDecodeError):
+        return 2
+    return 0 if outcome_class == "ACCEPTED" else 2
+
+
 def write_bootstrap_required_block(*, args: argparse.Namespace, root: Path, validation: dict) -> int:
     state_path = Path(args.state_file)
     state = ensure_run_state_extensions(load_json(state_path))
@@ -1812,7 +1823,7 @@ def write_bootstrap_required_block(*, args: argparse.Namespace, root: Path, vali
     thin_code = cmd_thin_output(args)
     if thin_code == 0 and args.mode == "default":
         print_thin_output_summary(Path(args.output))
-    return thin_code
+    return check_process_exit_code(thin_code=thin_code, output_file=Path(args.output))
 
 
 def write_remote_unsupported_block(*, args: argparse.Namespace, root: Path) -> int:
@@ -1866,7 +1877,7 @@ def write_remote_unsupported_block(*, args: argparse.Namespace, root: Path) -> i
     thin_code = cmd_thin_output(args)
     if thin_code == 0 and args.mode == "default":
         print_thin_output_summary(Path(args.output))
-    return thin_code
+    return check_process_exit_code(thin_code=thin_code, output_file=Path(args.output))
 
 
 def sync_restored_checkpoint_artifacts(target_root: Path) -> list[str]:
@@ -3509,17 +3520,18 @@ def cmd_check(args: argparse.Namespace) -> int:
         maybe_print_doctor_override_warning(doctor_path)
     args._suppress_summary = True
     thin_code = cmd_thin_output(args)
+    check_code = check_process_exit_code(thin_code=thin_code, output_file=Path(args.output))
     if thin_code == 0 and args.mode == "default":
         print_thin_output_summary(Path(args.output))
         thin_payload = load_json(Path(args.output)) if Path(args.output).exists() else {}
         outcome_class = thin_payload.get("outcome_class", "")
         if thin_payload.get("next_command", "") == "synrail refresh-acceptance":
-            return thin_code
+            return check_code
         if Path(args.report_file).exists():
             report_payload = load_json(Path(args.report_file))
             skip_prompt_reasons = {"CONTROLLED_BOOTSTRAP_NOT_CONFIRMED", "REMOTE_TARGET_UNSUPPORTED"} | VERIFICATION_GATE_REASONS
             if report_payload.get("reason", "") in skip_prompt_reasons:
-                return thin_code
+                return check_code
         if outcome_class not in {"ACCEPTED", ""} and getattr(args, "repair_packet_file", None):
             prompt_output = str(alpha_file(root, "prompt")) if root else str(Path(args.output).with_name("prompt.json"))
             forwarded = [
@@ -3538,7 +3550,7 @@ def cmd_check(args: argparse.Namespace) -> int:
                     print(f"Prepared fallback surface: {created_fallback}")
                 print("What to fix:")
                 print_prompt_summary_compact(Path(prompt_output), include_prompt=False)
-    return thin_code
+    return check_code
 
 
 def normalize_repair_packet(packet: dict) -> dict:

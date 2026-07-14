@@ -194,6 +194,10 @@ convenient read-only proof for a failing test suite, and editing the code
 after a green `synrail verify` makes the receipt stale until verify runs
 again.
 
+The command is safe to use as a shell or CI gate: `synrail check` exits with
+`0` only for `Status: Accepted`. Every non-accepted verdict exits with `2`
+while preserving its bounded repair guidance in the output.
+
 Without a `synrail.toml`, the behavioral lane is not enforced: read
 `Status: Accepted` as "the recorded proof is real, fresh, and in scope."
 Even this no-profile decision is authenticated for new runs; an older active

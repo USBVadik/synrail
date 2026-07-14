@@ -523,6 +523,7 @@ class BehavioralClaimGapTests(unittest.TestCase):
             project_root = self._start_bypass_scenario(tmpdir)
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertNotIn("Status: Accepted", stdout_lines(check))
             self.assertIn("Status: Verification Required", stdout_lines(check))
             report = json.loads((project_root / ".synrail" / "report.json").read_text())
@@ -535,6 +536,11 @@ class BehavioralClaimGapTests(unittest.TestCase):
 
             check_after_red_verify = self.run_alpha(
                 "check", "--artifact-root", ".synrail", cwd=project_root
+            )
+            self.assertEqual(
+                2,
+                check_after_red_verify.returncode,
+                check_after_red_verify.stdout + check_after_red_verify.stderr,
             )
             self.assertNotIn("Status: Accepted", stdout_lines(check_after_red_verify))
             self.assertIn("Status: Verification Failed", stdout_lines(check_after_red_verify))
@@ -577,6 +583,7 @@ class BehavioralClaimGapTests(unittest.TestCase):
 
             (project_root / "app.py").write_text(WRONG_FIX_APP)
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertNotIn("Status: Accepted", stdout_lines(check))
             report = json.loads((project_root / ".synrail" / "report.json").read_text())
             self.assertEqual("VERIFICATION_RECEIPT_STALE", report["reason"])
@@ -589,6 +596,7 @@ class BehavioralClaimGapTests(unittest.TestCase):
             (project_root / "synrail.toml").write_text(relaxed)
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertNotIn("Status: Accepted", stdout_lines(check))
             self.assertIn("Status: Verification Config Changed", stdout_lines(check))
             report = json.loads((project_root / ".synrail" / "report.json").read_text())
@@ -611,6 +619,7 @@ class BehavioralClaimGapTests(unittest.TestCase):
             receipts_path.write_text(json.dumps(payload, indent=2) + "\n")
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertNotIn("Status: Accepted", stdout_lines(check))
             report = json.loads((project_root / ".synrail" / "report.json").read_text())
             self.assertEqual("VERIFICATION_RECEIPT_INVALID", report["reason"])
