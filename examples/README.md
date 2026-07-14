@@ -34,6 +34,9 @@ They are here to show how `Synrail` artifacts fit together without importing raw
 - `false-green-benchmark/`
   - denser starter public benchmark pack with curated local cases and case families
   - makes the false-green problem concrete without claiming external empirical proof
+- `cross-repo-pilot/`
+  - privacy-bounded maintainer dogfood capture for runs in other repositories
+  - fixes the evidence class to internal and keeps external alpha claims separate
 - `false_green_demo.md`
   - one short public-facing summary of the same false-green wedge
 

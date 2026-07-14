@@ -278,6 +278,34 @@ onboarding all express the same behavioral gate; config/executable/workspace dri
 fails closed; targeted policy tests plus the full release gate and adversarial
 review pass.
 
+## Track E: Dogfood And Cross-Repo Product Evidence
+
+Behavioral verification is now strong enough to govern Synrail's own changes.
+The next product question is whether that gate is worth its operator cost across
+repositories, not whether another local fixture can be made green.
+
+- [x] Commit an operator-reviewed `synrail.toml` for Synrail itself. Use the
+      portable `@synrail-python` alias while preserving concrete interpreter
+      realpath/content locking at controlled start.
+- [x] Add a privacy-bounded internal cross-repo capture format. Bind records to
+      run/report/final-result/receipt hashes, require a preserved same-run
+      blocked report before claiming a false-green prevention, and exclude raw
+      verifier output and absolute local paths.
+- [ ] Complete 3-5 maintainer-run pilots on disposable clones from different
+      repositories. Measure setup time, first useful blocker, verification
+      time, time to acceptance, interventions, and confusion moments.
+- [ ] Keep those records labelled `INTERNAL_CROSS_REPO_DOGFOOD` and
+      `NOT_EXTERNAL_EMPIRICAL_EVIDENCE`; do not move them into the external
+      alpha ledger.
+- [ ] Collect 3-5 new human-operated external reports using the existing
+      external template, then prioritize UX changes from repeated friction
+      rather than another broad internal audit.
+
+Definition of done: Synrail governs its own implementation tranche through
+`preflight -> start -> verify -> check`; at least three internal cross-repo
+records are captured without claim inflation; external usefulness remains a
+separate, explicitly unfilled evidence class until real users supply it.
+
 ## Do Not Do Yet
 
 - No typed-evidence-graph or VSA closure-certificate rewrite.
