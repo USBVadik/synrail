@@ -151,11 +151,12 @@ echo "Step 2: convenient proof cannot earn acceptance"
 echo '$ synrail check --artifact-root .synrail'
 set +e
 blocked_output="$(cd "$DEMO_PROJECT" && "$SYNRAIL" check --artifact-root .synrail 2>&1)"
+blocked_rc=$?
 set -e
 blocked_status="$(printf '%s\n' "$blocked_output" | grep -m1 '^Status: ' || true)"
 printf '%bSynrail: %s%b\n' "$COLOR_RED" "$blocked_status" "$COLOR_RESET"
 
-if [[ "$blocked_status" != "Status: Verification Failed" ]]; then
+if [[ $blocked_rc -ne 2 || "$blocked_status" != "Status: Verification Failed" ]]; then
   echo "Demo assertion failed: red behavioral verification did not block acceptance." >&2
   printf '%s\n' "$blocked_output" >&2
   exit 1

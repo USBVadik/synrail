@@ -1,0 +1,52 @@
+{
+  "schema_version": "internal_cross_repo_pilot_v0",
+  "evidence_class": "INTERNAL_CROSS_REPO_DOGFOOD",
+  "claim_scope": "NOT_EXTERNAL_EMPIRICAL_EVIDENCE",
+  "captured_at": "2026-07-14T17:05:52.565636+00:00",
+  "run_id": "ALPHA_RUN_20260714T170543759248Z_3b7cb7",
+  "repository": {
+    "label": "usbvadik-aws-proof-gated-prompts",
+    "revision": "986b44d3aec380e0e104114fb45a993b78c197bd",
+    "ecosystem": "documentation-policy"
+  },
+  "task": {
+    "summary": "Preserve the public proof-gated promise while adding a bounded maintenance marker.",
+    "class": "bounded-behavior-fix"
+  },
+  "timing": {
+    "setup_seconds": 0.301,
+    "time_to_first_blocker_seconds": 2.529,
+    "verification_seconds": 0.076,
+    "time_to_accepted_seconds": 8.0,
+    "total_operator_seconds": 9.367
+  },
+  "outcome": {
+    "accepted": true,
+    "closure_status": "ACCEPTED",
+    "report_result": "OK",
+    "report_reason": "NONE",
+    "false_green_prevented": "yes",
+    "first_blocker_reason": "VERIFICATION_FAILED",
+    "operator_interventions": [
+      "No bounded suggestion was available; added and committed a repository-specific operator test before the run."
+    ],
+    "confusion_moments": []
+  },
+  "verification_profiles": [
+    {
+      "profile": "positioning",
+      "duration_seconds": 0.076,
+      "exit_code": 0,
+      "green": true
+    }
+  ],
+  "artifact_bindings": {
+    "state_sha256": "fe8e8b498a000824220a9a2f86bf4ff0c87a3709b020d44ca8ee123a8c439fd0",
+    "project_profile_sha256": "0b5439616b51a727234fb4491849c886728db04a832026159beb171264d93f19",
+    "report_sha256": "2c4a536e28b9b90f11e7d56d27e363661c3eca8a8d9b51218dea16be74687728",
+    "final_result_sha256": "6ad09b1dd803b9f52e3ef9d76f9f3ec0407af4fe880c71e6fdd874b263a2bba6",
+    "verification_receipts_sha256": "afbc77d0fad0b3d622734c02441897838edb5ed39199cd63f707454c437ae984",
+    "blocked_report_sha256": "69c4dd603c0303fefde4497b222644900c67f2cd9a42f9dfe4c06eb71a038497"
+  },
+  "notes": "Maintainer-operated disposable clone; not external empirical evidence."
+}

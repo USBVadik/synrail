@@ -79,6 +79,21 @@ class InstallSmokeTests(unittest.TestCase):
         ):
             self.assertEqual(__version__, synrail_version())
 
+    def test_dev_build_backend_is_locked_and_audited(self) -> None:
+        constraints = (REPO_ROOT / "constraints-dev.txt").read_text()
+        makefile = (REPO_ROOT / "Makefile").read_text()
+        workflow = (REPO_ROOT / ".github" / "workflows" / "security-hygiene.yml").read_text()
+
+        self.assertIn("setuptools==83.0.0", constraints)
+        self.assertIn(
+            "$(PYTHON) -m pip install --upgrade setuptools -c $(CONSTRAINTS)",
+            makefile,
+        )
+        self.assertIn(
+            "python -m pip install --upgrade pip setuptools -c constraints-dev.txt",
+            workflow,
+        )
+
     def test_public_cli_does_not_advertise_retired_contest_commands(self) -> None:
         result = subprocess.run(
             [PYTHON, str(REPO_ROOT / "alpha.py"), "--help"],
@@ -445,7 +460,8 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("Agent: repaired the behavior, not the story", first_run_guide)
         self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", first_run_guide)
         self.assertIn("synrail suggest-verification", first_run_guide)
-        self.assertIn("synrail init-verification --name unit -- python -m pytest -q", first_run_guide)
+        self.assertIn("synrail init-verification --name unit -- @synrail-python -m pytest -q", first_run_guide)
+        self.assertIn("resolves to the interpreter running\nSynrail", first_run_guide)
         self.assertIn("This command does not run the argv, infer your test framework, or trust the", first_run_guide)
         self.assertIn("writes a `REVIEW REQUIRED` scaffold", first_run_guide)
         self.assertIn("exact timestamped backup", first_run_guide)
@@ -561,7 +577,8 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("synrail suggest-verification", public_readme)
         self.assertIn("recognizes conventional Python/Node/Go/Rust root markers", public_readme)
         self.assertIn("never runs a discovered command, writes `synrail.toml`, or marks a candidate\ntrusted", public_readme)
-        self.assertIn("synrail init-verification --name unit -- python -m pytest -q", public_readme)
+        self.assertIn("synrail init-verification --name unit -- @synrail-python -m pytest -q", public_readme)
+        self.assertIn("the one reserved executable alias", public_readme)
         self.assertIn("scaffold one required profile without executing the command", public_readme)
         self.assertIn("generated `synrail.toml` is marked `REVIEW REQUIRED`", public_readme)
         self.assertIn("exact timestamped backup", public_readme)

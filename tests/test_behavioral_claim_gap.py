@@ -26,9 +26,12 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tools.reference.synrail_verification_profile_v0 import (
     OUTPUT_EXCERPT_BYTES,
+    SYNRAIL_PYTHON_ARGV0,
+    _terminate_process_tree,
     fingerprints_match,
     workspace_fingerprint,
 )
@@ -65,13 +68,13 @@ TASK_IDENTITY = "Fix add() in app.py so the unit tests in test_app.py pass."
 
 
 def verification_profile_toml() -> str:
-    # The operator approves an absolute interpreter path; json.dumps produces
-    # a valid TOML basic string for it on every platform.
+    # The operator approves Synrail's interpreter alias; controlled start still
+    # locks the concrete interpreter realpath and content hash.
     # -B keeps bytecode caching out of the fixture: the wrong and the real
     # fix have identical size and can land within one mtime granule.
     return (
         "[verification.unit]\n"
-        f'argv = [{json.dumps(sys.executable)}, "-B", "-m", "unittest", "test_app"]\n'
+        f'argv = [{json.dumps(SYNRAIL_PYTHON_ARGV0)}, "-B", "-m", "unittest", "test_app"]\n'
         "timeout_seconds = 300\n"
         "required = true\n"
     )
@@ -86,6 +89,23 @@ def stdout_lines(completed: subprocess.CompletedProcess[str]) -> set[str]:
 
 
 class BehavioralClaimGapTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "posix", "process-group cleanup is POSIX-specific")
+    def test_process_group_cleanup_treats_permission_error_as_best_effort(self) -> None:
+        process = mock.Mock()
+        process.pid = 12345
+        process.poll.return_value = 0
+
+        with (
+            mock.patch(
+                "tools.reference.synrail_verification_profile_v0.os.killpg",
+                side_effect=[None, PermissionError(1, "operation not permitted")],
+            ),
+            mock.patch("tools.reference.synrail_verification_profile_v0.time.sleep"),
+        ):
+            _terminate_process_tree(process)
+
+        process.kill.assert_not_called()
+
     def run_alpha(
         self,
         *args: str,
@@ -522,6 +542,7 @@ class BehavioralClaimGapTests(unittest.TestCase):
             project_root = self._start_bypass_scenario(tmpdir)
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertNotIn("Status: Accepted", stdout_lines(check))
             self.assertIn("Status: Verification Required", stdout_lines(check))
             report = json.loads((project_root / ".synrail" / "report.json").read_text())
@@ -534,6 +555,11 @@ class BehavioralClaimGapTests(unittest.TestCase):
 
             check_after_red_verify = self.run_alpha(
                 "check", "--artifact-root", ".synrail", cwd=project_root
+            )
+            self.assertEqual(
+                2,
+                check_after_red_verify.returncode,
+                check_after_red_verify.stdout + check_after_red_verify.stderr,
             )
             self.assertNotIn("Status: Accepted", stdout_lines(check_after_red_verify))
             self.assertIn("Status: Verification Failed", stdout_lines(check_after_red_verify))
@@ -576,6 +602,7 @@ class BehavioralClaimGapTests(unittest.TestCase):
 
             (project_root / "app.py").write_text(WRONG_FIX_APP)
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertNotIn("Status: Accepted", stdout_lines(check))
             report = json.loads((project_root / ".synrail" / "report.json").read_text())
             self.assertEqual("VERIFICATION_RECEIPT_STALE", report["reason"])
@@ -588,6 +615,7 @@ class BehavioralClaimGapTests(unittest.TestCase):
             (project_root / "synrail.toml").write_text(relaxed)
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertNotIn("Status: Accepted", stdout_lines(check))
             self.assertIn("Status: Verification Config Changed", stdout_lines(check))
             report = json.loads((project_root / ".synrail" / "report.json").read_text())
@@ -610,6 +638,7 @@ class BehavioralClaimGapTests(unittest.TestCase):
             receipts_path.write_text(json.dumps(payload, indent=2) + "\n")
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertNotIn("Status: Accepted", stdout_lines(check))
             report = json.loads((project_root / ".synrail" / "report.json").read_text())
             self.assertEqual("VERIFICATION_RECEIPT_INVALID", report["reason"])

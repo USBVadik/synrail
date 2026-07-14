@@ -9,9 +9,11 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import venv
 from pathlib import Path
 
 from tools.reference.synrail_verification_profile_v0 import (
+    SYNRAIL_PYTHON_ARGV0,
     inspect_verification_readiness,
     lock_verification_profiles,
 )
@@ -257,6 +259,97 @@ class VerificationPreflightTests(unittest.TestCase):
                 locked["profiles"]["unit"]["argv0_realpath"],
                 "preflight and start must agree on executable resolution",
             )
+
+    def test_synrail_python_alias_locks_the_current_interpreter(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_verification_preflight_alias_") as tmpdir:
+            project_root = self.seed_git_project(
+                tmpdir,
+                config=profile_toml(SYNRAIL_PYTHON_ARGV0, "-c", "print('green')"),
+            )
+
+            readiness = inspect_verification_readiness(project_root)
+            locked = lock_verification_profiles(project_root)
+
+            expected = str(Path(sys.executable).resolve())
+            expected_execution = str(Path(os.path.abspath(sys.executable)))
+            self.assertEqual("READY", readiness["status"])
+            self.assertEqual(SYNRAIL_PYTHON_ARGV0, readiness["profiles"][0]["argv0"])
+            self.assertEqual(expected_execution, readiness["profiles"][0]["argv0_execution_path"])
+            self.assertEqual(expected, readiness["profiles"][0]["argv0_realpath"])
+            self.assertEqual(expected_execution, locked["profiles"]["unit"]["argv0_execution_path"])
+            self.assertEqual(expected, locked["profiles"]["unit"]["argv0_realpath"])
+            self.assertTrue(locked["profiles"]["unit"]["argv0_sha256"])
+
+    def test_synrail_python_alias_preserves_virtualenv_imports(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_verification_preflight_venv_") as tmpdir:
+            project_root = self.seed_git_project(
+                tmpdir,
+                config=profile_toml(
+                    SYNRAIL_PYTHON_ARGV0,
+                    "-c",
+                    "import synrail_venv_probe; print(synrail_venv_probe.VALUE)",
+                ),
+            )
+            venv_root = Path(tmpdir) / "probe-venv"
+            venv.EnvBuilder(with_pip=False).create(venv_root)
+            venv_python = (
+                venv_root / "Scripts" / "python.exe"
+                if os.name == "nt"
+                else venv_root / "bin" / "python"
+            )
+            purelib = subprocess.run(
+                [
+                    str(venv_python),
+                    "-c",
+                    "import sysconfig; print(sysconfig.get_paths()['purelib'])",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            expected_execution = subprocess.run(
+                [str(venv_python), "-c", "import sys; print(sys.executable)"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            (Path(purelib) / "synrail_venv_probe.py").write_text(
+                "VALUE = 'venv-only-green'\n",
+                encoding="utf-8",
+            )
+            probe = subprocess.run(
+                [
+                    str(venv_python),
+                    "-c",
+                    (
+                        "import json, sys; from pathlib import Path; "
+                        "from tools.reference.synrail_verification_profile_v0 import "
+                        "execute_profile, lock_verification_profiles; "
+                        "project = Path(sys.argv[1]); cache = Path(sys.argv[2]); "
+                        "lock = lock_verification_profiles(project); "
+                        "outcome = execute_profile(name='unit', locked_profile=lock['profiles']['unit'], "
+                        "project_root=project, artifact_root=project / '.synrail', run_id='venv-probe', "
+                        "config_sha256=lock['config_sha256'], cache_root=cache); "
+                        "print(json.dumps({'lock': lock, 'outcome': outcome}))"
+                    ),
+                    str(project_root),
+                    str(Path(tmpdir) / "cache"),
+                ],
+                cwd=REPO_ROOT,
+                env={**os.environ, "PYTHONPATH": str(REPO_ROOT)},
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(0, probe.returncode, probe.stdout + probe.stderr)
+            payload = json.loads(probe.stdout)
+            locked_profile = payload["lock"]["profiles"]["unit"]
+            receipt = payload["outcome"]["receipt"]
+            self.assertEqual("OK", payload["outcome"]["status"])
+            self.assertEqual(0, receipt["exit_code"], receipt["stderr_excerpt"])
+            self.assertIn("venv-only-green", receipt["stdout_excerpt"])
+            self.assertEqual(expected_execution, locked_profile["argv0_execution_path"])
+            self.assertEqual(expected_execution, receipt["argv0_execution_path"])
 
     def test_relative_artifact_root_resolves_from_discovered_project_root(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_verification_preflight_") as tmpdir:

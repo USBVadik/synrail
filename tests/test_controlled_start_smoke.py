@@ -452,7 +452,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertIn("Runtime helper: synrail runtime-helper", init.stdout)
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
-            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertIn("Controlled Run Required", check.stdout)
             self.assertIn("Next command: synrail start", check.stdout)
 
@@ -1133,7 +1133,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
                 "remote_target",
                 cwd=project_root,
             )
-            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertIn("Remote Target Not Supported Yet", check.stdout)
 
             report = load_json(artifact_root / "report.json")
@@ -1183,7 +1183,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             )
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
-            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertFalse((artifact_root / "readback.txt").exists())
             self.assertNotIn("Prepared fallback surface: .synrail/readback.txt", check.stdout)
             self.assertIn(".synrail/final_result.json", check.stdout)
@@ -1244,7 +1244,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             (artifact_root / "scenario_proof.txt").write_text("Scenario passed.\n")
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
-            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertIn("Proof Too Thin To Trust", check.stdout)
 
             retry = self.run_alpha("retry", "--artifact-root", ".synrail", cwd=project_root)
@@ -1357,7 +1357,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             )
 
             weak_check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
-            self.assertEqual(0, weak_check.returncode, weak_check.stdout + weak_check.stderr)
+            self.assertEqual(2, weak_check.returncode, weak_check.stdout + weak_check.stderr)
             self.assertIn("Status: Proof Incomplete", weak_check.stdout)
             repairable_state = load_json(artifact_root / "state.json")
             self.assertEqual("PROOF_BUNDLE_PARTIAL", repairable_state["state"])
@@ -1441,7 +1441,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             (artifact_root / "readback.txt").write_text("Confirmed the changed section in app.py.\n")
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
-            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertIn("set a trust-bearing final_result.status in .synrail/final_result.json", check.stdout)
             self.assertFalse((artifact_root / "scenario_proof.txt").exists())
             self.assertNotIn("Prepared fallback surface: .synrail/scenario_proof.txt", check.stdout)
@@ -1634,7 +1634,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
                 "--clean-surface",
                 cwd=project_root,
             )
-            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertIn("doctor override present", check.stdout.lower())
             doctor = load_json(artifact_root / "doctor.json")
             self.assertTrue(doctor["gate_results"]["clean_execution_surface"]["override"])
@@ -1795,7 +1795,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             )
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
-            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertIn("workspace not trusted", check.stdout.lower())
             self.assertIn("workspace is not ready yet", check.stdout.lower())
 
@@ -1822,7 +1822,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
                 "intended.txt",
                 cwd=project_root,
             )
-            self.assertEqual(0, spoofed_scope.returncode, spoofed_scope.stdout + spoofed_scope.stderr)
+            self.assertEqual(2, spoofed_scope.returncode, spoofed_scope.stdout + spoofed_scope.stderr)
             self.assertIn("Workspace Not Trusted", spoofed_scope.stdout)
             self.assertNotIn("Status: Accepted", {line.strip() for line in spoofed_scope.stdout.splitlines()})
 
@@ -1833,7 +1833,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual("DOCTOR_NOT_GREEN", spoofed_report.get("reason", ""))
 
             retry = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
-            self.assertEqual(0, retry.returncode, retry.stdout + retry.stderr)
+            self.assertEqual(2, retry.returncode, retry.stdout + retry.stderr)
             self.assertIn("Workspace Not Trusted", retry.stdout)
             self.assertIn("--clean-surface", retry.stdout)
 

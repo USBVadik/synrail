@@ -74,7 +74,7 @@ class AlphaTestPackSmokeTests(unittest.TestCase):
             )
 
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
-            self.assertEqual(0, check.returncode, check.stdout + check.stderr)
+            self.assertEqual(2, check.returncode, check.stdout + check.stderr)
             self.assertNotIn(str(project_root), check.stdout)
             self.assertIn(
                 "Fix the issue shown below: update the result payload in .synrail/final_result.json. Leave every other proof surface unchanged. Then rerun synrail check.",

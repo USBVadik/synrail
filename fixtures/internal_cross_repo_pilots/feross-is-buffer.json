@@ -1,0 +1,52 @@
+{
+  "schema_version": "internal_cross_repo_pilot_v0",
+  "evidence_class": "INTERNAL_CROSS_REPO_DOGFOOD",
+  "claim_scope": "NOT_EXTERNAL_EMPIRICAL_EVIDENCE",
+  "captured_at": "2026-07-14T17:05:42.971573+00:00",
+  "run_id": "ALPHA_RUN_20260714T170536561002Z_598266",
+  "repository": {
+    "label": "feross-is-buffer",
+    "revision": "5ef3a7df7acfba98b55246136ae49424d852993b",
+    "ecosystem": "node"
+  },
+  "task": {
+    "summary": "Preserve Buffer detection while adding a bounded implementation marker.",
+    "class": "bounded-behavior-fix"
+  },
+  "timing": {
+    "setup_seconds": 43.669,
+    "time_to_first_blocker_seconds": 3.516,
+    "verification_seconds": 0.321,
+    "time_to_accepted_seconds": 5.0,
+    "total_operator_seconds": 50.607
+  },
+  "outcome": {
+    "accepted": true,
+    "closure_status": "ACCEPTED",
+    "report_result": "OK",
+    "report_reason": "NONE",
+    "false_green_prevented": "yes",
+    "first_blocker_reason": "VERIFICATION_FAILED",
+    "operator_interventions": [
+      "Reviewed the npm test suggestion and narrowed it to the existing local test-node script to avoid the browser lane."
+    ],
+    "confusion_moments": []
+  },
+  "verification_profiles": [
+    {
+      "profile": "node",
+      "duration_seconds": 0.321,
+      "exit_code": 0,
+      "green": true
+    }
+  ],
+  "artifact_bindings": {
+    "state_sha256": "ec83367a71f246df04a7541f966539fb811f6c23195631800182b60c8402dafb",
+    "project_profile_sha256": "45b42a62cb586169c0f0821d16f91b709ae9a2c39bedbaab442aa62c48dd56a5",
+    "report_sha256": "c3197dc1338b63d3d6dde0b4ba2e97adeaa11948407e22aacc3409c96cb6149c",
+    "final_result_sha256": "da1a31d848b3c1186fc1f3ea670463bf3b84aee3bf880687357b7f57e3731a2c",
+    "verification_receipts_sha256": "4f270ff183e4936c8c33167d55533d958e6925aff5fdd3cd620be678dcaf4695",
+    "blocked_report_sha256": "e592136fb01d8788c544f079ac2523a4b504f745e471aa76c2810f62d2e48b92"
+  },
+  "notes": "Maintainer-operated disposable clone; not external empirical evidence."
+}

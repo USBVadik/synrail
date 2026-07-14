@@ -138,7 +138,7 @@ fall back to explicit manual argv rather than a guess.
 Then scaffold one required profile without executing the command:
 
 ```bash
-synrail init-verification --name unit -- python -m pytest -q
+synrail init-verification --name unit -- @synrail-python -m pytest -q
 ```
 
 The generated `synrail.toml` is marked `REVIEW REQUIRED`. Inspect the exact
@@ -148,6 +148,14 @@ creates an exact timestamped backup before replacing the whole file; prefer
 manual editing when an existing config already contains profiles you need.
 Do not put secrets in profile argv: the config is intended to be reviewed and
 committed, and the scaffold also prints the argv for confirmation.
+`@synrail-python` is the one reserved executable alias: it locks both the exact
+Python invocation path running Synrail and that interpreter's realpath and
+bytes. This preserves virtualenv-installed packages while keeping a reviewed
+Python profile portable across macOS, Linux, and Windows without trusting
+`PATH` aliases.
+It does not discover a different target-project `.venv`. If Synrail is running
+from a global or tool-only environment, review the suggestion and configure an
+explicit project interpreter or project-owned test runner instead.
 
 Before creating a controlled run, inspect the exact start-time readiness
 without executing the configured command:
@@ -167,7 +175,7 @@ it discovers the git root and resolves its default artifact path there.
 
 ```toml
 [verification.unit]
-argv = ["python", "-m", "pytest", "-q"]
+argv = ["@synrail-python", "-m", "pytest", "-q"]
 timeout_seconds = 300
 required = true
 ```
@@ -189,6 +197,10 @@ too large or contains a path Synrail cannot safely content-bind. An agent cannot
 convenient read-only proof for a failing test suite, and editing the code
 after a green `synrail verify` makes the receipt stale until verify runs
 again.
+
+The command is safe to use as a shell or CI gate: `synrail check` exits with
+`0` only for `Status: Accepted`. Every non-accepted verdict exits with `2`
+while preserving its bounded repair guidance in the output.
 
 Without a `synrail.toml`, the behavioral lane is not enforced: read
 `Status: Accepted` as "the recorded proof is real, fresh, and in scope."
