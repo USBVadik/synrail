@@ -296,6 +296,9 @@ For Python commands, `@synrail-python` resolves to the interpreter running
 Synrail. Synrail still locks that interpreter's realpath and SHA-256, so the
 alias is portable across operating systems without weakening executable
 identity checks or consulting a mutable `python`/`python3` PATH alias.
+The alias does not search for a separate target-project `.venv`. When Synrail
+runs from a global or tool-only environment, replace the suggestion with an
+explicit project interpreter or project-owned test runner after review.
 
 After review and commit, confirm that controlled start will accept the profile:
 

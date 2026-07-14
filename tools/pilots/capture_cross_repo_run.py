@@ -269,6 +269,22 @@ def build_pilot_record(
 
     closure_status = report.get("closure_status", "")
     accepted = closure_status == "ACCEPTED"
+    required_results = {
+        item["profile"]: item for item in profile_results if item["profile"] in required_profiles
+    }
+    if false_green_prevented == "yes":
+        if first_blocker_reason != "VERIFICATION_FAILED":
+            raise PilotCaptureError(
+                "false-green=yes requires a same-run VERIFICATION_FAILED blocker"
+            )
+        if not accepted or report.get("result") != "OK":
+            raise PilotCaptureError(
+                "false-green=yes requires the repaired run to reach accepted OK closure"
+            )
+        if any(not required_results[name]["green"] for name in required_profiles):
+            raise PilotCaptureError(
+                "false-green=yes requires every locked required profile to be green"
+            )
     verification_seconds = round(sum(item["duration_seconds"] for item in profile_results), 3)
     return {
         "schema_version": SCHEMA_VERSION,

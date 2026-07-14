@@ -28,7 +28,8 @@
     "false_green_prevented": "yes",
     "first_blocker_reason": "VERIFICATION_FAILED",
     "operator_interventions": [
-      "No bounded suggestion was available; reviewed and committed the existing unittest command manually."
+      "No bounded suggestion was available; reviewed and committed the existing unittest command manually.",
+      "Installed the disposable target package into the interpreter running Synrail; this did not test separate project-venv discovery."
     ],
     "confusion_moments": []
   },

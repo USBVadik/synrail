@@ -299,7 +299,10 @@ def _python_suggestion(
             profile_name="python-tests",
             argv=(SYNRAIL_PYTHON_ARGV0, "-m", "pytest", "-q"),
             detected_from=tuple(sorted(set(pytest_sources))),
-            rationale="Python project declares pytest configuration or a pytest dependency.",
+            rationale=(
+                "Python project declares pytest configuration or a pytest dependency; "
+                "review that Synrail's interpreter contains the target dependencies."
+            ),
             priority=10,
         )
 
@@ -312,7 +315,10 @@ def _python_suggestion(
                 profile_name="python-tests",
                 argv=(SYNRAIL_PYTHON_ARGV0, "-m", "tox"),
                 detected_from=("tox.ini",),
-                rationale="Python project declares at least one tox test environment.",
+                rationale=(
+                    "Python project declares at least one tox test environment; review that "
+                    "Synrail's interpreter contains tox and the target dependencies."
+                ),
                 priority=11,
             )
     return None

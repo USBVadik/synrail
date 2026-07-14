@@ -229,6 +229,42 @@ class CrossRepoPilotTests(unittest.TestCase):
                     notes="",
                 )
 
+    def test_false_green_yes_requires_verification_block_and_accepted_repair(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_cross_repo_pilot_") as tmpdir:
+            project, artifacts = self.seed(tmpdir)
+            blocked_path = Path(tmpdir) / "blocked-report.json"
+
+            blocked = json.loads(blocked_path.read_text())
+            blocked["reason"] = "DOCTOR_NOT_GREEN"
+            blocked_path.write_text(json.dumps(blocked), encoding="utf-8")
+            with self.assertRaisesRegex(PilotCaptureError, "VERIFICATION_FAILED"):
+                self.build(project, artifacts)
+
+            blocked["reason"] = "VERIFICATION_FAILED"
+            blocked_path.write_text(json.dumps(blocked), encoding="utf-8")
+            state_path = artifacts / "state.json"
+            state = json.loads(state_path.read_text())
+            state["closure"]["status"] = "REJECTED"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            report_path = artifacts / "report.json"
+            report = json.loads(report_path.read_text())
+            report["closure_status"] = "REJECTED"
+            report["result"] = "BLOCKED"
+            report_path.write_text(json.dumps(report), encoding="utf-8")
+            with self.assertRaisesRegex(PilotCaptureError, "accepted OK closure"):
+                self.build(project, artifacts)
+
+    def test_false_green_yes_requires_green_required_receipts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_cross_repo_pilot_") as tmpdir:
+            project, artifacts = self.seed(tmpdir)
+            receipts_path = artifacts / "verification_receipts.json"
+            receipts = json.loads(receipts_path.read_text())
+            receipts["receipts"]["unit"]["exit_code"] = 1
+            receipts_path.write_text(json.dumps(receipts), encoding="utf-8")
+
+            with self.assertRaisesRegex(PilotCaptureError, "required profile"):
+                self.build(project, artifacts)
+
     def test_cli_refuses_silent_output_replacement(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_cross_repo_pilot_") as tmpdir:
             project, artifacts = self.seed(tmpdir)

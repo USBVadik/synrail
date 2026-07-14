@@ -35,6 +35,10 @@ found automatically but narrowed from `npm test` to the existing local
 `npm run test-node` lane after operator review. This is evidence that profile
 review remains part of setup, not evidence of zero-touch adoption.
 
+The Python pilot installed its disposable target package into the interpreter
+running Synrail. It therefore validates virtualenv execution semantics, but it
+does not demonstrate automatic discovery of a separate target-project `.venv`.
+
 ## What The Pilot Found Before Final Capture
 
 The first attempts exposed two Synrail integration bugs that were fixed before

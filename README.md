@@ -153,6 +153,9 @@ Python invocation path running Synrail and that interpreter's realpath and
 bytes. This preserves virtualenv-installed packages while keeping a reviewed
 Python profile portable across macOS, Linux, and Windows without trusting
 `PATH` aliases.
+It does not discover a different target-project `.venv`. If Synrail is running
+from a global or tool-only environment, review the suggestion and configure an
+explicit project interpreter or project-owned test runner instead.
 
 Before creating a controlled run, inspect the exact start-time readiness
 without executing the configured command:
