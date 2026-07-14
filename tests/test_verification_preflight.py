@@ -12,6 +12,7 @@ import unittest
 from pathlib import Path
 
 from tools.reference.synrail_verification_profile_v0 import (
+    SYNRAIL_PYTHON_ARGV0,
     inspect_verification_readiness,
     lock_verification_profiles,
 )
@@ -257,6 +258,23 @@ class VerificationPreflightTests(unittest.TestCase):
                 locked["profiles"]["unit"]["argv0_realpath"],
                 "preflight and start must agree on executable resolution",
             )
+
+    def test_synrail_python_alias_locks_the_current_interpreter(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_verification_preflight_alias_") as tmpdir:
+            project_root = self.seed_git_project(
+                tmpdir,
+                config=profile_toml(SYNRAIL_PYTHON_ARGV0, "-c", "print('green')"),
+            )
+
+            readiness = inspect_verification_readiness(project_root)
+            locked = lock_verification_profiles(project_root)
+
+            expected = str(Path(sys.executable).resolve())
+            self.assertEqual("READY", readiness["status"])
+            self.assertEqual(SYNRAIL_PYTHON_ARGV0, readiness["profiles"][0]["argv0"])
+            self.assertEqual(expected, readiness["profiles"][0]["argv0_realpath"])
+            self.assertEqual(expected, locked["profiles"]["unit"]["argv0_realpath"])
+            self.assertTrue(locked["profiles"]["unit"]["argv0_sha256"])
 
     def test_relative_artifact_root_resolves_from_discovered_project_root(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_verification_preflight_") as tmpdir:

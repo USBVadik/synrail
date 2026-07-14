@@ -281,7 +281,7 @@ manually rather than broadening a guess.
 Use the fail-safe scaffold instead of writing the selected profile from memory:
 
 ```bash
-synrail init-verification --name unit -- python -m pytest -q
+synrail init-verification --name unit -- @synrail-python -m pytest -q
 ```
 
 This command does not run the argv, infer your test framework, or trust the
@@ -292,6 +292,10 @@ use `--force`, Synrail creates an exact timestamped backup before replacing
 the whole config; edit manually when you need to preserve other profiles.
 Never put secrets in profile argv: `synrail.toml` is intended to be reviewed
 and committed, and the scaffold prints the argv for confirmation.
+For Python commands, `@synrail-python` resolves to the interpreter running
+Synrail. Synrail still locks that interpreter's realpath and SHA-256, so the
+alias is portable across operating systems without weakening executable
+identity checks or consulting a mutable `python`/`python3` PATH alias.
 
 After review and commit, confirm that controlled start will accept the profile:
 
@@ -307,7 +311,7 @@ first execution still happens only after `start`, when you invoke
 
 ```toml
 [verification.unit]
-argv = ["python", "-m", "pytest", "-q"]
+argv = ["@synrail-python", "-m", "pytest", "-q"]
 timeout_seconds = 300
 required = true
 ```

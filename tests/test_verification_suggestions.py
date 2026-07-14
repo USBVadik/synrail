@@ -15,6 +15,7 @@ from tools.reference.synrail_verification_suggestions_v0 import (
     VerificationSuggestionError,
     discover_verification_suggestions,
 )
+from tools.reference.synrail_verification_profile_v0 import SYNRAIL_PYTHON_ARGV0
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -71,7 +72,7 @@ class VerificationSuggestionTests(unittest.TestCase):
             candidate = report["candidates"][0]
             self.assertEqual("python-pytest", candidate["candidate_id"])
             self.assertEqual("python-tests", candidate["profile_name"])
-            self.assertEqual(["python", "-m", "pytest", "-q"], candidate["argv"])
+            self.assertEqual([SYNRAIL_PYTHON_ARGV0, "-m", "pytest", "-q"], candidate["argv"])
             self.assertEqual("REVIEW_REQUIRED", candidate["trust_state"])
             self.assertEqual("NOT_ATTESTED", candidate["source_trust"])
             self.assertEqual(
@@ -81,7 +82,7 @@ class VerificationSuggestionTests(unittest.TestCase):
                     "--name",
                     "python-tests",
                     "--",
-                    "python",
+                    SYNRAIL_PYTHON_ARGV0,
                     "-m",
                     "pytest",
                     "-q",

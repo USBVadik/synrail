@@ -5,7 +5,7 @@ The operator approves behavioral verification commands once, in
 ``synrail.toml`` at the project root:
 
     [verification.unit]
-    argv = ["python", "-m", "pytest", "-q"]
+    argv = ["@synrail-python", "-m", "pytest", "-q"]
     timeout_seconds = 300
     required = true
 
@@ -50,6 +50,7 @@ except ImportError:
     from synrail_safe_git_v0 import SafeGitError, run_safe_git
 
 CONFIG_FILE_NAME = "synrail.toml"
+SYNRAIL_PYTHON_ARGV0 = "@synrail-python"
 RECEIPTS_FILE_NAME = "verification_receipts.json"
 RECEIPT_KEY_FILE_NAME = "receipt_hmac.key"
 RECEIPT_SCHEMA_VERSION = "verification_receipt_v0"
@@ -356,6 +357,8 @@ def _normalize_profile_entry(name: str, entry: object) -> tuple[dict, str]:
 
 
 def _resolve_argv0(argv0: str, *, project_root: Path) -> str:
+    if argv0 == SYNRAIL_PYTHON_ARGV0:
+        return str(Path(sys.executable).resolve())
     candidate = Path(argv0)
     if not candidate.is_absolute() and (os.sep in argv0 or "/" in argv0):
         candidate = project_root / candidate

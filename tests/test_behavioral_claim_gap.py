@@ -29,6 +29,7 @@ from pathlib import Path
 
 from tools.reference.synrail_verification_profile_v0 import (
     OUTPUT_EXCERPT_BYTES,
+    SYNRAIL_PYTHON_ARGV0,
     fingerprints_match,
     workspace_fingerprint,
 )
@@ -65,13 +66,13 @@ TASK_IDENTITY = "Fix add() in app.py so the unit tests in test_app.py pass."
 
 
 def verification_profile_toml() -> str:
-    # The operator approves an absolute interpreter path; json.dumps produces
-    # a valid TOML basic string for it on every platform.
+    # The operator approves Synrail's interpreter alias; controlled start still
+    # locks the concrete interpreter realpath and content hash.
     # -B keeps bytecode caching out of the fixture: the wrong and the real
     # fix have identical size and can land within one mtime granule.
     return (
         "[verification.unit]\n"
-        f'argv = [{json.dumps(sys.executable)}, "-B", "-m", "unittest", "test_app"]\n'
+        f'argv = [{json.dumps(SYNRAIL_PYTHON_ARGV0)}, "-B", "-m", "unittest", "test_app"]\n'
         "timeout_seconds = 300\n"
         "required = true\n"
     )

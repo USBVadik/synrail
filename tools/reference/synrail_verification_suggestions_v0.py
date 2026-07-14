@@ -16,6 +16,11 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+try:
+    from .synrail_verification_profile_v0 import SYNRAIL_PYTHON_ARGV0
+except ImportError:
+    from synrail_verification_profile_v0 import SYNRAIL_PYTHON_ARGV0
+
 
 SUGGESTIONS_SCHEMA_VERSION = "verification_suggestions_v0"
 MAX_MARKER_BYTES = 256 * 1024
@@ -292,7 +297,7 @@ def _python_suggestion(
         return VerificationSuggestion(
             candidate_id="python-pytest",
             profile_name="python-tests",
-            argv=("python", "-m", "pytest", "-q"),
+            argv=(SYNRAIL_PYTHON_ARGV0, "-m", "pytest", "-q"),
             detected_from=tuple(sorted(set(pytest_sources))),
             rationale="Python project declares pytest configuration or a pytest dependency.",
             priority=10,
@@ -305,7 +310,7 @@ def _python_suggestion(
             return VerificationSuggestion(
                 candidate_id="python-tox",
                 profile_name="python-tests",
-                argv=("python", "-m", "tox"),
+                argv=(SYNRAIL_PYTHON_ARGV0, "-m", "tox"),
                 detected_from=("tox.ini",),
                 rationale="Python project declares at least one tox test environment.",
                 priority=11,

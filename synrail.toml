@@ -1,0 +1,7 @@
+# Operator-reviewed verification policy for Synrail's own repository.
+# @synrail-python resolves to the interpreter running Synrail; its realpath and
+# content hash are still locked at controlled start.
+[verification.unit]
+argv = ["@synrail-python", "-m", "unittest", "discover", "-s", "tests"]
+timeout_seconds = 300
+required = true

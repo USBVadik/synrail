@@ -138,7 +138,7 @@ fall back to explicit manual argv rather than a guess.
 Then scaffold one required profile without executing the command:
 
 ```bash
-synrail init-verification --name unit -- python -m pytest -q
+synrail init-verification --name unit -- @synrail-python -m pytest -q
 ```
 
 The generated `synrail.toml` is marked `REVIEW REQUIRED`. Inspect the exact
@@ -148,6 +148,10 @@ creates an exact timestamped backup before replacing the whole file; prefer
 manual editing when an existing config already contains profiles you need.
 Do not put secrets in profile argv: the config is intended to be reviewed and
 committed, and the scaffold also prints the argv for confirmation.
+`@synrail-python` is the one reserved executable alias: it resolves to the
+Python interpreter running Synrail, then that interpreter's realpath and bytes
+are locked like any other `argv[0]`. This keeps a reviewed Python profile
+portable across macOS, Linux, and Windows without trusting `PATH` aliases.
 
 Before creating a controlled run, inspect the exact start-time readiness
 without executing the configured command:
@@ -167,7 +171,7 @@ it discovers the git root and resolves its default artifact path there.
 
 ```toml
 [verification.unit]
-argv = ["python", "-m", "pytest", "-q"]
+argv = ["@synrail-python", "-m", "pytest", "-q"]
 timeout_seconds = 300
 required = true
 ```
