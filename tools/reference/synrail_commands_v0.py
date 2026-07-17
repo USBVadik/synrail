@@ -107,6 +107,11 @@ def build_agent_policy_context(
         project_root=project_root,
         artifact_root=args.artifact_root,
     )
+    # argparse supplies a real bool; avoid treating an unspecified mock or
+    # arbitrary truthy object as an opt-in to the external artifact cache.
+    ephemeral = getattr(args, "ephemeral", False) is True
+    requested_policy_mode = str(getattr(args, "policy_mode", "strict") or "strict").strip().lower()
+    policy_mode = "focused" if requested_policy_mode == "focused" else "strict"
     command = context.preferred_synrail_command()
     fallback_command = context.preferred_synrail_fallback_command()
     repo_native_alpha_command = context.preferred_repo_native_alpha_command(project_root=project_root)
@@ -116,12 +121,19 @@ def build_agent_policy_context(
     return {
         "project_root": project_root,
         "artifact_root": artifact_root,
+        "ephemeral": ephemeral,
+        "policy_mode": policy_mode,
         "command": command,
         "fallback_command": fallback_command,
         "repo_native_alpha_command": repo_native_alpha_command,
         "workspace_isolation_note": workspace_isolation_note,
         "prefer_runtime_helper": prefer_runtime_helper,
     }
+
+
+def runtime_helper_command(*, command: str, ephemeral: bool) -> str:
+    suffix = " --ephemeral" if ephemeral else ""
+    return f"{command} runtime-helper{suffix}"
 
 
 def run_install_agent_files_command(
@@ -135,6 +147,8 @@ def run_install_agent_files_command(
     )
     project_root = policy_context["project_root"]
     artifact_root = policy_context["artifact_root"]
+    ephemeral = policy_context["ephemeral"]
+    policy_mode = policy_context["policy_mode"]
     command = policy_context["command"]
     fallback_command = policy_context["fallback_command"]
     repo_native_alpha_command = policy_context["repo_native_alpha_command"]
@@ -151,6 +165,8 @@ def run_install_agent_files_command(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
+        policy_mode=policy_mode,
     )
     gemini_content = context.render_gemini_policy_markdown(
         artifact_root=artifact_root,
@@ -159,6 +175,8 @@ def run_install_agent_files_command(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
+        policy_mode=policy_mode,
     )
     claude_content = context.render_claude_policy_markdown(
         artifact_root=artifact_root,
@@ -167,6 +185,8 @@ def run_install_agent_files_command(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
+        policy_mode=policy_mode,
     )
     agents_block = context.render_agents_policy_block(
         artifact_root=artifact_root,
@@ -175,6 +195,8 @@ def run_install_agent_files_command(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
+        policy_mode=policy_mode,
     )
     gemini_block = context.render_gemini_policy_block(
         artifact_root=artifact_root,
@@ -183,6 +205,8 @@ def run_install_agent_files_command(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
+        policy_mode=policy_mode,
     )
     claude_block = context.render_claude_policy_block(
         artifact_root=artifact_root,
@@ -191,6 +215,8 @@ def run_install_agent_files_command(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
+        policy_mode=policy_mode,
     )
 
     agents_written, agents_state, agents_backup = context.write_agent_policy_file(
@@ -214,14 +240,20 @@ def run_install_agent_files_command(
 
     print("Agent adoption files are ready.")
     print(f"Project root: {project_root}")
-    print(f"Artifact root hint: {artifact_root}")
+    if ephemeral:
+        print("Artifact mode: ephemeral user cache outside this checkout")
+    else:
+        print(f"Artifact root hint: {artifact_root}")
+    if policy_mode == "focused":
+        print("Policy mode: focused mutation tasks; ordinary read-only work stays outside Synrail.")
     print(f"Synrail command: {command}")
     if fallback_command:
         print(f"Synrail fallback for this machine: {fallback_command}")
     if workspace_isolation_note:
         print(f"Workspace note: {workspace_isolation_note}")
     if prefer_runtime_helper:
-        print(f"Runtime note: use `{command} runtime-helper` for a small curl or template-render verification path.")
+        helper_command = runtime_helper_command(command=command, ephemeral=ephemeral)
+        print(f"Runtime note: use `{helper_command}` for a small curl or template-render verification path.")
     print(f"AGENTS.md: {agents_state}")
     print(f"GEMINI.md: {gemini_state}")
     print(f"CLAUDE.md: {claude_state}")
@@ -273,6 +305,8 @@ def cmd_init_agent(
     )
     project_root = policy_context["project_root"]
     artifact_root = policy_context["artifact_root"]
+    ephemeral = policy_context["ephemeral"]
+    policy_mode = policy_context["policy_mode"]
     command = policy_context["command"]
     fallback_command = policy_context["fallback_command"]
     repo_native_alpha_command = policy_context["repo_native_alpha_command"]
@@ -311,6 +345,8 @@ def cmd_init_agent(
             repo_native_alpha_command=repo_native_alpha_command,
             workspace_isolation_note=workspace_isolation_note,
             prefer_runtime_helper=prefer_runtime_helper,
+            ephemeral=ephemeral,
+            policy_mode=policy_mode,
         )
         managed_block = context.render_claude_policy_block(
             artifact_root=artifact_root,
@@ -319,6 +355,8 @@ def cmd_init_agent(
             repo_native_alpha_command=repo_native_alpha_command,
             workspace_isolation_note=workspace_isolation_note,
             prefer_runtime_helper=prefer_runtime_helper,
+            ephemeral=ephemeral,
+            policy_mode=policy_mode,
         )
     elif agent == "kiro":
         full_content = context.render_kiro_policy_markdown(
@@ -328,6 +366,8 @@ def cmd_init_agent(
             repo_native_alpha_command=repo_native_alpha_command,
             workspace_isolation_note=workspace_isolation_note,
             prefer_runtime_helper=prefer_runtime_helper,
+            ephemeral=ephemeral,
+            policy_mode=policy_mode,
         )
         managed_block = context.render_kiro_policy_block(
             artifact_root=artifact_root,
@@ -336,6 +376,8 @@ def cmd_init_agent(
             repo_native_alpha_command=repo_native_alpha_command,
             workspace_isolation_note=workspace_isolation_note,
             prefer_runtime_helper=prefer_runtime_helper,
+            ephemeral=ephemeral,
+            policy_mode=policy_mode,
         )
     else:
         full_content = context.render_gemini_policy_markdown(
@@ -345,6 +387,8 @@ def cmd_init_agent(
             repo_native_alpha_command=repo_native_alpha_command,
             workspace_isolation_note=workspace_isolation_note,
             prefer_runtime_helper=prefer_runtime_helper,
+            ephemeral=ephemeral,
+            policy_mode=policy_mode,
         )
         managed_block = context.render_gemini_policy_block(
             artifact_root=artifact_root,
@@ -353,6 +397,8 @@ def cmd_init_agent(
             repo_native_alpha_command=repo_native_alpha_command,
             workspace_isolation_note=workspace_isolation_note,
             prefer_runtime_helper=prefer_runtime_helper,
+            ephemeral=ephemeral,
+            policy_mode=policy_mode,
         )
 
     written, state, backup = context.write_agent_policy_file(
@@ -364,14 +410,20 @@ def cmd_init_agent(
 
     print(f"Agent onboarding is ready for {agent}.")
     print(f"Project root: {project_root}")
-    print(f"Artifact root hint: {artifact_root}")
+    if ephemeral:
+        print("Artifact mode: ephemeral user cache outside this checkout")
+    else:
+        print(f"Artifact root hint: {artifact_root}")
+    if policy_mode == "focused":
+        print("Policy mode: focused mutation tasks; ordinary read-only work stays outside Synrail.")
     print(f"Synrail command: {command}")
     if fallback_command:
         print(f"Synrail fallback for this machine: {fallback_command}")
     if workspace_isolation_note:
         print(f"Workspace note: {workspace_isolation_note}")
     if prefer_runtime_helper:
-        print(f"Runtime note: use `{command} runtime-helper` for a small curl or template-render verification path.")
+        helper_command = runtime_helper_command(command=command, ephemeral=ephemeral)
+        print(f"Runtime note: use `{helper_command}` for a small curl or template-render verification path.")
     print(f"{file_name}: {state}")
     if backup:
         print(f"{file_name} backup: {backup}")
@@ -393,59 +445,26 @@ def render_github_action_ci_adapter(*, artifact_root: str, invocation_command: s
     return "\n".join(
         [
             "name: Synrail check",
-            "description: Run Synrail check through a bounded repo-local adapter path",
+            "description: Check an existing Synrail run materialized by an earlier step in this job",
             "inputs:",
             "  artifact-root:",
-            "    description: Artifact root passed to Synrail check",
+            "    description: Existing Synrail artifact root materialized inside this job",
             "    required: false",
             f"    default: {artifact_root}",
             "runs:",
             "  using: composite",
             "  steps:",
-            "    - name: Run Synrail check",
+            "    - name: Check materialized Synrail artifacts",
             "      shell: bash",
+            "      env:",
+            "        SYNRAIL_ARTIFACT_ROOT: ${{ inputs.artifact-root }}",
             "      run: |",
-            f"        {invocation_command} check --artifact-root \"${{{{ inputs.artifact-root }}}}\"",
-        ]
-    ) + "\n"
-
-
-def render_github_action_ci_workflow(*, artifact_root: str) -> str:
-    return "\n".join(
-        [
-            "name: Synrail check",
-            "on:",
-            "  push:",
-            "  pull_request:",
-            "  workflow_dispatch:",
-            "permissions:",
-            "  contents: read",
-            "jobs:",
-            "  synrail-check:",
-            "    runs-on: ubuntu-latest",
-            "    steps:",
-            "      - name: Checkout repo",
-            f"        uses: {GITHUB_CHECKOUT_ACTION} # v6",
-            "      - name: Set up Python",
-            f"        uses: {GITHUB_SETUP_PYTHON_ACTION} # v6",
-            "        with:",
-            "          python-version: \"3.11\"",
-            "      - name: Upgrade pip",
-            "        run: python3 -m pip install --upgrade pip",
-            "      - name: Install Synrail dev dependencies",
-            "        run: make install-dev",
-            "      - name: Run unit tests",
-            "        run: make test",
-            "      - name: Compile Python files",
-            "        run: make compile",
-            "      - name: Run Ruff",
-            "        run: make lint",
-            "      - name: Run coverage",
-            "        run: make coverage",
-            "      - name: Run Synrail composite action",
-            "        uses: ./.github/actions/synrail-check",
-            "        with:",
-            f"          artifact-root: {artifact_root}",
+            "        artifact_root=\"$SYNRAIL_ARTIFACT_ROOT\"",
+            "        if [ ! -f \"$artifact_root/state.json\" ]; then",
+            "          echo \"::error title=Synrail artifacts missing::This adapter only checks an existing run. Materialize the matching artifact root in this job before calling it.\"",
+            "          exit 2",
+            "        fi",
+            f"        {invocation_command} check --artifact-root \"$artifact_root\"",
         ]
     ) + "\n"
 
@@ -591,14 +610,16 @@ def cmd_init_ci(
         artifact_root=args.artifact_root,
     )
     invocation_command = context.preferred_repo_native_alpha_command(project_root=project_root) or "synrail"
+    if getattr(args, "workflow", False) is True:
+        print("Synrail did not generate a GitHub Actions workflow.")
+        print("Why: a clean GitHub checkout has no local Synrail run artifacts, so a generated workflow would fail or imply proof it cannot produce.")
+        print("What to do next: run `synrail init-ci` to create the same-job adapter, then call it only after an upstream job step materializes the matching artifact root.")
+        return 2
     adapter_path = project_root / ".github" / "actions" / "synrail-check" / "action.yml"
     adapter_content = render_github_action_ci_adapter(
         artifact_root=artifact_root,
         invocation_command=invocation_command,
     )
-    workflow_enabled = bool(getattr(args, "workflow", False))
-    workflow_path = project_root / ".github" / "workflows" / "synrail-check.yml"
-    workflow_content = render_github_action_ci_workflow(artifact_root=artifact_root)
 
     adapter_inspection = inspect_ci_file(adapter_path, adapter_content)
     if adapter_inspection == "different" and not args.force:
@@ -606,52 +627,26 @@ def cmd_init_ci(
         print(f"Adapter path: {adapter_path}")
         print("What to do next: review the existing adapter and rerun with --force if you want Synrail to replace it with the bounded check adapter.")
         return 2
-    if workflow_enabled:
-        workflow_inspection = inspect_ci_file(workflow_path, workflow_content)
-        if workflow_inspection == "different" and not args.force:
-            print("GitHub Actions workflow already exists with different contents.")
-            print(f"Workflow path: {workflow_path}")
-            print("What to do next: review the existing workflow and rerun with --force if you want Synrail to replace it with the bounded workflow scaffold.")
-            return 2
 
     adapter_written, adapter_state, adapter_backup = write_ci_file(adapter_path, adapter_content, force=args.force)
-    workflow_written = False
-    workflow_state = ""
-    workflow_backup: Path | None = None
-    if workflow_enabled:
-        workflow_written, workflow_state, workflow_backup = write_ci_file(workflow_path, workflow_content, force=args.force)
 
     print("GitHub Action CI adapter is ready.")
     print(f"Project root: {project_root}")
     print(f"Adapter path: {adapter_path}")
-    print("Adapter scope: bounded check-only GitHub composite action")
+    print("Adapter scope: check-only composite action for an already materialized Synrail run")
     print(f"Artifact root default: {artifact_root}")
     print(f"Invocation path: {invocation_command} check --artifact-root \"${{{{ inputs.artifact-root }}}}\"")
+    print("Artifact contract: an upstream step in the same job must materialize the matching artifact root before this adapter runs.")
     print("Workflow call site: uses: ./.github/actions/synrail-check")
     if adapter_backup:
         print(f"Adapter backup: {adapter_backup}")
-    if workflow_enabled:
-        print("GitHub Actions workflow is ready.")
-        print(f"Workflow path: {workflow_path}")
-        print("Workflow triggers: push, pull_request, workflow_dispatch")
-        print("Workflow behavior: checks out the repo and runs the local composite action without mutating proof artifacts by default.")
-        if workflow_backup:
-            print(f"Workflow backup: {workflow_backup}")
-        if adapter_state == "updated" or workflow_state == "updated":
-            print("What to do next: commit the refreshed adapter and workflow so GitHub Actions can run the bounded Synrail lane.")
-        elif adapter_written or workflow_written:
-            print("What to do next: commit the adapter and workflow so GitHub Actions can run the bounded Synrail lane.")
-        else:
-            print("What to do next: keep the existing adapter and workflow committed so GitHub Actions continues using the bounded Synrail lane.")
-        return 0
-
-    print("Adapter only: add a workflow that calls uses: ./.github/actions/synrail-check, or rerun with --workflow.")
+    print("Adapter only: call it from a job after an earlier step materializes the matching artifact root.")
     if adapter_state == "updated":
-        print("What to do next: commit the refreshed adapter and add a workflow with `uses: ./.github/actions/synrail-check`, or rerun with `--workflow`.")
+        print("What to do next: commit the refreshed adapter and add it to a job that materializes the matching Synrail artifact root first.")
     elif adapter_written:
-        print("What to do next: commit the adapter and add a workflow with `uses: ./.github/actions/synrail-check`, or rerun with `--workflow`.")
+        print("What to do next: commit the adapter and add it to a job that materializes the matching Synrail artifact root first.")
     else:
-        print("What to do next: call the existing adapter from a workflow with `uses: ./.github/actions/synrail-check`, or rerun with `--workflow`.")
+        print("What to do next: call the existing adapter from a job that materializes the matching Synrail artifact root first.")
     return 0
 
 

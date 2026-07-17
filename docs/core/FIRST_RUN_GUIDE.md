@@ -1,27 +1,18 @@
 # Your First Synrail Run
 
-Synrail governs one bounded change at a time. It blocks false-green closure and tells you what to fix.
-
-## False-Green Demo
-
-```text
-Agent: fixed add(); tests pass
-Agent proof: grep found the new fast-path line
-Verification unit: FAIL (exit 1)
-Synrail: Status: Verification Failed
-Agent: repaired the behavior, not the story
-Verification unit: GREEN
-Synrail: Status: Accepted
-```
+Synrail governs one bounded agent task at a time. It does not decide whether a
+piece of code is beautiful; it decides whether the run has earned the right to
+say it is done.
 
 Only `Status: Accepted` means the task may be reported as complete.
 
-## Install
+## 0. Install And See The Demo
 
 macOS / Linux:
 
 ```bash
 make install-dev
+make demo
 ```
 
 Windows PowerShell:
@@ -34,199 +25,46 @@ $env:Path = "$(Resolve-Path .venv\Scripts);$env:Path"
 synrail.exe --help
 ```
 
-This creates the local development venv and installs the `synrail` console script used by the public quickstart.
-The current animated demo is a Bash harness. On Windows, run it from Git Bash
-after completing the PowerShell install above.
+The animated demo is a Bash harness. On Windows, run it from Git Bash after the
+PowerShell install. Synrail currently supports CPython 3.11-3.14.
 
-Synrail currently supports CPython 3.11-3.14. Linux CI tests each supported
-version; Windows smoke runs on Python 3.11. Python 3.15 is not supported until
-it is added to that matrix.
-
-If editable install is temporarily unavailable but this is a source checkout,
-`examples/false-green-demo/run_demo.sh` falls back to `python3 alpha.py` after
-checking for an installed `synrail` command. The installed CLI remains the
-normal path for real work.
-
-## Pick The Smallest First Path
-
-Do not begin by filling in every artifact file. Pick the narrowest route that
-matches what you need to establish:
-
-1. **See the false-green loop.** Run `make demo`. It is disposable and shows a
-   known failing behavioral check remain blocked until the repair is verified.
-2. **Govern one simple existing tracked file.** Use `synrail start`, make the
-   change, `synrail record path/to/file`, then `synrail check`. This proves a
-   scoped patch and a recheckable read-only observation; it does not prove a
-   program-behavior claim by itself.
-3. **Make a claim such as "tests pass" enforceable.** Review and commit a
-   `synrail.toml` verification profile before `start`, then use `synrail
-   verify` before `check`. Follow [step 2b](#2b-verify-behavioral-claims-when-profiles-are-configured).
-4. **Do QA or analysis across many repositories.** Add `--ephemeral` to the
-   active run commands so Synrail stores its artifacts outside each checkout.
-
-Use the smallest route that supports the actual claim. In particular, do not
-represent a single-file `record` run as proof that a test suite passed.
-
-## Optional One-Time Repo Setup For Local Agents
-
-If you want local coding agents to discover Synrail naturally in this repo, bootstrap the repo-native hints in one step:
+If the installed command is not on your PATH in a source checkout, use the
+local executable:
 
 ```bash
-make install-local
+.venv/bin/synrail --help
 ```
 
-That wraps the repo-native installer and immediately creates missing `AGENTS.md` / `GEMINI.md` / `CLAUDE.md` files in the repo root or appends a managed Synrail block to existing ones. The generated policy teaches agents the full `preflight -> start -> verify -> check` lifecycle, keeps `synrail.toml` operator-owned, and forbids replacing a failed behavioral profile with convenient narrative or read-only proof. If you later rerun with `--force`, Synrail first writes a timestamped `.synrail.bak.*` backup of the existing policy file before replacing it. It is optional for humans, but useful when you want the local agent workflow to start in controlled mode without adding Synrail instructions to every prompt.
+`make demo` is disposable and is the quickest way to understand the product.
+It shows a real required test fail, a plausible but insufficient proof, and
+acceptance only after the behavior is repaired and reverified.
 
-For Kiro, generate a workspace steering file instead of a root-level policy file:
+## Pick One Route
+
+1. **A small existing tracked edit:** prove a patch and a recheckable
+   observation. Use [route 1](#1-prove-one-small-tracked-change).
+2. **A test or runtime claim:** make an operator-reviewed command mandatory.
+   Use [route 2](#2-enforce-a-behavioral-claim).
+3. **QA across several repositories:** keep artifacts outside each checkout.
+   Use [route 3](#3-keep-artifacts-outside-many-repositories).
+4. **An unusual edge case:** untracked, deleted, binary, no-git, pre-dirty,
+   very large, or no-op work uses the explicit `final_result.json` route. Run
+   `synrail final-result-template`, fill only the named proof fields, then let
+   `synrail check` tell you whether a fallback surface is actually needed.
+
+Do not use a small patch proof to claim that a test suite passed. That claim
+needs route 2.
+
+## 1. Prove One Small Tracked Change
+
+Start from a clean git worktree. Begin one bounded run:
 
 ```bash
-synrail init-agent --agent kiro
+synrail start "Describe the bounded local change."
 ```
 
-The command writes `.kiro/steering/synrail.md`. It intentionally does not create Kiro hooks because hook configuration is environment-specific and should remain operator-owned.
-
-For a runnable GitHub Actions lane after install, use:
-
-```bash
-synrail init-ci --workflow
-```
-
-That writes both the local composite action and `.github/workflows/synrail-check.yml`. If you only want the adapter, run `synrail init-ci` and then add your own workflow that calls `uses: ./.github/actions/synrail-check`.
-
-If either generated file already exists with different contents, Synrail blocks unless you rerun with `--force`, and it writes a timestamped `.synrail.bak.*` backup before replacing the existing file.
-
-## Git Preflight
-
-Start here:
-
-```bash
-synrail preflight
-```
-
-Preflight now checks two separate surfaces:
-
-- local install/artifact readiness
-- behavioral-verification readiness from `synrail.toml`
-
-It reports one of `NOT_CONFIGURED`, `REVIEW_REQUIRED`, `BLOCKED`, or `READY`
-for behavioral verification and prints one next safe step. A present but
-untracked, dirty, invalid, unsafe, or unresolved profile makes preflight exit
-non-zero before a run is created. An absent profile stays install-ready, but
-behavioral claims are explicitly ungated. Preflight inspects config, clean git
-provenance, and executable identity; it does not execute profile argv or sign a
-verification lock. When run inside a repository subdirectory, it discovers the
-git root and places the default `.synrail` artifact root there. `READY` also
-requires at least one `required = true` profile; an optional-only config does
-not enforce a behavioral acceptance gate.
-
-If the checkout-local wrapper is blocked on this host, use the repo-local fallback instead:
-
-```bash
-python3 alpha.py preflight
-```
-
-Synrail works best when `git` is installed because the cheapest strong proof is a real `git_diff`.
-
-Check once:
-
-```bash
-git --version
-```
-
-If `git` is missing, preflight should make the weaker path explicit:
-
-Git is not installed. Synrail can still use structured diff_provenance, but git_diff and restore coverage will be weaker. Install git for the normal path.
-
-Use that exact message when preflight reports the missing-git path.
-
-If `git` is missing, Synrail can still run. Do not invent a `git_diff`. In `.synrail/final_result.json`, leave `git_diff` empty and use structured provenance instead:
-
-- for a single-file change, use `diff_provenance`
-- for a multi-file change, use `diff_provenance_records` or `per_file_diff_provenance` with one record per modified file
-- in each record, include `changed_file`
-- one exact `added_line`, `removed_line`, or `observed_line`
-- one stable `context_before` or `context_after`
-- `verification_command`
-- `verification_result`
-
-If `synrail` is not on your `PATH` after install, use the local wrapper from this checkout:
-
-```bash
-./.venv/bin/synrail
-```
-
-If a local agent host blocks that checkout-local wrapper behind a permission or approval wall, try the repo-local fallback instead:
-
-```bash
-python3 alpha.py
-```
-
-For a full repo-native first loop, use the exact fallback commands instead of probing wrapper paths:
-
-```bash
-python3 alpha.py
-python3 alpha.py start "Describe the bounded local change."
-python3 alpha.py check
-```
-
-The rest of this guide still uses `synrail` for brevity.
-
-## Quick Status
-
-Run this first in the repo:
-
-```bash
-synrail
-```
-
-Synrail is a CLI control kernel, not a background daemon. The dashboard tells you whether a controlled run is active and what the next command should be.
-
-For open-ended questions like "what is this project?" or "where did we stop?", still start with `synrail` and keep the first pass read-only before broader repo exploration.
-
-## Four Steps
-
-### 1. Start a controlled run
-
-```bash
-synrail start "Describe the bounded change you are making."
-```
-
-This creates `.synrail/` and opens one governed run for this bounded change.
-
-If you are doing QA/analysis across many repositories and do not want Synrail artifacts inside each checkout, use the repo-clean artifact lane:
-
-```bash
-synrail start --ephemeral "Describe the bounded local analysis."
-```
-
-That stores Synrail artifacts in the user cache for this project while keeping `project_root` and verification paths bound to the repository you launched from. Continue with:
-
-```bash
-synrail check --ephemeral
-synrail cleanup --ephemeral
-```
-
-If you run from a subdirectory inside a git checkout, Synrail uses the git repository root as the default project root. If you are launching from a parent workspace that contains many repos, pass the target explicitly:
-
-```bash
-synrail start --ephemeral --project-root path/to/target-repo "Describe the bounded local analysis."
-```
-
-If `check` reports `Status: Blocked` with `Blocking diagnostic: PATH_SCOPE_VIOLATION`, that invocation stopped before closure and did not accept the task. Correct the named path or `--project-root`, then run `check` again as a separate command. Never merge a blocked invocation's output with a later command's `Status: Accepted`.
-
-`start --ephemeral` prunes stale ephemeral runs older than 24 hours before creating the new run. You can also sweep old ephemeral cache runs manually:
-
-```bash
-synrail cleanup --ephemeral --stale
-```
-
-Use `--artifact-root ./.synrail` only when you intentionally want the run artifacts to stay inside the repository for handoff or debugging.
-
-### 2. Do the bounded work and record proof
-
-Make the requested change and run the project's normal tests. If the bounded
-change touches exactly one existing tracked file, use the thin recorder instead
-of constructing JSON by hand:
+Make the change and run the project's normal local checks. For exactly one
+existing tracked regular file, record the patch and one read-only observation:
 
 ```bash
 synrail record path/to/file \
@@ -234,238 +72,131 @@ synrail record path/to/file \
   --verify "grep -n 'needle' path/to/file"
 ```
 
-With `--ephemeral`, repeat the same artifact locator used by `start`:
+Then evaluate closure:
 
 ```bash
-synrail record path/to/file --ephemeral \
-  --summary "Describe the concrete bounded result." \
-  --verify "grep -n 'needle' path/to/file"
+synrail check
 ```
 
-`record` is deliberately narrow. It:
-
-- requires one direct, existing, repository-relative tracked file
-- requires a clean git worktree at `start` and the same `HEAD` at `record`
-- rejects any second dirty file instead of hiding it
-- captures the real `HEAD`-to-worktree patch with external diff/textconv disabled
-- runs only the existing closure-recheck command policy and rejects allowed
-  command binaries resolved from inside the target repository
-- writes `final_result.json` with `accepted: false` semantics
-- never invokes closure and never reports the task as accepted
-- requires the recorded patch to still match the live worktree at `check`
-
-Use manual `final_result.json` proof for multi-file, untracked, deleted,
-already-satisfied/no-op, pre-dirty, revision-changing, no-git, or large-patch
-work. On that path, treat
-`final_result.json` as the first proof surface and only expand fallback proof
-surfaces later if `synrail check` names them:
-
-On the normal happy path, treat it as the only proof surface you need to touch.
-
-- `final_result.json` for the trust-bearing status, changed files, and diff/provenance record
-- `readback.txt` is fallback-only; if `final_result.json` already carries strong structured verification, leave `readback.txt` untouched unless `synrail check` explicitly names it
-- `scenario_proof.txt` is fallback-only; if `final_result.json` already carries strong structured verification, leave `scenario_proof.txt` untouched unless `synrail check` explicitly names it
-
-In a manually authored `final_result.json`, use a trust-bearing status: `PROVEN` for an evidenced bounded edit, or `ALREADY_SATISFIED` only for a truthful no-op attestation where the requested state was already present before any edit.
-
-If `git` is unavailable in the project environment, leave `git_diff` empty. Use `diff_provenance` for a single-file change, or `diff_provenance_records` / `per_file_diff_provenance` with repo-relative paths and exact observed lines for a multi-file change, instead of trying to simulate a patch.
-
-For `diff_provenance.verification_command`, use one directly recheckable repo-relative read-only command: `grep -n`, `cat`, `head`, `tail`, `git diff -- <path>`, `git show -- <path>`, or `git log -- <path>`. Git recheck commands must use exactly `git diff/show/log -- <path>` with no `git -c`, `--ext-diff`, `--textconv`, or other options before `--`. Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets there; those can be valid manual investigation commands, but they are not stable closure recheck commands.
-
-On Windows, set UTF-8 mode before runs that touch localized paths such as `Рабочий стол`, and put Git for Windows `usr\bin` on `PATH` when your `verification_command` uses `grep`, `cat`, `head`, or `tail`:
-
-```powershell
-$env:PYTHONUTF8 = "1"
-$env:Path = "C:\Program Files\Git\usr\bin;" + $env:Path
-```
-
-In the normal `synrail check` path, you usually do not need to hand-copy run identity fields or a cleanup summary into `final_result.json` when the current controlled run context and doctor-ready workspace already provide that truth. Focus first on the status, changed files, and diff/provenance. Only spend extra steps on `readback.txt` or `scenario_proof.txt` if `check` still names them after `final_result.json` is already strong.
-
-If you need help with the default proof shape, use:
+For a small clean-start batch of up to 32 existing tracked files, use:
 
 ```bash
-synrail final-result-template
+synrail record --all-modified \
+  --summary "Describe the concrete bounded result across the tracked files."
+synrail check
 ```
 
-Only if `check` later targets a fallback prose surface, use:
+The batch recorder creates per-file rechecks and binds the complete live dirty
+scope and patch. It rejects untracked, deleted, binary, oversized, pre-dirty,
+revision-changing, or concurrently modified work. Both record modes write
+proof, not acceptance.
 
-```bash
-synrail readback-template
-synrail scenario-proof-template
-```
+If `check` is non-green, fix only the named blocker and run `synrail check`
+again. If the change makes a behavior claim, continue with route 2 before that
+final check.
 
-### 2b. Verify behavioral claims when profiles are configured
+## 2. Enforce A Behavioral Claim
 
-Read-only proof shows the change is real; it does not show the program
-behaves as claimed. If the task claims behavior ("tests pass"), approve the
-verification command once in `synrail.toml` at the project root, before
-`synrail start`. Commit the file first: v1 requires a regular, git-tracked
-`synrail.toml` that matches `HEAD` when the run starts.
-
-If the exact repository test command is not already known, inspect bounded
-review-required candidates first:
+Use this when the agent says "tests pass," "the build works," or any other
+runtime claim. The command has to be operator-reviewed and committed before
+work starts.
 
 ```bash
 synrail suggest-verification
-```
-
-This read-only command recognizes conventional Python/Node/Go/Rust root
-markers. It does not execute package scripts or test commands, does not create
-`synrail.toml`, and does not trust its own suggestion. Review the exact argv it
-prints. If there is no suitable candidate, use the real project command
-manually rather than broadening a guess.
-
-Use the fail-safe scaffold instead of writing the selected profile from memory:
-
-```bash
 synrail init-verification --name unit -- @synrail-python -m pytest -q
-```
-
-This command does not run the argv, infer your test framework, or trust the
-resulting file. It writes a `REVIEW REQUIRED` scaffold and refuses to replace
-a different `synrail.toml` by default. Review the exact argv and timeout,
-commit the file, and only then start a new controlled run. If you explicitly
-use `--force`, Synrail creates an exact timestamped backup before replacing
-the whole config; edit manually when you need to preserve other profiles.
-Never put secrets in profile argv: `synrail.toml` is intended to be reviewed
-and committed, and the scaffold prints the argv for confirmation.
-For Python commands, `@synrail-python` resolves to the interpreter running
-Synrail. Synrail still locks that interpreter's realpath and SHA-256, so the
-alias is portable across operating systems without weakening executable
-identity checks or consulting a mutable `python`/`python3` PATH alias.
-The alias does not search for a separate target-project `.venv`. When Synrail
-runs from a global or tool-only environment, replace the suggestion with an
-explicit project interpreter or project-owned test runner after review.
-
-After review and commit, confirm that controlled start will accept the profile:
-
-```bash
+# review synrail.toml, then commit it
 synrail preflight
-```
-
-Continue only when it reports `Behavioral verification: READY`. If it reports
-`REVIEW_REQUIRED` or `BLOCKED`, perform only the named next step and rerun
-preflight. This command never runs the configured verification command; the
-first execution still happens only after `start`, when you invoke
-`synrail verify`.
-
-```toml
-[verification.unit]
-argv = ["@synrail-python", "-m", "pytest", "-q"]
-timeout_seconds = 300
-required = true
-```
-
-`start` locally authenticates a lock containing the project/git root, raw
-config hash, and each resolved executable's path and SHA-256. After the bounded
-change, run:
-
-```bash
+synrail start "Describe the bounded local change."
+# make the change and record its scope proof
 synrail verify
-```
-
-Synrail rechecks the lock and clean git provenance, strips common runtime
-override/injection variables, re-executes the locked command without a shell,
-hashes all output while retaining only bounded diagnostic excerpts, performs
-best-effort verifier process-tree cleanup after success or timeout, and writes a locally
-authenticated receipt. `check` refuses acceptance while any required profile
-lacks a fresh green receipt, and editing files after a green verify makes the
-receipt stale until you run `synrail verify` again. Changing the project root,
-`synrail.toml`, the authenticated lock, or the resolved executable mid-run blocks the run;
-start a new run to adopt a legitimate change. Verification also blocks if the
-command mutates visible workspace content or if Synrail cannot safely
-content-bind the visible git workspace. New runs authenticate the no-profile decision too,
-so an old active run without a lock must restart instead of silently
-downgrading verification. This local receipt detects drift and direct artifact
-edits; it is not a security boundary against an agent sharing the operator account.
-If a profile genuinely needs one of the stripped variables, put that setup in
-an operator-reviewed wrapper and use the wrapper as `argv[0]` so its content is
-locked too.
-
-#### Receipt key lifecycle
-
-Synrail signs local verification locks and receipts with a per-user HMAC key.
-It is local control state, not a project artifact: never commit, attach, or
-share `receipt_hmac.key` with a repository or public issue.
-
-- macOS default: `~/Library/Caches/synrail/receipt_hmac.key`
-- Linux default: `~/.cache/synrail/receipt_hmac.key`
-- `SYNRAIL_CACHE_HOME` overrides both defaults; `XDG_CACHE_HOME` controls the
-  Linux base when `SYNRAIL_CACHE_HOME` is unset.
-
-On POSIX hosts Synrail attempts to create the file with mode `0600`. Deleting
-or rotating the key makes all earlier locks and receipts unverifiable by
-design; Synrail will create a new key on the next run, and you must start a new
-bounded run and re-run verification. Do not rotate a key to make a blocked run
-green, and prefer a fresh run rather than copying the key to another machine.
-
-### 3. Check
-
-```bash
 synrail check
 ```
 
-**Expected output on first try: non-green.** This is normal. You will see what failed and what to fix.
+Continue only when `preflight` reports `Behavioral verification: READY`.
+`verify` writes a fresh receipt for the locked command; `check` blocks if that
+receipt is missing, red, or stale. Full setup, trust limits, and troubleshooting
+are in [Behavioral Verification Profiles](../advanced/VERIFICATION_PROFILES.md).
 
-### 4. Fix what check says, then re-check
+## 3. Keep Artifacts Outside Many Repositories
 
-Fix only the named blocker, then rerun:
-
-```bash
-synrail check
-```
-
-If you need a clearer breakdown of a proof gap, run:
+For analysis, QA, or small work across several repositories, use the ephemeral
+lane:
 
 ```bash
-synrail explain-proof
+synrail start --ephemeral "Describe the bounded local analysis."
+# make or inspect the bounded change
+synrail record --ephemeral --all-modified \
+  --summary "Describe the concrete bounded result across the tracked files."
+synrail check --ephemeral
+synrail cleanup --ephemeral
 ```
 
-Repeat until `synrail check` prints `Status: Accepted`.
-
-Only `Status: Accepted` means the task may be reported as complete. If Synrail returns `Proof Invalid`, `Rejected`, `Blocked`, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.
-
-## What non-green means
-
-- `Controlled Run Required` -- you need to use `synrail start`, not plain init.
-- `Proof Incomplete` -- the proof bundle is incomplete. Fill in the named sections.
-- `Proof Too Thin To Trust` -- structure is there but evidence is thin. Strengthen the named sections.
-- `Workspace Not Ready` or `Workspace Not Trusted` -- readiness or trust failed. Read the blocking repair target.
-- `Cannot Continue This Run` -- this run reached a terminal rejected state. Start a new bounded run or restore a verified point before trying again.
-
-Non-green is the normal first state. It means the system is working.
-
-## When you are done
-
-`Status: Accepted` means the proof bundle is complete, the doctor passed, and closure is honest. You can now:
+From a git subdirectory, Synrail discovers the checkout root. From a parent
+workspace containing multiple repositories, select the target explicitly:
 
 ```bash
-synrail session-export --artifact-root .synrail
+synrail start --ephemeral --project-root path/to/target-repo \
+  "Describe the bounded local analysis."
 ```
 
-If a later deploy or restart script must cause a side effect, do not call it raw.
-Use the deploy-guard pattern described in [DEPLOY_GUARD_INTEGRATION_001.md](./DEPLOY_GUARD_INTEGRATION_001.md).
+Use the same `--ephemeral` and `--project-root` values throughout the run. The
+full multi-repo lifecycle, Windows notes, and allowed proof-command shapes are
+in [Repo-Clean Workflows](../advanced/REPO_CLEAN_WORKFLOWS.md).
 
-## If something breaks
+## Read A Non-Green Result
 
-If you already saved a fallback and want to understand what restore would do before changing the workspace again, preview it first:
+| Status | Meaning | What to do |
+| --- | --- | --- |
+| `Verification Failed` | A required behavior command failed or has no green receipt. | Repair the behavior, run `synrail verify`, then check again. |
+| `Proof Incomplete` | A required proof surface is absent. | Fill only the named field or run the named template command. |
+| `Proof Too Thin To Trust` | The surface exists but does not prove enough. | Strengthen the named scope/provenance evidence. |
+| `Workspace Not Ready` / `Workspace Not Trusted` | Root, doctor, or workspace trust is not valid. | Read the named diagnostic; do not bypass it with a generic claim. |
+| `Cannot Continue This Run` | The run is terminally rejected. | Start a new bounded run or restore a verified point. |
+
+The first result being non-green is normal. It is Synrail preventing an
+unearned completion claim.
+
+## Optional Agent Wiring
+
+Humans can run the commands directly. To teach local agent hosts the same
+controlled workflow without repeating it in every prompt:
 
 ```bash
-synrail restore --preview
+make install-local
 ```
 
-Then decide whether to actually restore:
+This adds a managed Synrail block to agent-discovery files in the target repo.
+The default policy mode is `strict`: it asks the agent to start with Synrail on
+every task. For day-to-day Codex, Claude, Gemini, or Cursor work, the focused
+mode is usually cheaper:
 
 ```bash
-synrail restore
+synrail init-agent --agent codex --ephemeral --policy-mode focused
 ```
 
-If the preview says the current contour is limited or unsupported, do not treat restore as a full workspace rollback.
+`focused` leaves ordinary read-only questions, planning, and code review outside
+Synrail. It still requires the controlled loop before a mutation task can be
+reported complete: `start` -> `record` -> optional `verify` -> `check`. Use the
+default `strict` mode when you intentionally want every task, including
+orientation and analysis, to begin from governed state.
 
-If you need a compact bug report instead:
+For Kiro, use:
 
 ```bash
-synrail bug-packet --artifact-root .synrail
+synrail init-agent --agent kiro
 ```
 
-This creates a machine-readable bug report you can share with the maintainer.
+Agent policy does not make behavior claims trustworthy by itself; use a
+[verification profile](../advanced/VERIFICATION_PROFILES.md) when needed.
+
+## After A Run
+
+- Keep artifacts when you need a handoff or an audit trail.
+- Use `synrail cleanup --ephemeral` after a disposable external-cache run.
+- Use `synrail explain-proof` when the printed reason needs more detail.
+- Use `synrail restore --preview` before a restore; do not assume restore is a
+  universal workspace rollback.
+- For a compact report, use `synrail bug-packet`.
+
+For the product overview, return to the [README](../../README.md). For the
+complete current/user/maintainer separation, see the [Docs Map](../README.md).

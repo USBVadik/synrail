@@ -1,24 +1,33 @@
-# Synrail Docs Map
+# Synrail Documentation
 
-This is the short current source-of-truth reading path for the repo.
+Use this page to avoid treating the repository's research history as a setup
+manual.
 
-Start here:
+## Current User Path
 
-- `../README.md`
-- `core/FIRST_RUN_GUIDE.md`
-- `core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`
-- `core/ALPHA_LANE_001.md`
+Read these in order:
 
-Use this map when you want the fastest current path through what Synrail is, how a run works, and what counts as trusted proof.
+1. [`../README.md`](../README.md) - what Synrail is and whether it fits your workflow
+2. [`core/FIRST_RUN_GUIDE.md`](core/FIRST_RUN_GUIDE.md) - install plus the smallest useful route
+3. [`advanced/VERIFICATION_PROFILES.md`](advanced/VERIFICATION_PROFILES.md) - only when an agent must claim a test or runtime result
+4. [`advanced/REPO_CLEAN_WORKFLOWS.md`](advanced/REPO_CLEAN_WORKFLOWS.md) - only for multi-repo QA, external artifacts, or Windows details
 
-Then continue as needed for deeper reference:
+Most first runs need only the README and First Run Guide.
 
-- `core/SYNRAIL_DOCTOR.md` — doctor surface and readiness checks
-- `core/SYNRAIL_EVIDENCE_PRECEDENCE.md` — how competing proof sources are ordered
-- `core/SYNRAIL_KERNEL_STATUS_CONTRACT.md` — accepted/non-green status boundary
-- `core/SYNRAIL_EXACT_TASK_CLOSURE_SPEC.md` — exact-task closure semantics
-- `core/ARTIFACT_CONSISTENCY_001.md` — artifact trust and stale-source checks
-- `core/OBSERVABILITY_001.md` — observability and runtime replay surface
-- `review/README.md` — deeper review, critique, and archive material
+## Maintainer And Deep Reference
 
-Use `docs/review/README.md` only after this map when you explicitly want review and critique material.
+These files explain implementation boundaries; they are not required to install
+or use the normal local lane:
+
+- [`core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md`](core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md) - runtime truth model
+- [`core/SYNRAIL_KERNEL_STATUS_CONTRACT.md`](core/SYNRAIL_KERNEL_STATUS_CONTRACT.md) - accepted and non-green status contracts
+- [`core/SYNRAIL_EVIDENCE_PRECEDENCE.md`](core/SYNRAIL_EVIDENCE_PRECEDENCE.md) - competing evidence sources
+- [`core/SYNRAIL_DOCTOR.md`](core/SYNRAIL_DOCTOR.md) - doctor/readiness implementation
+- [`reference/`](reference/) - narrow technical reference material
+
+## Historical Review And Research
+
+[`review/README.md`](review/README.md) indexes audits, roadmaps, external
+feedback, launch materials, and prior execution records. [`boundary/`](boundary/)
+contains earlier product-boundary and extraction work. They are preserved as
+evidence and maintainer history, not as the public onboarding path.

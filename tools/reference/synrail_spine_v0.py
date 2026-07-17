@@ -1321,6 +1321,48 @@ def build_error_report(state: dict, *, reason: str, stopping_stage: str = "docto
     }
 
 
+def fail_subtool_execution(
+    ctx: OrchestrationContext,
+    args: argparse.Namespace,
+    *,
+    reason: str,
+    stopping_stage: str,
+    exit_code: int,
+) -> int:
+    """Persist one actionable error when an orchestration subtool cannot run.
+
+    The outer CLI captures the spine's stdout for normal checks.  Returning a
+    bare non-zero code here used to lose both the failed stage and the repair
+    context, which made genuine local failures look like a silent crash.
+    """
+    report = build_error_report(ctx.state, reason=reason, stopping_stage=stopping_stage)
+    report["resume_applied"] = ctx.resume_applied
+    report["resume_from_state"] = ctx.resume_from_state
+    report["repair_handoff_applied"] = ctx.repair_handoff_applied
+    report["repair_handoff_from_state"] = ctx.repair_handoff["from_state"] if ctx.repair_handoff else ""
+    report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(ctx.repair_handoff)
+    report["missing_continuation_inputs"] = list(ctx.continuation_missing_inputs)
+    report["selection_applied"] = ctx.selection_applied
+    report["selected_mode"] = ctx.selected_mode
+    report["selected_with_preparation"] = ctx.selected_with_preparation
+    report["next_safe_step"] = (
+        "inspect the named orchestration report failure, fix the local input for that stage, "
+        "then rerun synrail check"
+    )
+    return _finalize_and_exit(
+        ctx,
+        args,
+        report,
+        {
+            "result": "ERROR",
+            "stopping_stage": stopping_stage,
+            "reason": reason,
+            "next_safe_step": report["next_safe_step"],
+        },
+        exit_code=exit_code,
+    )
+
+
 def build_blocked_report(state: dict, doctor_record: dict) -> dict:
     return {
         "schema_version": "orchestration_report_v0",
@@ -2307,30 +2349,13 @@ def _phase_doctor(ctx: OrchestrationContext, args: argparse.Namespace) -> int | 
 
     code, _ = run_python_capture(DOCTOR, doctor_args)
     if code != 0:
-        report = build_error_report(ctx.state, reason="DOCTOR_EXECUTION_FAILED")
-        report["resume_applied"] = ctx.resume_applied
-        report["resume_from_state"] = ctx.resume_from_state
-        report["repair_handoff_applied"] = ctx.repair_handoff_applied
-        report["repair_handoff_from_state"] = ctx.repair_handoff["from_state"] if ctx.repair_handoff else ""
-        report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(ctx.repair_handoff)
-        report["missing_continuation_inputs"] = list(ctx.continuation_missing_inputs)
-        report["selection_applied"] = ctx.selection_applied
-        report["selected_mode"] = ctx.selected_mode
-        report["selected_with_preparation"] = ctx.selected_with_preparation
-        save_json(Path(args.report_output), report)
-        finalize_runtime_outputs(
+        return fail_subtool_execution(
+            ctx,
             args,
-            state=ctx.state,
-            report=report,
-            resume_applied=ctx.resume_applied,
-            resume_from_state=ctx.resume_from_state,
-            repair_handoff=ctx.repair_handoff,
-            missing_continuation_inputs=ctx.continuation_missing_inputs,
-            selection_receipt=ctx.selection_receipt,
-            starting_repair_packet=ctx.starting_repair_packet,
-            previous_repair_receipt=ctx.previous_repair_receipt,
+            reason="DOCTOR_EXECUTION_FAILED",
+            stopping_stage="doctor",
+            exit_code=code,
         )
-        return code
 
     ctx.doctor_record = load_json(Path(args.doctor_output))
     code, ctx.state, block_report = apply_doctor(load_state(ctx.state_path), ctx.doctor_record)
@@ -2491,18 +2516,13 @@ def _phase_execution_and_proof(ctx: OrchestrationContext, args: argparse.Namespa
         ]
         code, _ = run_python_capture(PROOF_PLAN, plan_args)
         if code != 0:
-            report = build_error_report(ctx.state, reason="PROOF_PLAN_EXECUTION_FAILED", stopping_stage="preparation")
-            report["resume_applied"] = ctx.resume_applied
-            report["resume_from_state"] = ctx.resume_from_state
-            report["repair_handoff_applied"] = ctx.repair_handoff_applied
-            report["repair_handoff_from_state"] = ctx.repair_handoff["from_state"] if ctx.repair_handoff else ""
-            report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(ctx.repair_handoff)
-            report["missing_continuation_inputs"] = list(ctx.continuation_missing_inputs)
-            report["selection_applied"] = ctx.selection_applied
-            report["selected_mode"] = ctx.selected_mode
-            report["selected_with_preparation"] = ctx.selected_with_preparation
-            save_json(Path(args.report_output), report)
-            return code
+            return fail_subtool_execution(
+                ctx,
+                args,
+                reason="PROOF_PLAN_EXECUTION_FAILED",
+                stopping_stage="preparation",
+                exit_code=code,
+            )
         ctx.preparation_applied = True
 
     bundle_args = [
@@ -2524,7 +2544,13 @@ def _phase_execution_and_proof(ctx: OrchestrationContext, args: argparse.Namespa
         bundle_args.extend(["--scenario-proof", args.scenario_proof])
     code, _ = run_python_capture(BUNDLE, bundle_args)
     if code != 0:
-        return code
+        return fail_subtool_execution(
+            ctx,
+            args,
+            reason="PROOF_BUNDLE_EXECUTION_FAILED",
+            stopping_stage="proof_bundle",
+            exit_code=code,
+        )
 
     ctx.bundle = load_json(Path(args.bundle_output))
     if args.plan_output and args.preparation_receipt_output:
@@ -2537,18 +2563,13 @@ def _phase_execution_and_proof(ctx: OrchestrationContext, args: argparse.Namespa
             ],
         )
         if code != 0:
-            report = build_error_report(ctx.state, reason="PREPARATION_RECEIPT_EXECUTION_FAILED", stopping_stage="preparation")
-            report["resume_applied"] = ctx.resume_applied
-            report["resume_from_state"] = ctx.resume_from_state
-            report["repair_handoff_applied"] = ctx.repair_handoff_applied
-            report["repair_handoff_from_state"] = ctx.repair_handoff["from_state"] if ctx.repair_handoff else ""
-            report["repair_handoff_required_inputs"] = repair_handoff_required_input_ids(ctx.repair_handoff)
-            report["missing_continuation_inputs"] = list(ctx.continuation_missing_inputs)
-            report["selection_applied"] = ctx.selection_applied
-            report["selected_mode"] = ctx.selected_mode
-            report["selected_with_preparation"] = ctx.selected_with_preparation
-            save_json(Path(args.report_output), report)
-            return code
+            return fail_subtool_execution(
+                ctx,
+                args,
+                reason="PREPARATION_RECEIPT_EXECUTION_FAILED",
+                stopping_stage="preparation",
+                exit_code=code,
+            )
         ctx.preparation_receipt = load_json(Path(args.preparation_receipt_output))
         ctx.preparation_ready_for_closure = ctx.preparation_receipt["ready_for_closure"]
 
@@ -2611,14 +2632,26 @@ def _phase_closure(ctx: OrchestrationContext, args: argparse.Namespace) -> int |
                 ],
             )
             if code != 0:
-                return code
+                return fail_subtool_execution(
+                    ctx,
+                    args,
+                    reason="ACCEPTANCE_VALIDATION_EXECUTION_FAILED",
+                    stopping_stage="acceptance_validation",
+                    exit_code=code,
+                )
         else:
             save_json(Path(args.acceptance_validation_output), missing_acceptance_validation_record("CRITERIA_FILE_MISSING"))
         closure_args.extend(["--acceptance-validation-file", args.acceptance_validation_output])
 
     code, _ = run_python_capture(CLOSURE, closure_args)
     if code != 0:
-        return code
+        return fail_subtool_execution(
+            ctx,
+            args,
+            reason="CLOSURE_EXECUTION_FAILED",
+            stopping_stage="closure",
+            exit_code=code,
+        )
 
     criteria_validation = load_json(Path(args.acceptance_validation_output)) if args.acceptance_validation_output and Path(args.acceptance_validation_output).exists() else None
     closure_state = load_state(ctx.state_path)
@@ -2800,7 +2833,13 @@ def _phase_refresh_and_comparison(ctx: OrchestrationContext, args: argparse.Name
             refresh_args.append("--reverification-complete")
         code, _ = run_python_capture(REFRESH, refresh_args)
         if code != 0:
-            return code
+            return fail_subtool_execution(
+                ctx,
+                args,
+                reason="REFRESH_EXECUTION_FAILED",
+                stopping_stage="refresh",
+                exit_code=code,
+            )
         ctx.state = load_state(ctx.state_path)
         ctx.refresh_report = load_json(Path(args.refresh_output))
         ctx.refresh_applied = True
@@ -2812,10 +2851,22 @@ def _phase_refresh_and_comparison(ctx: OrchestrationContext, args: argparse.Name
         try:
             harness = comparison_harness_for_inputs(args.baseline_file, args.synrail_file)
         except ValueError:
-            return 2
+            return fail_subtool_execution(
+                ctx,
+                args,
+                reason="COMPARISON_INPUTS_UNSUPPORTED",
+                stopping_stage="comparison",
+                exit_code=2,
+            )
         code, _ = run_python_capture(harness, ["--baseline-file", args.baseline_file, "--synrail-file", args.synrail_file, "--output", args.comparison_output])
         if code != 0:
-            return code
+            return fail_subtool_execution(
+                ctx,
+                args,
+                reason="COMPARISON_EXECUTION_FAILED",
+                stopping_stage="comparison",
+                exit_code=code,
+            )
         ctx.comparison = load_json(Path(args.comparison_output))
         ctx.comparison_applied = True
         ctx.comparison_verdict = ctx.comparison["verdict"]

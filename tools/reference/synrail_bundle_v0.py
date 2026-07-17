@@ -166,9 +166,216 @@ def build_closure_freshness_binding(
     }
 
 
+def _is_sha256(value: object) -> bool:
+    return isinstance(value, str) and len(value) == 64 and all(
+        character in "0123456789abcdefABCDEF" for character in value
+    )
+
+
+def _normalized_recorded_paths(value: object) -> list[str] | None:
+    if not isinstance(value, list):
+        return None
+    paths: list[str] = []
+    for item in value:
+        if not isinstance(item, str):
+            return None
+        normalized = item.strip().replace("\\", "/")
+        if not normalized or normalized in paths:
+            return None
+        paths.append(normalized)
+    return paths
+
+
+def _recorded_artifact_root_relative(metadata: dict) -> str:
+    raw = non_empty_string(metadata.get("artifact_root_relative", "")).replace("\\", "/")
+    if not raw:
+        return ""
+    candidate = Path(raw)
+    if candidate.is_absolute() or any(part == ".." for part in candidate.parts):
+        return ""
+    return raw.rstrip("/")
+
+
+def _is_recorded_control_path(path: str, *, artifact_root_relative: str) -> bool:
+    normalized = path.replace("\\", "/")
+    return bool(
+        artifact_root_relative
+        and (normalized == artifact_root_relative or normalized.startswith(artifact_root_relative + "/"))
+    )
+
+
+def _live_recorded_dirty_paths(
+    project_root: Path,
+    *,
+    artifact_root_relative: str,
+) -> tuple[list[str] | None, str]:
+    try:
+        tracked = run_safe_git(
+            project_root,
+            ["diff", "--name-only", "-z", "HEAD", "--"],
+        )
+        untracked = run_safe_git(
+            project_root,
+            ["ls-files", "-z", "--others", "--exclude-standard"],
+        )
+    except SafeGitError as exc:
+        return None, exc.reason.lower()
+    if tracked.returncode != 0 or untracked.returncode != 0:
+        return None, "recorded_patch_live_scope_failed"
+    paths = {
+        value.replace("\\", "/")
+        for value in [*tracked.stdout.split("\0"), *untracked.stdout.split("\0")]
+        if value
+        and not _is_recorded_control_path(
+            value,
+            artifact_root_relative=artifact_root_relative,
+        )
+    }
+    return sorted(paths), ""
+
+
+def _recorded_batch_patch_binding_result(
+    final: dict,
+    *,
+    project_root: Path,
+    metadata: dict,
+) -> dict:
+    result = {
+        "required": True,
+        "evaluated": True,
+        "matched": False,
+        "changed_file": "",
+        "changed_files": [],
+        "expected_patch_sha256": "",
+        "live_patch_sha256": "",
+        "expected_patch_sha256_by_file": {},
+        "live_patch_sha256_by_file": {},
+        "expected_worktree_patch_sha256": "",
+        "live_worktree_patch_sha256": "",
+        "expected_dirty_paths": [],
+        "live_dirty_paths": [],
+        "skip_reason": "",
+    }
+    modified_files = _normalized_recorded_paths(final.get("modified_files", []))
+    recorded_dirty_paths = _normalized_recorded_paths(metadata.get("recorded_dirty_paths", []))
+    hashes_raw = metadata.get("patch_sha256_by_file", {})
+    expected_worktree_hash = non_empty_string(metadata.get("worktree_patch_sha256", ""))
+    saved_patch = final.get("git_diff", "")
+    if (
+        not modified_files
+        or modified_files != sorted(modified_files)
+        or recorded_dirty_paths != modified_files
+        or not isinstance(hashes_raw, dict)
+        or not _is_sha256(expected_worktree_hash)
+        or not isinstance(saved_patch, str)
+        or not saved_patch
+    ):
+        result["skip_reason"] = "recorded_batch_patch_metadata_invalid"
+        return result
+
+    expected_hashes: dict[str, str] = {}
+    for path, value in hashes_raw.items():
+        if not isinstance(path, str) or not _is_sha256(value):
+            result["skip_reason"] = "recorded_batch_patch_metadata_invalid"
+            return result
+        expected_hashes[path.strip().replace("\\", "/")] = value.lower()
+    if set(expected_hashes) != set(modified_files):
+        result["skip_reason"] = "recorded_batch_patch_metadata_invalid"
+        return result
+    if sorted(git_diff_patch_paths(saved_patch)) != modified_files:
+        result["skip_reason"] = "recorded_batch_saved_patch_scope_invalid"
+        return result
+
+    result["changed_files"] = modified_files
+    result["expected_patch_sha256_by_file"] = expected_hashes
+    result["expected_worktree_patch_sha256"] = expected_worktree_hash.lower()
+    result["expected_dirty_paths"] = recorded_dirty_paths
+    if hashlib.sha256(saved_patch.encode("utf-8")).hexdigest() != expected_worktree_hash.lower():
+        result["skip_reason"] = "recorded_batch_saved_patch_hash_invalid"
+        return result
+
+    live_dirty_paths, dirty_paths_reason = _live_recorded_dirty_paths(
+        project_root,
+        artifact_root_relative=_recorded_artifact_root_relative(metadata),
+    )
+    if live_dirty_paths is None:
+        result["skip_reason"] = dirty_paths_reason
+        return result
+    result["live_dirty_paths"] = live_dirty_paths
+    if live_dirty_paths != recorded_dirty_paths:
+        result["skip_reason"] = "recorded_batch_scope_changed"
+        return result
+
+    live_hashes: dict[str, str] = {}
+    for changed_file in modified_files:
+        changed_path = project_root / changed_file
+        if not path_within_scope(
+            str(changed_path),
+            scope=DUAL_SCOPE,
+            project_root=project_root,
+            artifact_root=project_root / ".synrail",
+        ):
+            result["skip_reason"] = "recorded_patch_path_out_of_scope"
+            return result
+        violation = path_surface_violation(
+            str(changed_path),
+            field="final_result",
+            scope=DUAL_SCOPE,
+            surface_label="recorded batch changed file",
+            expected_surface="a direct in-scope tracked file",
+            stop_at=project_root,
+            project_root=project_root,
+            artifact_root=project_root / ".synrail",
+        )
+        if violation is not None:
+            result["skip_reason"] = "recorded_patch_path_out_of_scope"
+            return result
+        try:
+            completed = run_safe_git(project_root, ["diff", "HEAD", "--", changed_file])
+        except SafeGitError as exc:
+            result["skip_reason"] = exc.reason.lower()
+            return result
+        if completed.returncode != 0:
+            result["skip_reason"] = "recorded_patch_live_diff_failed"
+            return result
+        live_patch = completed.stdout
+        if not live_patch:
+            result["skip_reason"] = "recorded_patch_no_longer_matches_worktree"
+            return result
+        live_hashes[changed_file] = hashlib.sha256(live_patch.encode("utf-8")).hexdigest()
+    result["live_patch_sha256_by_file"] = live_hashes
+
+    try:
+        completed_worktree = run_safe_git(project_root, ["diff", "HEAD", "--"])
+    except SafeGitError as exc:
+        result["skip_reason"] = exc.reason.lower()
+        return result
+    if completed_worktree.returncode != 0:
+        result["skip_reason"] = "recorded_patch_live_diff_failed"
+        return result
+    live_worktree_patch = completed_worktree.stdout
+    live_worktree_hash = hashlib.sha256(live_worktree_patch.encode("utf-8")).hexdigest()
+    result["live_worktree_patch_sha256"] = live_worktree_hash
+    result["matched"] = bool(
+        live_hashes == expected_hashes
+        and live_worktree_patch == saved_patch
+        and live_worktree_hash == expected_worktree_hash.lower()
+    )
+    if not result["matched"]:
+        result["skip_reason"] = "recorded_patch_no_longer_matches_worktree"
+    return result
+
+
 def recorded_patch_binding_result(final: dict, *, project_root: Path) -> dict:
     metadata = final.get("_synrail", {})
-    required = isinstance(metadata, dict) and metadata.get("recorded_by") == "synrail record"
+    recorded_by = metadata.get("recorded_by") if isinstance(metadata, dict) else ""
+    required = recorded_by in {"synrail record", "synrail record --all-modified"}
+    if recorded_by == "synrail record --all-modified":
+        return _recorded_batch_patch_binding_result(
+            final,
+            project_root=project_root,
+            metadata=metadata,
+        )
     result = {
         "required": required,
         "evaluated": False,
@@ -395,9 +602,15 @@ def _parse_git_operand_paths(argv: list[str]) -> tuple[list[str] | None, str]:
     args = argv[1:]
     if len(args) < 3 or args[0] not in {"diff", "show", "log"}:
         return None, "command_shape_unsupported"
-    if args[1] != "--":
+    subcommand = args[0]
+    operands = args[1:]
+    if subcommand == "diff" and operands[:2] == ["--numstat", "HEAD"]:
+        operands = operands[2:]
+    elif subcommand == "diff" and operands[:1] == ["HEAD"]:
+        operands = operands[1:]
+    if not operands or operands[0] != "--":
         return None, "command_shape_unsupported"
-    pathspecs = args[2:]
+    pathspecs = operands[1:]
     if not pathspecs:
         return None, "command_shape_unsupported"
     return pathspecs, ""

@@ -314,12 +314,14 @@ try:
     from .synrail_proof_recorder_v0 import (
         ProofRecordError,
         capture_record_baseline,
+        record_all_modified_proof,
         record_single_file_proof,
     )
 except ImportError:
     from synrail_proof_recorder_v0 import (
         ProofRecordError,
         capture_record_baseline,
+        record_all_modified_proof,
         record_single_file_proof,
     )
 
@@ -769,6 +771,11 @@ def cmd_init_ci(args: argparse.Namespace) -> int:
 
 
 def cmd_preflight(args: argparse.Namespace) -> int:
+    ensure_default_project_root_arg(args)
+    if getattr(args, "ephemeral", False) is True:
+        # Reuse the same repo-keyed cache root as start/check so preflight
+        # validates the artifact surface the generated agent policy will use.
+        alpha_root_from_args(args)
     return extracted_cmd_preflight(args, context=ci_preflight_context())
 
 
@@ -1898,13 +1905,96 @@ def sync_restored_checkpoint_artifacts(target_root: Path) -> list[str]:
     return synced
 
 
-def print_thin_output_summary(output_file: Path) -> None:
+def accepted_assurance_line(*, output_file: Path, project_profile: dict | None) -> str:
+    """Describe the assurance behind an accepted public check without changing its status."""
+    if not output_file.exists():
+        return ""
+    try:
+        payload = load_json(output_file)
+    except (OSError, json.JSONDecodeError):
+        return ""
+    if payload.get("outcome_class") != "ACCEPTED":
+        return ""
+
+    lock = verification_lock_from_profile(project_profile)
+    profiles = lock.get("profiles", {}) if lock.get("present", False) else {}
+    required_count = sum(
+        1
+        for profile in profiles.values()
+        if isinstance(profile, dict) and profile.get("required", True)
+    )
+    if required_count:
+        noun = "profile" if required_count == 1 else "profiles"
+        return (
+            "Assurance: Behavioral verification passed "
+            f"({required_count} locked, operator-approved required {noun} green)."
+        )
+    return (
+        "Assurance: Proof accepted; this run had no required "
+        "operator-approved behavioral verification profile."
+    )
+
+
+def verification_error_next_step(outcome: dict) -> str:
+    """Keep `verify` failures actionable even when execution never started."""
+    supplied = outcome.get("next_step")
+    if isinstance(supplied, str) and supplied:
+        return supplied
+
+    next_steps = {
+        "VERIFICATION_LOCK_INVALID": (
+            "start a new controlled run so Synrail can rebuild the authenticated "
+            "operator-approved verification lock."
+        ),
+        "VERIFICATION_CONFIG_CHANGED": (
+            "restore the locked synrail.toml or start a new controlled run to adopt "
+            "the changed configuration."
+        ),
+        "VERIFICATION_CONFIG_UNTRUSTED": (
+            "restore a tracked, clean synrail.toml at the original HEAD, or start a "
+            "new controlled run after reviewing the configuration."
+        ),
+        "VERIFICATION_PROJECT_ROOT_CHANGED": (
+            "rerun from the project root locked at controlled start, or start a new "
+            "controlled run in this checkout."
+        ),
+        "VERIFICATION_BINARY_CHANGED": (
+            "restore the executable locked at start, or start a new controlled run "
+            "to adopt the current executable."
+        ),
+        "VERIFICATION_PROFILE_UNKNOWN": (
+            "rerun synrail verify without the unknown --profile value, or select a "
+            "profile locked at controlled start."
+        ),
+        "VERIFICATION_WORKSPACE_UNBOUND": (
+            "restore a git-backed workspace that Synrail can fingerprint completely, "
+            "then rerun synrail verify."
+        ),
+        "VERIFICATION_WORKSPACE_MUTATED": (
+            "restore the workspace to its pre-verification state, make the locked "
+            "verification command read-only, then rerun synrail verify."
+        ),
+        "VERIFICATION_EXECUTION_ERROR": (
+            "restore the locked verification environment or executable, then rerun "
+            "synrail verify."
+        ),
+    }
+    return next_steps.get(
+        str(outcome.get("reason", "")),
+        "inspect the verification error, restore the locked run environment, then "
+        "rerun synrail verify or start a new controlled run.",
+    )
+
+
+def print_thin_output_summary(output_file: Path, *, assurance_line: str = "") -> None:
     if not output_file.exists():
         return
     payload = load_json(output_file)
     lines = [
         f"Status: {payload.get('status_label', payload.get('outcome_class', ''))}",
     ]
+    if assurance_line:
+        lines.append(assurance_line)
     action_now = payload.get("action_now", "")
     if action_now:
         lines.append(f"Do this now: {action_now}")
@@ -2054,7 +2144,7 @@ def print_start_summary(*, root: Path, state_file: Path, project_root: Path) -> 
     profile = load_project_profile(root) or {}
     lines = [
         "Controlled run started.",
-        "Do this now: make the bounded change and run local verification; then use synrail record for one tracked file or strengthen final_result.json for other contours.",
+        "Do this now: make the bounded change and run local verification; then use synrail record for one tracked file, synrail record --all-modified for a small tracked batch, or strengthen final_result.json for other contours.",
         f"Artifact root: {display_path(root)}",
         f"Run id: {state.get('run_id', '')}",
         "Starter proof surface is ready for this run.",
@@ -2108,6 +2198,14 @@ def print_existing_run_summary(*, root: Path, state_file: Path, project_root: Pa
         "Need a canonical final_result shape? run " + shell_command(root, "final-result-template", project_root=project_root),
         "Next command: " + shell_command(root, "check", project_root=project_root),
     ]
+    if profile.get("artifact_storage_mode") == "ephemeral_cache":
+        lines.extend(
+            [
+                "If this task was intentionally abandoned, discard only this checkout's cached Synrail artifacts before starting a new run:",
+                "- " + shell_command(root, "cleanup", project_root=project_root),
+                "This removes external Synrail artifacts only; it does not modify project files.",
+            ]
+        )
     if profile.get("prefers_runtime_evidence", False):
         lines.append("Runtime helper: " + shell_command(root, "runtime-helper", project_root=project_root))
     print("\n".join(lines))
@@ -2247,7 +2345,7 @@ def final_result_template_payload(*, root: Path | None) -> dict:
         "Keep git_diff as a real patch with diff --git, ---, +++, and @@ markers when you can produce one.",
         "If git is not installed, do not invent git_diff; leave git_diff empty and use structured diff_provenance instead.",
         "If git_diff is unavailable, keep structured provenance explicit: use diff_provenance for a single-file change, or diff_provenance_records/per_file_diff_provenance with one direct-observation record per modified file for a multi-file change. Each record should include method, changed_file, one exact added_line or removed_line, one stable context_before or context_after anchor, and verification command plus result. If method is omitted but the direct-observation record is otherwise complete, Synrail can normalize it to direct_file_observation during a normal check.",
-        "Keep diff_provenance.verification_command recheckable: use one repo-relative read-only command such as grep -n, cat, head, tail, git diff -- <path>, git show -- <path>, or git log -- <path>. Git recheck commands must use exactly git diff/show/log -- <path> with no git -c, --ext-diff, --textconv, or other options before --. Do not use pipes, &&, sed, awk, perl, subshells, or multi-command snippets.",
+        "Keep diff_provenance.verification_command recheckable: use one repo-relative read-only command such as grep -n, cat, head, tail, git diff -- <path>, git diff HEAD -- <path>, git diff --numstat HEAD -- <path>, git show -- <path>, or git log -- <path>. Git recheck commands must use one of those exact shapes with no git -c, --ext-diff, --textconv, or other options. Do not use pipes, &&, sed, awk, perl, subshells, or multi-command snippets.",
         "For tiny edits, do not leave the exact changed line and its stable neighbor only in readback or scenario_proof; copy those anchors into diff_provenance too.",
         "For an already_satisfied no-op, keep modified_files empty, keep git_diff empty, and use diff_provenance.changed_file plus observed_line, verification command/result, and provenance_note.",
         "In the normal synrail check path, run identity is already carried from the current controlled context; only fill artifact_identity manually when you are doing a standalone bundle check without that context.",
@@ -2819,6 +2917,9 @@ def cmd_start(args: argparse.Namespace) -> int:
 def cmd_record(args: argparse.Namespace) -> int:
     root = alpha_root_from_args(args)
     requested_project_root = default_project_root_from_args(args)
+    batch_mode = bool(getattr(args, "all_modified", False))
+    changed_file = str(getattr(args, "changed_file", "") or "").strip()
+    verification_command = str(getattr(args, "verification_command", "") or "").strip()
     try:
         profile_project_root = project_root_from_profile(root)
     except (OSError, json.JSONDecodeError):
@@ -2831,15 +2932,46 @@ def cmd_record(args: argparse.Namespace) -> int:
             "Run synrail start first and reuse the same artifact mode.",
         )
         result = error.as_payload()
+    elif batch_mode and changed_file:
+        result = ProofRecordError(
+            "RECORD_MODE_INVALID",
+            "record --all-modified does not accept a named changed file.",
+            "Use either synrail record path/to/file --verify '...' or synrail record --all-modified --summary '...'.",
+        ).as_payload()
+    elif batch_mode and verification_command:
+        result = ProofRecordError(
+            "RECORD_MODE_INVALID",
+            "record --all-modified creates one safe per-file verification record itself.",
+            "Remove --verify and let Synrail record exact git diff --numstat HEAD evidence for every changed file.",
+        ).as_payload()
+    elif not batch_mode and not changed_file:
+        result = ProofRecordError(
+            "RECORD_MODE_REQUIRED",
+            "record needs either one repository-relative changed file or --all-modified.",
+            "Use synrail record path/to/file --verify '...' for one file, or synrail record --all-modified for a small tracked batch.",
+        ).as_payload()
+    elif not batch_mode and not verification_command:
+        result = ProofRecordError(
+            "VERIFICATION_COMMAND_REQUIRED",
+            "A single-file record needs one recheckable verification command.",
+            "Pass --verify with one repo-relative grep, cat, head, tail, or supported git command.",
+        ).as_payload()
     else:
         try:
-            result = record_single_file_proof(
-                artifact_root=root,
-                project_root=project_root,
-                changed_file=args.changed_file,
-                summary=args.summary,
-                verification_command=args.verification_command,
-            )
+            if batch_mode:
+                result = record_all_modified_proof(
+                    artifact_root=root,
+                    project_root=project_root,
+                    summary=args.summary,
+                )
+            else:
+                result = record_single_file_proof(
+                    artifact_root=root,
+                    project_root=project_root,
+                    changed_file=changed_file,
+                    summary=args.summary,
+                    verification_command=verification_command,
+                )
         except ProofRecordError as error:
             result = error.as_payload()
 
@@ -2858,11 +2990,19 @@ def cmd_record(args: argparse.Namespace) -> int:
     if getattr(args, "json", False):
         print(json.dumps(result, indent=2, ensure_ascii=True))
     else:
-        print("Synrail recorded recheckable proof for one tracked changed file.")
+        if batch_mode:
+            print(f"Synrail recorded recheckable proof for {len(result['changed_files'])} tracked changed files.")
+        else:
+            print("Synrail recorded recheckable proof for one tracked changed file.")
         print("Acceptance has not been evaluated yet.")
-        print(f"Changed file: {result['changed_file']}")
-        print(f"Verification: {result['verification_command']}")
+        if batch_mode:
+            print("Changed files: " + ", ".join(result["changed_files"]))
+            print("Verification: per-file git diff --numstat HEAD -- <path>")
+        else:
+            print(f"Changed file: {result['changed_file']}")
+            print(f"Verification: {result['verification_command']}")
         print(f"Final result: {display_path(Path(result['final_result']))}")
+        print("This records scope proof; when the run has a locked behavioral profile, run synrail verify before check.")
         print("Next command: " + next_command)
     return 0
 
@@ -2921,6 +3061,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
             print("Synrail could not run verification yet.")
             print(f"Reason: {outcome.get('reason', 'VERIFICATION_ERROR')}")
             print(f"What happened: {outcome.get('detail', '')}")
+            print(f"What to do next: {verification_error_next_step(outcome)}")
         return 2
     next_command = shell_command(root, "check", project_root=project_root)
     outcome["next_command"] = next_command
@@ -3528,7 +3669,13 @@ def cmd_check(args: argparse.Namespace) -> int:
     thin_code = cmd_thin_output(args)
     check_code = check_process_exit_code(thin_code=thin_code, output_file=Path(args.output))
     if thin_code == 0 and args.mode == "default":
-        print_thin_output_summary(Path(args.output))
+        print_thin_output_summary(
+            Path(args.output),
+            assurance_line=accepted_assurance_line(
+                output_file=Path(args.output),
+                project_profile=project_profile,
+            ),
+        )
         thin_payload = load_json(Path(args.output)) if Path(args.output).exists() else {}
         outcome_class = thin_payload.get("outcome_class", "")
         if thin_payload.get("next_command", "") == "synrail refresh-acceptance":
@@ -4175,20 +4322,24 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_record = sub.add_parser(
         "record",
-        help="Record recheckable proof for one tracked changed file",
+        help="Record recheckable proof for one tracked file or a small tracked batch",
         description=(
-            "Record proof for exactly one tracked regular file after a clean-worktree start. "
-            "HEAD must stay unchanged. This command writes proof only; synrail check decides acceptance."
+            "Record proof for one tracked regular file, or use --all-modified to create per-file proof for the complete small tracked change set. "
+            "The run must have started clean and HEAD must stay unchanged. This command writes proof only; synrail check decides acceptance."
         ),
     )
-    p_record.add_argument("changed_file", help="Repository-relative path to the only changed file")
+    p_record.add_argument("changed_file", nargs="?", help="Repository-relative path to one changed file")
+    p_record.add_argument(
+        "--all-modified",
+        action="store_true",
+        help="Record per-file proof for every current tracked change; do not combine with changed_file or --verify",
+    )
     p_record.add_argument("--summary", required=True, help="Concrete summary of the bounded result")
     p_record.add_argument(
         "--verify",
         "--verification-command",
         dest="verification_command",
-        required=True,
-        help="One read-only command that closure can recheck against the changed file",
+        help="One read-only command that closure can recheck against the named changed file",
     )
     p_record.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_record.add_argument("--ephemeral", action="store_true", help="Use the repo-keyed user-cache artifact root for this checkout")
@@ -4264,13 +4415,27 @@ def build_parser() -> argparse.ArgumentParser:
     p_init_agent.add_argument("--agent", required=True, choices=["claude", "gemini", "codex", "cursor", "kiro"])
     p_init_agent.add_argument("--project-root", default=".")
     p_init_agent.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_init_agent.add_argument(
+        "--ephemeral",
+        action="store_true",
+        help="Generate agent policy that keeps Synrail artifacts in the per-user cache outside this repo",
+    )
+    p_init_agent.add_argument(
+        "--policy-mode",
+        choices=["strict", "focused"],
+        default="strict",
+        help=(
+            "strict governs every task (default); focused governs mutations and completion claims "
+            "but leaves ordinary read-only work outside Synrail"
+        ),
+    )
     p_init_agent.add_argument("--force", action="store_true")
     p_init_agent.set_defaults(func=cmd_init_agent)
 
-    p_init_ci = sub.add_parser("init-ci", help="Write a bounded GitHub Action adapter or workflow scaffold for Synrail check")
+    p_init_ci = sub.add_parser("init-ci", help="Write a same-job GitHub Actions adapter for materialized Synrail artifacts")
     p_init_ci.add_argument("--project-root", default=".")
     p_init_ci.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
-    p_init_ci.add_argument("--workflow", action="store_true")
+    p_init_ci.add_argument("--workflow", action="store_true", help=argparse.SUPPRESS)
     p_init_ci.add_argument("--force", action="store_true")
     p_init_ci.set_defaults(func=cmd_init_ci)
 
@@ -4284,12 +4449,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--artifact-root",
         help="Artifact root; relative paths resolve from the project root (default: .synrail)",
     )
+    p_preflight.add_argument(
+        "--ephemeral",
+        action="store_true",
+        help="Inspect the repo-keyed user-cache artifact root used by --ephemeral runs",
+    )
     p_preflight.add_argument("--json", action="store_true")
     p_preflight.set_defaults(func=cmd_preflight)
 
     p_install_agent_files = sub.add_parser("install-agent-files", help=argparse.SUPPRESS)
     p_install_agent_files.add_argument("--project-root", default=".")
     p_install_agent_files.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
+    p_install_agent_files.add_argument("--ephemeral", action="store_true")
     p_install_agent_files.add_argument("--force", action="store_true")
     p_install_agent_files.set_defaults(func=cmd_install_agent_files)
 

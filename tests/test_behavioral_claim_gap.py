@@ -294,6 +294,11 @@ class BehavioralClaimGapTests(unittest.TestCase):
             verify = self.run_alpha("verify", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(2, verify.returncode, verify.stdout + verify.stderr)
             self.assertIn("VERIFICATION_LOCK_INVALID", verify.stdout)
+            self.assertIn(
+                "What to do next: start a new controlled run so Synrail can rebuild the authenticated "
+                "operator-approved verification lock.",
+                verify.stdout,
+            )
 
     def test_profile_lock_downgrade_cannot_disable_required_verification(self) -> None:
         for tamper_mode in ("unsigned_absent", "missing"):
@@ -591,6 +596,10 @@ class BehavioralClaimGapTests(unittest.TestCase):
             check = self.run_alpha("check", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(0, check.returncode, check.stdout + check.stderr)
             self.assertIn("Status: Accepted", stdout_lines(check))
+            self.assertIn(
+                "Assurance: Behavioral verification passed (1 locked, operator-approved required profile green).",
+                stdout_lines(check),
+            )
 
     def test_editing_code_after_green_verify_goes_stale(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_behavioral_gap_") as tmpdir:
@@ -624,6 +633,31 @@ class BehavioralClaimGapTests(unittest.TestCase):
             verify = self.run_alpha("verify", "--artifact-root", ".synrail", cwd=project_root)
             self.assertEqual(2, verify.returncode, verify.stdout + verify.stderr)
             self.assertIn("VERIFICATION_CONFIG_CHANGED", verify.stdout)
+            self.assertIn(
+                "What to do next: restore the locked synrail.toml or start a new controlled run to "
+                "adopt the changed configuration.",
+                verify.stdout,
+            )
+
+    def test_unknown_verify_profile_names_the_bounded_retry(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_behavioral_gap_") as tmpdir:
+            project_root = self._start_bypass_scenario(tmpdir)
+
+            verify = self.run_alpha(
+                "verify",
+                "--artifact-root",
+                ".synrail",
+                "--profile",
+                "does-not-exist",
+                cwd=project_root,
+            )
+            self.assertEqual(2, verify.returncode, verify.stdout + verify.stderr)
+            self.assertIn("VERIFICATION_PROFILE_UNKNOWN", verify.stdout)
+            self.assertIn(
+                "What to do next: rerun synrail verify without the unknown --profile value, or select "
+                "a profile locked at controlled start.",
+                verify.stdout,
+            )
 
     def test_tampered_receipt_blocks_acceptance(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_behavioral_gap_") as tmpdir:

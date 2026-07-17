@@ -59,6 +59,31 @@ class AgentAdoptionTests(unittest.TestCase):
         self.assertIn("Do not replace a failing behavioral profile with `grep`", content)
         self.assertIn("Any later code or config change makes prior verification stale", content)
 
+    def assert_focused_mutation_policy(self, content: str) -> None:
+        self.assertLessEqual(len(content.splitlines()), 70)
+        self.assertIn("## Focused Synrail Rule", content)
+        self.assertIn("Use Synrail before a task that will mutate project files", content)
+        self.assertIn("ordinary read-only questions, exploration, code review, planning", content)
+        self.assertIn("## Before A Mutation", content)
+        self.assertIn("synrail start", content)
+        self.assertIn("synrail preflight", content)
+        self.assertIn("Only `READY` allows", content)
+        self.assertIn("Do not create, edit, weaken, or replace `synrail.toml` during an active run", content)
+        self.assertLess(
+            content.index("synrail preflight"),
+            content.index("synrail start"),
+            "Behavioral preflight must precede the focused-mode start command.",
+        )
+        self.assertIn("synrail record path/to/file", content)
+        self.assertIn("synrail record --all-modified", content)
+        self.assertIn("synrail verify", content)
+        self.assertIn("synrail check", content)
+        self.assertIn("Only `Status: Accepted` means the task may be reported as complete", content)
+        self.assertIn("Treat `PATH_SCOPE_VIOLATION` as blocking", content)
+        self.assertNotIn("First Step On Every New Task", content)
+        self.assertNotIn("## Project Orientation", content)
+        self.assertNotIn("Run Synrail before deciding what to do next.", content)
+
     def run_alpha(self, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
         existing = env.get("PYTHONPATH", "")
@@ -101,7 +126,8 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("synrail", agents)
             self.assertIn('synrail start "Describe the bounded local change."', agents)
             self.assertIn("synrail record path/to/file", agents)
-            self.assertIn("`record` never accepts the task", agents)
+            self.assertIn("synrail record --all-modified", agents)
+            self.assertIn("`record` writes proof, not acceptance", agents)
             self.assertIn("exactly one tracked regular file", agents)
             self.assertIn("synrail check", agents)
             self.assertIn("cleanup_status` absent unless Synrail later asks for cleanup attestation", agents)
@@ -132,7 +158,7 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("Do not turn project recall into repo archaeology.", gemini)
             self.assertIn('synrail start "Describe the bounded local change."', gemini)
             self.assertIn("synrail record path/to/file", gemini)
-            self.assertIn("`record` never accepts the task", gemini)
+            self.assertIn("`record` writes proof, not acceptance", gemini)
             self.assertIn("fix only what check tells you to fix", gemini)
             self.assertIn("cheapest honest order", gemini)
             self.assertIn("fallback-only surfaces", gemini)
@@ -155,7 +181,7 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", claude)
             self.assertIn('synrail start "Describe the bounded local change."', claude)
             self.assertIn("synrail record path/to/file", claude)
-            self.assertIn("`record` never accepts the task", claude)
+            self.assertIn("`record` writes proof, not acceptance", claude)
             self.assertIn("fix only what check tells you to fix", claude)
             self.assertIn("cheapest honest order", claude)
             self.assertIn("fallback-only surfaces", claude)
@@ -302,6 +328,14 @@ class AgentAdoptionTests(unittest.TestCase):
         self.assert_behavioral_verification_policy(block)
         self.assertFalse(block.startswith("---\n"))
 
+        focused_policy = render_kiro_policy_markdown(**common_kwargs, policy_mode="focused")
+        focused_block = render_kiro_policy_block(**common_kwargs, policy_mode="focused")
+        self.assertTrue(focused_policy.startswith("---\ninclusion: auto\nname: synrail-workflow\n"))
+        self.assert_focused_mutation_policy(focused_policy)
+        self.assertIn("## Synrail Local Workflow", focused_block)
+        self.assert_focused_mutation_policy(focused_block)
+        self.assertFalse(focused_block.startswith("---\n"))
+
     def test_init_agent_routes_codex_and_cursor_to_full_agent_wiring(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_init_agent_alias_") as tmpdir:
             project_root = Path(tmpdir) / "project"
@@ -340,6 +374,141 @@ class AgentAdoptionTests(unittest.TestCase):
             for name in ["AGENTS.md", "GEMINI.md", "CLAUDE.md"]:
                 content = (cursor_root / name).read_text()
                 self.assert_behavioral_verification_policy(content)
+
+    def test_init_agent_ephemeral_writes_repo_clean_policy_for_codex(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_agent_ephemeral_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            result = self.run_alpha(
+                "init-agent",
+                "--agent",
+                "codex",
+                "--project-root",
+                str(project_root),
+                "--ephemeral",
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("Artifact mode: ephemeral user cache outside this checkout", result.stdout)
+
+            for name in ["AGENTS.md", "GEMINI.md", "CLAUDE.md"]:
+                content = (project_root / name).read_text()
+                self.assert_behavioral_verification_policy(content)
+                self.assertIn("synrail status --ephemeral", content)
+                self.assertIn("synrail preflight --ephemeral", content)
+                self.assertIn('synrail start --ephemeral "TASK"', content)
+                self.assertIn("synrail verify --ephemeral", content)
+                self.assertIn("synrail check --ephemeral", content)
+                self.assertIn("synrail cleanup --ephemeral", content)
+                self.assertIn("synrail record --all-modified", content)
+                self.assertIn("--all-modified --summary", content)
+                self.assertIn("runtime-helper --ephemeral", content)
+                self.assertIn("## Ephemeral Artifact Lifecycle", content)
+                self.assertIn("Run these commands from the target repository root.", content)
+                self.assertIn("outside the checkout", content)
+                self.assertNotIn("--artifact-root ./.synrail", content)
+
+    def test_init_agent_focused_policy_gates_mutations_without_governing_every_read_only_task(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_agent_focused_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            result = self.run_alpha(
+                "init-agent",
+                "--agent",
+                "codex",
+                "--project-root",
+                str(project_root),
+                "--ephemeral",
+                "--policy-mode",
+                "focused",
+            )
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("Policy mode: focused mutation tasks", result.stdout)
+            for name in ["AGENTS.md", "GEMINI.md", "CLAUDE.md"]:
+                content = (project_root / name).read_text()
+                self.assert_focused_mutation_policy(content)
+                self.assertIn("synrail cleanup --ephemeral", content)
+                self.assertNotIn("--artifact-root ./.synrail", content)
+
+    def test_init_agent_focused_policy_threads_through_every_agent_target(self) -> None:
+        policy_paths = {
+            "claude": [Path("CLAUDE.md")],
+            "gemini": [Path("GEMINI.md")],
+            "codex": [Path("AGENTS.md"), Path("GEMINI.md"), Path("CLAUDE.md")],
+            "cursor": [Path("AGENTS.md"), Path("GEMINI.md"), Path("CLAUDE.md")],
+            "kiro": [Path(".kiro") / "steering" / "synrail.md"],
+        }
+        for agent, relative_paths in policy_paths.items():
+            with self.subTest(agent=agent), tempfile.TemporaryDirectory(
+                prefix=f"synrail_init_agent_focused_{agent}_"
+            ) as tmpdir:
+                project_root = Path(tmpdir) / "project"
+                project_root.mkdir(parents=True, exist_ok=True)
+                (project_root / "alpha.py").write_text("print('stub')\n")
+
+                result = self.run_alpha(
+                    "init-agent",
+                    "--agent",
+                    agent,
+                    "--project-root",
+                    str(project_root),
+                    "--ephemeral",
+                    "--policy-mode",
+                    "focused",
+                )
+
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                self.assertIn("Policy mode: focused mutation tasks", result.stdout)
+                for relative_path in relative_paths:
+                    self.assert_focused_mutation_policy((project_root / relative_path).read_text())
+
+    def test_init_agent_help_exposes_strict_and_focused_policy_modes(self) -> None:
+        result = self.run_alpha("init-agent", "--help")
+
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("--policy-mode {strict,focused}", result.stdout)
+        normalized_help = " ".join(result.stdout.split())
+        self.assertIn("strict governs every task", normalized_help)
+        self.assertIn("focused governs mutations and completion claims", normalized_help)
+
+    def test_init_agent_ephemeral_threads_through_each_single_agent_policy(self) -> None:
+        policy_paths = {
+            "claude": Path("CLAUDE.md"),
+            "gemini": Path("GEMINI.md"),
+            "kiro": Path(".kiro") / "steering" / "synrail.md",
+        }
+        for agent, relative_path in policy_paths.items():
+            with self.subTest(agent=agent), tempfile.TemporaryDirectory(
+                prefix=f"synrail_init_agent_ephemeral_{agent}_"
+            ) as tmpdir:
+                project_root = Path(tmpdir) / "project"
+                project_root.mkdir(parents=True, exist_ok=True)
+                (project_root / "alpha.py").write_text("print('stub')\n")
+
+                result = self.run_alpha(
+                    "init-agent",
+                    "--agent",
+                    agent,
+                    "--project-root",
+                    str(project_root),
+                    "--ephemeral",
+                )
+
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                self.assertIn("Artifact mode: ephemeral user cache outside this checkout", result.stdout)
+                content = (project_root / relative_path).read_text()
+                self.assertIn("synrail status --ephemeral", content)
+                self.assertIn("synrail preflight --ephemeral", content)
+                self.assertIn("synrail check --ephemeral", content)
+                self.assertIn("synrail cleanup --ephemeral", content)
+                self.assertIn("synrail record --all-modified", content)
+                self.assertIn("--all-modified --summary", content)
+                self.assertIn("## Ephemeral Artifact Lifecycle", content)
+                self.assertNotIn("--artifact-root ./.synrail", content)
 
     def test_behavioral_lifecycle_uses_custom_command_and_artifact_root(self) -> None:
         policy = render_local_workflow_policy(
@@ -384,7 +553,7 @@ class AgentAdoptionTests(unittest.TestCase):
         self.assertIn("If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", agents)
         self.assertIn('synrail start "TASK" --artifact-root ./.synrail', agents)
         self.assertIn("synrail record path/to/file", agents)
-        self.assertIn("`record` never accepts the task", agents)
+        self.assertIn("`record` writes proof, not acceptance", agents)
         self.assertIn("synrail check --artifact-root ./.synrail", agents)
         self.assertIn("# only stop on Status: Accepted", agents)
 
@@ -482,7 +651,8 @@ class AgentAdoptionTests(unittest.TestCase):
             )
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
             self.assertIn("GitHub Action CI adapter is ready.", result.stdout)
-            self.assertIn("Adapter scope: bounded check-only GitHub composite action", result.stdout)
+            self.assertIn("Adapter scope: check-only composite action for an already materialized Synrail run", result.stdout)
+            self.assertIn("Artifact contract: an upstream step in the same job must materialize the matching artifact root before this adapter runs.", result.stdout)
             self.assertIn("Workflow call site: uses: ./.github/actions/synrail-check", result.stdout)
             self.assertIn("Invocation path: python3 alpha.py check --artifact-root \"${{ inputs.artifact-root }}\"", result.stdout)
 
@@ -491,7 +661,14 @@ class AgentAdoptionTests(unittest.TestCase):
             action = action_file.read_text()
             self.assertIn("name: Synrail check", action)
             self.assertIn("using: composite", action)
-            self.assertIn("python3 alpha.py check --artifact-root \"${{ inputs.artifact-root }}\"", action)
+            self.assertIn("Check materialized Synrail artifacts", action)
+            self.assertIn("SYNRAIL_ARTIFACT_ROOT: ${{ inputs.artifact-root }}", action)
+            self.assertIn('artifact_root="$SYNRAIL_ARTIFACT_ROOT"', action)
+            self.assertIn("if [ ! -f \"$artifact_root/state.json\" ]; then", action)
+            self.assertIn("Synrail artifacts missing", action)
+            self.assertIn("Materialize the matching artifact root in this job before calling it.", action)
+            self.assertIn("python3 alpha.py check --artifact-root \"$artifact_root\"", action)
+            self.assertNotIn('artifact_root="${{ inputs.artifact-root }}"', action)
             self.assertNotIn("start", action)
             self.assertNotIn("restore", action)
 
@@ -541,12 +718,15 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("GitHub Action CI adapter is ready.", rendered)
             self.assertIn("Adapter backup:", rendered)
             self.assertIn("What to do next: commit the refreshed adapter", rendered)
-            self.assertIn("python3 alpha.py check --artifact-root \"${{ inputs.artifact-root }}\"", action_file.read_text())
+            action = action_file.read_text()
+            self.assertIn("SYNRAIL_ARTIFACT_ROOT: ${{ inputs.artifact-root }}", action)
+            self.assertIn("python3 alpha.py check --artifact-root \"$artifact_root\"", action)
+            self.assertNotIn('artifact_root="${{ inputs.artifact-root }}"', action)
             backups = list(action_dir.glob("action.yml.synrail.bak.*"))
             self.assertEqual(1, len(backups))
             self.assertEqual("name: Existing adapter\n", backups[0].read_text())
 
-    def test_init_ci_workflow_writes_composite_action_and_workflow(self) -> None:
+    def test_init_ci_workflow_refuses_to_generate_unrunnable_scaffold(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_init_ci_workflow_") as tmpdir:
             project_root = Path(tmpdir) / "project"
             project_root.mkdir(parents=True, exist_ok=True)
@@ -560,26 +740,14 @@ class AgentAdoptionTests(unittest.TestCase):
                 "--artifact-root",
                 ".synrail",
             )
-            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-            self.assertIn("GitHub Action CI adapter is ready.", result.stdout)
-            self.assertIn("GitHub Actions workflow is ready.", result.stdout)
-            self.assertIn("Workflow triggers: push, pull_request, workflow_dispatch", result.stdout)
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            self.assertIn("Synrail did not generate a GitHub Actions workflow.", result.stdout)
+            self.assertIn("a clean GitHub checkout has no local Synrail run artifacts", result.stdout)
+            self.assertIn("run `synrail init-ci` to create the same-job adapter", result.stdout)
             action_file = project_root / ".github" / "actions" / "synrail-check" / "action.yml"
             workflow_file = project_root / ".github" / "workflows" / "synrail-check.yml"
-            self.assertTrue(action_file.exists())
-            self.assertTrue(workflow_file.exists())
-            workflow = workflow_file.read_text()
-            self.assertIn("push:", workflow)
-            self.assertIn("pull_request:", workflow)
-            self.assertIn("workflow_dispatch:", workflow)
-            self.assertIn("actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10", workflow)
-            self.assertIn("actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1", workflow)
-            self.assertIn("make install-dev", workflow)
-            self.assertIn("make test", workflow)
-            self.assertIn("make lint", workflow)
-            self.assertIn("make coverage", workflow)
-            self.assertIn("uses: ./.github/actions/synrail-check", workflow)
-            self.assertIn("artifact-root: .synrail", workflow)
+            self.assertFalse(action_file.exists())
+            self.assertFalse(workflow_file.exists())
 
     def test_init_ci_default_says_adapter_only(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_init_ci_adapter_only_") as tmpdir:
@@ -595,10 +763,10 @@ class AgentAdoptionTests(unittest.TestCase):
                 ".synrail",
             )
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-            self.assertIn("Adapter only: add a workflow that calls uses: ./.github/actions/synrail-check, or rerun with --workflow.", result.stdout)
+            self.assertIn("Adapter only: call it from a job after an earlier step materializes the matching artifact root.", result.stdout)
             self.assertFalse((project_root / ".github" / "workflows" / "synrail-check.yml").exists())
 
-    def test_init_ci_workflow_blocks_existing_different_file_without_force(self) -> None:
+    def test_init_ci_workflow_refusal_does_not_touch_existing_files(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_init_ci_workflow_block_") as tmpdir:
             project_root = Path(tmpdir) / "project"
             workflow_dir = project_root / ".github" / "workflows"
@@ -618,37 +786,9 @@ class AgentAdoptionTests(unittest.TestCase):
                 rc = cmd_init_ci(args)
             self.assertEqual(2, rc)
             rendered = stdout.getvalue()
-            self.assertIn("GitHub Actions workflow already exists with different contents.", rendered)
-            self.assertIn("rerun with --force", rendered)
+            self.assertIn("Synrail did not generate a GitHub Actions workflow.", rendered)
+            self.assertIn("a clean GitHub checkout has no local Synrail run artifacts", rendered)
             self.assertEqual("name: Existing workflow\n", workflow_file.read_text())
-
-    def test_init_ci_workflow_force_creates_backup(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="synrail_init_ci_workflow_force_") as tmpdir:
-            project_root = Path(tmpdir) / "project"
-            workflow_dir = project_root / ".github" / "workflows"
-            workflow_dir.mkdir(parents=True, exist_ok=True)
-            workflow_file = workflow_dir / "synrail-check.yml"
-            workflow_file.write_text("name: Existing workflow\n")
-            (project_root / "alpha.py").write_text("print('stub')\n")
-
-            stdout = StringIO()
-            args = mock.Mock(
-                project_root=str(project_root),
-                artifact_root=".synrail",
-                workflow=True,
-                force=True,
-            )
-            with redirect_stdout(stdout):
-                rc = cmd_init_ci(args)
-            self.assertEqual(0, rc)
-            rendered = stdout.getvalue()
-            self.assertIn("GitHub Actions workflow is ready.", rendered)
-            self.assertIn("Workflow backup:", rendered)
-            self.assertIn("What to do next: commit the refreshed adapter and workflow", rendered)
-            self.assertIn("uses: ./.github/actions/synrail-check", workflow_file.read_text())
-            backups = list(workflow_dir.glob("synrail-check.yml.synrail.bak.*"))
-            self.assertEqual(1, len(backups))
-            self.assertEqual("name: Existing workflow\n", backups[0].read_text())
 
     def test_repo_security_hygiene_workflow_covers_dependency_audit_and_secret_patterns(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "security-hygiene.yml").read_text()

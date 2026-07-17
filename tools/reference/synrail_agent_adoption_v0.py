@@ -10,6 +10,7 @@ from typing import Literal
 
 
 DEFAULT_ALPHA_ARTIFACT_ROOT = ".synrail"
+PolicyMode = Literal["strict", "focused"]
 
 
 def relative_artifact_root_for_project(*, project_root: Path, artifact_root: str) -> str:
@@ -43,11 +44,41 @@ def preferred_repo_native_alpha_command(*, project_root: Path) -> str | None:
     return "python3 alpha.py"
 
 
-def policy_command_examples(*, artifact_root: str) -> dict[str, str]:
-    return policy_command_examples_for_binary(artifact_root=artifact_root, command="synrail")
+def policy_command_examples(*, artifact_root: str, ephemeral: bool = False) -> dict[str, str]:
+    return policy_command_examples_for_binary(
+        artifact_root=artifact_root,
+        command="synrail",
+        ephemeral=ephemeral,
+    )
 
 
-def policy_command_examples_for_binary(*, artifact_root: str, command: str) -> dict[str, str]:
+def policy_command_examples_for_binary(
+    *,
+    artifact_root: str,
+    command: str,
+    ephemeral: bool = False,
+) -> dict[str, str]:
+    if ephemeral:
+        return {
+            "status": f"{command} status --ephemeral",
+            "preflight": f"{command} preflight --ephemeral",
+            "suggest_verification": f"{command} suggest-verification",
+            "start": f'{command} start --ephemeral "Describe the bounded local change."',
+            "record": (
+                f'{command} record path/to/file --summary "Describe the concrete bounded result." '
+                '--verify "grep -n \'expected text\' path/to/file" --ephemeral'
+            ),
+            "record_all": (
+                f'{command} record --all-modified --summary '
+                '"Describe the concrete bounded result across the tracked files." --ephemeral'
+            ),
+            "verify": f"{command} verify --ephemeral",
+            "check": f"{command} check --ephemeral",
+            "repair": f"{command} repair-step --ephemeral",
+            "cleanup": f"{command} cleanup --ephemeral",
+            "runtime_helper": f"{command} runtime-helper --ephemeral",
+        }
+
     quoted_root = shlex.quote(artifact_root)
     if artifact_root == DEFAULT_ALPHA_ARTIFACT_ROOT:
         return {
@@ -59,9 +90,15 @@ def policy_command_examples_for_binary(*, artifact_root: str, command: str) -> d
                 f'{command} record path/to/file --summary "Describe the concrete bounded result." '
                 '--verify "grep -n \'expected text\' path/to/file"'
             ),
+            "record_all": (
+                f'{command} record --all-modified --summary '
+                '"Describe the concrete bounded result across the tracked files."'
+            ),
             "verify": f"{command} verify",
             "check": f"{command} check",
             "repair": f"{command} repair-step",
+            "cleanup": f"{command} cleanup",
+            "runtime_helper": f"{command} runtime-helper",
         }
     return {
         "status": f"{command} status --artifact-root {quoted_root}",
@@ -72,19 +109,30 @@ def policy_command_examples_for_binary(*, artifact_root: str, command: str) -> d
             f'{command} record path/to/file --summary "Describe the concrete bounded result." '
             f'--verify "grep -n \'expected text\' path/to/file" --artifact-root {quoted_root}'
         ),
+        "record_all": (
+            f'{command} record --all-modified --summary '
+            f'"Describe the concrete bounded result across the tracked files." --artifact-root {quoted_root}'
+        ),
         "verify": f"{command} verify --artifact-root {quoted_root}",
         "check": f"{command} check --artifact-root {quoted_root}",
         "repair": f"{command} repair-step --artifact-root {quoted_root}",
+        "cleanup": f"{command} cleanup --artifact-root {quoted_root}",
+        "runtime_helper": f"{command} runtime-helper --artifact-root {quoted_root}",
     }
 
 
-def policy_workspace_note_lines(*, workspace_isolation_note: str, prefer_runtime_helper: bool, command: str) -> list[str]:
+def policy_workspace_note_lines(
+    *,
+    workspace_isolation_note: str,
+    prefer_runtime_helper: bool,
+    runtime_helper_command: str,
+) -> list[str]:
     lines: list[str] = []
     if workspace_isolation_note:
         lines.append(f"- {workspace_isolation_note}")
     if prefer_runtime_helper:
         lines.append(
-            f"- For UI or rendered-output tasks, prefer `{command} runtime-helper` and a simple curl or template-render check before browser automation."
+            f"- For UI or rendered-output tasks, prefer `{runtime_helper_command}` and a simple curl or template-render check before browser automation."
         )
     return lines
 
@@ -126,24 +174,40 @@ def policy_explicit_artifact_root(artifact_root: str) -> str:
     return shlex.quote(f"./{artifact_text}")
 
 
-def policy_run_loop_lines(*, artifact_root: str, command: str) -> list[str]:
-    explicit_root = policy_explicit_artifact_root(artifact_root)
-    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
+def policy_run_loop_lines(*, artifact_root: str, command: str, ephemeral: bool = False) -> list[str]:
+    commands = policy_command_examples_for_binary(
+        artifact_root=artifact_root,
+        command=command,
+        ephemeral=ephemeral,
+    )
+    if ephemeral:
+        preflight_command = commands["preflight"]
+        start_command = f'{command} start --ephemeral "TASK"'
+        verify_command = commands["verify"]
+        check_command = commands["check"]
+    else:
+        explicit_root = policy_explicit_artifact_root(artifact_root)
+        preflight_command = f"{command} preflight --artifact-root {explicit_root}"
+        start_command = f'{command} start "TASK" --artifact-root {explicit_root}'
+        verify_command = f"{command} verify --artifact-root {explicit_root}"
+        check_command = f"{command} check --artifact-root {explicit_root}"
     return [
         "## Run Loop",
         "",
         "```bash",
-        f"{command} preflight --artifact-root {explicit_root}",
+        preflight_command,
         "# continue on READY; NOT_CONFIGURED only for non-behavioral tasks",
-        f'{command} start "TASK" --artifact-root {explicit_root}',
+        start_command,
         "# make one bounded change and run the real local verification",
         commands["record"],
-        f"# READY only: {command} verify --artifact-root {explicit_root}",
-        f"{command} check --artifact-root {explicit_root}",
+        "# or, for a small clean-start tracked batch",
+        commands["record_all"],
+        f"# READY only: {verify_command}",
+        check_command,
         "# only stop on Status: Accepted",
         "```",
         "",
-        "Use `record` only when the run started with a clean git worktree, `HEAD` did not change, and exactly one tracked regular file changed. For multi-file, untracked, deleted, no-op, no-git, pre-dirty, or revision-changing work, update `final_result.json` with complete structured proof instead. `record` never accepts the task; behavioral `verify` and final `check` remain separate gates.",
+        "Use `record path/to/file` only when exactly one tracked regular file changed. Use `record --all-modified` only for a small clean-start tracked batch of up to 32 files; it records every eligible file and rejects untracked, deleted, binary, large, or concurrently changing surfaces. For every other contour, update `final_result.json` with complete structured proof instead. `record` writes proof, not acceptance; behavioral `verify` and final `check` remain separate gates.",
         "",
     ]
 
@@ -159,18 +223,35 @@ def policy_non_accepted_status_lines(check_command: str) -> list[str]:
     ]
 
 
-def policy_no_git_proof_line(artifact_root: str) -> str:
+def policy_no_git_proof_line(artifact_root: str, *, ephemeral: bool = False) -> str:
+    final_result_location = (
+        "the `final_result.json` file under the ephemeral artifact root printed by `synrail start --ephemeral`"
+        if ephemeral
+        else f"`{artifact_root}/final_result.json`"
+    )
     return (
-        f"If `git` is unavailable on this host, do not invent `git_diff`; leave it empty in `{artifact_root}/final_result.json` "
+        f"If `git` is unavailable on this host, do not invent `git_diff`; leave it empty in {final_result_location} "
         "and use structured provenance: `diff_provenance` for a single-file change, or `diff_provenance_records` / `per_file_diff_provenance` with one `changed_file`-backed record per modified file for a multi-file change. "
         "Each record should include one exact changed or observed line, a stable context anchor, `verification_command`, and `verification_result`."
     )
 
 
+def policy_ephemeral_lifecycle_lines(commands: dict[str, str]) -> list[str]:
+    return [
+        "## Ephemeral Artifact Lifecycle",
+        "",
+        "Run these commands from the target repository root. This policy keeps Synrail artifacts in the per-user cache, outside the checkout, while proof and verification paths remain repository-relative.",
+        f"If this task was intentionally abandoned, run `{commands['cleanup']}` before starting another task in this checkout.",
+        f"After a terminal result has been reported and no handoff or audit needs the run artifacts, run `{commands['cleanup']}` to discard this checkout's cached artifacts.",
+        "Do not add `--stale` during ordinary per-repository cleanup: that option can prune old cache runs for other checkouts.",
+        "",
+    ]
+
+
 def policy_recheck_command_line() -> str:
     return (
-        "Keep `diff_provenance.verification_command` recheckable: use one repo-relative read-only command such as `grep -n`, `cat`, `head`, `tail`, `git diff -- <path>`, `git show -- <path>`, or `git log -- <path>`. "
-        "Git recheck commands must use exactly `git diff/show/log -- <path>` with no `git -c`, `--ext-diff`, `--textconv`, or other options before `--`. "
+        "Keep `diff_provenance.verification_command` recheckable: use one repo-relative read-only command such as `grep -n`, `cat`, `head`, `tail`, `git diff -- <path>`, `git diff HEAD -- <path>`, `git diff --numstat HEAD -- <path>`, `git show -- <path>`, or `git log -- <path>`. "
+        "Git recheck commands must use one of those exact shapes with no `git -c`, `--ext-diff`, `--textconv`, or other options. "
         "Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets there."
     )
 
@@ -212,6 +293,89 @@ def policy_behavioral_verification_lines(commands: dict[str, str]) -> list[str]:
     ]
 
 
+def render_focused_workflow_policy(
+    *,
+    heading: str,
+    intro: str,
+    artifact_root: str,
+    command: str = "synrail",
+    fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+    ephemeral: bool = False,
+) -> str:
+    """Render the opt-in policy that gates mutations, not ordinary read-only work."""
+    commands = policy_command_examples_for_binary(
+        artifact_root=artifact_root,
+        command=command,
+        ephemeral=ephemeral,
+    )
+    template_command = f"{command} final-result-template" + (" --ephemeral" if ephemeral else "")
+    portability_lines = policy_portability_note_lines(
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+    )
+    note_lines = policy_workspace_note_lines(
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+        runtime_helper_command=commands["runtime_helper"],
+    )
+
+    lines = [
+        heading,
+        "",
+        intro,
+        "",
+        "## Focused Synrail Rule",
+        "",
+        "Use Synrail before a task that will mutate project files or needs a governed completion claim.",
+        "For ordinary read-only questions, exploration, code review, planning, or explanations, do not start a run unless the operator explicitly asks to govern that work.",
+        f"If a prior run is known to be active, use `{commands['status']}` before continuing it; otherwise start directly before the first mutation.",
+        "",
+        "## Before A Mutation",
+        "",
+        "If the task will claim that tests, a build, or runtime behavior passed, inspect the operator-owned profile before starting the run:",
+        "",
+        "```bash",
+        commands["preflight"],
+        "```",
+        "",
+        f"Only `READY` allows `{commands['verify']}` to make that behavioral claim Synrail-verified before `{commands['check']}`. `NOT_CONFIGURED` means scope proof may still be recorded, but do not claim behavior passed because of Synrail.",
+        "Do not create, edit, weaken, or replace `synrail.toml` during an active run.",
+        "",
+        "Start one bounded run before editing code, configuration, documentation, or other project files:",
+        "",
+        "```bash",
+        commands["start"],
+        "```",
+        "",
+        "## Record And Close",
+        "",
+        "For one existing tracked file, record the current patch plus one recheckable observation. For a small clean-start tracked batch, let Synrail record every eligible file:",
+        "",
+        "```bash",
+        commands["record"],
+        "# or, for a small tracked batch",
+        commands["record_all"],
+        f"# READY behavioral profile only: {commands['verify']}",
+        commands["check"],
+        "```",
+        "",
+        "`record` binds scope; it does not prove runtime behavior or accept the task. For untracked, deleted, pre-dirty, no-git, no-op, or large work, run `" + template_command + "` and follow the named proof fields instead of inventing a patch.",
+        policy_recheck_command_line(),
+        policy_path_scope_block_line(),
+        "",
+        *policy_non_accepted_status_lines(commands["check"]),
+        *(policy_ephemeral_lifecycle_lines(commands) if ephemeral else []),
+    ]
+    lines.extend(portability_lines)
+    lines.extend(note_lines)
+    if portability_lines or note_lines:
+        lines.append("")
+    return "\n".join(lines)
+
+
 def render_local_workflow_policy(
     *,
     heading: str,
@@ -222,18 +386,36 @@ def render_local_workflow_policy(
     repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
+    ephemeral: bool = False,
     first_command_heading: str | None,
     first_command_intro: str,
     show_cli_kernel_note: bool,
     start_intro: str,
     finish_intro: str | None = None,
     include_gemini_orientation_note: bool = False,
+    policy_mode: PolicyMode = "strict",
 ) -> str:
-    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
+    if policy_mode == "focused":
+        return render_focused_workflow_policy(
+            heading=heading,
+            intro=intro,
+            artifact_root=artifact_root,
+            command=command,
+            fallback_command=fallback_command,
+            repo_native_alpha_command=repo_native_alpha_command,
+            workspace_isolation_note=workspace_isolation_note,
+            prefer_runtime_helper=prefer_runtime_helper,
+            ephemeral=ephemeral,
+        )
+    commands = policy_command_examples_for_binary(
+        artifact_root=artifact_root,
+        command=command,
+        ephemeral=ephemeral,
+    )
     note_lines = policy_workspace_note_lines(
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
-        command=command,
+        runtime_helper_command=commands["runtime_helper"],
     )
     portability_lines = policy_portability_note_lines(
         fallback_command=fallback_command,
@@ -241,9 +423,18 @@ def render_local_workflow_policy(
     )
     orientation_lines = policy_orientation_lines(commands["status"])
     repo_native_commands = (
-        policy_command_examples_for_binary(artifact_root=artifact_root, command=repo_native_alpha_command)
+        policy_command_examples_for_binary(
+            artifact_root=artifact_root,
+            command=repo_native_alpha_command,
+            ephemeral=ephemeral,
+        )
         if repo_native_alpha_command
         else None
+    )
+    final_result_location = (
+        "the `final_result.json` file under the ephemeral artifact root printed by `synrail start --ephemeral`"
+        if ephemeral
+        else f"`{artifact_root}/final_result.json`"
     )
 
     lines = [heading, "", intro, ""]
@@ -279,7 +470,7 @@ def render_local_workflow_policy(
                 repo_native_commands["start"],
                 repo_native_commands["verify"],
                 repo_native_commands["check"],
-                f"{repo_native_alpha_command} runtime-helper",
+                repo_native_commands["runtime_helper"],
                 "```",
                 "",
                 "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
@@ -295,14 +486,19 @@ def render_local_workflow_policy(
         commands["start"],
         "```",
         "",
-        *policy_run_loop_lines(artifact_root=artifact_root, command=command),
+        *policy_run_loop_lines(
+            artifact_root=artifact_root,
+            command=command,
+            ephemeral=ephemeral,
+        ),
+        *(policy_ephemeral_lifecycle_lines(commands) if ephemeral else []),
         "## Work",
         "",
         "- Keep edits bounded and local to this repo.",
-        f"- For a clean-start change to exactly one tracked regular file, run the real local verification and use `{commands['record']}` to record recheckable proof without hand-authoring JSON.",
-        f"- For every other contour, run the local verification commands needed for the task before updating `{artifact_root}/final_result.json`. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+        f"- For a clean-start change to exactly one tracked regular file, run the real local verification and use `{commands['record']}` to record recheckable proof without hand-authoring JSON. For a small clean-start tracked batch of up to 32 files, use `{commands['record_all']}` instead; it records per-file proof and refuses untracked, deleted, binary, large, or concurrently changing surfaces.",
+        f"- For every other contour, run the local verification commands needed for the task before updating {final_result_location}. Only materialize fallback prose surfaces later if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
         "- Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
-        f"- {policy_no_git_proof_line(artifact_root)}",
+        f"- {policy_no_git_proof_line(artifact_root, ephemeral=ephemeral)}",
         f"- {policy_recheck_command_line()}",
         f"- {policy_path_scope_block_line()}",
         "",
@@ -338,7 +534,27 @@ def render_policy_markdown(
     repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
+    ephemeral: bool = False,
+    policy_mode: PolicyMode = "strict",
 ) -> str:
+    if policy_mode == "focused":
+        if agent_type == "gemini":
+            heading = "# Gemini Workflow"
+        elif agent_type == "claude":
+            heading = "# Claude Workflow"
+        else:
+            heading = "# Agent Workflow"
+        return render_focused_workflow_policy(
+            heading=heading,
+            intro="Use Synrail as the local acceptance gate for mutation tasks in this repo.",
+            artifact_root=artifact_root,
+            command=command,
+            fallback_command=fallback_command,
+            repo_native_alpha_command=repo_native_alpha_command,
+            workspace_isolation_note=workspace_isolation_note,
+            prefer_runtime_helper=prefer_runtime_helper,
+            ephemeral=ephemeral,
+        )
     if agent_type == "gemini":
         return render_local_workflow_policy(
             heading="# Gemini Workflow",
@@ -349,11 +565,13 @@ def render_policy_markdown(
             repo_native_alpha_command=repo_native_alpha_command,
             workspace_isolation_note=workspace_isolation_note,
             prefer_runtime_helper=prefer_runtime_helper,
+            ephemeral=ephemeral,
             first_command_heading="## First Command",
             first_command_intro="For every new user task, run Synrail first so you can see the current governed state:",
             show_cli_kernel_note=True,
             start_intro="If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
             include_gemini_orientation_note=True,
+            policy_mode=policy_mode,
         )
     if agent_type == "claude":
         return render_local_workflow_policy(
@@ -365,17 +583,23 @@ def render_policy_markdown(
             repo_native_alpha_command=repo_native_alpha_command,
             workspace_isolation_note=workspace_isolation_note,
             prefer_runtime_helper=prefer_runtime_helper,
+            ephemeral=ephemeral,
             first_command_heading="## First Command",
             first_command_intro="For every new user task, run Synrail first so you can see the current governed state:",
             show_cli_kernel_note=True,
             start_intro="If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
+            policy_mode=policy_mode,
         )
 
-    commands = policy_command_examples_for_binary(artifact_root=artifact_root, command=command)
+    commands = policy_command_examples_for_binary(
+        artifact_root=artifact_root,
+        command=command,
+        ephemeral=ephemeral,
+    )
     note_lines = policy_workspace_note_lines(
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
-        command=command,
+        runtime_helper_command=commands["runtime_helper"],
     )
     portability_lines = policy_portability_note_lines(
         fallback_command=fallback_command,
@@ -383,9 +607,18 @@ def render_policy_markdown(
     )
     orientation_lines = policy_orientation_lines(commands["status"])
     repo_native_commands = (
-        policy_command_examples_for_binary(artifact_root=artifact_root, command=repo_native_alpha_command)
+        policy_command_examples_for_binary(
+            artifact_root=artifact_root,
+            command=repo_native_alpha_command,
+            ephemeral=ephemeral,
+        )
         if repo_native_alpha_command
         else None
+    )
+    final_result_location = (
+        "the `final_result.json` file under the ephemeral artifact root printed by `synrail start --ephemeral`"
+        if ephemeral
+        else f"`{artifact_root}/final_result.json`"
     )
 
     lines = [
@@ -416,7 +649,7 @@ def render_policy_markdown(
                 repo_native_commands["start"],
                 repo_native_commands["verify"],
                 repo_native_commands["check"],
-                f"{repo_native_alpha_command} runtime-helper",
+                repo_native_commands["runtime_helper"],
                 "```",
                 "",
                 "Prefer these exact repo-local commands instead of probing wrapper paths with shell piping.",
@@ -432,14 +665,19 @@ def render_policy_markdown(
         "```",
         "",
         "2. Keep the change local and bounded to the stated task.",
-        f"3. For a clean-start change to exactly one tracked regular file, run the real local verification and use `{commands['record']}`. `record` writes proof only; it does not accept the task.",
-        f"4. For every other contour, run the local commands needed to verify the change honestly, then edit `{artifact_root}/final_result.json` in place as the work becomes real. Only materialize readback or scenario proof if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
+        f"3. For a clean-start change to exactly one tracked regular file, run the real local verification and use `{commands['record']}`. For a small clean-start tracked batch of up to 32 files, use `{commands['record_all']}`. `record` writes proof, not acceptance; only `check` decides acceptance.",
+        f"4. For every other contour, run the local commands needed to verify the change honestly, then edit {final_result_location} as the work becomes real. Only materialize readback or scenario proof if Synrail explicitly targets them, and leave `cleanup_status` absent unless Synrail later asks for cleanup attestation.",
         "5. Keep proof explicit in the cheapest honest order: make final_result carry trust-bearing status plus patch or structured diff provenance first; treat readback and scenario proof as fallback-only surfaces and do not touch them unless Synrail explicitly targets them or final_result cannot yet carry strong structured verification.",
-        f"6. {policy_no_git_proof_line(artifact_root)}",
+        f"6. {policy_no_git_proof_line(artifact_root, ephemeral=ephemeral)}",
         f"7. {policy_recheck_command_line()}",
         f"8. {policy_path_scope_block_line()}",
         "",
-        *policy_run_loop_lines(artifact_root=artifact_root, command=command),
+        *policy_run_loop_lines(
+            artifact_root=artifact_root,
+            command=command,
+            ephemeral=ephemeral,
+        ),
+        *(policy_ephemeral_lifecycle_lines(commands) if ephemeral else []),
         "## Before You Claim Success",
         "",
         "```bash",
@@ -477,6 +715,8 @@ def render_agent_policy_markdown(
     repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
+    ephemeral: bool = False,
+    policy_mode: PolicyMode = "strict",
 ) -> str:
     return render_policy_markdown(
         "agents",
@@ -486,6 +726,8 @@ def render_agent_policy_markdown(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
+        policy_mode=policy_mode,
     )
 
 
@@ -497,6 +739,8 @@ def render_gemini_policy_markdown(
     repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
+    ephemeral: bool = False,
+    policy_mode: PolicyMode = "strict",
 ) -> str:
     return render_policy_markdown(
         "gemini",
@@ -506,6 +750,8 @@ def render_gemini_policy_markdown(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
+        policy_mode=policy_mode,
     )
 
 
@@ -517,6 +763,8 @@ def render_claude_policy_markdown(
     repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
+    ephemeral: bool = False,
+    policy_mode: PolicyMode = "strict",
 ) -> str:
     return render_policy_markdown(
         "claude",
@@ -526,6 +774,8 @@ def render_claude_policy_markdown(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
+        policy_mode=policy_mode,
     )
 
 
@@ -537,6 +787,8 @@ def render_kiro_policy_markdown(
     repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
+    ephemeral: bool = False,
+    policy_mode: PolicyMode = "strict",
 ) -> str:
     """Render a Kiro workspace-steering file with valid front matter."""
     policy = render_local_workflow_policy(
@@ -548,10 +800,12 @@ def render_kiro_policy_markdown(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
         first_command_heading="## First Command",
         first_command_intro="For every new task that changes code or needs acceptance, run Synrail first:",
         show_cli_kernel_note=True,
         start_intro="If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
+        policy_mode=policy_mode,
     )
     return "\n".join(
         [
@@ -577,6 +831,8 @@ def render_agent_policy_block(
     repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
+    ephemeral: bool = False,
+    policy_mode: PolicyMode = "strict",
 ) -> str:
     return render_local_workflow_policy(
         heading=f"## {title}",
@@ -587,11 +843,13 @@ def render_agent_policy_block(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
         first_command_heading=None,
         first_command_intro="First command for every new task:",
         show_cli_kernel_note=False,
         start_intro="If Synrail shows that no controlled run is active, start one:",
         finish_intro="Before claiming success, run:",
+        policy_mode=policy_mode,
     )
 
 
@@ -603,6 +861,8 @@ def render_agents_policy_block(
     repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
+    ephemeral: bool = False,
+    policy_mode: PolicyMode = "strict",
 ) -> str:
     return render_agent_policy_block(
         title="Synrail Local Workflow",
@@ -613,6 +873,8 @@ def render_agents_policy_block(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
+        policy_mode=policy_mode,
     )
 
 
@@ -624,6 +886,8 @@ def render_gemini_policy_block(
     repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
+    ephemeral: bool = False,
+    policy_mode: PolicyMode = "strict",
 ) -> str:
     return render_agent_policy_block(
         title="Synrail Local Workflow",
@@ -634,6 +898,8 @@ def render_gemini_policy_block(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
+        policy_mode=policy_mode,
     )
 
 
@@ -645,6 +911,8 @@ def render_claude_policy_block(
     repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
+    ephemeral: bool = False,
+    policy_mode: PolicyMode = "strict",
 ) -> str:
     return render_agent_policy_block(
         title="Synrail Local Workflow",
@@ -655,6 +923,8 @@ def render_claude_policy_block(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
+        policy_mode=policy_mode,
     )
 
 
@@ -666,6 +936,8 @@ def render_kiro_policy_block(
     repo_native_alpha_command: str | None = None,
     workspace_isolation_note: str = "",
     prefer_runtime_helper: bool = False,
+    ephemeral: bool = False,
+    policy_mode: PolicyMode = "strict",
 ) -> str:
     return render_agent_policy_block(
         title="Synrail Local Workflow",
@@ -676,6 +948,8 @@ def render_kiro_policy_block(
         repo_native_alpha_command=repo_native_alpha_command,
         workspace_isolation_note=workspace_isolation_note,
         prefer_runtime_helper=prefer_runtime_helper,
+        ephemeral=ephemeral,
+        policy_mode=policy_mode,
     )
 
 

@@ -95,6 +95,25 @@ class SafeGitTests(unittest.TestCase):
         self.assertTrue(result["matched"], result)
         self.assert_no_marker_executed()
 
+    def test_bundle_git_numstat_head_recheck_uses_hardened_execution(self) -> None:
+        expected = run_safe_git(
+            self.project_root,
+            ["diff", "--numstat", "HEAD", "--", "sample.txt"],
+        ).stdout.rstrip("\n")
+        self.clear_markers()
+        result = verification_recheck_result(
+            {
+                "changed_file": "sample.txt",
+                "verification_command": "git diff --numstat HEAD -- sample.txt",
+                "verification_result": expected,
+            },
+            project_root=self.project_root,
+        )
+        self.assertTrue(result["command_allowed"])
+        self.assertTrue(result["executed"])
+        self.assertTrue(result["matched"], result)
+        self.assert_no_marker_executed()
+
     def test_inherited_git_config_injection_is_removed(self) -> None:
         injected = {
             "GIT_CONFIG_COUNT": "1",

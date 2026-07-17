@@ -24,7 +24,12 @@ if str(TOOLS_ROOT) not in sys.path:
 
 from synrail_cli_v0 import ephemeral_artifact_root  # noqa: E402
 from synrail_bundle_v0 import build_bundle  # noqa: E402
-from synrail_proof_recorder_v0 import ProofRecordError, record_single_file_proof  # noqa: E402
+from synrail_proof_recorder_v0 import (  # noqa: E402
+    MAX_BATCH_FILES,
+    ProofRecordError,
+    record_all_modified_proof,
+    record_single_file_proof,
+)
 
 
 class ThinRecordTests(unittest.TestCase):
@@ -40,7 +45,18 @@ class ThinRecordTests(unittest.TestCase):
             "Greeting:\nhello before\nEnd greeting.\n"
         )
         (self.project_root / "other.txt").write_text("other before\n")
-        self.git("add", "sample.txt", "other.txt")
+        (self.project_root / "third.txt").write_text("third before\n")
+        (self.project_root / ".synrail-not-a-control-file").write_text("ordinary before\n")
+        (self.project_root / ".synrail").mkdir()
+        (self.project_root / ".synrail" / "project-settings.txt").write_text("ordinary before\n")
+        self.git(
+            "add",
+            "sample.txt",
+            "other.txt",
+            "third.txt",
+            ".synrail-not-a-control-file",
+            ".synrail/project-settings.txt",
+        )
         self.git("commit", "-qm", "baseline")
         self.artifact_root = ephemeral_artifact_root(project_root=self.project_root)
         self.addCleanup(self.cleanup_ephemeral)
@@ -97,6 +113,18 @@ class ThinRecordTests(unittest.TestCase):
             *extra,
         )
 
+    def record_all(self, *extra: str) -> subprocess.CompletedProcess[str]:
+        return self.run_alpha(
+            "record",
+            "--all-modified",
+            "--ephemeral",
+            "--project-root",
+            str(self.project_root),
+            "--summary",
+            "Updated the bounded tracked files with recorded per-file proof.",
+            *extra,
+        )
+
     def starter_hash(self) -> str:
         return hashlib.sha256((self.artifact_root / "final_result.json").read_bytes()).hexdigest()
 
@@ -139,6 +167,10 @@ class ThinRecordTests(unittest.TestCase):
         )
         self.assertEqual(0, checked.returncode, checked.stdout + checked.stderr)
         self.assertIn("Status: Accepted", checked.stdout)
+        self.assertIn(
+            "Assurance: Proof accepted; this run had no required operator-approved behavioral verification profile.",
+            checked.stdout,
+        )
 
     def test_record_rejects_a_second_dirty_file_without_overwriting_starter(self) -> None:
         self.assertEqual(0, self.start().returncode)
@@ -150,6 +182,194 @@ class ThinRecordTests(unittest.TestCase):
         self.assertEqual(2, recorded.returncode, recorded.stdout + recorded.stderr)
         self.assertIn("SINGLE_FILE_SCOPE_REQUIRED", recorded.stdout)
         self.assertEqual(before, self.starter_hash())
+
+    def test_batch_record_for_all_tracked_changes_reaches_accepted_closure(self) -> None:
+        self.assertEqual(0, self.start().returncode)
+        (self.project_root / "sample.txt").write_text(
+            "Greeting:\nhello from batch record\nEnd greeting.\n"
+        )
+        (self.project_root / "other.txt").write_text("other batch change\n")
+
+        recorded = self.record_all()
+        self.assertEqual(0, recorded.returncode, recorded.stdout + recorded.stderr)
+        self.assertIn("proof for 2 tracked changed files", recorded.stdout)
+        self.assertIn("git diff --numstat HEAD -- <path>", recorded.stdout)
+
+        final_result = json.loads((self.artifact_root / "final_result.json").read_text())
+        self.assertEqual(["other.txt", "sample.txt"], final_result["modified_files"])
+        self.assertEqual("synrail record --all-modified", final_result["_synrail"]["recorded_by"])
+        self.assertEqual(["other.txt", "sample.txt"], final_result["_synrail"]["recorded_dirty_paths"])
+        self.assertEqual(2, len(final_result["diff_provenance_records"]))
+        self.assertEqual(
+            "git diff --numstat HEAD -- other.txt",
+            final_result["diff_provenance_records"][0]["verification_command"],
+        )
+
+        checked = self.run_alpha(
+            "check",
+            "--ephemeral",
+            "--project-root",
+            str(self.project_root),
+        )
+        self.assertEqual(0, checked.returncode, checked.stdout + checked.stderr)
+        self.assertIn("Status: Accepted", checked.stdout)
+        bundle = json.loads((self.artifact_root / "bundle.json").read_text())
+        self.assertTrue(bundle["recorded_patch_binding"]["required"])
+        self.assertTrue(bundle["recorded_patch_binding"]["matched"])
+        self.assertEqual(
+            ["other.txt", "sample.txt"],
+            bundle["recorded_patch_binding"]["changed_files"],
+        )
+
+    def test_batch_record_rejects_untracked_file_without_overwriting_starter(self) -> None:
+        self.assertEqual(0, self.start().returncode)
+        before = self.starter_hash()
+        (self.project_root / "sample.txt").write_text("hello from batch record\n")
+        (self.project_root / "new.txt").write_text("untracked change\n")
+
+        recorded = self.record_all()
+        self.assertEqual(2, recorded.returncode, recorded.stdout + recorded.stderr)
+        self.assertIn("TRACKED_PATCH_REQUIRED", recorded.stdout)
+        self.assertEqual(before, self.starter_hash())
+
+    def test_batch_record_rejects_more_than_the_small_batch_limit(self) -> None:
+        self.assertEqual(0, self.start().returncode)
+        before = self.starter_hash()
+        simulated_paths = [f"file_{index}.txt" for index in range(MAX_BATCH_FILES + 1)]
+
+        with mock.patch(
+            "synrail_proof_recorder_v0._changed_git_paths",
+            return_value=simulated_paths,
+        ):
+            with self.assertRaises(ProofRecordError) as raised:
+                record_all_modified_proof(
+                    artifact_root=self.artifact_root,
+                    project_root=self.project_root,
+                    summary="Tried to record an oversized batch.",
+                )
+        self.assertEqual("BATCH_TOO_LARGE_FOR_THIN_RECORD", raised.exception.reason)
+        self.assertEqual(before, self.starter_hash())
+
+    def test_batch_check_rejects_new_unrecorded_changed_file(self) -> None:
+        self.assertEqual(0, self.start().returncode)
+        (self.project_root / "sample.txt").write_text("hello from batch record\n")
+        (self.project_root / "other.txt").write_text("other batch change\n")
+        self.assertEqual(0, self.record_all().returncode)
+        (self.project_root / "third.txt").write_text("third unrecorded change\n")
+
+        # Doctor stops the normal path before the bundle can run: the new file
+        # is outside the previously observed-safe change surface.
+        checked = self.run_alpha(
+            "check",
+            "--ephemeral",
+            "--project-root",
+            str(self.project_root),
+        )
+        self.assertEqual(2, checked.returncode, checked.stdout + checked.stderr)
+        self.assertIn("Status: Workspace Not Trusted", checked.stdout)
+
+        # Even an explicit clean-surface override cannot turn the extra file
+        # into accepted work: bundle binding still compares the full dirty set.
+        checked_with_override = self.run_alpha(
+            "check",
+            "--ephemeral",
+            "--project-root",
+            str(self.project_root),
+            "--clean-surface",
+        )
+        self.assertEqual(2, checked_with_override.returncode, checked_with_override.stdout + checked_with_override.stderr)
+        self.assertIn("Status: Proof Too Thin To Trust", checked_with_override.stdout)
+        bundle = json.loads((self.artifact_root / "bundle.json").read_text())
+        binding = bundle["recorded_patch_binding"]
+        self.assertTrue(binding["required"])
+        self.assertFalse(binding["matched"])
+        self.assertEqual("recorded_batch_scope_changed", binding["skip_reason"])
+        self.assertEqual(["other.txt", "sample.txt"], binding["expected_dirty_paths"])
+        self.assertEqual(
+            ["other.txt", "sample.txt", "third.txt"],
+            binding["live_dirty_paths"],
+        )
+
+    def test_batch_binding_does_not_ignore_a_control_lookalike_file(self) -> None:
+        self.assertEqual(0, self.start().returncode)
+        (self.project_root / "sample.txt").write_text("hello from batch record\n")
+        (self.project_root / "other.txt").write_text("other batch change\n")
+        self.assertEqual(0, self.record_all().returncode)
+        lookalike = self.project_root / ".synrail-not-a-control-file"
+        lookalike.write_text("ordinary changed after recording\n")
+
+        checked = self.run_alpha(
+            "check",
+            "--ephemeral",
+            "--project-root",
+            str(self.project_root),
+            "--clean-surface",
+        )
+        self.assertEqual(2, checked.returncode, checked.stdout + checked.stderr)
+        self.assertIn("Status: Proof Too Thin To Trust", checked.stdout)
+        bundle = json.loads((self.artifact_root / "bundle.json").read_text())
+        binding = bundle["recorded_patch_binding"]
+        self.assertFalse(binding["matched"])
+        self.assertEqual("recorded_batch_scope_changed", binding["skip_reason"])
+        self.assertEqual(
+            [".synrail-not-a-control-file", "other.txt", "sample.txt"],
+            binding["live_dirty_paths"],
+        )
+
+    def test_batch_binding_does_not_ignore_project_synrail_path_for_ephemeral_run(self) -> None:
+        self.assertEqual(0, self.start().returncode)
+        (self.project_root / "sample.txt").write_text("hello from batch record\n")
+        (self.project_root / "other.txt").write_text("other batch change\n")
+        self.assertEqual(0, self.record_all().returncode)
+        (self.project_root / ".synrail" / "project-settings.txt").write_text(
+            "ordinary changed after recording\n"
+        )
+
+        # --ephemeral keeps Synrail's real artifacts outside the repository.
+        # A tracked project directory named .synrail must therefore remain in
+        # the recorded scope rather than being silently treated as control data.
+        checked = self.run_alpha(
+            "check",
+            "--ephemeral",
+            "--project-root",
+            str(self.project_root),
+            "--clean-surface",
+        )
+        self.assertEqual(2, checked.returncode, checked.stdout + checked.stderr)
+        self.assertIn("Status: Proof Too Thin To Trust", checked.stdout)
+        bundle = json.loads((self.artifact_root / "bundle.json").read_text())
+        binding = bundle["recorded_patch_binding"]
+        self.assertFalse(binding["matched"])
+        self.assertEqual("recorded_batch_scope_changed", binding["skip_reason"])
+        self.assertEqual(
+            [".synrail/project-settings.txt", "other.txt", "sample.txt"],
+            binding["live_dirty_paths"],
+        )
+
+    def test_check_names_and_reports_a_bundle_subtool_failure(self) -> None:
+        self.assertEqual(0, self.start().returncode)
+        (self.project_root / "sample.txt").write_text("hello from thin record\n")
+        self.assertEqual(0, self.record().returncode)
+
+        # A directory at the bundle output path makes the bundle writer fail.
+        # The outer check must preserve the failed stage as a report, rather
+        # than returning an unexplained non-zero process code.
+        (self.artifact_root / "bundle.json").mkdir()
+        checked = self.run_alpha(
+            "check",
+            "--ephemeral",
+            "--project-root",
+            str(self.project_root),
+        )
+
+        self.assertNotEqual(0, checked.returncode)
+        self.assertIn("PROOF_BUNDLE_EXECUTION_FAILED", checked.stdout)
+        self.assertNotIn("Traceback", checked.stderr)
+        report = json.loads((self.artifact_root / "report.json").read_text())
+        self.assertEqual("ERROR", report["result"])
+        self.assertEqual("proof_bundle", report["stopping_stage"])
+        self.assertEqual("PROOF_BUNDLE_EXECUTION_FAILED", report["reason"])
+        self.assertIn("rerun synrail check", report["next_safe_step"])
 
     def test_record_rejects_untracked_file(self) -> None:
         self.assertEqual(0, self.start().returncode)

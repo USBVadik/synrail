@@ -371,7 +371,7 @@ class ControlledStartSmokeTests(unittest.TestCase):
             self.assertEqual(0, start.returncode, start.stdout + start.stderr)
             self.assertIn("Controlled run started.", start.stdout)
             self.assertIn(
-                "Do this now: make the bounded change and run local verification; then use synrail record for one tracked file or strengthen final_result.json for other contours.",
+                "Do this now: make the bounded change and run local verification; then use synrail record for one tracked file, synrail record --all-modified for a small tracked batch, or strengthen final_result.json for other contours.",
                 start.stdout,
             )
             self.assertIn("fallback note: readback.txt and scenario_proof.txt stay hidden by default unless a later synrail check names one.", start.stdout)

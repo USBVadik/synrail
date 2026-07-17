@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Thin, fail-closed proof recording for one tracked changed file."""
+"""Fail-closed proof recording for small tracked change sets."""
 
 from __future__ import annotations
 
 import hashlib
 import json
+import shlex
 from pathlib import Path
 
 try:
     from .synrail_bundle_v0 import (
         VERIFICATION_RECHECK_STDOUT_LIMIT,
+        git_diff_patch_paths,
         verification_recheck_result,
     )
     from .synrail_io_v0 import load_json, save_json
@@ -22,6 +24,7 @@ try:
 except ImportError:
     from synrail_bundle_v0 import (
         VERIFICATION_RECHECK_STDOUT_LIMIT,
+        git_diff_patch_paths,
         verification_recheck_result,
     )
     from synrail_io_v0 import load_json, save_json
@@ -34,6 +37,7 @@ except ImportError:
 
 
 MAX_GIT_DIFF_BYTES = 256_000
+MAX_BATCH_FILES = 32
 CAPTURE_PROBE_RESULT = "__SYNRAIL_CAPTURE_PROBE_RESULT__"
 TERMINAL_RUN_STATES = {"CLOSURE_ACCEPTED", "CLOSURE_REJECTED"}
 
@@ -81,13 +85,10 @@ def _control_artifact_path(
     project_root: Path,
     artifact_root: Path | None,
 ) -> bool:
-    top_level = path.replace("\\", "/").split("/", 1)[0]
-    if top_level.startswith(".synrail"):
-        return True
+    normalized = path.replace("\\", "/")
     if artifact_root is None or not path_in_root(artifact_root.resolve(), project_root):
         return False
     relative_artifact_root = artifact_root.resolve().relative_to(project_root).as_posix()
-    normalized = path.replace("\\", "/")
     return normalized == relative_artifact_root or normalized.startswith(relative_artifact_root + "/")
 
 
@@ -195,6 +196,23 @@ def _capture_git_patch(project_root: Path, relative_file: str) -> str:
     return patch
 
 
+def _capture_worktree_patch(project_root: Path) -> str:
+    patch = _run_git(project_root, ["diff", "HEAD", "--"])
+    if not patch.strip() or "diff --git " not in patch or "@@" not in patch:
+        raise ProofRecordError(
+            "TRACKED_PATCH_REQUIRED",
+            "The record path could not find a real HEAD-to-worktree patch for the active change set.",
+            "Use record only for tracked modified files; use the manual proof path for untracked, deleted, binary, or no-op work.",
+        )
+    if len(patch.encode("utf-8")) > MAX_GIT_DIFF_BYTES:
+        raise ProofRecordError(
+            "PATCH_TOO_LARGE_FOR_THIN_RECORD",
+            "The active change-set patch exceeds the 256 KB record boundary.",
+            "Split the task into smaller bounded runs or use the manual proof path so the large change remains explicit and reviewable.",
+        )
+    return patch
+
+
 def _file_fingerprint(path: Path) -> tuple[int, int, int, int, str]:
     stat = path.stat()
     digest = hashlib.sha256()
@@ -223,7 +241,7 @@ def _capture_verification(
         raise ProofRecordError(
             "VERIFICATION_COMMAND_NOT_RECHECKABLE",
             f"The existing closure recheck policy rejected the command: {skip_reason or 'command_not_executed'}.",
-            "Use one repo-relative grep, cat, head, tail, or git diff/show/log -- <path> command against the changed file.",
+            "Use one repo-relative grep, cat, head, tail, or supported git diff/show/log command against the changed file.",
         )
     output = str(probe.get("stdout_snippet", "") or "")
     if not output.strip():
@@ -241,16 +259,12 @@ def _capture_verification(
     return output
 
 
-def record_single_file_proof(
+def _active_record_context(
     *,
     artifact_root: Path,
     project_root: Path,
-    changed_file: str,
     summary: str,
-    verification_command: str,
-) -> dict:
-    artifact_root = artifact_root.resolve()
-    project_root = project_root.resolve()
+) -> tuple[dict, str]:
     state_path = artifact_root / "state.json"
     profile_path = artifact_root / "project_profile.json"
     if not state_path.is_file() or not profile_path.is_file():
@@ -295,7 +309,7 @@ def record_single_file_proof(
         detail = ", ".join(str(path) for path in dirty_at_start) if isinstance(dirty_at_start, list) else "invalid baseline"
         raise ProofRecordError(
             "CLEAN_START_REQUIRED",
-            "The thin record path cannot separate this run from files that were already dirty at start: " + detail,
+            "The record path cannot separate this run from files that were already dirty at start: " + detail,
             "Commit, stash, or otherwise isolate the pre-existing work, then start a fresh run; otherwise use explicit manual proof.",
         )
     current_head = _run_git(project_root, ["rev-parse", "HEAD"]).strip()
@@ -313,6 +327,35 @@ def record_single_file_proof(
             "The proof summary must contain at least 24 non-whitespace characters.",
             "Describe the concrete bounded result rather than writing a generic done claim.",
         )
+    return state, cleaned_summary
+
+
+def _batch_verification_command(relative_file: str) -> str:
+    return "git diff --numstat HEAD -- " + shlex.quote(relative_file)
+
+
+def _artifact_root_relative_to_project(*, artifact_root: Path, project_root: Path) -> str:
+    try:
+        return artifact_root.resolve().relative_to(project_root.resolve()).as_posix()
+    except ValueError:
+        return ""
+
+
+def record_single_file_proof(
+    *,
+    artifact_root: Path,
+    project_root: Path,
+    changed_file: str,
+    summary: str,
+    verification_command: str,
+) -> dict:
+    artifact_root = artifact_root.resolve()
+    project_root = project_root.resolve()
+    state, cleaned_summary = _active_record_context(
+        artifact_root=artifact_root,
+        project_root=project_root,
+        summary=summary,
+    )
 
     resolved_file, relative_file = _validated_changed_file(project_root, changed_file)
     initial_fingerprint = _file_fingerprint(resolved_file)
@@ -379,4 +422,139 @@ def record_single_file_proof(
         "verification_command": verification_command.strip(),
         "verification_result": verification_result,
         "patch_sha256": payload["_synrail"]["patch_sha256"],
+    }
+
+
+def record_all_modified_proof(
+    *,
+    artifact_root: Path,
+    project_root: Path,
+    summary: str,
+) -> dict:
+    """Record per-file proof for the complete clean-start tracked change set."""
+    artifact_root = artifact_root.resolve()
+    project_root = project_root.resolve()
+    state, cleaned_summary = _active_record_context(
+        artifact_root=artifact_root,
+        project_root=project_root,
+        summary=summary,
+    )
+
+    changed_paths = _changed_git_paths(project_root, artifact_root=artifact_root)
+    if not changed_paths:
+        raise ProofRecordError(
+            "BATCH_SCOPE_REQUIRED",
+            "The batch record path needs at least one tracked changed file in the active worktree.",
+            "Make the bounded tracked changes first, then rerun synrail record --all-modified.",
+        )
+    if len(changed_paths) > MAX_BATCH_FILES:
+        raise ProofRecordError(
+            "BATCH_TOO_LARGE_FOR_THIN_RECORD",
+            f"The batch record path is limited to {MAX_BATCH_FILES} changed files; this run has {len(changed_paths)}.",
+            "Split the work into smaller bounded runs or use the manual proof path for the larger change set.",
+        )
+
+    captured: list[dict[str, object]] = []
+    for changed_path in changed_paths:
+        resolved_file, relative_file = _validated_changed_file(project_root, changed_path)
+        patch = _capture_git_patch(project_root, relative_file)
+        verification_command = _batch_verification_command(relative_file)
+        verification_result = _capture_verification(
+            project_root=project_root,
+            relative_file=relative_file,
+            verification_command=verification_command,
+        )
+        captured.append(
+            {
+                "resolved_file": resolved_file,
+                "relative_file": relative_file,
+                "fingerprint": _file_fingerprint(resolved_file),
+                "patch": patch,
+                "verification_command": verification_command,
+                "verification_result": verification_result,
+            }
+        )
+
+    expected_paths = [str(item["relative_file"]) for item in captured]
+    recorded_worktree_patch = _capture_worktree_patch(project_root)
+    if sorted(git_diff_patch_paths(recorded_worktree_patch)) != expected_paths:
+        raise ProofRecordError(
+            "BATCH_SCOPE_REQUIRED",
+            "The full tracked patch does not match the complete changed-file set observed by Synrail.",
+            "Stop concurrent edits, inspect git status, and rerun synrail record --all-modified.",
+        )
+
+    final_changed_paths = _changed_git_paths(project_root, artifact_root=artifact_root)
+    final_worktree_patch = _capture_worktree_patch(project_root)
+    stable = (
+        final_changed_paths == expected_paths
+        and final_worktree_patch == recorded_worktree_patch
+        and sorted(git_diff_patch_paths(final_worktree_patch)) == expected_paths
+    )
+    for item in captured:
+        relative_file = str(item["relative_file"])
+        resolved_file = item["resolved_file"]
+        final_resolved_file, final_relative_file = _validated_changed_file(project_root, relative_file)
+        final_patch = _capture_git_patch(project_root, relative_file)
+        stable = stable and bool(
+            final_relative_file == relative_file
+            and final_resolved_file == resolved_file
+            and _file_fingerprint(final_resolved_file) == item["fingerprint"]
+            and final_patch == item["patch"]
+        )
+    final_worktree_patch_after_files = _capture_worktree_patch(project_root)
+    stable = stable and final_worktree_patch_after_files == recorded_worktree_patch
+    if not stable:
+        raise ProofRecordError(
+            "WORKTREE_CHANGED_DURING_RECORD",
+            "A changed file, its patch, or the surrounding dirty-file scope changed while Synrail was recording batch proof.",
+            "Stop concurrent edits, inspect the live diff, and rerun synrail record --all-modified.",
+        )
+
+    provenance_records = [
+        {
+            "method": "git_patch_plus_recheck",
+            "changed_file": str(item["relative_file"]),
+            "verification_command": str(item["verification_command"]),
+            "verification_result": str(item["verification_result"]),
+        }
+        for item in captured
+    ]
+    patch_sha256_by_file = {
+        str(item["relative_file"]): hashlib.sha256(str(item["patch"]).encode("utf-8")).hexdigest()
+        for item in captured
+    }
+    payload = {
+        "request_id": str(state.get("run_id", "") or ""),
+        "task_class": str(state.get("task_class", "") or "bounded_change"),
+        "status": "PROVEN",
+        "change_disposition": "modified",
+        "summary": cleaned_summary,
+        "modified_files": expected_paths,
+        "git_diff": recorded_worktree_patch,
+        "diff_provenance_records": provenance_records,
+        "_synrail": {
+            "recorded_by": "synrail record --all-modified",
+            "patch_sha256_by_file": patch_sha256_by_file,
+            "worktree_patch_sha256": hashlib.sha256(recorded_worktree_patch.encode("utf-8")).hexdigest(),
+            "recorded_dirty_paths": expected_paths,
+            "artifact_root_relative": _artifact_root_relative_to_project(
+                artifact_root=artifact_root,
+                project_root=project_root,
+            ),
+            "acceptance_evaluated": False,
+        },
+    }
+    output_path = artifact_root / "final_result.json"
+    save_json(output_path, payload)
+    return {
+        "result": "BATCH_PROOF_RECORDED",
+        "accepted": False,
+        "closure_evaluated": False,
+        "artifact_root": str(artifact_root),
+        "project_root": str(project_root),
+        "final_result": str(output_path),
+        "changed_files": expected_paths,
+        "verification_commands": [str(item["verification_command"]) for item in captured],
+        "patch_sha256_by_file": patch_sha256_by_file,
     }

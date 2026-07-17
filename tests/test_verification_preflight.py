@@ -83,6 +83,26 @@ class VerificationPreflightTests(unittest.TestCase):
             self.assertIn("init-verification", payload["behavioral_verification"]["next_step"])
             self.assertFalse((project_root / ".synrail").exists(), "preflight must not leave an artifact directory behind")
 
+    def test_ephemeral_preflight_checks_cache_without_creating_repo_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_verification_preflight_") as tmpdir:
+            project_root = self.seed_git_project(tmpdir)
+            cache_root = Path(tmpdir) / "synrail-cache"
+            env = {**os.environ, "SYNRAIL_CACHE_HOME": str(cache_root)}
+            preflight = subprocess.run(
+                [sys.executable, str(ALPHA_ENTRY), "preflight", "--ephemeral", "--json"],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+
+            self.assertEqual(0, preflight.returncode, preflight.stdout + preflight.stderr)
+            payload = json.loads(preflight.stdout)
+            self.assertEqual("PASS", payload["status"])
+            self.assertTrue(Path(payload["artifact_root"]).is_relative_to(cache_root.resolve()))
+            self.assertFalse((project_root / ".synrail").exists())
+
     def test_untracked_and_dirty_profiles_require_review_before_start(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_verification_preflight_") as tmpdir:
             project_root = self.seed_git_project(tmpdir)

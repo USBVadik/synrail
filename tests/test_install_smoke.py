@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import sys
 import subprocess
@@ -203,7 +204,7 @@ class InstallSmokeTests(unittest.TestCase):
 
         self.assertIn("Controlled run started.", start_result.stdout)
         self.assertIn(
-            "Do this now: make the bounded change and run local verification; then use synrail record for one tracked file or strengthen final_result.json for other contours.",
+            "Do this now: make the bounded change and run local verification; then use synrail record for one tracked file, synrail record --all-modified for a small tracked batch, or strengthen final_result.json for other contours.",
             start_result.stdout,
         )
         self.assertIn("Starter proof surface is ready for this run.", start_result.stdout)
@@ -376,6 +377,75 @@ class InstallSmokeTests(unittest.TestCase):
             )
             self.assertIn("Synrail artifacts removed.", cleanup.stdout)
 
+    def test_ephemeral_reused_run_names_safe_abandon_command(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_ephemeral_reuse_") as tmpdir:
+            root = Path(tmpdir)
+            project_root = root / "project"
+            cache_root = root / "cache"
+            project_root.mkdir(parents=True, exist_ok=True)
+            env = {**os.environ, "SYNRAIL_CACHE_HOME": str(cache_root)}
+
+            first = subprocess.run(
+                [
+                    PYTHON,
+                    str(REPO_ROOT / "alpha.py"),
+                    "start",
+                    "--ephemeral",
+                    "--project-root",
+                    str(project_root),
+                    "first ephemeral task",
+                ],
+                check=True,
+                cwd=REPO_ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            artifact_line = next(line for line in first.stdout.splitlines() if line.startswith("Artifact root: "))
+            artifact_root = Path(artifact_line.split(": ", 1)[1]).expanduser().resolve()
+            first_state = json.loads((artifact_root / "state.json").read_text())
+
+            second = subprocess.run(
+                [
+                    PYTHON,
+                    str(REPO_ROOT / "alpha.py"),
+                    "start",
+                    "--ephemeral",
+                    "--project-root",
+                    str(project_root),
+                    "different task after an abandoned run",
+                ],
+                check=True,
+                cwd=REPO_ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertIn("Synrail already has a controlled run in progress.", second.stdout)
+            self.assertIn("If this task was intentionally abandoned", second.stdout)
+            self.assertIn("cleanup --ephemeral --project-root", second.stdout)
+            self.assertIn("it does not modify project files", second.stdout)
+            self.assertEqual(first_state["run_id"], json.loads((artifact_root / "state.json").read_text())["run_id"])
+
+            cleanup = subprocess.run(
+                [
+                    PYTHON,
+                    str(REPO_ROOT / "alpha.py"),
+                    "cleanup",
+                    "--ephemeral",
+                    "--project-root",
+                    str(project_root),
+                ],
+                check=True,
+                cwd=REPO_ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertIn("Synrail artifacts removed.", cleanup.stdout)
+            self.assertFalse(artifact_root.exists())
+
     @unittest.skipUnless(shutil.which("git"), "git is required for git-root discovery smoke")
     def test_ephemeral_start_from_subdir_uses_git_project_root(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_ephemeral_gitroot_") as tmpdir:
@@ -479,58 +549,97 @@ class InstallSmokeTests(unittest.TestCase):
             self.assertIn("Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells", claude)
             self.assertIn("Do not create helper scripts or make edits for an orientation-only question.", claude)
 
-    def test_first_run_guide_mentions_preflight_and_git_missing_path(self) -> None:
+    def test_current_user_docs_have_a_short_truthful_path(self) -> None:
         first_run_guide = (REPO_ROOT / "docs" / "core" / "FIRST_RUN_GUIDE.md").read_text()
         public_readme = (REPO_ROOT / "README.md").read_text()
-        public_readme_normalized = " ".join(public_readme.split())
         docs_readme = (REPO_ROOT / "docs" / "README.md").read_text()
         review_readme = (REPO_ROOT / "docs" / "review" / "README.md").read_text()
+        profiles_guide = (REPO_ROOT / "docs" / "advanced" / "VERIFICATION_PROFILES.md").read_text()
+        repo_clean_guide = (REPO_ROOT / "docs" / "advanced" / "REPO_CLEAN_WORKFLOWS.md").read_text()
         reference_readme = (REPO_ROOT / "tools" / "reference" / "README.md").read_text()
-        alpha_lane = (REPO_ROOT / "docs" / "core" / "ALPHA_LANE_001.md").read_text()
-        alpha_test_pack = (REPO_ROOT / "docs" / "core" / "ALPHA_TEST_PACK_001.md").read_text()
-        external_critique_pack = (REPO_ROOT / "docs" / "review" / "EXTERNAL_CRITIQUE_PACK_001.md").read_text()
-        review_handoff_checklist = (REPO_ROOT / "docs" / "review" / "REVIEW_HANDOFF_CHECKLIST_001.md").read_text()
+        normalized_profiles_guide = " ".join(profiles_guide.split())
 
-        self.assertIn("Agent: fixed add(); tests pass", first_run_guide)
-        self.assertIn("Verification unit: FAIL (exit 1)", first_run_guide)
-        self.assertIn("Synrail: Status: Verification Failed", first_run_guide)
-        self.assertIn("Verification unit: GREEN", first_run_guide)
-        self.assertIn("Agent: repaired the behavior, not the story", first_run_guide)
+        # Public onboarding stays short. The deeper operating detail belongs in
+        # explicitly named advanced guides rather than in the landing page.
+        self.assertLessEqual(len(public_readme.splitlines()), 190)
+        self.assertLessEqual(len(first_run_guide.splitlines()), 220)
+        self.assertIn(
+            'Synrail is a local acceptance gate for coding agents. It blocks a\nfalse-green "done" claim until task-scoped proof is rechecked.',
+            public_readme,
+        )
+        self.assertIn("## See It In 30 Seconds", public_readme)
+        self.assertIn("Agent: fixed add(); tests pass", public_readme)
+        self.assertIn("Verification unit: FAIL (exit 1)", public_readme)
+        self.assertIn("Synrail: Status: Verification Failed", public_readme)
+        self.assertIn("Synrail: Status: Accepted", public_readme)
+        self.assertIn("![Synrail false-green demo](examples/false-green-demo/assets/synrail-false-green-hero.gif)", public_readme)
+        self.assertIn("## Try It In 2 Minutes", public_readme)
+        self.assertIn("make install-dev", public_readme)
+        self.assertIn("make demo", public_readme)
+        self.assertIn("## Pick The Smallest Useful Lane", public_readme)
+        self.assertIn("[Small tracked change](docs/core/FIRST_RUN_GUIDE.md#1-prove-one-small-tracked-change)", public_readme)
+        self.assertIn("[Behavioral verification](docs/core/FIRST_RUN_GUIDE.md#2-enforce-a-behavioral-claim)", public_readme)
+        self.assertIn("[Repo-clean workflow](docs/core/FIRST_RUN_GUIDE.md#3-keep-artifacts-outside-many-repositories)", public_readme)
+        self.assertIn("## Is This Just Post-Review?", public_readme)
+        self.assertIn("you are acting as Synrail manually", " ".join(public_readme.split()))
+        self.assertIn("## What It Does Not Claim", public_readme)
+        self.assertIn("not a hostile same-user security boundary", public_readme)
+        self.assertIn("## The Everyday Loop", public_readme)
+        self.assertIn("synrail record --all-modified", public_readme)
+        self.assertIn("`record` writes proof, not acceptance.", public_readme)
+        self.assertIn("[Behavioral profiles](docs/advanced/VERIFICATION_PROFILES.md)", public_readme)
+        self.assertIn("[Repo-clean workflows](docs/advanced/REPO_CLEAN_WORKFLOWS.md)", public_readme)
+        self.assertNotIn("python3 tools/reference/synrail_install_v0.py", public_readme)
+
+        self.assertIn("# Your First Synrail Run", first_run_guide)
         self.assertIn("Only `Status: Accepted` means the task may be reported as complete.", first_run_guide)
-        self.assertIn("synrail suggest-verification", first_run_guide)
-        self.assertIn("synrail init-verification --name unit -- @synrail-python -m pytest -q", first_run_guide)
-        self.assertIn("resolves to the interpreter running\nSynrail", first_run_guide)
-        self.assertIn("This command does not run the argv, infer your test framework, or trust the", first_run_guide)
-        self.assertIn("writes a `REVIEW REQUIRED` scaffold", first_run_guide)
-        self.assertIn("exact timestamped backup", first_run_guide)
-        self.assertIn("Never put secrets in profile argv", first_run_guide)
-        self.assertIn("`NOT_CONFIGURED`, `REVIEW_REQUIRED`, `BLOCKED`, or `READY`", first_run_guide)
-        self.assertIn("Continue only when it reports `Behavioral verification: READY`", first_run_guide)
-        self.assertIn("does not execute profile argv or sign a", first_run_guide)
         self.assertIn("make install-dev", first_run_guide)
         self.assertIn("py -3 -m venv .venv", first_run_guide)
-        self.assertIn('.\\.venv\\Scripts\\python.exe -m pip install -e ".[dev]" -c constraints-dev.txt', first_run_guide)
-        self.assertIn("run it from Git Bash", first_run_guide)
-        self.assertIn("## Pick The Smallest First Path", first_run_guide)
-        self.assertIn("Do not begin by filling in every artifact file", first_run_guide)
-        self.assertIn("See the false-green loop", first_run_guide)
-        self.assertIn("Govern one simple existing tracked file", first_run_guide)
-        self.assertIn('Make a claim such as "tests pass" enforceable', first_run_guide)
-        self.assertIn("Do QA or analysis across many repositories", first_run_guide)
-        self.assertIn("do not\nrepresent a single-file `record` run as proof that a test suite passed", first_run_guide)
-        self.assertIn("make install-local", first_run_guide)
-        self.assertIn("This creates the local development venv and installs the `synrail` console script used by the public quickstart.", first_run_guide)
-        self.assertIn("If you are doing QA/analysis across many repositories and do not want Synrail artifacts inside each checkout", first_run_guide)
-        self.assertIn('synrail start --ephemeral "Describe the bounded local analysis."', first_run_guide)
-        self.assertIn("synrail check --ephemeral", first_run_guide)
+        self.assertIn("## 1. Prove One Small Tracked Change", first_run_guide)
+        self.assertIn("synrail record path/to/file", first_run_guide)
+        self.assertIn("synrail record --all-modified", first_run_guide)
+        self.assertIn("## 2. Enforce A Behavioral Claim", first_run_guide)
+        self.assertIn("synrail preflight", first_run_guide)
+        self.assertIn("synrail verify", first_run_guide)
+        self.assertIn("[Behavioral Verification Profiles](../advanced/VERIFICATION_PROFILES.md)", first_run_guide)
+        self.assertIn("## 3. Keep Artifacts Outside Many Repositories", first_run_guide)
         self.assertIn("synrail cleanup --ephemeral", first_run_guide)
-        self.assertIn("synrail cleanup --ephemeral --stale", first_run_guide)
-        self.assertIn("prunes stale ephemeral runs older than 24 hours", first_run_guide)
-        self.assertIn("If you run from a subdirectory inside a git checkout, Synrail uses the git repository root as the default project root.", first_run_guide)
-        self.assertIn('synrail start --ephemeral --project-root path/to/target-repo "Describe the bounded local analysis."', first_run_guide)
-        self.assertIn("Do not use pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets there", first_run_guide)
-        self.assertIn('$env:PYTHONUTF8 = "1"', first_run_guide)
-        self.assertIn('$env:Path = "C:\\Program Files\\Git\\usr\\bin;" + $env:Path', first_run_guide)
+        self.assertIn("[Repo-Clean Workflows](../advanced/REPO_CLEAN_WORKFLOWS.md)", first_run_guide)
+        self.assertIn("## Read A Non-Green Result", first_run_guide)
+        self.assertIn("make install-local", first_run_guide)
+        self.assertIn("--policy-mode focused", first_run_guide)
+        self.assertIn("ordinary read-only questions, planning, and code review outside", first_run_guide)
+        self.assertIn("`start` -> `record` -> optional `verify` -> `check`", first_run_guide)
+        self.assertNotIn("python3 tools/reference/synrail_install_v0.py", first_run_guide)
+
+        self.assertIn("# Behavioral Verification Profiles", profiles_guide)
+        self.assertIn("synrail suggest-verification", profiles_guide)
+        self.assertIn("synrail init-verification --name unit -- @synrail-python -m pytest -q", profiles_guide)
+        self.assertIn("Behavioral verification: READY", profiles_guide)
+        self.assertIn("A convenient read-only `grep` proof cannot substitute", profiles_guide)
+        self.assertIn("Do not put secrets in `argv`", normalized_profiles_guide)
+        self.assertIn("suggestion only: it never executes a candidate", normalized_profiles_guide)
+        self.assertIn("not a hostile\nsame-user boundary", profiles_guide)
+        self.assertIn("receipt_hmac.key", profiles_guide)
+
+        self.assertIn("# Repo-Clean Workflows", repo_clean_guide)
+        self.assertIn("synrail start --ephemeral", repo_clean_guide)
+        self.assertIn("synrail cleanup --ephemeral", repo_clean_guide)
+        self.assertIn("synrail cleanup --ephemeral --stale", repo_clean_guide)
+        self.assertIn("A process killed mid-run cannot promise instant cleanup.", repo_clean_guide)
+        self.assertIn("Use the same `--ephemeral` and `--project-root` values", repo_clean_guide)
+        self.assertIn("PATH_SCOPE_VIOLATION", repo_clean_guide)
+        self.assertIn("Do not use `git -c`, `--ext-diff`, `--textconv`", repo_clean_guide)
+        self.assertIn("multi-command snippets", repo_clean_guide)
+        self.assertIn('$env:PYTHONUTF8 = "1"', repo_clean_guide)
+
+        self.assertIn("# Synrail Documentation", docs_readme)
+        self.assertIn("## Current User Path", docs_readme)
+        self.assertIn("Most first runs need only the README and First Run Guide.", docs_readme)
+        self.assertIn("## Historical Review And Research", docs_readme)
+        self.assertIn("# Synrail Review And History", review_readme)
+        self.assertIn("This directory is evidence and maintainer history, not a setup guide.", review_readme)
+
         template = subprocess.run(
             [PYTHON, str(REPO_ROOT / "alpha.py"), "final-result-template", "--ephemeral"],
             check=True,
@@ -540,191 +649,18 @@ class InstallSmokeTests(unittest.TestCase):
         ).stdout
         self.assertIn("Keep diff_provenance.verification_command recheckable", template)
         self.assertIn("Do not use pipes, &&, sed, awk, perl, subshells, or multi-command snippets.", template)
-        self.assertIn("Use `--artifact-root ./.synrail` only when you intentionally want the run artifacts to stay inside the repository", first_run_guide)
-        self.assertIn("On the normal happy path, treat it as the only proof surface you need to touch.", first_run_guide)
-        self.assertIn("leave `readback.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
-        self.assertIn("leave `scenario_proof.txt` untouched unless `synrail check` explicitly names it", first_run_guide)
-        self.assertIn("Only if `check` later targets a fallback prose surface, use:", first_run_guide)
-        self.assertIn("Git Preflight", first_run_guide)
-        self.assertIn("synrail preflight", first_run_guide)
-        self.assertIn("python3 alpha.py preflight", first_run_guide)
-        self.assertIn("Git is not installed. Synrail can still use structured diff_provenance, but git_diff and restore coverage will be weaker. Install git for the normal path.", first_run_guide)
-        self.assertIn("If `git` is missing, Synrail can still run. Do not invent a `git_diff`.", first_run_guide)
-        self.assertIn("leave `git_diff` empty and use structured provenance instead", first_run_guide)
-        self.assertIn("for a multi-file change, use `diff_provenance_records` or `per_file_diff_provenance`", first_run_guide)
-        self.assertIn('python3 alpha.py start "Describe the bounded local change."', first_run_guide)
-        self.assertIn("python3 alpha.py check", first_run_guide)
-        self.assertIn("Repeat until `synrail check` prints `Status: Accepted`.", first_run_guide)
-        self.assertIn("synrail record path/to/file", first_run_guide)
-        self.assertIn("requires one direct, existing, repository-relative tracked file", first_run_guide)
-        self.assertIn("requires a clean git worktree at `start` and the same `HEAD` at `record`", first_run_guide)
-        self.assertIn("never invokes closure and never reports the task as accepted", first_run_guide)
-        self.assertIn("Use manual `final_result.json` proof for multi-file, untracked, deleted", first_run_guide)
-        self.assertIn("`Status: Accepted` means the proof bundle is complete", first_run_guide)
-        self.assertIn("`Proof Too Thin To Trust` -- structure is there but evidence is thin.", first_run_guide)
-        self.assertIn("`Cannot Continue This Run` -- this run reached a terminal rejected state.", first_run_guide)
 
-        self.assertIn(
-            'Synrail is a local acceptance gate for coding agents: it blocks false-green\n"done" until task-scoped proof is rechecked.',
-            public_readme,
-        )
-        self.assertIn("[![CI](https://github.com/USBVadik/synrail/actions/workflows/security-hygiene.yml/badge.svg)]", public_readme)
-        self.assertIn("[![License: Apache-2.0]", public_readme)
-        self.assertIn("![Python 3.11-3.14]", public_readme)
-        self.assertIn("![Status: Alpha]", public_readme)
-        self.assertIn("If the proof is weak, mismatched, or unverified", public_readme)
-        self.assertIn("names one bounded repair step", public_readme)
-        self.assertIn("Behavioral verification: READY", public_readme)
-        self.assertIn("Preflight never executes profile", public_readme)
-        self.assertIn("CI asks whether configured jobs passed.", public_readme)
-        self.assertIn("AI code review asks what looks wrong in", public_readme)
-        self.assertIn("this bounded agent run earned an accepted result", public_readme)
-        self.assertIn("It does not replace CI or review", public_readme)
-        self.assertIn("## 30-Second Demo", public_readme)
-        self.assertIn("Agent: fixed add(); tests pass", public_readme)
-        self.assertIn("Verification unit: FAIL (exit 1)", public_readme)
-        self.assertIn("Synrail: Status: Verification Failed", public_readme)
-        self.assertIn("Verification unit: GREEN", public_readme)
-        self.assertIn("Synrail: Status: Accepted", public_readme)
-        self.assertIn("![Synrail false-green demo](examples/false-green-demo/assets/synrail-false-green-hero.gif)", public_readme)
-        self.assertIn("[MP4 demo asset](examples/false-green-demo/assets/synrail-false-green-hero.mp4)", public_readme)
-        self.assertIn("A real failing unit test and a structurally valid `grep` proof are checked by", public_readme)
-        self.assertIn("[false-green demo](examples/false-green-demo/README.md)", public_readme)
-        self.assertIn("[first tester protocol](docs/review/FIRST_TESTER_PROTOCOL_001.md)", public_readme)
-        self.assertIn("If you only open three public surfaces, use them in this order:", public_readme)
-        self.assertIn("[Your First Synrail Run](docs/core/FIRST_RUN_GUIDE.md)", public_readme)
-        self.assertIn("The point is not to make agent output sound confident. The point is to stop false-green closure before it gets accepted as truth.", public_readme)
-        self.assertIn("## Is This Just Post-Review?", public_readme)
-        self.assertIn("A normal post-review asks: is this code good?", public_readme)
-        self.assertIn("Synrail asks a narrower question first: is the agent allowed to claim this task is done?", public_readme)
-        self.assertIn("If you personally inspect every diff, run every check, and keep the whole agent context in your head, Synrail may be unnecessary overhead.", public_readme)
-        self.assertIn("you are acting as Synrail manually", public_readme)
-        self.assertIn("Synrail is for the moment you stop being the runtime supervisor", public_readme)
-        self.assertIn("It does not replace review. It prevents unearned acceptance before review.", public_readme)
-        self.assertIn("## Try It In 2 Minutes", public_readme)
-        self.assertIn("git clone https://github.com/USBVadik/synrail", public_readme)
-        self.assertIn("make demo", public_readme)
-        self.assertIn("This is the fastest way to see Synrail block plausible proof while required tests are red", public_readme)
-        self.assertIn("On Windows, use the PowerShell install path", public_readme)
-        self.assertIn("## Choose Your First Path", public_readme)
-        self.assertIn("You do not need to learn every artifact or command before trying Synrail", public_readme)
-        self.assertIn("See the product catch a false-green claim", public_readme)
-        self.assertIn("[single-file route](#first-real-task-one-tracked-file)", public_readme)
-        self.assertIn("[behavioral route](#behavioral-verification-operator-owned-profiles)", public_readme)
-        self.assertIn("[repo-clean route](#repo-clean-analysis-across-many-repositories)", public_readme)
-        self.assertIn("The first two routes are intentionally cheap", public_readme)
-        self.assertIn("## You May Not Need Synrail If", public_readme)
-        self.assertIn("you personally inspect every changed line", public_readme)
-        self.assertIn("a false-green costs less than running the gate", public_readme)
-        self.assertIn("In that case, the baseline is probably better. Synrail becomes useful when verification debt compounds.", public_readme)
-        self.assertIn("## Who This Is For", public_readme)
-        self.assertIn("developers using Claude Code, Cursor, Codex, Aider, Gemini CLI, or similar coding agents", public_readme)
-        self.assertIn("operators who still manually verify whether an agent's \"done\" claim is actually supported", public_readme)
-        self.assertIn("## False-Green Cases Synrail Targets", public_readme)
-        self.assertNotIn("tests claimed as passed but not actually run", public_readme)
-        self.assertIn("recorded verification evidence that fails read-only recheck", public_readme)
-        self.assertIn("## Behavioral Verification: Operator-Owned Profiles", public_readme)
-        self.assertIn("Use this route only when the agent must be allowed to make a behavioral claim", public_readme)
-        self.assertIn("<summary>Profile setup and trust model (advanced)</summary>", public_readme)
-        self.assertIn("</details>", public_readme)
-        self.assertIn("synrail suggest-verification", public_readme)
-        self.assertIn("recognizes conventional Python/Node/Go/Rust root markers", public_readme)
-        self.assertIn("never runs a discovered command, writes `synrail.toml`, or marks a candidate\ntrusted", public_readme)
-        self.assertIn("synrail init-verification --name unit -- @synrail-python -m pytest -q", public_readme)
-        self.assertIn("the one reserved executable alias", public_readme)
-        self.assertIn("scaffold one required profile without executing the command", public_readme)
-        self.assertIn("generated `synrail.toml` is marked `REVIEW REQUIRED`", public_readme)
-        self.assertIn("exact timestamped backup", public_readme)
-        self.assertIn("Do not put secrets in profile argv", public_readme)
-        self.assertIn("[verification.unit]", public_readme)
-        self.assertIn("git-tracked config that matches `HEAD`", public_readme)
-        self.assertIn(
-            "refuses acceptance while any required profile lacks a fresh green receipt",
-            public_readme_normalized,
-        )
-        self.assertIn("An agent cannot substitute a\nconvenient read-only proof for a failing test suite", public_readme)
-        self.assertIn("realpath and SHA-256 of each `argv[0]`", public_readme)
-        self.assertIn("`PYTEST_ADDOPTS`, `NODE_OPTIONS`, and preload hooks", public_readme)
-        self.assertIn("it is not a hostile same-user security\nboundary", public_readme)
-        self.assertIn("The tamper-resistant lane is a required CI check", public_readme)
-        self.assertIn("narrative completion instead of concrete runtime evidence", public_readme)
-        self.assertIn("# after make install-dev", public_readme)
-        self.assertIn("## First Real Task: One Tracked File", public_readme)
-        self.assertIn('.venv/bin/synrail start "Describe the bounded local change."', public_readme)
-        self.assertIn(".venv/bin/synrail record path/to/file", public_readme)
-        self.assertIn("It writes proof, not acceptance", public_readme)
-        self.assertIn(".venv/bin/synrail check", public_readme)
-        self.assertIn("### Repo-Clean Analysis Across Many Repositories", public_readme)
-        self.assertIn("## Alpha Tester Install Path", public_readme)
-        self.assertIn("Prefer a repo-clean artifact lane when you are using Synrail for QA/analysis across many repositories:", public_readme)
-        self.assertIn('.venv/bin/synrail start --ephemeral "Describe the bounded local analysis."', public_readme)
-        self.assertIn(".venv/bin/synrail check --ephemeral", public_readme)
-        self.assertIn(".venv/bin/synrail cleanup --ephemeral", public_readme)
-        self.assertIn(".venv/bin/synrail cleanup --ephemeral --stale", public_readme)
-        self.assertIn("prunes stale ephemeral runs older than 24 hours", public_readme)
-        self.assertIn("If you run from a subdirectory inside a git checkout, Synrail uses the git repository root as the default project root.", public_readme)
-        self.assertIn('.venv/bin/synrail start --ephemeral --project-root path/to/target-repo "Describe the bounded local analysis."', public_readme)
-        self.assertIn("Git recheck commands must use exactly `git diff/show/log -- <path>`", public_readme)
-        self.assertIn("with no `git -c`, `--ext-diff`, `--textconv`, pipes, `&&`, `sed`, `awk`, `perl`, subshells, or multi-command snippets in that field.", public_readme)
-        self.assertIn('$env:PYTHONUTF8 = "1"', public_readme)
-        self.assertIn('$env:Path = "C:\\Program Files\\Git\\usr\\bin;" + $env:Path', public_readme)
-        self.assertIn("`--ephemeral` keeps Synrail artifacts outside the project checkout while still resolving proof and verification paths against the project root.", public_readme)
-        self.assertIn("Use this only when you want the repo-native installer path used by alpha testers.", public_readme)
-        self.assertIn("It writes `CLAUDE.md`, `GEMINI.md`, and `AGENTS.md` for agent discovery in the target project.", public_readme)
-        self.assertNotIn("python3 tools/reference/synrail_install_v0.py --venv .venv --project-root", public_readme)
-        self.assertIn("## Give Feedback", public_readme)
-        self.assertIn("issues/new?template=false_green_case.yml", public_readme)
-        self.assertIn("issues/new?template=confusing_output.yml", public_readme)
-        self.assertIn("issues/new?template=alpha_feedback.yml", public_readme)
-        self.assertIn("## Where It Fits", public_readme)
-        self.assertIn("| Layer | Primary question | Typical output | Relationship to Synrail |", public_readme)
-        self.assertIn("Did the configured jobs pass?", public_readme)
-        self.assertIn("What looks risky or wrong in this diff?", public_readme)
-        self.assertIn("Did this bounded agent run earn the right to say done?", public_readme)
-        self.assertIn("binds task, changed scope, rechecked proof, and closure", public_readme)
-        self.assertIn("## When To Use It", public_readme)
-        self.assertIn("one local agent run on the same machine needs a reviewable proof boundary", public_readme)
-        self.assertIn("## When Not To Use It", public_readme)
-        self.assertIn("you need a broad self-serve workflow platform or general automation engine", public_readme)
-        self.assertIn("you want the current alpha to stand in for full deployment or ops orchestration", public_readme)
-        self.assertIn("narrow local alpha product", public_readme)
-        self.assertIn("not yet broad self-serve or broad production-ready", public_readme)
-        self.assertIn("[Docs Map](docs/README.md)", public_readme)
-        self.assertIn("[Review archive map](docs/review/README.md)", public_readme)
-        self.assertLess(
-            public_readme.index("## Choose Your First Path"),
-            public_readme.index("## Behavioral Verification: Operator-Owned Profiles"),
-        )
-        self.assertLess(
-            public_readme.index("## Behavioral Verification: Operator-Owned Profiles"),
-            public_readme.index("## First Real Task: One Tracked File"),
-        )
-
-        self.assertIn("This is the short current source-of-truth reading path for the repo.", docs_readme)
-        self.assertIn("core/FIRST_RUN_GUIDE.md", docs_readme)
-        self.assertIn("core/SYNRAIL_RUNTIME_TRUTH_SURFACE.md", docs_readme)
-        self.assertIn("Use `docs/review/README.md` only after this map", docs_readme)
-        self.assertIn("This index is for deeper review, critique, and outreach material.", review_readme)
-        self.assertIn("It is not the primary public source-of-truth reading path for the repo.", review_readme)
-        self.assertIn("Current public-proof surfaces on this branch:", review_readme)
-
-        current_public_docs = {
+        current_user_docs = {
             "README.md": public_readme,
             "docs/core/FIRST_RUN_GUIDE.md": first_run_guide,
-            "docs/core/ALPHA_LANE_001.md": alpha_lane,
-            "docs/core/ALPHA_TEST_PACK_001.md": alpha_test_pack,
-            "docs/review/EXTERNAL_CRITIQUE_PACK_001.md": external_critique_pack,
-            "docs/review/REVIEW_HANDOFF_CHECKLIST_001.md": review_handoff_checklist,
+            "docs/advanced/VERIFICATION_PROFILES.md": profiles_guide,
+            "docs/advanced/REPO_CLEAN_WORKFLOWS.md": repo_clean_guide,
             "tools/reference/README.md": reference_readme,
         }
-        for name, content in current_public_docs.items():
-            with self.subTest(current_public_doc=name):
+        for name, content in current_user_docs.items():
+            with self.subTest(current_user_doc=name):
                 self.assertNotIn("python3 tools/reference/synrail_install_v0.py --venv .venv", content)
                 self.assertNotIn("python3 tools/reference/synrail_install_v0.py", content)
-        self.assertIn("../../examples/false-green-demo/README.md", review_readme)
-        self.assertIn("PUBLIC_LAUNCH_PACKET_001.md", review_readme)
-        self.assertIn("FIRST_TESTER_PROTOCOL_001.md", review_readme)
-        self.assertIn("SERVER_GEMINI_ALPHA_FINDING_001.md", review_readme)
 
         demo_readme = (REPO_ROOT / "examples" / "false_green_demo.md").read_text()
         demo_pack_readme = (REPO_ROOT / "examples" / "false-green-demo" / "README.md").read_text()
@@ -877,8 +813,8 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1", ci_workflow)
         self.assertIn("gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e", ci_workflow)
         self.assertIn('python-version: ["3.11", "3.12", "3.13", "3.14"]', ci_workflow)
-        self.assertIn("Receipt key lifecycle", first_run_guide)
-        self.assertIn("receipt_hmac.key", first_run_guide)
+        self.assertIn("Receipt Key Lifecycle", profiles_guide)
+        self.assertIn("receipt_hmac.key", profiles_guide)
         self.assertNotIn("uses: actions/checkout@v4", ci_workflow)
         self.assertNotIn("uses: actions/setup-python@v5", ci_workflow)
         self.assertIn(
@@ -893,6 +829,26 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("strengthen final_result.json first", reference_readme)
         self.assertIn("leave readback/scenario_proof untouched unless synrail check later names them", reference_readme)
         self.assertIn("focus on `final_result.json`: status, changed files, and diff/provenance first", reference_readme)
+
+    def test_current_docs_local_markdown_targets_exist(self) -> None:
+        """Keep the curated onboarding path navigable as docs are reorganized."""
+        current_docs = (
+            REPO_ROOT / "README.md",
+            REPO_ROOT / "docs" / "README.md",
+            REPO_ROOT / "docs" / "core" / "FIRST_RUN_GUIDE.md",
+            REPO_ROOT / "docs" / "advanced" / "VERIFICATION_PROFILES.md",
+            REPO_ROOT / "docs" / "advanced" / "REPO_CLEAN_WORKFLOWS.md",
+            REPO_ROOT / "docs" / "review" / "README.md",
+        )
+        markdown_target = re.compile(r"!?\[[^\]]+\]\(([^)]+)\)")
+
+        for document in current_docs:
+            for target in markdown_target.findall(document.read_text()):
+                local_target = target.split("#", 1)[0]
+                if not local_target or "://" in local_target or local_target.startswith("mailto:"):
+                    continue
+                with self.subTest(document=document.relative_to(REPO_ROOT), target=target):
+                    self.assertTrue((document.parent / local_target).exists())
 
 
 if __name__ == "__main__":
