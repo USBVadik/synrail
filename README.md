@@ -77,15 +77,26 @@ This is the fastest way to see Synrail block plausible proof while required test
 On Windows, use the PowerShell install path in the [First Run Guide](docs/core/FIRST_RUN_GUIDE.md), then run the current demo harness from Git Bash.
 The documented compatibility range is CPython 3.11-3.14; Linux CI tests every version in that range and Windows smoke covers 3.11.
 
-## Verify The Local Install
+## Choose Your First Path
 
-```bash
-make install-dev
-.venv/bin/synrail --help
-make demo
-```
+You do not need to learn every artifact or command before trying Synrail. Pick
+the smallest lane that matches the claim you want to make:
 
-Use this when you already have the checkout and want the shortest local smoke path.
+- **See the product catch a false-green claim.** Run `make demo`. It is a
+  disposable, known failing-then-repaired example; it does not touch your work.
+- **Proof-gate one small existing tracked file.** Use the
+  [single-file route](#first-real-task-one-tracked-file). It captures a real
+  patch and rechecks one read-only proof command.
+- **Allow an agent to say a behavior claim such as "tests pass."** Use the
+  [behavioral route](#behavioral-verification-operator-owned-profiles). A
+  human reviews and commits the exact verification command before the run
+  starts.
+- **Do QA or analysis across several repositories.** Use the
+  [repo-clean route](#repo-clean-analysis-across-many-repositories), which
+  keeps run artifacts outside the checkout.
+
+The first two routes are intentionally cheap. The behavioral route is the one
+that turns a named runtime check into an acceptance requirement.
 
 ## You May Not Need Synrail If
 
@@ -114,6 +125,19 @@ In that case, the baseline is probably better. Synrail becomes useful when verif
 - failed repair handoff without a bounded continuation path
 
 ## Behavioral Verification: Operator-Owned Profiles
+
+Use this route only when the agent must be allowed to make a behavioral claim,
+such as "tests pass." A human chooses the exact verification command once,
+reviews it, and commits it in `synrail.toml` before the controlled run starts.
+Then `synrail verify` must produce a fresh green receipt before `synrail check`
+can accept the work.
+
+If you just want the first commands, read the [behavioral route in Your First
+Synrail Run](docs/core/FIRST_RUN_GUIDE.md#2b-verify-behavioral-claims-when-profiles-are-configured).
+The detailed setup and trust model are kept below for operators who need them.
+
+<details>
+<summary>Profile setup and trust model (advanced)</summary>
 
 Read-only proof (`grep`, `cat`, `head`, `tail`, `git diff/show/log`) shows
 that a change is real, fresh, and in scope. It does not show that the
@@ -216,7 +240,9 @@ drift and direct artifact edits; it is not a hostile same-user security
 boundary. The tamper-resistant lane is a required CI check on a surface the
 agent cannot write to.
 
-## Quick Start
+</details>
+
+## First Real Task: One Tracked File
 
 ```bash
 # after make install-dev
@@ -238,6 +264,8 @@ closure will recheck. It writes proof, not acceptance; only the following
 pre-dirty, revision-changing, or no-git work, use the explicit
 `final_result.json` path described in the
 [First Run Guide](docs/core/FIRST_RUN_GUIDE.md).
+
+### Repo-Clean Analysis Across Many Repositories
 
 Prefer a repo-clean artifact lane when you are using Synrail for QA/analysis across many repositories:
 

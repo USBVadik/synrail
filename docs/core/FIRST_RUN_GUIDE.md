@@ -47,6 +47,26 @@ If editable install is temporarily unavailable but this is a source checkout,
 checking for an installed `synrail` command. The installed CLI remains the
 normal path for real work.
 
+## Pick The Smallest First Path
+
+Do not begin by filling in every artifact file. Pick the narrowest route that
+matches what you need to establish:
+
+1. **See the false-green loop.** Run `make demo`. It is disposable and shows a
+   known failing behavioral check remain blocked until the repair is verified.
+2. **Govern one simple existing tracked file.** Use `synrail start`, make the
+   change, `synrail record path/to/file`, then `synrail check`. This proves a
+   scoped patch and a recheckable read-only observation; it does not prove a
+   program-behavior claim by itself.
+3. **Make a claim such as "tests pass" enforceable.** Review and commit a
+   `synrail.toml` verification profile before `start`, then use `synrail
+   verify` before `check`. Follow [step 2b](#2b-verify-behavioral-claims-when-profiles-are-configured).
+4. **Do QA or analysis across many repositories.** Add `--ephemeral` to the
+   active run commands so Synrail stores its artifacts outside each checkout.
+
+Use the smallest route that supports the actual claim. In particular, do not
+represent a single-file `record` run as proof that a test suite passed.
+
 ## Optional One-Time Repo Setup For Local Agents
 
 If you want local coding agents to discover Synrail naturally in this repo, bootstrap the repo-native hints in one step:
