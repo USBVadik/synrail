@@ -48,6 +48,14 @@ make install-local
 
 That wraps the repo-native installer and immediately creates missing `AGENTS.md` / `GEMINI.md` / `CLAUDE.md` files in the repo root or appends a managed Synrail block to existing ones. The generated policy teaches agents the full `preflight -> start -> verify -> check` lifecycle, keeps `synrail.toml` operator-owned, and forbids replacing a failed behavioral profile with convenient narrative or read-only proof. If you later rerun with `--force`, Synrail first writes a timestamped `.synrail.bak.*` backup of the existing policy file before replacing it. It is optional for humans, but useful when you want the local agent workflow to start in controlled mode without adding Synrail instructions to every prompt.
 
+For Kiro, generate a workspace steering file instead of a root-level policy file:
+
+```bash
+synrail init-agent --agent kiro
+```
+
+The command writes `.kiro/steering/synrail.md`. It intentionally does not create Kiro hooks because hook configuration is environment-specific and should remain operator-owned.
+
 For a runnable GitHub Actions lane after install, use:
 
 ```bash

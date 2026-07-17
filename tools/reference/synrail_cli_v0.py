@@ -29,6 +29,8 @@ try:
         render_claude_policy_markdown,
         render_gemini_policy_block,
         render_gemini_policy_markdown,
+        render_kiro_policy_block,
+        render_kiro_policy_markdown,
         write_agent_policy_file,
     )
 except ImportError:
@@ -44,6 +46,8 @@ except ImportError:
         render_claude_policy_markdown,
         render_gemini_policy_block,
         render_gemini_policy_markdown,
+        render_kiro_policy_block,
+        render_kiro_policy_markdown,
         write_agent_policy_file,
     )
 
@@ -732,9 +736,11 @@ def agent_adoption_context() -> AgentAdoptionContext:
         render_agent_policy_markdown=render_agent_policy_markdown,
         render_gemini_policy_markdown=render_gemini_policy_markdown,
         render_claude_policy_markdown=render_claude_policy_markdown,
+        render_kiro_policy_markdown=render_kiro_policy_markdown,
         render_agents_policy_block=render_agents_policy_block,
         render_gemini_policy_block=render_gemini_policy_block,
         render_claude_policy_block=render_claude_policy_block,
+        render_kiro_policy_block=render_kiro_policy_block,
         write_agent_policy_file=write_agent_policy_file,
     )
 
@@ -4255,7 +4261,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_suggest_verification.set_defaults(func=cmd_suggest_verification)
 
     p_init_agent = sub.add_parser("init-agent", help="Write agent onboarding files for one supported agent")
-    p_init_agent.add_argument("--agent", required=True, choices=["claude", "gemini", "codex", "cursor"])
+    p_init_agent.add_argument("--agent", required=True, choices=["claude", "gemini", "codex", "cursor", "kiro"])
     p_init_agent.add_argument("--project-root", default=".")
     p_init_agent.add_argument("--artifact-root", default=DEFAULT_ALPHA_ARTIFACT_ROOT)
     p_init_agent.add_argument("--force", action="store_true")
