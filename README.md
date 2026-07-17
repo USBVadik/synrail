@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/USBVadik/synrail/actions/workflows/security-hygiene.yml/badge.svg)](https://github.com/USBVadik/synrail/actions/workflows/security-hygiene.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+![Python 3.11-3.14](https://img.shields.io/badge/python-3.11--3.14-blue)
 ![Status: Alpha](https://img.shields.io/badge/status-alpha-orange)
 
 Synrail is a local acceptance gate for coding agents: it blocks false-green
@@ -75,6 +75,7 @@ make demo
 
 This is the fastest way to see Synrail block plausible proof while required tests are red, then accept only the verified repair.
 On Windows, use the PowerShell install path in the [First Run Guide](docs/core/FIRST_RUN_GUIDE.md), then run the current demo harness from Git Bash.
+The documented compatibility range is CPython 3.11-3.14; Linux CI tests every version in that range and Windows smoke covers 3.11.
 
 ## Verify The Local Install
 
