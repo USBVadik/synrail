@@ -25,9 +25,10 @@ This demo shows the narrow Synrail wedge:
 
 The script creates a disposable git repository with a buggy function, a real
 `unittest`, and a tracked Verification Profile. It invokes the real installed
-Synrail CLI to record proof, run the required test, check closure, repair the
-behavior, and reverify it. The script asserts both the blocked and accepted
-states; this is not a prewritten transcript printer.
+`synrail` command when available, then falls back to `python3 alpha.py` from a
+source checkout. It records proof, runs the required test, checks closure,
+repairs the behavior, and reverifies it. The script asserts both the blocked
+and accepted states; this is not a prewritten transcript printer.
 
 ## What you should see
 

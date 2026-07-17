@@ -88,6 +88,13 @@ one primary owner: `ownership:product`, `ownership:operator`, or
 label after classification. Split mixed-owner reports, and require a failing
 regression before a product-owned kernel fix.
 
+## CI And Action Pins
+
+The repository CI matrix supports CPython 3.11 through 3.14. Keep third-party
+GitHub Actions pinned to full commit SHAs; update a pin only with its release
+comment and a passing CI run. Do not replace a SHA pin with a mutable tag such
+as `@v6` during routine edits.
+
 Never attach an unredacted bug packet, secret, private source excerpt, or absolute
 path to a public issue. Use the private vulnerability-reporting path in
 `SECURITY.md` for suspected security issues.

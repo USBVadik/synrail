@@ -140,6 +140,43 @@ class InstallSmokeTests(unittest.TestCase):
             result.stdout,
         )
 
+    @unittest.skipIf(os.name == "nt", "The source-checkout fallback test uses a POSIX-only isolated PATH")
+    def test_false_green_demo_falls_back_to_repo_local_alpha(self) -> None:
+        bash = shutil.which("bash")
+        self.assertIsNotNone(bash, "the live false-green demo requires bash")
+        with tempfile.TemporaryDirectory(prefix="synrail_demo_alpha_fallback_") as tmpdir:
+            isolated_root = Path(tmpdir) / "synrail"
+            script_dir = isolated_root / "examples" / "false-green-demo"
+            script_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(REPO_ROOT / "alpha.py", isolated_root / "alpha.py")
+            shutil.copytree(REPO_ROOT / "tools", isolated_root / "tools")
+            # A source checkout includes the doctor-coverage corpus fixtures; without
+            # them, a real fallback rightly refuses to claim the workspace is ready.
+            shutil.copytree(REPO_ROOT / "fixtures", isolated_root / "fixtures")
+            shutil.copy2(
+                REPO_ROOT / "examples" / "false-green-demo" / "run_demo.sh",
+                script_dir / "run_demo.sh",
+            )
+
+            env = os.environ.copy()
+            env["SYNRAIL_PYTHON"] = PYTHON
+            env["PATH"] = os.pathsep.join(
+                path
+                for path in os.get_exec_path(env)
+                if not (Path(path) / "synrail").exists()
+            )
+            result = subprocess.run(
+                [bash, str(script_dir / "run_demo.sh")],
+                check=True,
+                cwd=isolated_root,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+
+        self.assertIn("Synrail: Status: Verification Failed", result.stdout)
+        self.assertIn("Synrail: Status: Accepted", result.stdout)
+
     def _assert_installed_start_path(self, synrail_bin: Path, project_root: Path) -> None:
         artifact_root = project_root / ".synrail"
 
@@ -525,7 +562,7 @@ class InstallSmokeTests(unittest.TestCase):
         )
         self.assertIn("[![CI](https://github.com/USBVadik/synrail/actions/workflows/security-hygiene.yml/badge.svg)]", public_readme)
         self.assertIn("[![License: Apache-2.0]", public_readme)
-        self.assertIn("![Python 3.11+]", public_readme)
+        self.assertIn("![Python 3.11-3.14]", public_readme)
         self.assertIn("![Status: Alpha]", public_readme)
         self.assertIn("If the proof is weak, mismatched, or unverified", public_readme)
         self.assertIn("names one bounded repair step", public_readme)
@@ -700,7 +737,7 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("2. behavioral repair turns the operator-owned profile green", demo_pack_readme)
         self.assertIn("3. accepted closure appears only after fresh verification", demo_pack_readme)
         self.assertIn("./run_demo.sh", demo_pack_readme)
-        self.assertIn("invokes the real installed", demo_pack_readme)
+        self.assertIn("`synrail` command when available", demo_pack_readme)
         self.assertIn("this is not a", demo_pack_readme)
         self.assertIn("prewritten transcript printer", demo_pack_readme)
         self.assertIn("assets/synrail-false-green-hero.gif", demo_pack_readme)
@@ -713,8 +750,9 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertTrue((demo_assets_root / "synrail-false-green-hero-poster.png").is_file())
         self.assertIn("FIRST_TESTER_PROTOCOL_001.md", demo_pack_readme)
         self.assertIn("GitHub issue templates", demo_pack_readme)
-        self.assertIn('"$SYNRAIL" check --artifact-root .synrail', demo_script)
+        self.assertIn('"${SYNRAIL[@]}" check --artifact-root .synrail', demo_script)
         self.assertIn('.venv/Scripts/synrail.exe', demo_script)
+        self.assertIn('SYNRAIL=("$PYTHON" "$REPO_ROOT/alpha.py")', demo_script)
         self.assertIn("Demo assertion failed", demo_script)
         self.assertIn("Verification unit: FAIL (exit 1)", demo_transcript)
         self.assertIn("Synrail: Status: Verification Failed", demo_transcript)
@@ -809,8 +847,12 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn('synrail start --ephemeral "one sentence describing the change"', first_tester_checklist)
         self.assertIn("synrail record path/to/file --ephemeral", first_tester_checklist)
         self.assertIn("synrail cleanup --ephemeral", first_tester_checklist)
-        self.assertIn("uses: actions/checkout@v6", ci_workflow)
-        self.assertIn("uses: actions/setup-python@v6", ci_workflow)
+        self.assertIn("actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10", ci_workflow)
+        self.assertIn("actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1", ci_workflow)
+        self.assertIn("gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e", ci_workflow)
+        self.assertIn('python-version: ["3.11", "3.12", "3.13", "3.14"]', ci_workflow)
+        self.assertIn("Receipt key lifecycle", first_run_guide)
+        self.assertIn("receipt_hmac.key", first_run_guide)
         self.assertNotIn("uses: actions/checkout@v4", ci_workflow)
         self.assertNotIn("uses: actions/setup-python@v5", ci_workflow)
         self.assertIn(

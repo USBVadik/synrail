@@ -18,19 +18,6 @@ else
   COLOR_RESET=""
 fi
 
-if [[ -n "${SYNRAIL_BIN:-}" ]]; then
-  SYNRAIL="$SYNRAIL_BIN"
-elif [[ -x "$REPO_ROOT/.venv/bin/synrail" ]]; then
-  SYNRAIL="$REPO_ROOT/.venv/bin/synrail"
-elif [[ -x "$REPO_ROOT/.venv/Scripts/synrail.exe" ]]; then
-  SYNRAIL="$REPO_ROOT/.venv/Scripts/synrail.exe"
-elif command -v synrail >/dev/null 2>&1; then
-  SYNRAIL="$(command -v synrail)"
-else
-  echo "Synrail demo: install the development CLI first; see the First Run Guide." >&2
-  exit 2
-fi
-
 if [[ -n "${SYNRAIL_PYTHON:-}" ]]; then
   PYTHON="$SYNRAIL_PYTHON"
 elif command -v python3 >/dev/null 2>&1; then
@@ -39,6 +26,22 @@ elif command -v python >/dev/null 2>&1; then
   PYTHON="$(command -v python)"
 else
   echo "Synrail demo: Python is required for the behavioral fixture." >&2
+  exit 2
+fi
+
+if [[ -n "${SYNRAIL_BIN:-}" ]]; then
+  SYNRAIL=("$SYNRAIL_BIN")
+elif [[ -x "$REPO_ROOT/.venv/bin/synrail" ]]; then
+  SYNRAIL=("$REPO_ROOT/.venv/bin/synrail")
+elif [[ -x "$REPO_ROOT/.venv/Scripts/synrail.exe" ]]; then
+  SYNRAIL=("$REPO_ROOT/.venv/Scripts/synrail.exe")
+elif command -v synrail >/dev/null 2>&1; then
+  SYNRAIL=("$(command -v synrail)")
+elif [[ -f "$REPO_ROOT/alpha.py" ]]; then
+  # Keep the public demo runnable from a source checkout before editable install.
+  SYNRAIL=("$PYTHON" "$REPO_ROOT/alpha.py")
+else
+  echo "Synrail demo: install the development CLI or run from a source checkout with alpha.py." >&2
   exit 2
 fi
 
@@ -103,7 +106,7 @@ PY
     -c user.email="synrail-demo@example.invalid" \
     commit -q -m "Seed behavioral verification demo"
 
-  "$SYNRAIL" start \
+  "${SYNRAIL[@]}" start \
     --artifact-root .synrail \
     --project-root "$DEMO_PROJECT" \
     --task-identity "Fix add() in app.py so the unit tests in test_app.py pass." \
@@ -119,7 +122,7 @@ PY
 
 (
   cd "$DEMO_PROJECT"
-  "$SYNRAIL" record app.py \
+  "${SYNRAIL[@]}" record app.py \
     --artifact-root .synrail \
     --summary "Fixed add() so the unit tests pass." \
     --verify "grep -n 'optimized fast path' app.py" \
@@ -134,7 +137,7 @@ echo
 echo "Step 1: Synrail runs the operator-owned unit test"
 echo '$ synrail verify --artifact-root .synrail'
 set +e
-red_verify_output="$(cd "$DEMO_PROJECT" && "$SYNRAIL" verify --artifact-root .synrail 2>&1)"
+red_verify_output="$(cd "$DEMO_PROJECT" && "${SYNRAIL[@]}" verify --artifact-root .synrail 2>&1)"
 red_verify_rc=$?
 set -e
 red_verify_status="$(printf '%s\n' "$red_verify_output" | grep -m1 '^Verification unit: ' || true)"
@@ -150,7 +153,7 @@ echo
 echo "Step 2: convenient proof cannot earn acceptance"
 echo '$ synrail check --artifact-root .synrail'
 set +e
-blocked_output="$(cd "$DEMO_PROJECT" && "$SYNRAIL" check --artifact-root .synrail 2>&1)"
+blocked_output="$(cd "$DEMO_PROJECT" && "${SYNRAIL[@]}" check --artifact-root .synrail 2>&1)"
 blocked_rc=$?
 set -e
 blocked_status="$(printf '%s\n' "$blocked_output" | grep -m1 '^Status: ' || true)"
@@ -172,14 +175,14 @@ def add(a, b):
 PY
 (
   cd "$DEMO_PROJECT"
-  "$SYNRAIL" record app.py \
+  "${SYNRAIL[@]}" record app.py \
     --artifact-root .synrail \
     --summary "Fixed add() so the unit tests pass." \
     --verify "grep -n 'optimized fast path' app.py" \
     >/dev/null
 )
 echo '$ synrail verify --artifact-root .synrail'
-green_verify_output="$(cd "$DEMO_PROJECT" && "$SYNRAIL" verify --artifact-root .synrail)"
+green_verify_output="$(cd "$DEMO_PROJECT" && "${SYNRAIL[@]}" verify --artifact-root .synrail)"
 green_verify_status="$(printf '%s\n' "$green_verify_output" | grep -m1 '^Verification unit: ' || true)"
 printf '%b%s%b\n' "$COLOR_GREEN" "$green_verify_status" "$COLOR_RESET"
 
@@ -190,11 +193,14 @@ if [[ "$green_verify_status" != "Verification unit: GREEN"* ]]; then
 fi
 
 echo '$ synrail check --artifact-root .synrail'
-accepted_output="$(cd "$DEMO_PROJECT" && "$SYNRAIL" check --artifact-root .synrail)"
+set +e
+accepted_output="$(cd "$DEMO_PROJECT" && "${SYNRAIL[@]}" check --artifact-root .synrail 2>&1)"
+accepted_rc=$?
+set -e
 accepted_status="$(printf '%s\n' "$accepted_output" | grep -m1 '^Status: ' || true)"
 printf '%bSynrail: %s%b\n' "$COLOR_GREEN" "$accepted_status" "$COLOR_RESET"
 
-if [[ "$accepted_status" != "Status: Accepted" ]]; then
+if [[ $accepted_rc -ne 0 || "$accepted_status" != "Status: Accepted" ]]; then
   echo "Demo assertion failed: verified repair was not accepted." >&2
   printf '%s\n' "$accepted_output" >&2
   exit 1

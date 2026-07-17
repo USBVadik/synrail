@@ -38,6 +38,15 @@ This creates the local development venv and installs the `synrail` console scrip
 The current animated demo is a Bash harness. On Windows, run it from Git Bash
 after completing the PowerShell install above.
 
+Synrail currently supports CPython 3.11-3.14. Linux CI tests each supported
+version; Windows smoke runs on Python 3.11. Python 3.15 is not supported until
+it is added to that matrix.
+
+If editable install is temporarily unavailable but this is a source checkout,
+`examples/false-green-demo/run_demo.sh` falls back to `python3 alpha.py` after
+checking for an installed `synrail` command. The installed CLI remains the
+normal path for real work.
+
 ## Optional One-Time Repo Setup For Local Agents
 
 If you want local coding agents to discover Synrail naturally in this repo, bootstrap the repo-native hints in one step:
@@ -352,6 +361,23 @@ edits; it is not a security boundary against an agent sharing the operator accou
 If a profile genuinely needs one of the stripped variables, put that setup in
 an operator-reviewed wrapper and use the wrapper as `argv[0]` so its content is
 locked too.
+
+#### Receipt key lifecycle
+
+Synrail signs local verification locks and receipts with a per-user HMAC key.
+It is local control state, not a project artifact: never commit, attach, or
+share `receipt_hmac.key` with a repository or public issue.
+
+- macOS default: `~/Library/Caches/synrail/receipt_hmac.key`
+- Linux default: `~/.cache/synrail/receipt_hmac.key`
+- `SYNRAIL_CACHE_HOME` overrides both defaults; `XDG_CACHE_HOME` controls the
+  Linux base when `SYNRAIL_CACHE_HOME` is unset.
+
+On POSIX hosts Synrail attempts to create the file with mode `0600`. Deleting
+or rotating the key makes all earlier locks and receipts unverifiable by
+design; Synrail will create a new key on the next run, and you must start a new
+bounded run and re-run verification. Do not rotate a key to make a blocked run
+green, and prefer a fresh run rather than copying the key to another machine.
 
 ### 3. Check
 
