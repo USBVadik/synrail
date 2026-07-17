@@ -57,6 +57,18 @@ def cmd_telemetry_enable(
 PolicyWriter = Callable[[Path, str, str, bool], tuple[bool, str, Path | None]]
 
 
+def kiro_steering_path_violation(project_root: Path) -> Path | None:
+    """Reject a Kiro steering target whose local path escapes through a symlink."""
+    for candidate in (
+        project_root / ".kiro",
+        project_root / ".kiro" / "steering",
+        project_root / ".kiro" / "steering" / "synrail.md",
+    ):
+        if candidate.is_symlink():
+            return candidate
+    return None
+
+
 @dataclass(frozen=True)
 class AgentAdoptionContext:
     relative_artifact_root_for_project: Callable[..., str]
@@ -68,9 +80,11 @@ class AgentAdoptionContext:
     render_agent_policy_markdown: Callable[..., str]
     render_gemini_policy_markdown: Callable[..., str]
     render_claude_policy_markdown: Callable[..., str]
+    render_kiro_policy_markdown: Callable[..., str]
     render_agents_policy_block: Callable[..., str]
     render_gemini_policy_block: Callable[..., str]
     render_claude_policy_block: Callable[..., str]
+    render_kiro_policy_block: Callable[..., str]
     write_agent_policy_file: PolicyWriter
 
 
@@ -265,8 +279,30 @@ def cmd_init_agent(
     workspace_isolation_note = policy_context["workspace_isolation_note"]
     prefer_runtime_helper = policy_context["prefer_runtime_helper"]
 
-    file_name = "CLAUDE.md" if agent == "claude" else "GEMINI.md"
-    path = project_root / file_name
+    relative_path = (
+        Path("CLAUDE.md")
+        if agent == "claude"
+        else Path(".kiro") / "steering" / "synrail.md"
+        if agent == "kiro"
+        else Path("GEMINI.md")
+    )
+    file_name = relative_path.as_posix()
+    path = project_root / relative_path
+    if agent == "kiro":
+        symlink_path = kiro_steering_path_violation(project_root)
+        if symlink_path is not None:
+            print(
+                json.dumps(
+                    {
+                        "result": "ERROR",
+                        "reason": "POLICY_PATH_SYMLINK",
+                        "path": file_name,
+                        "detail": f"refusing to write Kiro steering through symlink: {symlink_path}",
+                    },
+                    ensure_ascii=True,
+                )
+            )
+            return 2
     if agent == "claude":
         full_content = context.render_claude_policy_markdown(
             artifact_root=artifact_root,
@@ -277,6 +313,23 @@ def cmd_init_agent(
             prefer_runtime_helper=prefer_runtime_helper,
         )
         managed_block = context.render_claude_policy_block(
+            artifact_root=artifact_root,
+            command=command,
+            fallback_command=fallback_command,
+            repo_native_alpha_command=repo_native_alpha_command,
+            workspace_isolation_note=workspace_isolation_note,
+            prefer_runtime_helper=prefer_runtime_helper,
+        )
+    elif agent == "kiro":
+        full_content = context.render_kiro_policy_markdown(
+            artifact_root=artifact_root,
+            command=command,
+            fallback_command=fallback_command,
+            repo_native_alpha_command=repo_native_alpha_command,
+            workspace_isolation_note=workspace_isolation_note,
+            prefer_runtime_helper=prefer_runtime_helper,
+        )
+        managed_block = context.render_kiro_policy_block(
             artifact_root=artifact_root,
             command=command,
             fallback_command=fallback_command,

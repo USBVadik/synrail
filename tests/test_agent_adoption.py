@@ -28,6 +28,8 @@ from synrail_agent_adoption_v0 import (
     render_claude_policy_markdown,
     render_gemini_policy_block,
     render_gemini_policy_markdown,
+    render_kiro_policy_block,
+    render_kiro_policy_markdown,
     render_local_workflow_policy,
 )
 from synrail_cli_v0 import (
@@ -200,6 +202,105 @@ class AgentAdoptionTests(unittest.TestCase):
             self.assertIn("Only `Status: Accepted` means the task may be reported as complete. If Synrail returns Proof Invalid, Rejected, Blocked, or any repair step, do not summarize the task as done; run the named repair step or report the exact Synrail blocker.", claude)
             self.assertIn('synrail start "TASK" --artifact-root ./.synrail', claude)
             self.assertIn("# only stop on Status: Accepted", claude)
+
+    def test_init_agent_writes_kiro_workspace_steering(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_agent_kiro_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir(parents=True, exist_ok=True)
+            (project_root / "alpha.py").write_text("print('stub')\n")
+
+            result = self.run_alpha(
+                "init-agent",
+                "--agent",
+                "kiro",
+                "--project-root",
+                str(project_root),
+                "--artifact-root",
+                ".synrail",
+            )
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            policy_path = project_root / ".kiro" / "steering" / "synrail.md"
+            self.assertIn("Agent onboarding is ready for kiro.", result.stdout)
+            self.assertIn(".kiro/steering/synrail.md: written", result.stdout)
+            self.assertTrue(policy_path.is_file())
+            self.assertFalse((project_root / "KIRO.md").exists())
+            self.assertFalse((project_root / "AGENTS.md").exists())
+            policy = policy_path.read_text()
+            self.assertTrue(policy.startswith("---\ninclusion: auto\nname: synrail-workflow\n"))
+            self.assert_behavioral_verification_policy(policy)
+            self.assertIn("Use Synrail as the default local control path", policy)
+            self.assertIn("python3 alpha.py check", policy)
+
+    def test_init_agent_appends_to_existing_kiro_steering_file(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_agent_kiro_append_") as tmpdir:
+            project_root = Path(tmpdir) / "project"
+            policy_path = project_root / ".kiro" / "steering" / "synrail.md"
+            policy_path.parent.mkdir(parents=True, exist_ok=True)
+            policy_path.write_text("---\ninclusion: always\n---\n# Existing Kiro Guidance\n")
+
+            result = self.run_alpha(
+                "init-agent",
+                "--agent",
+                "kiro",
+                "--project-root",
+                str(project_root),
+                "--artifact-root",
+                ".synrail",
+            )
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn(".kiro/steering/synrail.md: appended", result.stdout)
+            policy = policy_path.read_text()
+            self.assertIn("inclusion: always", policy)
+            self.assertIn("# Existing Kiro Guidance", policy)
+            self.assertIn("<!-- SYNRAIL_", policy)
+            self.assertIn("_START -->", policy)
+            self.assert_behavioral_verification_policy(policy)
+
+    @unittest.skipIf(os.name == "nt", "Windows symlink creation may require elevated permissions")
+    def test_init_agent_rejects_symlinked_kiro_steering_path(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="synrail_init_agent_kiro_symlink_") as tmpdir:
+            root = Path(tmpdir)
+            project_root = root / "project"
+            external_root = root / "external"
+            project_root.mkdir(parents=True, exist_ok=True)
+            external_root.mkdir(parents=True, exist_ok=True)
+            (project_root / ".kiro").symlink_to(external_root, target_is_directory=True)
+
+            result = self.run_alpha(
+                "init-agent",
+                "--agent",
+                "kiro",
+                "--project-root",
+                str(project_root),
+                "--artifact-root",
+                ".synrail",
+            )
+
+            self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+            self.assertIn("POLICY_PATH_SYMLINK", result.stdout)
+            self.assertFalse((external_root / "steering" / "synrail.md").exists())
+
+    def test_kiro_policy_renderers_keep_front_matter_and_shared_workflow(self) -> None:
+        common_kwargs = {
+            "artifact_root": ".synrail",
+            "command": "synrail",
+            "fallback_command": "./.venv/bin/synrail",
+            "repo_native_alpha_command": "python3 alpha.py",
+            "workspace_isolation_note": "",
+            "prefer_runtime_helper": False,
+        }
+
+        policy = render_kiro_policy_markdown(**common_kwargs)
+        block = render_kiro_policy_block(**common_kwargs)
+
+        self.assertTrue(policy.startswith("---\ninclusion: auto\nname: synrail-workflow\n"))
+        self.assertIn("# Synrail Workflow", policy)
+        self.assert_behavioral_verification_policy(policy)
+        self.assertIn("## Synrail Local Workflow", block)
+        self.assert_behavioral_verification_policy(block)
+        self.assertFalse(block.startswith("---\n"))
 
     def test_init_agent_routes_codex_and_cursor_to_full_agent_wiring(self) -> None:
         with tempfile.TemporaryDirectory(prefix="synrail_init_agent_alias_") as tmpdir:

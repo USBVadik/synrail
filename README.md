@@ -289,6 +289,14 @@ the full `preflight -> start -> verify -> check` lifecycle. It keeps
 `synrail.toml` operator-owned and forbids replacing a failed behavioral profile
 with convenient narrative or read-only proof.
 
+For Kiro workspace steering, generate the dedicated portable policy file instead:
+
+```bash
+synrail init-agent --agent kiro
+```
+
+This writes `.kiro/steering/synrail.md`. It does not install or assume Kiro hooks; hooks are environment-specific and remain under the operator's control.
+
 ## Developer Checks
 
 ```bash

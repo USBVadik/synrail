@@ -529,6 +529,44 @@ def render_claude_policy_markdown(
     )
 
 
+def render_kiro_policy_markdown(
+    *,
+    artifact_root: str,
+    command: str = "synrail",
+    fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
+    """Render a Kiro workspace-steering file with valid front matter."""
+    policy = render_local_workflow_policy(
+        heading="# Synrail Workflow",
+        intro="Use Synrail as the default local control path for this repo.",
+        artifact_root=artifact_root,
+        command=command,
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+        first_command_heading="## First Command",
+        first_command_intro="For every new task that changes code or needs acceptance, run Synrail first:",
+        show_cli_kernel_note=True,
+        start_intro="If Synrail shows that no controlled run is active and the task needs edits, start one controlled run:",
+    )
+    return "\n".join(
+        [
+            "---",
+            "inclusion: auto",
+            "name: synrail-workflow",
+            'description: "Use for bounded code changes, verification, and proof-gated acceptance tasks."',
+            "---",
+            "",
+            policy.rstrip(),
+            "",
+        ]
+    )
+
+
 def render_agent_policy_block(
     *,
     title: str,
@@ -620,6 +658,27 @@ def render_claude_policy_block(
     )
 
 
+def render_kiro_policy_block(
+    *,
+    artifact_root: str,
+    command: str = "synrail",
+    fallback_command: str | None = None,
+    repo_native_alpha_command: str | None = None,
+    workspace_isolation_note: str = "",
+    prefer_runtime_helper: bool = False,
+) -> str:
+    return render_agent_policy_block(
+        title="Synrail Local Workflow",
+        intro="Use Synrail as the default local control path for this repo.",
+        artifact_root=artifact_root,
+        command=command,
+        fallback_command=fallback_command,
+        repo_native_alpha_command=repo_native_alpha_command,
+        workspace_isolation_note=workspace_isolation_note,
+        prefer_runtime_helper=prefer_runtime_helper,
+    )
+
+
 def policy_orientation_lines(status_command: str) -> list[str]:
     return [
         "## Project Orientation",
@@ -690,6 +749,7 @@ def write_agent_policy_file(
     managed_block: str,
     force: bool,
 ) -> tuple[bool, str, Path | None]:
+    path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         current = path.read_text()
         if current == full_content:
