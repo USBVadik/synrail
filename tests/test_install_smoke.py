@@ -149,6 +149,7 @@ class InstallSmokeTests(unittest.TestCase):
             script_dir = isolated_root / "examples" / "false-green-demo"
             script_dir.mkdir(parents=True, exist_ok=True)
             shutil.copy2(REPO_ROOT / "alpha.py", isolated_root / "alpha.py")
+            shutil.copy2(REPO_ROOT / "reference_runner.py", isolated_root / "reference_runner.py")
             shutil.copytree(REPO_ROOT / "tools", isolated_root / "tools")
             # A source checkout includes the doctor-coverage corpus fixtures; without
             # them, a real fallback rightly refuses to claim the workspace is ready.
@@ -510,6 +511,13 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("py -3 -m venv .venv", first_run_guide)
         self.assertIn('.\\.venv\\Scripts\\python.exe -m pip install -e ".[dev]" -c constraints-dev.txt', first_run_guide)
         self.assertIn("run it from Git Bash", first_run_guide)
+        self.assertIn("## Pick The Smallest First Path", first_run_guide)
+        self.assertIn("Do not begin by filling in every artifact file", first_run_guide)
+        self.assertIn("See the false-green loop", first_run_guide)
+        self.assertIn("Govern one simple existing tracked file", first_run_guide)
+        self.assertIn('Make a claim such as "tests pass" enforceable', first_run_guide)
+        self.assertIn("Do QA or analysis across many repositories", first_run_guide)
+        self.assertIn("do not\nrepresent a single-file `record` run as proof that a test suite passed", first_run_guide)
         self.assertIn("make install-local", first_run_guide)
         self.assertIn("This creates the local development venv and installs the `synrail` console script used by the public quickstart.", first_run_guide)
         self.assertIn("If you are doing QA/analysis across many repositories and do not want Synrail artifacts inside each checkout", first_run_guide)
@@ -598,8 +606,13 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("make demo", public_readme)
         self.assertIn("This is the fastest way to see Synrail block plausible proof while required tests are red", public_readme)
         self.assertIn("On Windows, use the PowerShell install path", public_readme)
-        self.assertIn("## Verify The Local Install", public_readme)
-        self.assertIn("Use this when you already have the checkout and want the shortest local smoke path.", public_readme)
+        self.assertIn("## Choose Your First Path", public_readme)
+        self.assertIn("You do not need to learn every artifact or command before trying Synrail", public_readme)
+        self.assertIn("See the product catch a false-green claim", public_readme)
+        self.assertIn("[single-file route](#first-real-task-one-tracked-file)", public_readme)
+        self.assertIn("[behavioral route](#behavioral-verification-operator-owned-profiles)", public_readme)
+        self.assertIn("[repo-clean route](#repo-clean-analysis-across-many-repositories)", public_readme)
+        self.assertIn("The first two routes are intentionally cheap", public_readme)
         self.assertIn("## You May Not Need Synrail If", public_readme)
         self.assertIn("you personally inspect every changed line", public_readme)
         self.assertIn("a false-green costs less than running the gate", public_readme)
@@ -611,6 +624,9 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertNotIn("tests claimed as passed but not actually run", public_readme)
         self.assertIn("recorded verification evidence that fails read-only recheck", public_readme)
         self.assertIn("## Behavioral Verification: Operator-Owned Profiles", public_readme)
+        self.assertIn("Use this route only when the agent must be allowed to make a behavioral claim", public_readme)
+        self.assertIn("<summary>Profile setup and trust model (advanced)</summary>", public_readme)
+        self.assertIn("</details>", public_readme)
         self.assertIn("synrail suggest-verification", public_readme)
         self.assertIn("recognizes conventional Python/Node/Go/Rust root markers", public_readme)
         self.assertIn("never runs a discovered command, writes `synrail.toml`, or marks a candidate\ntrusted", public_readme)
@@ -633,10 +649,12 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("The tamper-resistant lane is a required CI check", public_readme)
         self.assertIn("narrative completion instead of concrete runtime evidence", public_readme)
         self.assertIn("# after make install-dev", public_readme)
+        self.assertIn("## First Real Task: One Tracked File", public_readme)
         self.assertIn('.venv/bin/synrail start "Describe the bounded local change."', public_readme)
         self.assertIn(".venv/bin/synrail record path/to/file", public_readme)
         self.assertIn("It writes proof, not acceptance", public_readme)
         self.assertIn(".venv/bin/synrail check", public_readme)
+        self.assertIn("### Repo-Clean Analysis Across Many Repositories", public_readme)
         self.assertIn("## Alpha Tester Install Path", public_readme)
         self.assertIn("Prefer a repo-clean artifact lane when you are using Synrail for QA/analysis across many repositories:", public_readme)
         self.assertIn('.venv/bin/synrail start --ephemeral "Describe the bounded local analysis."', public_readme)
@@ -673,6 +691,14 @@ class InstallSmokeTests(unittest.TestCase):
         self.assertIn("not yet broad self-serve or broad production-ready", public_readme)
         self.assertIn("[Docs Map](docs/README.md)", public_readme)
         self.assertIn("[Review archive map](docs/review/README.md)", public_readme)
+        self.assertLess(
+            public_readme.index("## Choose Your First Path"),
+            public_readme.index("## Behavioral Verification: Operator-Owned Profiles"),
+        )
+        self.assertLess(
+            public_readme.index("## Behavioral Verification: Operator-Owned Profiles"),
+            public_readme.index("## First Real Task: One Tracked File"),
+        )
 
         self.assertIn("This is the short current source-of-truth reading path for the repo.", docs_readme)
         self.assertIn("core/FIRST_RUN_GUIDE.md", docs_readme)
