@@ -1,6 +1,6 @@
 # Synrail Roadmap
 
-Current as of 2026-07-13.
+Current as of 2026-09-14.
 
 This file is the public current roadmap. Older kernel-hardening detail lives in `docs/review/ROADMAP_STATUS_001.md` and the review archive; do not treat the old sprint notes as the active source of truth.
 
@@ -29,6 +29,32 @@ Not the current lane:
 - generic CI/CD replacement
 - universal agent correctness
 - broad self-serve platform behavior
+
+### Next validation experiment: protected admission
+
+The local alpha remains available as the current reference workflow. The next
+experiment applies the same false-green rule at the GitHub merge boundary: the
+actor authoring a change should not also control the policy and evidence used to
+admit it.
+
+We will start with a time-boxed, non-blocking shadow check for pull requests that
+change tests, CI workflows, policy, permissions, or deployment guardrails. It
+will reuse existing CI and review evidence rather than replace those systems.
+This is not a broad hosted-platform launch, and blocking use will be considered
+only after external pilots demonstrate incremental value and acceptable
+operational cost.
+
+The experiment advances only if it produces:
+
+- at least three external shadow pilots and 300 real verdicts
+- at least three natural, actionable catches across two organizations
+- at least one material catch after the existing required checks were green
+- median setup time at or below 30 minutes and adjudicated false blocks at or below 2%
+- two teams willing to enter a paid pilot after the evidence review
+
+The odds improve by keeping the scope narrow, starting in shadow mode, using
+GitHub-native controls, and measuring catches, misses, overrides, and setup cost
+with denominators instead of relying on seeded demos or internal audits.
 
 ## Already Closed
 
