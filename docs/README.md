@@ -14,6 +14,14 @@ Read these in order:
 
 Most first runs need only the README and First Run Guide.
 
+## Experimental GitHub Path
+
+[`core/PROTECTED_ADMISSION_SHADOW.md`](core/PROTECTED_ADMISSION_SHADOW.md)
+documents the non-blocking protected-admission evaluator for exact pull-request
+base/head commit pairs. Use it to observe changes to tests, CI, policy,
+permissions, and deployment guardrails without turning the local alpha into a
+hosted platform or claiming a merge decision.
+
 ## Maintainer And Deep Reference
 
 These files explain implementation boundaries; they are not required to install

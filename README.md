@@ -58,7 +58,12 @@ CPython 3.11-3.14. Windows setup is in the [First Run Guide](docs/core/FIRST_RUN
 | See Synrail catch a false-green claim | [`make demo`](examples/false-green-demo/README.md) |
 | Prove one small tracked edit is real and current | [Small tracked change](docs/core/FIRST_RUN_GUIDE.md#1-prove-one-small-tracked-change) |
 | Let an agent claim behavior such as "tests pass" | [Behavioral verification](docs/core/FIRST_RUN_GUIDE.md#2-enforce-a-behavioral-claim) |
+| Observe whether a PR changes tests, CI, policy, permissions, or deployment guardrails | [Protected admission shadow](docs/core/PROTECTED_ADMISSION_SHADOW.md) |
 | Work across many repositories without `.synrail/` in each | [Repo-clean workflow](docs/core/FIRST_RUN_GUIDE.md#3-keep-artifacts-outside-many-repositories) |
+
+The protected-admission lane is an experimental, non-blocking GitHub shadow
+check. It carries the same false-green thesis to the merge boundary without
+replacing the local alpha, CI, or code review.
 
 The single-file and batch record routes prove scope and current patch. A claim
 about runtime behavior needs an operator-reviewed verification profile and a

@@ -4285,9 +4285,71 @@ def hide_internal_options(parser: argparse.ArgumentParser, *, visible: set[str])
         action.help = argparse.SUPPRESS
 
 
+def cmd_protected_admission(args: argparse.Namespace) -> int:
+    try:
+        from .synrail_protected_admission_v0 import evaluate_protected_admission
+    except ImportError:
+        from synrail_protected_admission_v0 import evaluate_protected_admission
+
+    exit_code, payload = evaluate_protected_admission(
+        project_root=args.project_root,
+        base_sha=args.base_sha,
+        head_sha=args.head_sha,
+    )
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=True, sort_keys=True))
+        return exit_code
+
+    print("Synrail protected admission")
+    print("Mode: Shadow (non-blocking)")
+    print(f"Result: {payload['result']}")
+    print(f"Would block if enforced: {'yes' if payload['would_block'] else 'no'}")
+    print(f"Reason codes: {', '.join(payload['reason_codes'])}")
+    if payload["evaluation_status"] == "COMPLETE":
+        print(f"Base SHA: {payload['base_sha']}")
+        print(f"Head SHA: {payload['head_sha']}")
+        print(f"Merge-base SHA: {payload['merge_base_sha']}")
+        for match in payload["matches"][:10]:
+            categories = ",".join(match["categories"])
+            safe_path = json.dumps(match["path"], ensure_ascii=True)
+            print(f"Observed: {match['change_type']} {safe_path} [{categories}]")
+        remaining = len(payload["matches"]) - 10
+        if remaining > 0:
+            print(f"Observed: {remaining} additional matched paths")
+    print(f"Detail: {payload['detail']}")
+    return exit_code
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="synrail", formatter_class=_SuppressingHelpFormatter)
     sub = parser.add_subparsers(dest="cmd")
+
+    p_protected_admission = sub.add_parser(
+        "protected-admission",
+        help="Observe authority-changing paths for one exact pull-request commit pair",
+        description=(
+            "Run the non-blocking protected-admission shadow evaluator against exact "
+            "base and head commit SHAs. This command observes path-level authority "
+            "changes; it does not accept, reject, or merge a pull request."
+        ),
+    )
+    p_protected_admission.add_argument(
+        "--base-sha",
+        required=True,
+        help="Full lowercase base commit object ID",
+    )
+    p_protected_admission.add_argument(
+        "--head-sha",
+        required=True,
+        help="Full lowercase head commit object ID",
+    )
+    p_protected_admission.add_argument(
+        "--project-root",
+        default=".",
+        help="Git top-level checkout containing both commit objects (default: .)",
+    )
+    p_protected_admission.add_argument("--json", action="store_true")
+    p_protected_admission.set_defaults(func=cmd_protected_admission)
 
     p_init = sub.add_parser("init", help=argparse.SUPPRESS)
     p_init.add_argument("--run-id")
